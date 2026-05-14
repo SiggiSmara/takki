@@ -236,7 +236,7 @@ Chinese, Japanese, and Vietnamese use Input Method Editors — the user types La
 
 From the word frequency data, the app derives:
 - **Letter frequency ranking** — computed by iterating over frequency-weighted words, determines the order in which new keys are introduced in lessons
-- **Bigram and trigram frequencies** — computed from the same source, drives pseudo-word generation for the middle lesson phase
+- **Bigram and trigram frequencies** — computed from the same source, drives character pair and sequence generation in Layer 1 drills
 - **Filtered word list** — top N words by frequency meeting length and character criteria
 
 All three are recomputed at every application startup. The computation is fast (milliseconds for a few thousand words) and this approach avoids cache invalidation complexity. If performance ever becomes a concern, caching can be added later.
@@ -317,7 +317,7 @@ LANGUAGE_CONFIGS = {
 **What was removed from config through derivation:**
 - **Home row definition** — derived from Windows keyboard layout API at runtime by querying characters at the 10 home row scan code positions, then applying the exclude list
 - **Character spoken names** — handled by TTS engine directly (neural TTS pronounces letter names correctly in the target language)
-- **Special key spoken names** — handled by TTS engine directly (Spacebar, Backspace, Enter are ordinary words in each language)
+- **Special key spoken names** — handled by TTS engine directly (Spacebar, Enter are ordinary words in each language; Backspace is disabled in the lesson engine and never instructed)
 
 **The override file** (`language_override.yaml` in the app data folder) is checked before the hardcoded config at startup. It exists for:
 - Languages not in `wordfreq` (parent provides a custom word list)
@@ -336,26 +336,38 @@ LANGUAGE_CONFIGS = {
 
 ## ADR-010: Lesson Structure and Progression
 
-**Decision:** Three-phase adaptive lesson engine with named milestone levels. Lesson content is generated algorithmically from frequency data. Progression rules are language-agnostic. Per-language YAML files contain only the minimal config from ADR-009.
+**Decision:** Two-layer concurrent lesson engine with named milestone levels. Lesson content is generated algorithmically from frequency data. Progression rules are language-agnostic. Per-language YAML files contain only the minimal config from ADR-009.
 
-### The Three Phases
+### The Two Practice Layers
 
-**Phase 1 — Character drills**  
-Pure motor learning. Home row keys only initially, introduced one hand at a time. Character pairs and short sequences weighted by letter frequency. No real words. Goal: accurate finger placement through repetition.
+**Layer 1 — Character drills** (always active; never replaced)  
+Motor learning through character pairs and short sequences weighted by letter and bigram frequency. Home row keys only initially, introduced one hand at a time. Goal: accurate finger placement through repetition, building towards muscle memory.
 
-**Phase 2 — Pseudo-words**  
-Pronounceable nonsense sequences generated from bigram/trigram frequencies. More natural rhythm than random characters but no word-recognition shortcut — the child must actually locate each key. Begins when the child has demonstrated proficiency on 8+ keys. This phase was validated by the Keybr approach to adaptive typing practice.
+**Layer 2 — Real words** (unlocks when ≥ 8 keys known)  
+Words from the filtered word list constrained to keys the child has already mastered. Runs alongside Layer 1 — does not replace it. Word length progresses (3 → 4 → 5 → 6 letters) as accuracy on the current length exceeds 85% over 20 words. Hearing a real word spoken then typing it reinforces correct phoneme-grapheme associations alongside motor skill — a documented benefit for visually impaired children.
 
-**Phase 3 — Real words**  
-Words from the filtered word list, initially constrained to words using only keys the child has already mastered. Word length progression: 3 letters → 4 → 5 → 6. Eventually simple sentences. Hearing a real word spoken, then typing it, reinforces phonics and spelling alongside motor skill — a documented dual benefit for visually impaired children.
+**Why two layers, not three:** The original design included a pseudo-word layer between drills and real words, following the Keybr approach. Pseudo-words work for sighted typists because the exercise is purely visual — copy this symbol sequence, no phonics involved. For a blind child hearing a spoken pseudo-word, the exercise unavoidably teaches sound-to-spelling associations, and those associations may be wrong or misleading in languages with irregular spelling (English and French especially). The real-words layer with a constrained key set fills the same bridge role from drills to fluent typing without the linguistic risk. Interleaving Layer 1 and Layer 2 concurrently also produces better long-term retention than completing each phase in strict sequence.
 
 ### Progression Rules
 
 Progression is adaptive and continuous, not fixed-step:
-- A new key is introduced when accuracy on current keys exceeds 90% over a minimum of 50 presses
-- A key is considered "known" when accuracy has been sustained above 90% across multiple sessions
-- Word length increases when accuracy on current length exceeds 85% over 20 words
+- A new key is introduced in Layer 1 when first-attempt accuracy on current keys exceeds 90% over a minimum of 50 presses (auto-rejections count as failed attempts — see ADR-012)
+- A key is considered "known" when first-attempt accuracy has been sustained above 90% across multiple sessions
+- Layer 2 unlocks when ≥ 8 keys are known
+- Word length in Layer 2 advances when clean word rate exceeds 85% over 20 words
+- Clean word rate (no auto-rejections, no restarts — see ADR-012) is the sole progression gate until the child reaches sustained real-word fluency (see milestones below)
 - All thresholds are configurable in a single global config file (not per-language)
+
+**Session composition:** Each session is a weighted mix across unlocked layers. Proportions shift automatically as key knowledge grows:
+
+| Keys known | Layer 1 (drills) | Layer 2 (real words) |
+|---|---|---|
+| < 8        | 100%             | —                    |
+| 8–15       | 60%              | 40%                  |
+| 16–25      | 35%              | 65%                  |
+| 26+ (full) | 20%              | 80%                  |
+
+Proportions are configurable in the global lesson progression rules config (not per-language).
 
 ### Milestone Levels
 
@@ -363,10 +375,18 @@ Named milestones wrap the adaptive engine to give parents, teachers, and childre
 
 | Level | Criterion |
 |---|---|
-| **Bronze** | All home row keys known |
-| **Silver** | Full alphabet known |
-| **Gold** | Real words at 30+ WPM with 95% accuracy |
-| **Platinum** | Sentences at 40+ WPM with 95% accuracy |
+| **Bronze** | Home row keys known (≥ 90% accuracy sustained) — drills only |
+| **Silver** | 25% vocabulary coverage — "1 in 4 everyday words" reachable |
+| **Gold** | 50% vocabulary coverage — "half of everyday words" reachable |
+| **Platinum** | Full alphabet known (≥ 90% accuracy sustained) — any word attemptable |
+| **Diamond** | Fluent dictation — ≥ 95% accuracy on real words without spelling prompt |
+| **Speed** | Dictation at ≥ 30 WPM with ≥ 95% accuracy (optional; for motivated older learners) |
+
+**Vocabulary coverage** is computed as frequency-weighted token coverage from the `wordfreq` data already loaded at startup: what fraction of words in typical everyday text can be typed using the child's current key set. This metric is language-agnostic — 25% means the same thing to a child in any language, even though the number of keys needed to reach it varies by language. The app can report this as a live percentage ("you can now type 1 in 3 everyday words") which gives children a concrete, motivating signal between milestones.
+
+Speed is not reported or targeted until Diamond and above because before that point the bottleneck is key-finding, not finger movement. The natural transition signal from Platinum to Diamond is the child succeeding in dictation mode — hearing just the whole word and typing it correctly from memory without the spelling prompt.
+
+The specific coverage percentages (25%, 50%) are tentative pending validation against actual coverage curves for target languages — see Open Questions.
 
 Each milestone triggers a distinct audio celebration — an important engagement mechanism for visually impaired children who cannot see progress bars or badges.
 
@@ -375,7 +395,7 @@ Each milestone triggers a distinct audio celebration — an important engagement
 The lesson engine is entirely language-agnostic. The same code drives German, French, English, and Polish lessons because all content is derived from frequency data at runtime. The only language-specific inputs are:
 - The filtered word list (from `wordfreq` + parent override)
 - The letter frequency ranking (computed from `wordfreq`)
-- The bigram/trigram model (computed from `wordfreq`)
+- The bigram/trigram model (computed from `wordfreq`, used for drill sequence generation)
 
 This means adding a new language requires no lesson authoring — only the minimal config entry from ADR-009.
 
@@ -411,6 +431,36 @@ For a visually impaired child, the timing and nature of feedback is critical:
 
 **Encouragement variety:** The default rule-based feedback generator cycles through a set of varied encouragement phrases per language. The optional LLM plugin can replace this with dynamically generated responses for more natural variety.
 
+**Word presentation protocol:**
+
+- *Character drills (Layer 1):* Each character is announced individually by TTS, then the child types it. The next character follows after a correct keypress or a configurable timeout.
+
+- *Real words, early (Layer 2, pre-Diamond):* The whole word is spoken first, then spelled letter by letter: *"house — h, o, u, s, e"*. The child then types. The whole-word reading reinforces correct pronunciation; the spelling reinforces phoneme-grapheme mapping. Both are intentional — this is the design that distinguishes real words from the pseudo-word approach that was considered and rejected (see ADR-010).
+
+- *Real words, dictation mode (Layer 2, Diamond+):* The spelling step is withheld. Only the whole word is spoken. The child must recall the spelling from memory. Successful typing without the spelling prompt is the readiness signal for the Diamond milestone.
+
+**Wrong character handling — auto-reject:**
+
+When the child types an incorrect character, the keypress is auto-rejected: it is never committed to the typed sequence. The error tone fires immediately (low-latency sound cue, not TTS). TTS then re-prompts the current character. The child simply tries again. This means every character that has been accepted is correct by definition — the child is always at a known position with a clean sequence behind them.
+
+Auto-reject applies in both layers. In Layer 1 the drill repeats the same character prompt. In Layer 2 the same character position in the word is re-prompted.
+
+**Backspace — considered and rejected:**
+
+With auto-reject in place, backspace has no meaningful use case. The only situations where backspace seems useful — "I typed the wrong character," "I want to rethink from an earlier position" — are either already handled (wrong characters are discarded automatically) or better served by other controls. Going back one character does not help a child who is disoriented; re-reading the full prompt does. Backspace is therefore disabled entirely. Pressing it plays the boundary tone so the child knows the key registered but had no effect.
+
+This was a deliberate decision. Future contributors should not reintroduce backspace without revisiting the auto-reject model — the two are in tension, and the combination creates more complexity than it resolves.
+
+**Recovery — re-read key:**
+
+A dedicated re-read key (configurable, default Escape) re-speaks the full current prompt and position at any time: *"house — typed: h, o — next: u"*. This is the recovery path for a child who has lost track, mis-heard a character, or simply wants to reorient. It does not reset progress on the current word.
+
+A separate restart key (configurable, default Escape held or double-tap) abandons the current word and re-presents it from the beginning. The word is not counted toward session totals.
+
+**WPM measurement:** Execution time is measured from the child's first keystroke to their last accepted keystroke on a given word. Prompt delivery time is excluded entirely. WPM is only computed and surfaced in progress reporting once the child is in dictation mode (Diamond milestone reached).
+
+**Clean word definition:** A word is "clean" if it was completed with no auto-rejections and no restarts — every character accepted on the first attempt. This is the metric used for progression thresholds and the child summary, not raw completion rate.
+
 ---
 
 ## Component Overview
@@ -426,9 +476,9 @@ For a visually impaired child, the timing and nature of feedback is critical:
 │                      │  • Cloud TTS (optional plugin)   │
 ├──────────────────────┼──────────────────────────────────┤
 │    Voice Input       │    Lesson Engine                 │
-│  • faster-whisper    │  • Phase controller              │
+│  • faster-whisper    │  • Layer controller              │
 │    (local)           │  • Adaptive key introducer       │
-│                      │  • Pseudo-word generator         │
+│                      │  • Drill sequence generator      │
 │                      │  • Word selector                 │
 ├──────────────────────┼──────────────────────────────────┤
 │    Language Layer    │    Feedback Layer                │
@@ -492,9 +542,11 @@ All three are served by the same summary at different verbosity levels. The summ
 
 **Child summary** (spoken, brief, celebratory):
 - Keys mastered
-- Current phase (drills / pseudo-words / real words)
+- Current layer active (drills only / drills + real words)
 - Milestone level reached
-- Best speed today
+- Vocabulary coverage percentage ("you can now type X% of everyday words") — reported as a live motivating signal between milestones
+- Clean words today (words typed correctly on first attempt without backspacing — a concrete accuracy signal meaningful to a child)
+- Best execution speed today (reported only at Diamond milestone and above)
 - Streak (days practiced in a row)
 
 **Parent/teacher summary** (spoken + printable text file):
@@ -561,9 +613,9 @@ The SAPI fallback (via pyttsx3) means the app is never non-functional due to a m
 │                      │  • Cloud TTS (optional plugin)   │
 ├──────────────────────┼──────────────────────────────────┤
 │    Voice Input       │    Lesson Engine                 │
-│  • faster-whisper    │  • Phase controller              │
+│  • faster-whisper    │  • Layer controller              │
 │    (local)           │  • Adaptive key introducer       │
-│                      │  • Pseudo-word generator         │
+│                      │  • Drill sequence generator      │
 │                      │  • Word selector                 │
 ├──────────────────────┼──────────────────────────────────┤
 │    Language Layer    │    Feedback Layer                │
@@ -598,6 +650,7 @@ The following were explicitly considered and excluded from v1:
 | Keyboard shortcuts curriculum | Separate topic; addressed after core typing is established |
 | One-handed typing support | Future implementation; architecture does not preclude it |
 | Braille keyboard support | Future implementation; architecture is compatible |
+| Narrative / quest framing | Evaluated as an audio-native engagement mechanism well-suited to visually impaired children. Deferred to v2 to avoid content maintenance burden and the requirement to author story content in 40+ languages. The LLM plugin path (ADR-004) is the intended community contribution entry point for this feature. |
 | Cloud sync of progress | No server dependency; local SQLite is sufficient |
 | Multiplayer / competitive modes | Not relevant for target audience |
 
@@ -608,6 +661,8 @@ The following were explicitly considered and excluded from v1:
 The following questions remain unresolved and require research before or during implementation:
 
 1. **Minimum hardware spec** — `faster-whisper` with the `base` model requires ~1GB RAM and has CPU inference latency. Research needed: what is the realistic minimum spec in target schools and homes across different countries, and which Whisper model size should be the default recommendation? This affects installation documentation and potentially the choice of default model.
+
+2. **Vocabulary coverage curve validation** — The Silver and Gold milestones use 25% and 50% frequency-weighted token coverage as thresholds. These percentages need to be validated against actual `wordfreq` data for a representative sample of target languages to confirm they land at natural, well-paced breakpoints — not reachable in the first session, not months apart. A short Python script against `wordfreq` would resolve this before implementation begins.
 
 ---
 
