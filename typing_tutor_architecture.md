@@ -7,7 +7,7 @@
 > **Target users:** Visually impaired children, their parents, and teachers  
 > **Repository:** github.com/SiggiSmara/takki  
 >
-> *Takki (Icelandic): a key or mechanical button. Also the sound of fingers finding their keys.*
+> *Takki (Icelandic): a key or mechanical button.  Implies the sound of a button being pressed.*
 
 ---
 
@@ -31,16 +31,17 @@
 14. [ADR-013: Onboarding Language Detection](#adr-013-onboarding-language-detection)
 15. [ADR-014: Progress Reporting](#adr-014-progress-reporting)
 16. [ADR-015: Piper Voice Model Distribution](#adr-015-piper-voice-model-distribution)
-17. [Component Overview](#component-overview)
-18. [Out of Scope](#out-of-scope)
-19. [Open Questions](#open-questions)
-20. [Next Steps Before Implementation](#next-steps-before-implementation)
+17. [ADR-016: Visual Display Design](#adr-016-visual-display-design)
+18. [Component Overview](#component-overview)
+19. [Out of Scope](#out-of-scope)
+20. [Open Questions](#open-questions)
+21. [Next Steps Before Implementation](#next-steps-before-implementation)
 
 ---
 
 ## 1. Project Context
 
-This project aims to fill a gap in the accessibility software landscape: a free, open source, multilingual touch typing tutor designed specifically for visually impaired children. The only known comparable product (TypeAbility) is proprietary, English-language focused, and has limited support for other languages.
+This project aims to fill a gap in the accessibility software landscape: a free, open source, multilingual touch typing tutor designed specifically for visually impaired children. 
 
 ### Design Principles
 
@@ -48,7 +49,7 @@ This project aims to fill a gap in the accessibility software landscape: a free,
 - **Zero elevated privileges.** Installation and operation must not require administrator rights. This is a hard constraint for school deployment.
 - **Minimal setup friction.** The fewer decisions required of a parent or teacher at setup, the better. The ideal is: install, hand to child, done.
 - **Audio is the primary interface.** All interaction — instructions, feedback, navigation — must work without any visual reference.
-- **Open source contribution friendly.** Architecture should make it easy for teachers, linguists, and developers to contribute language packs, word lists, and lesson content without deep Python knowledge.
+- **Open source contribution friendly.** Architecture should make it easy for teachers, linguists, and developers to contribute word lists, and lesson content without deep Python knowledge.
 - **Start focused, don't block the future.** Build for Windows first, but architect for everywhere. Avoid Windows-specific patterns where a cross-platform alternative costs nothing extra. Platform-specific code lives behind clean interfaces so future contributors can add macOS or Linux support without unpicking assumptions throughout the codebase.
 
 ### Platform Constraints (Fixed)
@@ -69,7 +70,7 @@ The three areas that are genuinely Windows-specific are isolated behind clean in
 | `get_home_row_keys()` | Windows keyboard layout scan codes | Carbon (macOS) / xkb (Linux) |
 | `get_fallback_tts()` | pyttsx3 → SAPI | pyttsx3 → nsss (macOS) / espeak (Linux) |
 
-By calling these functions rather than the platform APIs directly, adding macOS or Linux support becomes an exercise in implementing three functions — not refactoring the codebase. The practical effort to port to either platform, once Windows is stable, is estimated at 2-4 days of focused work plus platform-specific packaging and testing.
+By calling these functions rather than the platform APIs directly, adding macOS or Linux support becomes an exercise in implementing three functions — not refactoring the codebase. The practical effort to port to either platform, once Windows is stable, should be a minimal ammount of focused work plus platform-specific packaging and testing.
 
 ---
 
@@ -413,7 +414,7 @@ Child profiles and progress data need to persist across sessions. SQLite is the 
 - No server, no network, no account required
 - Sufficient for the data volumes involved (per-key accuracy history, session logs, milestone records)
 
-Each child has a named profile selected at startup (spoken menu). Multiple children can share one installation.
+Each child has a named profile selected at startup (spoken menu). Multiple children can share one installation. Each profile stores visual display settings (on/off, text size, background color, foreground color, cursor style) — see ADR-016.
 
 ---
 
@@ -463,42 +464,6 @@ A separate restart key (configurable, default Escape held or double-tap) abandon
 
 ---
 
-## Component Overview
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                    App Core (Python)                    │
-├──────────────────────┬──────────────────────────────────┤
-│    Input Layer       │    Audio Layer                   │
-│  • pynput            │  • Piper TTS (default)           │
-│  • Windows layout    │  • pyttsx3/SAPI (fallback)       │
-│    API               │  • pygame (sound cues)           │
-│                      │  • Cloud TTS (optional plugin)   │
-├──────────────────────┼──────────────────────────────────┤
-│    Voice Input       │    Lesson Engine                 │
-│  • faster-whisper    │  • Layer controller              │
-│    (local)           │  • Adaptive key introducer       │
-│                      │  • Drill sequence generator      │
-│                      │  • Word selector                 │
-├──────────────────────┼──────────────────────────────────┤
-│    Language Layer    │    Feedback Layer                │
-│  • wordfreq          │  • Rule-based (default)          │
-│  • Letter freq       │  • LLM plugin (optional)         │
-│  • Bigram model      │                                  │
-│  • Word list filter  │                                  │
-│  • Parent override   │                                  │
-├──────────────────────┴──────────────────────────────────┤
-│                  Config / State                         │
-│  • Hardcoded language configs (40+ languages)           │
-│  • language_override.yaml (edge cases)                  │
-│  • custom_words.txt (parent additions/exclusions)       │
-│  • SQLite: child profiles, progress, session history    │
-│  • Global lesson progression rules config               │
-└─────────────────────────────────────────────────────────┘
-```
-
----
-
 ## ADR-013: Onboarding Language Detection
 
 **Decision:** Detect language automatically from Windows locale on first run and begin communicating immediately in that language. If detection fails or the detected language is not supported, rotate spoken welcomes through the top 5 languages by global speaker population until the user responds or selects a language.
@@ -545,7 +510,7 @@ All three are served by the same summary at different verbosity levels. The summ
 - Current layer active (drills only / drills + real words)
 - Milestone level reached
 - Vocabulary coverage percentage ("you can now type X% of everyday words") — reported as a live motivating signal between milestones
-- Clean words today (words typed correctly on first attempt without backspacing — a concrete accuracy signal meaningful to a child)
+- Clean words today (words typed correctly on first attempt — a concrete accuracy signal meaningful to a child)
 - Best execution speed today (reported only at Diamond milestone and above)
 - Streak (days practiced in a row)
 
@@ -600,6 +565,115 @@ The SAPI fallback (via pyttsx3) means the app is never non-functional due to a m
 
 ---
 
+## ADR-016: Visual Display Design
+
+**Decision:** Optional secondary visual display, off by default, child-configured. Consistent two-line layout across both lesson layers. Visual cues appear after or simultaneously with audio — never before. Display shows only what is directly part of the current task.
+
+### Rationale
+
+Literature on learned helplessness in visually impaired children establishes that over-assistance from observers who have more information than the child is a documented harm. A visual display that surfaces per-keypress error data to an observer before the child has processed their own audio feedback creates exactly the information asymmetry that produces this effect. VI children themselves report feeling their independence limited by parents and support teachers who intervene on the basis of what they observe.
+
+The governing principle is the **observer invariant**: nothing appears on screen during a session that the child has not already heard or is simultaneously hearing. The screen is a subtitle to the audio, not an additional information channel.
+
+The display is opt-in and child-controlled — consistent with the finding that true independence means control over how and when support is received. Children with visual impairments typically know their preferred colors and contrast settings from other assistive tools; the setup workflow respects this prior knowledge.
+
+### The Two-Line Layout
+
+All visual display uses a consistent two-line structure:
+
+- **Upper line** — the prompt: what the child is supposed to type
+- **Lower line** — the response: what the child has typed, with the cursor marking the current position
+
+**Layer 1 (character drills):**
+
+```
+        a              ← current target character, centered
+    f g h |            ← up to 3 history characters left of centered cursor
+```
+
+- Upper line: current target character, large, centered. Appears simultaneously with TTS announcement.
+- Lower line: up to 3 most recently correctly typed characters to the left of a centered cursor. Cursor sits directly below the target character in the upper line.
+- On correct keypress: the correct character briefly occupies the cursor position, shifts left into history, oldest history character disappears off-screen, upper line updates to the next target.
+- On wrong keypress: nothing changes. Cursor stays. Upper line stays. No error indicator of any kind.
+
+**Layer 2 (real words):**
+
+```
+h o u s e             ← full word
+h o u | _             ← typed characters aligned, cursor at next position
+```
+
+- Upper line: the full word, displayed from the start.
+- Lower line: correctly typed characters aligned character-by-character with the upper line. Cursor at the next untyped position, directly below the corresponding character above.
+- On correct keypress: character fills cursor position, cursor advances one step right.
+- On wrong keypress: nothing changes. No error indicator.
+
+### What the Display Never Shows
+
+- Error indicators — no red X, no color change, no flash on wrong keypress
+- What wrong key was pressed
+- Real-time accuracy statistics or WPM
+- A keyboard diagram or key highlighting
+- Running session statistics
+- Layer or mode indicator during a session
+- Vocabulary coverage percentage during a session
+
+All of the above are either available post-session in the parent/teacher summary (ADR-014) or serve only as observer-facing data that creates information asymmetry.
+
+### Visual Setup Workflow
+
+Setup is navigated entirely by audio. The child runs through five steps:
+
+1. **On/off** — visual display is off by default. The child explicitly enables it.
+2. **Text size** — named steps: Large, Very Large, Maximum. TTS names each; a sample character previews on screen.
+3. **Background color** — see Color Selection below.
+4. **Foreground color** — same flow; the chosen background is shown throughout so the child previews the actual combination as foreground changes.
+5. **Cursor style** — Block, Underline, Blinking. TTS names each; cursor updates live in the preview.
+
+After all five steps, the full combination is shown with a sample word:
+
+> TTS: *"Here is how your screen will look — yellow background, black text, showing the word 'house'. Press Enter to save or Escape to change."*
+
+Settings are stored per child profile in SQLite (see ADR-011).
+
+### Color Selection
+
+Children with visual impairments typically know their preferred colors from overlays and assistive tools used in school. The selection flow respects this prior knowledge:
+
+1. TTS asks the child to name their preferred color.
+2. `faster-whisper` transcribes the response. A fuzzy match is attempted against the palette and common synonyms (e.g. "navy" / "dark blue" → Navy; "ivory" / "off-white" → Cream).
+3. If a match is found: the screen previews the color immediately. TTS confirms and asks the child to accept or try again.
+4. If no match or no response: TTS moves to browse mode — each palette color is spoken in turn, the screen updates live, and the child confirms with Enter or voice.
+
+Background is selected first, then foreground. The chosen background is shown throughout foreground selection so the child always previews the real combination.
+
+**Palette:**
+
+| Name | Hex |
+|---|---|
+| Black | #000000 |
+| White | #FFFFFF |
+| Yellow | #FFE600 |
+| Orange | #FF6600 |
+| Red | #CC0000 |
+| Blue | #0055CC |
+| Green | #008800 |
+| Purple | #6600CC |
+| Cream | #FFFACD |
+| Navy | #001F5B |
+
+Foreground and background are chosen independently. The only constraint: foreground and background may not be the same color — same-color entries are excluded from the browse list and rejected on voice match. No soft warning for near-similar colors — the live preview gives the child direct feedback on readability and they are the best judge of their own vision.
+
+### Alternatives Considered
+
+- **Pre-paired high-contrast presets:** Rejected. VI children's visual needs vary significantly by condition; free independent selection with a live preview respects individual needs and prior knowledge.
+- **Real-time error indicators (red X, color flash):** Rejected. Creates information asymmetry — an observer sees error data before the child has processed their own audio feedback. Literature links this directly to learned helplessness in VI children.
+- **Keyboard diagram with key highlighting:** Rejected. Undermines the touch-typing goal; creates a visual dependency that delays muscle memory formation.
+- **Single-line display:** Rejected. Conflates prompt and response; requires a different layout metaphor for Layer 1 vs Layer 2, creating unnecessary cognitive overhead at the layer transition.
+- **Observer-facing real-time dashboard:** Rejected. All observer data is post-session via the parent/teacher summary (ADR-014). Real-time observer data creates conditions for unsolicited intervention.
+
+---
+
 ## Component Overview
 
 ```
@@ -624,12 +698,19 @@ The SAPI fallback (via pyttsx3) means the app is never non-functional due to a m
 │  • Bigram model      │                                  │
 │  • Word list filter  │                                  │
 │  • Parent override   │                                  │
+├──────────────────────┼──────────────────────────────────┤
+│    Visual Layer      │                                  │
+│  • Two-line display  │                                  │
+│    (off by default)  │                                  │
+│  • Per-profile config│                                  │
+│  • pygame rendering  │                                  │
 ├──────────────────────┴──────────────────────────────────┤
 │                  Config / State                         │
 │  • Hardcoded language configs (40+ languages)           │
 │  • language_override.yaml (edge cases)                  │
 │  • custom_words.txt (parent additions/exclusions)       │
-│  • SQLite: child profiles, progress, session history    │
+│  • SQLite: child profiles, progress, session history,   │
+│            visual display settings per profile          │
 │  • Global lesson progression rules config               │
 │  • Piper model cache (per language, downloaded once)    │
 └─────────────────────────────────────────────────────────┘
