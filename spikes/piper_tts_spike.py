@@ -23,6 +23,7 @@ import wave
 import subprocess
 
 VOICE_NAME = "en_US-lessac-low"
+VOICE_DIR = "spikes"
 OUTPUT_WAV = "spikes/spike_piper_output.wav"
 TEST_PHRASE = "Hello. This is a test of the Piper text to speech engine."
 
@@ -51,7 +52,7 @@ def download_voice() -> bool:
     print("(This is a one-time download of ~30MB — subsequent runs use the cache)\n")
     t0 = time.perf_counter()
     result = subprocess.run(
-        [sys.executable, "-m", "piper.download_voices", VOICE_NAME],
+        [sys.executable, "-m", "piper.download_voices", "--download-dir", VOICE_DIR, VOICE_NAME],
         capture_output=False,
     )
     elapsed = time.perf_counter() - t0
@@ -66,10 +67,10 @@ def download_voice() -> bool:
 def synthesize() -> bool:
     section("3. Synthesis")
     try:
-        from piper import PiperVoice
-        import piper.download as dl
+        from pathlib import Path
+        from piper.voice import PiperVoice
 
-        model_path = dl.get_model_path(VOICE_NAME)
+        model_path = Path(VOICE_DIR) / f"{VOICE_NAME}.onnx"
         print(f"Loading model from: {model_path}")
 
         t0 = time.perf_counter()
