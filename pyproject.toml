@@ -1,0 +1,27 @@
+[project]
+name = "takki"
+version = "0.1.0"
+description = "Typing tutor for visually impaired children"
+authors = [
+    { name = "Sigurður Smárason", email = "8719966+SiggiSmara@users.noreply.github.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "faster-whisper>=1.2.1",
+    "pygame>=2.6.1",
+    "pynput>=1.8.2 ; sys_platform == 'win32'",
+    "pyttsx3>=2.99",
+    "wordfreq>=3.1.1",
+]
+
+[project.scripts]
+takki = "takki:main"
+
+[build-system]
+requires = ["uv_build>=0.9.14,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]
