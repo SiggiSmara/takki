@@ -18,7 +18,7 @@ For small fixes or documentation changes, a pull request is fine without a prior
 
 ## Code style and architecture
 
-- Read [docs/architecture.md](docs/architecture.md) before writing any code. The design decisions there are agreed and should be treated as constraints unless you open an issue to revisit one.
+- Read [docs/typing_tutor_architecture.md](docs/typing_tutor_architecture.md) before writing any code. The design decisions there are agreed and should be treated as constraints unless you open an issue to revisit one.
 - The lesson engine is intentionally language-agnostic. Changes that make it language-specific will not be accepted without strong justification.
 - Platform-specific code must live behind the three clean interfaces described in the architecture (language detection, home row derivation, fallback TTS). Do not call platform APIs directly from application logic.
 
