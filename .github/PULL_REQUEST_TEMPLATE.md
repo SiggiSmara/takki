@@ -23,7 +23,7 @@ Fixes #
 - [ ] My change preserves the **offline-first** principle — no new network calls at runtime.
 - [ ] External I/O sits behind a `typing.Protocol` per ADR-019; logic does not call hardware/model APIs directly.
 - [ ] New code has unit tests against fakes; hardware/model tests are tagged with the appropriate pytest marker.
-- [ ] If this introduces or changes an architectural decision, an ADR is added or updated in `docs/typing_tutor_architecture.md`.
+- [ ] If this introduces or changes an architectural decision, an ADR is added or updated in `docs/architecture.md`.
 - [ ] `uv run pytest`, `uv run ruff check`, `uv run ruff format --check`, and `uv run pyright` all pass locally.
 - [ ] `CHANGELOG.md` updated under `[Unreleased]` if user-facing.
 

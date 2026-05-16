@@ -20,7 +20,7 @@ Takki teaches touch typing through audio. All instruction, feedback, and navigat
 
 **Pre-implementation.** The architecture is agreed and documented. No code has been written yet.
 
-See [docs/typing_tutor_architecture.md](docs/typing_tutor_architecture.md) for the full design decisions and rationale.
+See [docs/architecture.md](docs/architecture.md) for the full design decisions and rationale.
 
 ## Platform
 

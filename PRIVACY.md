@@ -53,7 +53,7 @@ If you deploy Takki in a school or other institutional setting, the responsible 
 
 ## How this stance is enforced
 
-This is a deliberate architectural decision. The relevant decisions in [docs/typing_tutor_architecture.md](docs/typing_tutor_architecture.md):
+This is a deliberate architectural decision. The relevant decisions in [docs/architecture.md](docs/architecture.md):
 
 - ADR-002 (speech recognition is local-only)
 - ADR-003 (text-to-speech is local-only)

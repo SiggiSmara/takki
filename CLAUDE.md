@@ -1,6 +1,6 @@
 # Takki — Claude Code Guide
 
-Typing tutor for visually impaired children. Audio is the primary interface. See [docs/typing_tutor_architecture.md](docs/typing_tutor_architecture.md) for all design decisions and rationale.
+Typing tutor for visually impaired children. Audio is the primary interface. See [docs/architecture.md](docs/architecture.md) for all design decisions and rationale.
 
 ## Non-negotiable rules
 
@@ -74,7 +74,7 @@ src/
     voice/          # faster-whisper wrapper
     config.py       # Global lesson progression thresholds
 docs/
-  typing_tutor_architecture.md
+  architecture.md
 intents/            # Per-language intent definitions (lang.yaml)
 tests/
 CLAUDE.md
