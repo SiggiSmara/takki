@@ -83,7 +83,7 @@ pyproject.toml
 
 ## Open questions (resolve before implementing affected components)
 
-1. **Piper TTS native Windows support** — spike required. If broken, ADR-003 needs revision.
-2. **`pygame.mixer` headless on Windows** — confirm audio plays without a display window.
-3. **Vocabulary coverage curve** — validate 25%/50% Silver/Gold thresholds against `wordfreq` data.
+1. ~~**Piper TTS native Windows support**~~ — **resolved.** Works natively on Windows (Python 3.11 MSVC). Model load ~2.3s (one-time), synthesis ~0.19s per phrase. ADR-003 stands.
+2. ~~**`pygame.mixer` headless on Windows**~~ — **resolved.** Confirmed: mixer initialises (22050 Hz stereo) and plays audio with no display window. `pygame.display` never touched. pygame 2.6.1 / SDL 2.28.4.
+3. ~~**Vocabulary coverage curve**~~ — **resolved.** Silver/Gold are key-count based (≥1/3 and ≥2/3 of language's full key set). Coverage displayed as motivating info only, computed over words ≥ 3 chars (aligns with Layer 2 floor; prevents single-letter articles skewing the number).
 4. **Minimum hardware spec** — affects default Whisper model recommendation.
