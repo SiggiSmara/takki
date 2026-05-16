@@ -24,6 +24,7 @@ These are decided. Do not introduce code that violates them without opening a di
 - **Audio first.** Every user-facing interaction must work without a visual display. The visual display (pygame window) is opt-in per child profile.
 - **Language-agnostic lesson engine.** No language-specific logic inside the lesson engine. All language inputs come from the language layer (wordfreq + config).
 - **No LLM for word filtering.** Explicitly decided against. See ADR-008.
+- **LLM for intent recognition only, hardware-gated.** Optional tertiary fallback in the layered intent pipeline (ADR-017). Never used for word filtering, encouragement generation, or real-time lesson content. Hardware tier (0–3) determined automatically at setup. See ADR-004, ADR-018.
 - **No backspace in lesson engine.** Wrong keypresses are auto-rejected. Backspace is disabled. See ADR-012.
 
 ## Platform interfaces
@@ -43,13 +44,14 @@ Never call platform APIs directly from application logic. Always go through thes
 | Component | Choice | Notes |
 |---|---|---|
 | Speech recognition | `faster-whisper` | Local only. `base` model default. CPU viable (~500–800ms). |
-| TTS (primary) | Piper TTS | Native Windows support TBD — spike required before finalising. |
+| TTS (primary) | Piper TTS | Confirmed on Windows (Python 3.11 MSVC). Load ~2.3s once, synthesis ~0.19s. |
 | TTS (fallback) | pyttsx3 / SAPI | Always available on Windows, no install needed. |
 | Keyboard capture | `pynput` | No elevated privileges needed on Windows. |
 | Language data | `wordfreq` | ~40 languages, bundled, no network. |
 | Persistence | SQLite (`sqlite3`) | Built-in, single file, no server. |
 | Audio cues | `pygame.mixer` | Immediate low-latency feedback. Initialised independently of display. |
 | Visual display | `pygame.display` | Conditional — only initialised if visual display enabled in profile. |
+| LLM (intent fallback) | `llama-cpp-python` | Optional, hardware-adaptive tiers 0–3. Fallback for intent recognition only. See ADR-004, ADR-018. |
 | Distribution | PyInstaller | Must be built on Windows. |
 
 ## Project structure (target)
@@ -67,6 +69,7 @@ src/
     config.py       # Global lesson progression thresholds
 docs/
   typing_tutor_architecture.md
+intents/            # Per-language intent definitions (lang.yaml)
 tests/
 CLAUDE.md
 CONTRIBUTING.md
