@@ -34,10 +34,14 @@
 17. [ADR-016: Visual Display Design](#adr-016-visual-display-design)
 18. [ADR-017: Voice Command and Intent Recognition](#adr-017-voice-command-and-intent-recognition)
 19. [ADR-018: Hardware-Adaptive LLM Tiering](#adr-018-hardware-adaptive-llm-tiering)
-20. [Component Overview](#component-overview)
-21. [Out of Scope](#out-of-scope)
-22. [Open Questions](#open-questions)
-23. [Next Steps Before Implementation](#next-steps-before-implementation)
+20. [ADR-019: Testing Strategy and I/O Isolation](#adr-019-testing-strategy-and-io-isolation)
+21. [ADR-020: Voice Input Trigger — Push-to-Talk](#adr-020-voice-input-trigger--push-to-talk)
+22. [ADR-021: Voice Activity Detection](#adr-021-voice-activity-detection)
+23. [ADR-022: Localisation Strategy](#adr-022-localisation-strategy)
+24. [Component Overview](#component-overview)
+25. [Out of Scope](#out-of-scope)
+26. [Open Questions](#open-questions)
+27. [Next Steps Before Implementation](#next-steps-before-implementation)
 ---
 
 ## 1. Project Context
@@ -112,7 +116,7 @@ Voice control is a core feature — the app must be navigable without vision. Th
 
 The small startup latency (model load time) is acceptable given that the app is not a real-time dictation tool — voice is used for navigation commands, not continuous input.
 
-Whisper produces text transcriptions. Mapping transcriptions to actionable intents (e.g. "faster", "next", "stop") is handled by a separate intent recognition layer — see ADR-017.
+Whisper produces text transcriptions. Mapping transcriptions to actionable intents (e.g. "faster", "next", "stop") is handled by a separate intent recognition layer — see ADR-017. The microphone is closed by default and opens only via push-to-talk — see ADR-020 for the activation model and ADR-021 for end-of-utterance detection.
 
 ### Alternatives Considered
 
@@ -235,6 +239,8 @@ This means:
 - Dead keys and AltGr combinations are handled by Windows before the app sees them
 
 `pynput` is chosen over the `keyboard` library because it does not require elevated privileges on Windows for standard key capture.
+
+The push-to-talk key (ADR-020) is captured via the same `pynput` pipeline as any other key; the lesson engine consumes character events and ignores the talk key, while the voice subsystem subscribes to talk-key events and ignores character keys.
 
 ### Alternatives Considered
 
@@ -482,6 +488,8 @@ Each child has a named profile selected at startup (spoken menu). Multiple child
 - Visual display settings (on/off, text size, background color, foreground color, cursor style) — see ADR-016
 - Voice settings (`tts_rate`, `tts_voice`, `language` override) — see ADR-003
 
+**Profile portability:** the SQLite file *is* the profile data. It lives at `%APPDATA%\Takki\takki.sqlite` on Windows (the cross-platform location is the standard per-user application data folder reported by the platform interface). To move a child's progress to another computer, copy that file to the same location on the destination machine and rename if necessary to avoid colliding with an existing profile. No export/import flow is provided in v1 — the file is the export format. Parents are reminded of this in the parent/teacher summary (ADR-014).
+
 ---
 
 ## ADR-012: Audio Feedback Design
@@ -493,6 +501,8 @@ Each child has a named profile selected at startup (spoken menu). Multiple child
 For a visually impaired child, the timing and nature of feedback is critical:
 
 **Immediate sound cues** (not TTS): A short pleasant chime for a correct keypress, a gentle low tone for incorrect. These play within milliseconds of the keypress — fast enough to feel like direct cause and effect. Implemented via `pygame.mixer` with small bundled `.wav` files. TTS latency (even with fast local models) is too slow for this feedback loop. Confirmed on Windows: `pygame.mixer` initialises and plays audio without `pygame.display` — no window is opened (pygame 2.6.1, SDL 2.28.4, 22050 Hz stereo).
+
+The talk-key chirp tones (chirp-on / chirp-off, see ADR-020) use the same `pygame.mixer` pipeline. They are tonally distinct from the correct/error cues so the child never confuses "mic is open" with "you typed correctly."
 
 **TTS for spoken content:** Everything else — what to type next, encouragement, instructions, milestone announcements, menu navigation — uses Piper TTS (or SAPI fallback). This content is not latency-sensitive.
 
@@ -517,6 +527,12 @@ Triggered when `remaining = alpha_size − keys_mastered ≤ 6`. The coverage fr
 - *Real words, early (Layer 2, pre-Diamond):* The whole word is spoken first, then spelled letter by letter: *"house — h, o, u, s, e"*. The child then types. The whole-word reading reinforces correct pronunciation; the spelling reinforces phoneme-grapheme mapping. Both are intentional — this is the design that distinguishes real words from the pseudo-word approach that was considered and rejected (see ADR-010).
 
 - *Real words, dictation mode (Layer 2, Diamond+):* The spelling step is withheld. Only the whole word is spoken. The child must recall the spelling from memory. Successful typing without the spelling prompt is the readiness signal for the Diamond milestone.
+
+**TTS interrupt on keypress:**
+
+When the child types while TTS is still speaking the prompt, the TTS is cancelled immediately and the keypress is processed normally. Confident typers — especially older or more fluent children — should not be slowed by the prompt audio they already know. The sound cue and any re-prompt that follow play against silence, not over a tail of unfinished speech. The cancellation is per-utterance: only the current spoken prompt is interrupted, not the application's audio pipeline.
+
+This applies in both layers and to any non-essential TTS (encouragement, between-word remarks). Universal voice commands and milestone announcements complete their utterance and are not interrupted by keypresses, since they are not part of the current type-this-character loop.
 
 **Wrong character handling — auto-reject:**
 
@@ -943,6 +959,324 @@ Tier definitions themselves (which model maps to which tier, what RAM thresholds
 
 ---
 
+## ADR-019: Testing Strategy and I/O Isolation
+
+**Decision:** All external-world interfaces are defined as `typing.Protocol` classes. Application logic depends on the Protocol, never on the concrete implementation. Tests use fake implementations by default. Hardware- and model-dependent tests are isolated via pytest markers and run on dedicated CI tiers via GitHub Actions.
+
+### Rationale
+
+The project has many awkward-to-test dependencies: Piper TTS (model download, Windows-confirmed), `faster-whisper` (model download, audio in), `pynput` (keyboard hardware), `pygame.mixer` (sound card), Windows locale and keyboard APIs (Windows-only), `llama-cpp-python` (GB-scale models). Without architectural discipline, testing the lesson engine, intent pipeline, and progression rules would require setting up these dependencies — slow, flaky, and incompatible with the headless Linux dev environment.
+
+The fix is to push every external interface behind a `Protocol` boundary. The pattern is already proven by the three Windows-specific platform interfaces (ADR-005, ADR-006, ADR-013) — this ADR generalises it to every external interface in the system.
+
+`typing.Protocol` is preferred over abstract base classes:
+- No inheritance required — implementations are structurally typed
+- No mocking framework overhead — fakes are trivial Python classes
+- Static type checkers verify conformance
+- The plugin architecture (LLM, optional cloud TTS in component overview) naturally drops in as alternative Protocol implementations
+
+### Protocol Catalog
+
+Each protocol is introduced when its consuming component is first built. Real implementations live in their domain module (`src/takki/audio/`, `src/takki/voice/`, etc.). Fakes live in `tests/fakes/`.
+
+| Protocol | Real implementation(s) | Fake |
+|---|---|---|
+| `TTSEngine` | `PiperTTS`, `FallbackTTS` (pyttsx3/SAPI) | `RecordingTTS` |
+| `SoundCuePlayer` | `PygameMixerCues` | `RecordingCues` |
+| `KeyEventStream` | `PynputKeyStream` | `ScriptedKeyStream` |
+| `VoiceTranscriber` | `WhisperTranscriber` | `ScriptedTranscriber` |
+| `WordSource` | `WordfreqSource` | `FixedListSource` |
+| `Clock` | `SystemClock` | `FakeClock` |
+| `LLMRunner` | `LlamaCppRunner` | `ScriptedLLMRunner` |
+| `HardwareProbe` | `RealHardwareProbe` | `FixedHardwareProbe` |
+
+The three platform functions in CLAUDE.md (`get_system_language`, `get_home_row_keys`, `get_fallback_tts`) are the Windows-specific instances of this same pattern.
+
+**The Protocol boundary is also the plugin boundary.** Any third-party or community-contributed alternative — a different TTS engine, an alternative wake-word handler, a cloud-LLM adapter forked downstream — is a new Protocol implementation drop-in. There is no separate plugin framework; the Protocol set above is the public extension surface.
+
+### Test Pyramid
+
+Default `uv run pytest` runs only Tiers 1 and 2 — fast, deterministic, no models, no hardware.
+
+| Tier | Scope | Where | Trigger | Cost |
+|---|---|---|---|---|
+| 1. Unit | Logic against fakes — lesson engine, progression rules, intent layers 1–3, milestone gates, encouragement selection | Linux | every PR | seconds; ~80% of suite |
+| 2. Integration (stubbed I/O) | SQLite in-memory, `wordfreq` for 2 languages, pyttsx3+espeak, pygame headless, Whisper on WAV fixtures | Linux | every PR | ~1 minute |
+| 3. Platform smoke | Windows platform interfaces, `pynput`, Piper, SAPI | `windows-latest` | every PR | a few minutes |
+| 4. Slow integration | Full Whisper corpus, all LLM tiers, all `wordfreq` languages | matrix | nightly | longer; off critical path |
+| 5. Release | PyInstaller bundle + `.exe` smoke test | `windows-latest` | on tag | rare |
+
+Pytest markers control inclusion: `audio`, `model`, `windows_only`, `slow`, `release`. `pyproject.toml` declares them so they're recognised. Default invocation:
+
+    uv run pytest -m "not (audio or model or windows_only or slow or release)"
+
+### GitHub Actions Strategy
+
+CI covers the bits Linux dev cannot:
+
+- **OS matrix.** `windows-latest` runs platform smoke tests every PR. `ubuntu-latest` runs the bulk of the suite. No macOS runner until ADR-006 scope expands.
+- **Model caching.** `actions/cache` keyed on Piper, Whisper, and LLM model URLs. First run downloads; subsequent runs hit cache. Integration tests against real models cost seconds after warm-up.
+- **Headless audio/video.** `SDL_AUDIODRIVER=dummy` and `SDL_VIDEODRIVER=dummy` let `pygame` initialise without a sound card or display. Catches code-path regressions; humans verify quality.
+- **Synthetic audio fixtures.** A small WAV corpus committed to the repo covers common intents in each Beta-supported language. Whisper transcription is deterministic given a fixed model and fixed input — accuracy regressions on Whisper version bumps are visible.
+
+  *Source of the corpus:* the fixtures are generated by TTS (Piper at varied rates and voices) and supplemented with adult-recorded clips read by maintainers and contributors. We do **not** collect or commit recordings of children's speech — both for ethical reasons and because we have no consent framework that could make it appropriate. The synthetic corpus catches regressions in transcription and intent resolution, but it does not represent the variability of real child speech. Evaluating recognition quality on actual children is therefore deferred to the Beta friends/family pilot, where informed parental consent and an appropriate testing protocol can be arranged per family.
+
+### What CI Cannot Verify
+
+- Audio quality and naturalness of Piper voices
+- Keyboard latency feel
+- Whether intent recognition resolves well on real child speech (high variability, disfluencies)
+- Visual display readability across vision conditions
+
+These require human testing. The Beta friends/family pilot in [roadmap.md](roadmap.md) is the venue.
+
+### Alternatives Considered
+
+- **Mocking framework (`unittest.mock` patching):** Rejected. Encourages patching at import time, which leaves real implementations available as accidental coupling vectors. Protocol+fake is more explicit and works with static type checking.
+- **Dependency injection container:** Rejected. Overkill at this codebase size. Direct constructor injection of Protocol implementations is sufficient.
+- **No isolation, real I/O in tests:** Rejected. Slow tests get skipped; skipped tests rot.
+- **Abstract base classes instead of Protocols:** Rejected. Forces inheritance, blocks structural typing, more verbose for no benefit.
+
+---
+
+## ADR-020: Voice Input Trigger — Push-to-Talk
+
+**Decision:** Voice input is gated by a dedicated push-to-talk key. The microphone is closed by default and opens only when the child presses the talk key. A short ascending chirp marks the start of listening; a short descending chirp marks the end. Wake-word and always-listening approaches are explicitly rejected.
+
+### Rationale
+
+The competing approaches all fail on at least one project constraint:
+
+- **Always-listening.** Mic permanently hot. Contradicts the offline/privacy stance — even if no audio leaves the device, a parent or school IT explaining Takki cannot honestly say "the mic only opens when the child asks it to." That guarantee is a meaningful trust signal for the target audience.
+- **Wake word ("Hey Takki").** Local wake-word engines (Porcupine, OpenWakeWord) are available and would preserve offline operation. But wake-word engines are trained predominantly on adult speech and have documented poor activation rates on children's voices. A child who already has limited feedback channels and has to repeat "Hey Takki" four times before the mic opens is a frustrated child. There is also no visual indicator a VI child can use to distinguish "the system heard the wake word but didn't understand the command" from "the system didn't hear the wake word at all" — both produce silence.
+- **Push-to-talk.** Explicit control by the child. Audio cues (chirp on / chirp off) give a VI child unambiguous feedback that the mic is hot. The key itself is a learnable interaction — for a typing tutor, this is curriculum-adjacent rather than friction. Privacy guarantee is concrete: the mic is open exactly when the child holds or has just pressed the talk key.
+
+The "extra key to learn" cost is genuinely small. VI children develop strong touch-locating muscle memory; a single dedicated key at a fixed location is well within the same skill set the app is teaching.
+
+### Default Talk Key
+
+**Right Ctrl** is the default. It is configurable per profile.
+
+The key was selected against these constraints:
+
+- Must not conflict with screen reader modifier conventions (Caps Lock and Insert are off-limits — these are used by NVDA, JAWS, and Windows Narrator and may collide if a screen reader is later installed alongside Takki)
+- Must not conflict with characters the child types during lessons (rules out alphabet keys, Spacebar, Enter)
+- Must be reliably findable by touch (rules out function keys on laptop keyboards where they share with brightness/volume, and Pause/Break which is missing on many keyboards)
+- Single-press behaviour must be a no-op in normal use (so that accidental presses outside of intent-to-talk are harmless)
+- Right Shift was considered and rejected — pressed often enough during typing that accidental triggering during practice is plausible.
+
+No strong cross-tool convention exists in the VI community for this specific interaction; voice-input tools in the accessibility space (Talon Voice, Dragon) typically default to "configure your own." The Right Ctrl default will be validated during the Beta pilot, and the per-profile configurability means changing the default later is reversible without code change.
+
+### Trigger Behaviour
+
+**Press-and-release with auto-close** is the default:
+
+1. Child presses and releases the talk key
+2. Chirp-on plays (~150ms, ascending tone)
+3. Microphone opens; recording begins
+4. End-of-utterance is detected by VAD (see ADR-021) — typically 800ms of silence after speech
+5. Chirp-off plays (~150ms, descending tone)
+6. Recording ends; audio is passed to Whisper for transcription
+7. Transcription is passed to the intent recognition pipeline (ADR-017)
+
+A maximum recording length (default 10 seconds) caps any open-ended recording if VAD fails.
+
+**Press-and-hold** is supported as a per-profile alternative. In this mode the mic is open while the key is held; release ends the recording immediately and skips the VAD-driven silence detection. Some children find walkie-talkie style more intuitive; some find press-and-release lower effort. The choice is part of profile setup.
+
+### Audio Feedback Design
+
+Chirp tones are distinct from the lesson engine's correct/error tones (ADR-012). They are:
+
+- Short (~150ms each) — not interrupting the child's flow
+- Tonally distinct from sound cues used elsewhere
+- Identical across sessions and across lessons — predictable cue, not a varying signal
+
+Together with the chirp-on/chirp-off pair, this gives a VI child unambiguous, time-bounded feedback about when the mic is hot. The mic is never in an ambiguous state from the child's perspective.
+
+### Interaction With the Lesson Engine
+
+- **During a lesson:** the talk key opens the mic for navigation commands (repeat, faster, slower, exit). The lesson pauses while listening. If a child presses the talk key mid-word, the current word is held in place, the command is resolved, then practice resumes from the same position. The word is not abandoned and progress is not lost.
+- **During TTS output:** pressing the talk key cancels the current TTS utterance (consistent with the keypress-interrupts-TTS rule in ADR-012) and opens the mic immediately. The child should not have to wait for the prompt to finish before being able to interrupt.
+- **During setup:** the talk key opens an additional command channel for universal escape intents (go back, help, skip). The setup script itself opens the mic during specific question prompts ("What's your name?", "What color do you want?") without the child needing the talk key.
+
+### Alternatives Considered
+
+- **Always-listening with intent threshold filter.** Rejected — keeps mic open, conflicts with privacy stance.
+- **Wake word.** Rejected — see Rationale; child-speech activation rates are poor and the silent-failure mode is bad UX for VI children.
+- **Push-to-mute (mic on by default, child turns it off).** Rejected — same privacy issue as always-listening, with worse defaults.
+- **Touch a specific keyboard zone (multi-key combo).** Rejected — not different from a single key in practice, more complex to learn.
+- **Hardware button (USB push-to-talk dongle).** Rejected for v1 — adds a peripheral dependency. May reconsider for v2 if pilot feedback suggests it.
+
+---
+
+## ADR-021: Voice Activity Detection
+
+**Decision:** Use `webrtcvad` for end-of-utterance detection. With push-to-talk (ADR-020), start-of-speech is signalled by the talk key, so VAD is needed only to determine when the child has finished speaking. Neural VAD alternatives (`silero-vad`) are deferred.
+
+### Rationale
+
+VAD requirements are different under push-to-talk than under always-on listening:
+
+- Start-of-speech is signalled by the talk key — no acoustic detection needed
+- End-of-speech ("they stopped, send to Whisper now") is the only acoustic decision left
+- End-of-utterance detection is exactly what energy + spectrum-based VAD is good at; the harder cases for VAD (distinguishing speech from speech-like noise during a long passive listening window) do not arise
+
+`webrtcvad` is:
+
+- A small native extension (~30 KB)
+- The original Google WebRTC voice activity detector — mature, well-tested, widely deployed
+- Pure C with thin Python bindings — no neural network, no model file, no GPU
+- Fast enough to run frame-by-frame on the audio stream with negligible CPU cost
+
+The cost of adding `silero-vad` (the obvious neural alternative) is substantial:
+
+| | `webrtcvad` | `silero-vad` (via Torch) | `silero-vad` (via onnxruntime) |
+|---|---|---|---|
+| Install size | ~30 KB | ~200 MB (CPU-only Torch wheels) | ~50 MB |
+| Bundle impact (PyInstaller) | negligible | +500 MB – 1 GB | ~60 MB |
+| Cold-start time | instant | 1–2s Torch import | <500ms |
+| ML runtime count | 0 | 3 (Torch + CTranslate2 + llama.cpp) | 3 (onnxruntime + CTranslate2 + llama.cpp) |
+| Accuracy on quiet speech | OK | Better | Better |
+
+For end-of-utterance under push-to-talk, the accuracy gain does not justify the added runtime weight. The most expensive part of the project's distribution story is already the PyInstaller bundle plus Piper models plus optional LLM models. Adding 500 MB+ for a marginal VAD upgrade would dominate the install size for a feature most children will never notice working correctly.
+
+### How It Works in Takki
+
+1. Talk key pressed → audio recording begins at 16 kHz mono (matching Whisper's native rate)
+2. Audio is fed to `webrtcvad` in 20ms frames
+3. VAD reports speech/non-speech per frame
+4. After N consecutive non-speech frames (default 800ms after the first speech frame is seen), recording ends
+5. A maximum recording length (default 10 seconds) caps the recording if VAD fails to detect silence
+6. The full recording is passed to Whisper for transcription
+
+### Sensitivity Setting
+
+`webrtcvad` exposes an aggressiveness setting of 0–3:
+
+- 0 = least aggressive (more permissive — more likely to declare speech, less likely to cut off quiet speakers)
+- 3 = most aggressive (more likely to declare silence, more likely to cut off quiet speech)
+
+**Default: 2** (moderate). Configurable per profile. A quiet child or noisy school environment may need a lower setting; an environment with continuous background noise may need a higher one.
+
+### Failure Modes
+
+- **VAD never detects silence (continuous noise).** The 10-second cap ends the recording, Whisper transcribes, and the intent layer handles whatever it can. If Whisper returns garbage, the standard "I didn't catch that — try again" response fires.
+- **VAD declares silence immediately (mic level too low).** Whisper receives a too-short audio clip and returns nothing meaningful. Same response: "I didn't catch that — try again." Repeated occurrences may prompt the app to suggest reducing VAD aggressiveness during a future setup pass.
+- **VAD declares silence during a long pause mid-utterance.** Acceptable failure mode — the child can simply press the talk key again. With push-to-talk, a "false cut" is annoying but not destructive.
+
+### Future Upgrade Path
+
+If Beta pilot testing reveals that `webrtcvad` consistently fails on real child speech in real environments (quiet speakers, noisy classrooms, accented speech), the upgrade path is `silero-vad` loaded via `onnxruntime` — **not** via Torch. `onnxruntime` is a much smaller dependency than Torch and remains compatible with the bundle-size constraint.
+
+The VAD interface sits behind a Protocol (ADR-019), so swapping implementations is a localised change.
+
+### Alternatives Considered
+
+- **Naive energy threshold.** Works in quiet environments but doesn't distinguish speech from noise. Sensitive to mic gain — a child with a quiet mic gets cut off; a child with a hot mic gets noise recorded as speech. `webrtcvad` is barely heavier and meaningfully more robust.
+- **`silero-vad` via Torch.** Quality gain doesn't justify Torch dependency and bundle inflation. See table above.
+- **`silero-vad` via onnxruntime.** Viable but adds an ML runtime we don't currently need. Reserved as the upgrade path if `webrtcvad` proves insufficient.
+- **Streaming Whisper / continuous transcription.** Out of scope — we are not building a dictation tool. Voice input is for short navigation commands, not continuous speech-to-text.
+
+---
+
+## ADR-022: Localisation Strategy
+
+**Decision:** All localisation surfaces use YAML files per language. This applies uniformly to runtime UI strings, the encouragement phrase bank (ADR-012), intent definitions (ADR-017), and the voice catalog (ADR-015). No gettext, no `.po`/`.mo` workflow, no translation platform integration in v1.
+
+### Rationale
+
+The conventional choice for Python application localisation is gettext. For Takki specifically, gettext is a poor fit:
+
+- **Every UI string is spoken, not displayed.** Gettext's strengths — handling display length, layout, RTL/LTR, character set quirks — do not apply. The visual display in Takki shows only the typing prompt and typed characters (ADR-016), no localised labels.
+- **Multi-variant phrases are first-class.** The encouragement bank (ADR-012) requires multiple variants per phrase with random selection for natural variety. Many UI strings benefit from the same treatment ("Welcome back, Lisa" / "Hi Lisa! Ready to practice?" / "Hello Lisa, let's go" — picked at random keeps repeated sessions from sounding scripted). Gettext does not handle multi-variant naturally; YAML lists do.
+- **Existing localisation surfaces already use YAML.** Intent definitions (ADR-017) and voice catalog (ADR-015) are YAML by design. Adding gettext for one surface fragments the contribution pattern; YAML across the board is one mental model.
+- **Contributor audience.** Native-speaker volunteers (teachers, linguists, parents) edit YAML directly via PRs. They are not running professional localisation workflows. `.po`/`.mo` tooling is unnecessary friction.
+- **Native-speaker review is more effective on a single readable file.** The language pack PR template requires a native-speaker review; a reviewer scanning one YAML file catches phrasing issues that a scattered `.mo` review would miss.
+
+### Schema
+
+Four files per language, each in its own directory:
+
+```
+strings/{lang}.yaml          # Runtime UI strings (this ADR)
+encouragement/{lang}.yaml    # Encouragement phrase bank (ADR-012)
+intents/{lang}.yaml          # Voice command intents (ADR-017)
+voice_catalog/{lang}.yaml    # Curated Piper voice metadata (ADR-015)
+```
+
+UI strings (`strings/{lang}.yaml`) — single string or list of variants per key:
+
+```yaml
+ready_to_practice: "Ready to practice."
+
+language_detected: "Language detected: {language}."
+
+profile_loaded:
+  - "Hi {name}! Ready to practice?"
+  - "Welcome back, {name}."
+  - "Hello {name}, let's go."
+
+milestone_silver:
+  - "You've reached Silver! You know one third of the alphabet now."
+  - "Silver milestone! That's a third of your alphabet mastered."
+
+didnt_catch_that:
+  - "I didn't catch that — try again."
+  - "Sorry, can you say that again?"
+```
+
+A list-valued key triggers random selection at lookup time. Single-value keys are returned verbatim.
+
+### Pluralisation
+
+For languages with rich plural categories (Polish, Russian, Arabic, etc.), explicit forms by CLDR plural category:
+
+```yaml
+keys_known:
+  one: "You know one key now."
+  few: "You know {count} keys now."
+  many: "You know {count} keys now."
+  other: "You know {count} keys now."
+```
+
+The string resolver picks the appropriate form using CLDR plural rules. The `babel` library (pure Python, widely available) provides the plural-rule lookup; `babel` is added as a runtime dependency when the localisation module lands.
+
+A pluralised key may itself contain a list of variants per form:
+
+```yaml
+clean_words_today:
+  one:
+    - "One clean word today!"
+    - "You typed one perfectly today."
+  other:
+    - "{count} clean words today!"
+    - "You typed {count} perfectly today."
+```
+
+### Loading and Runtime Behaviour
+
+- At app start, the active language's YAML files are loaded into memory. Files are small (kilobytes); the cost is negligible.
+- A `tr(key, **params)` function returns the appropriate string. Multi-variant keys randomise per call.
+- Format strings use Python's `str.format` style (`{name}`, `{count}`).
+- Missing keys fall back to English (`en`) with a logged warning. The user-facing failure mode is "the app speaks English for this one phrase," not a crash.
+
+### Contribution Path
+
+1. A contributor (native speaker or working with a native-speaker reviewer) forks the repo
+2. They add or edit the four YAML files for their language
+3. They open a PR using the language pack template (`.github/ISSUE_TEMPLATE/language_pack.md`)
+4. Native-speaker review is required for merge
+5. No build step — YAML is read at runtime; the change is live in the next session
+
+### Alternatives Considered
+
+- **Gettext (`.po` / `.mo`).** Rejected. See rationale. Mature ecosystem, but mismatched with audio-first delivery and multi-variant requirements; adds compilation step and tooling burden for no benefit in this project.
+- **Fluent (Mozilla).** Promising — natively handles plural categories, grammatical gender, and selectors. Adds `fluent.runtime` as a dependency. Reserved as a future option if YAML proves insufficient for languages with very complex morphology. The cost is a learning curve for contributors who don't already know Fluent.
+- **Weblate / Crowdin integration.** Both support YAML in addition to .po. No integration at v1 scope — contributors edit YAML via PRs. Possible future addition without changing the file format.
+- **Mixed approach (gettext for UI strings, YAML for everything else).** Rejected. Fragmenting the contribution pattern for one surface adds friction with no proportionate benefit.
+
+---
+
 ## Component Overview
 
 ```
@@ -1017,6 +1351,8 @@ The following questions remain unresolved and require research before or during 
 
 1. **Minimum hardware spec** — `faster-whisper` with the `base` model requires ~1GB RAM and has CPU inference latency. Research needed: what is the realistic minimum spec in target schools and homes across different countries, and which Whisper model size should be the default recommendation? This affects installation documentation and potentially the choice of default model.
 
+2. **Session pacing and fatigue** — Audio-only practice is more cognitively taxing than sighted practice. Research needed: do other VI-focused educational tools enforce session length limits, recommend breaks, or auto-pause after a period of inactivity? Should Takki proactively suggest a break, or trust the child and parent to manage pacing? Affects ADR-010 (lesson structure) and the steady-state session loop.
+
 ---
 
 ## Next Steps Before Implementation
@@ -1031,11 +1367,7 @@ This pre-ADR document captures agreed architectural decisions but is not suffici
 - Add a CONTRIBUTING.md stub so early visitors understand contributions are welcome
 
 **2. Implementation Roadmap**
-A phased implementation plan is required before any code is written. It should define:
-- Milestone phases (e.g., Phase 1: core engine + single language; Phase 2: full language support; Phase 3: voice control; etc.)
-- Dependencies between components (what must exist before what can be built)
-- What constitutes "done" for each phase
-- How the project will be structured for open source contribution from the start
+See [roadmap.md](roadmap.md) for the agreed phased plan (Alpha, Beta, V1), the in/out-of-scope split per phase, dependency-ordered task lists within each phase, and the "done" criteria.
 
 **3. Resolve Open Questions**
 The minimum hardware spec question should be researched before finalising the choice of default Whisper model, as this affects the installation experience for the target audience.

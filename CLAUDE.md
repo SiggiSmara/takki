@@ -6,6 +6,8 @@ Typing tutor for visually impaired children. Audio is the primary interface. See
 
 - **Never run `python` directly.** Always `uv run python` or `uv run pytest`. No exceptions.
 - **Never `cd` before a command.** All commands run from the repo root. Use absolute or repo-relative paths.
+- **All external I/O behind a `typing.Protocol`.** Lesson engine, intent pipeline, and progression logic depend on the Protocol, not the implementation. No direct calls to Piper, pynput, Whisper, `pygame`, etc. from logic code. The three Windows-specific platform interfaces below are the most prominent case; the rule applies to every external interface. See ADR-019.
+- **Tests use fakes by default.** Each Protocol ships with a fake implementation in `tests/fakes/`. Hardware- and model-dependent tests are gated by pytest markers (`audio`, `model`, `windows_only`, `slow`) and excluded from the default `uv run pytest`. See ADR-019.
 
 ## Development environment
 
@@ -26,6 +28,8 @@ These are decided. Do not introduce code that violates them without opening a di
 - **No LLM for word filtering.** Explicitly decided against. See ADR-008.
 - **LLM for intent recognition only, hardware-gated.** Optional tertiary fallback in the layered intent pipeline (ADR-017). Never used for word filtering, encouragement generation, or real-time lesson content. Hardware tier (0–3) determined automatically at setup. See ADR-004, ADR-018.
 - **No backspace in lesson engine.** Wrong keypresses are auto-rejected. Backspace is disabled. See ADR-012.
+- **Push-to-talk only.** The microphone is closed by default and opens only when the child presses the configurable talk key (default Right Ctrl). No wake word, no always-listening, no continuous transcription. See ADR-020.
+- **YAML for all localisation.** Runtime UI strings, encouragement bank, intent definitions, and voice catalog are all per-language YAML files. No gettext, no `.po`/`.mo` workflow. See ADR-022.
 
 ## Platform interfaces
 
@@ -43,10 +47,12 @@ Never call platform APIs directly from application logic. Always go through thes
 
 | Component | Choice | Notes |
 |---|---|---|
-| Speech recognition | `faster-whisper` | Local only. `base` model default. CPU viable (~500–800ms). |
+| Speech recognition | `faster-whisper` | Local only. `base` model default. CPU viable (~500–800ms). Triggered by push-to-talk (ADR-020). |
+| Voice activity detection | `webrtcvad` | End-of-utterance only (push-to-talk supplies start). Tiny C extension, no ML runtime. See ADR-021. |
 | TTS (primary) | Piper TTS | Confirmed on Windows (Python 3.11 MSVC). Load ~2.3s once, synthesis ~0.19s. |
 | TTS (fallback) | pyttsx3 / SAPI | Always available on Windows, no install needed. |
-| Keyboard capture | `pynput` | No elevated privileges needed on Windows. |
+| Keyboard capture | `pynput` | No elevated privileges needed on Windows. Push-to-talk key handled via same pipeline. |
+| Localisation | YAML per language | UI strings, encouragement, intents, voice catalog — all YAML. No gettext. See ADR-022. |
 | Language data | `wordfreq` | ~40 languages, bundled, no network. |
 | Persistence | SQLite (`sqlite3`) | Built-in, single file, no server. |
 | Audio cues | `pygame.mixer` | Immediate low-latency feedback. Initialised independently of display. |
@@ -83,6 +89,15 @@ pyproject.toml
 - No docstrings beyond a single short line where genuinely needed.
 - No error handling for things that cannot happen. Validate only at system boundaries.
 - No premature abstraction. Three similar lines beats a helper that only exists for hypothetical reuse.
+
+## Testing strategy
+
+- Define a `typing.Protocol` for every external interface; concrete impls live in their domain module, fakes live in `tests/fakes/`.
+- Default `uv run pytest` runs only fast deterministic tests against fakes. Slow tests opt in via markers.
+- GitHub Actions runs the tiered pyramid: unit + integration + Windows platform smoke on every PR; slow integration nightly; PyInstaller on release tags.
+- Headless audio/video on CI via `SDL_AUDIODRIVER=dummy` / `SDL_VIDEODRIVER=dummy`.
+- Whisper, Piper, and LLM models are cached in CI via `actions/cache`; integration tests against real models cost seconds after warm-up.
+- See ADR-019 for the full pyramid, protocol catalog, and CI strategy.
 
 ## Open questions (resolve before implementing affected components)
 

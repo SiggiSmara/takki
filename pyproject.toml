@@ -23,5 +23,54 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "pre-commit>=4.6.0",
+    "pyright[nodejs]>=1.1.409",
     "pytest>=9.0.3",
+    "ruff>=0.15.13",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+extend-exclude = ["spikes"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "SIM", # flake8-simplify
+    "RUF", # ruff-specific
+]
+ignore = [
+    "E501",  # line length is handled by the formatter
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B", "SIM"]
+
+[tool.pyright]
+include = ["src", "tests"]
+exclude = ["**/__pycache__", ".venv", "build", "dist", "spikes"]
+pythonVersion = "3.11"
+typeCheckingMode = "strict"
+reportMissingTypeStubs = false
+reportUnknownMemberType = "warning"
+reportUnknownVariableType = "warning"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = [
+    "-m", "not (audio or model or windows_only or slow or release)",
+]
+markers = [
+    "audio: tests that require a working audio output device or SDL audio init",
+    "model: tests that require downloading or loading a Piper, Whisper, or LLM model",
+    "windows_only: tests that only run on Windows (platform interfaces, SAPI, pynput on Windows)",
+    "slow: integration tests that take more than a few seconds to run",
+    "release: tests that run only on release tags (PyInstaller bundle smoke tests)",
 ]

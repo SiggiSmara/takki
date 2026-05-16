@@ -1,0 +1,32 @@
+# Normalise line endings on commit; check out per platform
+* text=auto eol=lf
+
+# Source files always LF
+*.py text eol=lf
+*.md text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.toml text eol=lf
+*.txt text eol=lf
+*.cfg text eol=lf
+*.ini text eol=lf
+*.json text eol=lf
+
+# Binary assets — never normalise
+*.wav binary
+*.mp3 binary
+*.ogg binary
+*.onnx binary
+*.gguf binary
+*.bin binary
+*.pt binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.exe binary
+
+# Lockfiles — LF, never merge interactively
+uv.lock text eol=lf merge=ours

@@ -216,3 +216,16 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Pyright
+.pyright/
+
+# Takki-specific
+# Model caches if a developer points them at the repo for testing
+/models/
+# Local synthetic audio fixtures larger than 500 KB are stored via Git LFS or kept out
+# of the repo; small reference clips can be checked in directly under tests/fixtures/.
+# PyInstaller working artifacts (build/ and dist/ already covered above)
+takki.spec
+# Local pre-commit cache
+.pre-commit-cache/
