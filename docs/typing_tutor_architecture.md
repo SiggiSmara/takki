@@ -28,15 +28,16 @@
 11. [ADR-010: Lesson Structure and Progression](#adr-010-lesson-structure-and-progression)
 12. [ADR-011: Persistence and State](#adr-011-persistence-and-state)
 13. [ADR-012: Audio Feedback Design](#adr-012-audio-feedback-design)
-14. [ADR-013: Onboarding Language Detection](#adr-013-onboarding-language-detection)
+14. [ADR-013: Onboarding and Profile Selection](#adr-013-onboarding-and-profile-selection)
 15. [ADR-014: Progress Reporting](#adr-014-progress-reporting)
 16. [ADR-015: Piper Voice Model Distribution](#adr-015-piper-voice-model-distribution)
 17. [ADR-016: Visual Display Design](#adr-016-visual-display-design)
-18. [Component Overview](#component-overview)
-19. [Out of Scope](#out-of-scope)
-20. [Open Questions](#open-questions)
-21. [Next Steps Before Implementation](#next-steps-before-implementation)
-
+18. [ADR-017: Voice Command and Intent Recognition](#adr-017-voice-command-and-intent-recognition)
+19. [ADR-018: Hardware-Adaptive LLM Tiering](#adr-018-hardware-adaptive-llm-tiering)
+20. [Component Overview](#component-overview)
+21. [Out of Scope](#out-of-scope)
+22. [Open Questions](#open-questions)
+23. [Next Steps Before Implementation](#next-steps-before-implementation)
 ---
 
 ## 1. Project Context
@@ -45,7 +46,7 @@ This project aims to fill a gap in the accessibility software landscape: a free,
 
 ### Design Principles
 
-- **Offline first.** The app must work completely without internet access after installation. Many target users are in school or home environments where internet reliability cannot be assumed.
+- **Fully offline.** The app works completely without internet access after installation. Nothing about a child's voice, typing, or progress is ever sent anywhere. Some optional components (Piper voice models, optional local LLM models) are downloaded once at setup; after that, the app never needs network access.
 - **Zero elevated privileges.** Installation and operation must not require administrator rights. This is a hard constraint for school deployment.
 - **Minimal setup friction.** The fewer decisions required of a parent or teacher at setup, the better. The ideal is: install, hand to child, done.
 - **Audio is the primary interface.** All interaction — instructions, feedback, navigation — must work without any visual reference.
@@ -111,6 +112,8 @@ Voice control is a core feature — the app must be navigable without vision. Th
 
 The small startup latency (model load time) is acceptable given that the app is not a real-time dictation tool — voice is used for navigation commands, not continuous input.
 
+Whisper produces text transcriptions. Mapping transcriptions to actionable intents (e.g. "faster", "next", "stop") is handled by a separate intent recognition layer — see ADR-017.
+
 ### Alternatives Considered
 
 - **Windows Speech Recognition API:** Rejected. Requires per-language configuration, poor multilingual support, inconsistent accuracy.
@@ -121,7 +124,7 @@ The small startup latency (model load time) is acceptable given that the app is 
 
 ## ADR-003: Text-to-Speech (Audio Feedback)
 
-**Decision:** Piper TTS as default, with pyttsx3/Windows SAPI as automatic fallback. Optional cloud TTS as a user-configured plugin.
+**Decision:** Piper TTS as default, with pyttsx3/Windows SAPI as automatic fallback.
 
 ### Rationale
 
@@ -132,6 +135,7 @@ Audio feedback is the primary output modality. Quality matters — a robotic or 
 - Runs fully locally, no internet
 - Pre-built voice models available for many languages
 - Lightweight enough to bundle or download at first run
+- Confirmed working natively on Windows (Python 3.11 MSVC): model load ~2.3s once per session, synthesis ~0.19s per phrase (real-time factor ~0.06×)
 
 **pyttsx3/SAPI** is retained as fallback because:
 - Zero additional installation — uses built-in Windows voices
@@ -140,37 +144,80 @@ Audio feedback is the primary output modality. Quality matters — a robotic or 
 
 **Character and key name pronunciation** is handled directly by TTS rather than through lookup tables. Neural TTS engines correctly pronounce letter names and common special characters in their target language (e.g., a German TTS voice pronounces "ä" as "A-Umlaut" correctly). Explicit overrides are added only when testing reveals specific mispronunciations — this list is expected to be very small.
 
+**Per-student voice settings** are stored in the child profile (see ADR-011):
+
+- `tts_rate` — Piper `length_scale` float. Default 1.0. Range 0.6–2.0 in 0.2 steps. Higher = slower. Adjusted via spoken "faster" / "slower" commands; each command moves one step. Speech rate is highly individual — a change of 0.2 is perceptible and meaningful. The range covers the full practical spectrum from fast-but-intelligible (0.6) to very deliberate (2.0).
+- `tts_voice` — Piper voice model key, e.g. `en_US-amy-low`. Null means use the language default. Gender and accent are baked into the model; there is no separate gender field. The parent selects a voice from the curated `voice_catalog.yaml` (see ADR-015) before the model is downloaded — the chosen key is then stored here.
+- `language` — BCP-47 language code override. Null means inherit the globally detected system language. Used when a child's instruction language differs from the OS locale (e.g. an English OS in a Welsh-medium school).
+
+**SAPI fallback rate mapping:** SAPI rate runs −10 (slowest) to +10 (fastest), opposite direction to `length_scale`. Mapping: `sapi_rate = round((1.0 − length_scale) × 10)`, clamped to [−10, 10].
+
 ### Alternatives Considered
 
 - **Pre-recorded audio files:** Rejected. Would require recording every letter, word, and phrase in every supported language. Eliminates multilingual flexibility and creates an enormous maintenance burden.
-- **Cloud TTS only:** Rejected. Breaks offline-first principle.
+- **Cloud TTS only:** Rejected. Breaks fully-offline principle.
 - **SAPI only:** Rejected. Voice quality is insufficient for a primary audio interface, especially for children.
 
 ---
 
 ## ADR-004: LLM Integration
 
-**Decision:** Optional, pluggable, offline-first. Default operation requires no LLM. LLM role is limited to encouragement phrase variation and contextual sentence generation.
+**Decision:** Local LLM only, optional, hardware-adaptive (see ADR-018). Never used for real-time encouragement. Used only as a tertiary fallback for intent recognition (see ADR-017) when the rule-based pipeline returns no confident match, primarily during setup. Online/cloud LLMs are explicitly out of scope.
 
 ### Rationale
 
-LLMs add genuine value in specific places but introduce risk if overused:
+LLMs add genuine value in specific places but introduce risk if overused. After detailed evaluation:
 
-**Where LLMs help:**
-- Generating varied, warm encouragement responses (avoiding the repetition of "Well done!" becoming meaningless)
-- Generating simple age-appropriate sentences for advanced lesson phases
-- Onboarding conversation ("What is your name? What language would you like to practice?")
+**Where LLMs help (and are used):**
+- Fallback intent recognition during setup, when the child uses phrasing not anticipated by the rule-based pipeline
+- Tertiary fallback during steady-state voice navigation, for unusual phrasings
 
-**Where LLMs were explicitly rejected:**
-- **Word list filtering for age-appropriateness** — LLMs have baked-in cultural bias, inconsistent results between runs, and impose value judgements that belong to parents and teachers, not the software. See ADR-008.
+**Where LLMs are explicitly NOT used:**
 
-The integration is designed as a clean interface (`FeedbackGenerator`, `SentenceGenerator`) with a rule-based default implementation. Users can optionally configure a local LLM backend (via Ollama) or a cloud backend (OpenAI, Anthropic) through a config file. The app never requires or assumes an LLM is present.
+*Real-time encouragement generation.* Latency budget is essentially zero — the child completes a word and expects positive feedback immediately. Even on capable hardware, local LLM generation of a short encouragement phrase takes seconds; on the target older hardware it takes 4–10 seconds. This breaks the encouragement loop entirely. Encouragement uses a rule-based phrase bank per language with light randomization (see ADR-012). The "variety problem" is solved by authoring enough phrases — 30–50 per language is sufficient for any practical session length.
+
+*Word list filtering for age-appropriateness.* LLMs have baked-in cultural bias, inconsistent results between runs, and impose value judgements that belong to parents and teachers, not the software. See ADR-008.
+
+*Online/cloud LLM integration.* Rejected entirely. The benefits are concentrated in setup (a one-time event), but cloud integration requires the user to configure API keys, accept network dependency, and accept that their child's voice transcriptions leave the device. The trade is wrong: the users who would most benefit from a smoother setup are the least likely to do additional configuration to get there. Cloud LLM support would also contradict the fully-offline principle, add testing and maintenance burden, and create privacy concerns disproportionate to its benefit. Users who want this can fork the project.
+
+### LLM Tier Model
+
+Three optional tiers, with the offered tier determined automatically by hardware detection at setup (see ADR-018):
+
+**Tier 0 — No LLM (default for all users)**
+- Rule-based intent recognition (ADR-017) and rule-based encouragement
+- Works on any 8 GB RAM machine of any reasonable age
+- No download, no runtime cost beyond the base app
+
+**Tier 1 — Small LLM (1–1.5B parameters)**
+- For machines with ~3 GB+ free RAM after Takki loads, CPU roughly 7+ years old or newer
+- Model: Llama 3.2 1B Q4 or Qwen 2.5 1.5B Q4 in GGUF format
+- Download: ~700 MB – 1.2 GB on demand
+- Intent recognition latency: 1–3 seconds on target hardware
+
+**Tier 2 — Medium LLM (3–4B parameters)**
+- For machines with ~5 GB+ free RAM after Takki loads, CPU roughly 5+ years old or newer
+- Model: Llama 3.2 3B Q4 or Gemma 3 4B Q4
+- Download: ~2–2.5 GB on demand
+- Intent recognition latency: under 1.5 seconds; quality noticeably better than Tier 1
+
+**Tier 3 — Larger LLM (7–8B parameters)**
+- For modern machines or machines with a capable discrete GPU
+- Model: Qwen 2.5 7B Q4 or Llama 3.1 8B Q4
+- Download: ~4–5 GB on demand
+- Intent recognition latency: under 1 second; approaches frontier-model quality on narrow tasks
+
+The runtime is `llama-cpp-python` — pure Python bindings to `llama.cpp`, fully offline, cross-platform.
+
+### Why Not Fine-Tune a Takki-Specific Model
+
+Considered and deferred. A fine-tuned 1B model can achieve 99%+ intent accuracy on narrow domains (e-commerce benchmarks confirm this), but requires synthetic dataset generation per language, single-GPU training infrastructure, and ongoing maintenance as intents evolve. For a hobby project at this stage, generic instruction-tuned models are good enough as a fallback layer behind the rule-based pipeline. Fine-tuning remains a viable future direction if usage grows and the rule-based pipeline shows systematic gaps.
 
 ### Alternatives Considered
 
-- **LLM as core dependency:** Rejected. Breaks offline-first principle, adds hardware requirements, creates ongoing cost dependency.
-- **No LLM at all:** Viable for v1 but the pluggable interface is low-cost to build and high-value for contributors who want to enhance the experience.
-
+- **LLM as core dependency:** Rejected. Breaks fully-offline principle, adds hardware requirements, excludes families with older equipment.
+- **No LLM at all:** Viable; would work but loses the fallback option for unusual phrasings during setup. The hardware-adaptive opt-in pattern means no user is forced to use an LLM, so this provides upside without imposing cost on constrained machines.
+- **Cloud/online LLM:** Rejected. See above.
 ---
 
 ## ADR-005: Keyboard Handling
@@ -236,11 +283,24 @@ Chinese, Japanese, and Vietnamese use Input Method Editors — the user types La
 - `pip install wordfreq` — integrates naturally into the Python stack
 
 From the word frequency data, the app derives:
-- **Letter frequency ranking** — computed by iterating over frequency-weighted words, determines the order in which new keys are introduced in lessons
+- **Letter frequency ranking** — computed by iterating over frequency-weighted words, restricted to characters present on the keyboard layout, determines the order in which new keys are introduced in lessons
 - **Bigram and trigram frequencies** — computed from the same source, drives character pair and sequence generation in Layer 1 drills
-- **Filtered word list** — top N words by frequency meeting length and character criteria
+- **Filtered word list** — top N words by frequency meeting length and character criteria; words containing characters absent from the keyboard layout are excluded (see Layer 2 below)
 
-All three are recomputed at every application startup. The computation is fast (milliseconds for a few thousand words) and this approach avoids cache invalidation complexity. If performance ever becomes a concern, caching can be added later.
+**Native alphabet definition** — The authoritative set of characters in the language's alphabet comes from the keyboard layout, not from wordfreq. The platform interface (scan code enumeration via `get_home_row_keys()` extended to all alphabetic positions) returns exactly the characters the physical keyboard can produce; this is the native key set. Characters present in wordfreq only through loanwords — e.g. é in English, from café and résumé — are absent from the keyboard layout and excluded from the native set.
+
+Two consequences:
+- The letter frequency ranking (which key to introduce next) uses wordfreq `char_weight`, restricted to characters in the native key set. Loanword-only characters are never in the ordering.
+- The Layer 2 word list excludes any word containing a character not in the native key set. Loanwords are dropped entirely — from the lesson and from the coverage denominator.
+
+In the spike script (`spikes/wordfreq_coverage_spike.py`), native alphabet membership is approximated statistically: a character is native if it appears in words totalling ≥0.1% of 3+ character alphabetic text (`MIN_NATIVE_COVERAGE = 0.001`). This correctly separates genuine alphabet members (Icelandic ð, þ; German ü, ä, ö) from loanword-only characters. The real implementation uses the keyboard layout, which is authoritative.
+
+**Startup cost (measured across 20 Latin-script languages):**
+- `get_frequency_dict()` load: 25–400ms for most languages. Polish (1.2s) and Finnish (0.8s) are outliers due to large word counts (450k and 725k words respectively). On Windows, file I/O is slower — lazy loading on first language access is preferred over loading all at startup.
+- Letter frequency ranking: sub-100ms for any language — just a weighted sum over the frequency dict.
+- Full coverage curve (all 26 steps): 200ms–14s depending on word count. **Never compute the full curve at startup.** The app only needs the letter ordering (cheap) at startup; coverage for the child's current key set is computed incrementally as keys are mastered.
+
+This approach avoids cache invalidation complexity. If lazy loading is insufficient for the Polish/Finnish case, a pre-computed letter ordering can be bundled as a small static file alongside the language config.
 
 **Limitation:** `wordfreq` data is a snapshot through approximately 2021 and is no longer actively updated. For a children's typing tutor using common vocabulary, this is entirely acceptable — high-frequency common words do not change significantly over time.
 
@@ -345,7 +405,7 @@ LANGUAGE_CONFIGS = {
 Motor learning through character pairs and short sequences weighted by letter and bigram frequency. Home row keys only initially, introduced one hand at a time. Goal: accurate finger placement through repetition, building towards muscle memory.
 
 **Layer 2 — Real words** (unlocks when ≥ 8 keys known)  
-Words from the filtered word list constrained to keys the child has already mastered. Runs alongside Layer 1 — does not replace it. Word length progresses (3 → 4 → 5 → 6 letters) as accuracy on the current length exceeds 85% over 20 words. Hearing a real word spoken then typing it reinforces correct phoneme-grapheme associations alongside motor skill — a documented benefit for visually impaired children.
+Words from the filtered word list constrained to keys the child has already mastered. Words containing characters absent from the keyboard layout (loanwords such as café, résumé) are excluded from both the word list and the coverage denominator — the child is never asked to type them and they do not inflate coverage. Runs alongside Layer 1 — does not replace it. Word length progresses (3 → 4 → 5 → 6 letters) as accuracy on the current length exceeds 85% over 20 words. Hearing a real word spoken then typing it reinforces correct phoneme-grapheme associations alongside motor skill — a documented benefit for visually impaired children.
 
 **Why two layers, not three:** The original design included a pseudo-word layer between drills and real words, following the Keybr approach. Pseudo-words work for sighted typists because the exercise is purely visual — copy this symbol sequence, no phonics involved. For a blind child hearing a spoken pseudo-word, the exercise unavoidably teaches sound-to-spelling associations, and those associations may be wrong or misleading in languages with irregular spelling (English and French especially). The real-words layer with a constrained key set fills the same bridge role from drills to fluent typing without the linguistic risk. Interleaving Layer 1 and Layer 2 concurrently also produces better long-term retention than completing each phase in strict sequence.
 
@@ -377,17 +437,21 @@ Named milestones wrap the adaptive engine to give parents, teachers, and childre
 | Level | Criterion |
 |---|---|
 | **Bronze** | Home row keys known (≥ 90% accuracy sustained) — drills only |
-| **Silver** | 25% vocabulary coverage — "1 in 4 everyday words" reachable |
-| **Gold** | 50% vocabulary coverage — "half of everyday words" reachable |
+| **Silver** | ≥ 1/3 of the language's full key set mastered |
+| **Gold** | ≥ 2/3 of the language's full key set mastered |
 | **Platinum** | Full alphabet known (≥ 90% accuracy sustained) — any word attemptable |
 | **Diamond** | Fluent dictation — ≥ 95% accuracy on real words without spelling prompt |
 | **Speed** | Dictation at ≥ 30 WPM with ≥ 95% accuracy (optional; for motivated older learners) |
 
-**Vocabulary coverage** is computed as frequency-weighted token coverage from the `wordfreq` data already loaded at startup: what fraction of words in typical everyday text can be typed using the child's current key set. This metric is language-agnostic — 25% means the same thing to a child in any language, even though the number of keys needed to reach it varies by language. The app can report this as a live percentage ("you can now type 1 in 3 everyday words") which gives children a concrete, motivating signal between milestones.
+**Milestone gates are key-count based, not coverage based.** Silver triggers when the child has mastered ≥ 1/3 of the language's full key set; Gold at ≥ 2/3. "Full key set" is the count of distinct alphabetic characters on the language's physical keyboard layout, enumerated via the platform scan code interface. This is the authoritative source — it includes diacritics and native special characters (e.g. Icelandic has 34 keys including ð, þ, á, é, í; Czech 40 keys) and excludes loanword-only characters that happen to appear in wordfreq data. Using the language's own alphabet size as the denominator means Silver and Gold are always "a third of your alphabet" and "two thirds of your alphabet" regardless of language complexity.
+
+Measured across 20 Latin-script languages: Silver gate (⌊alpha/3⌋) ranges from 8 keys (Finnish, Indonesian) to 13 keys (Czech, Slovak), average 10 keys. Gold gate (⌊alpha×2/3⌋) ranges from 16 keys (Indonesian) to 27 keys (Czech, Slovak), average 21 keys. Coverage at the Silver gate varies from 5% (Slovenian) to 35% (French); at Gold from 61% (Turkish) to 96% (Italian). This wide variation confirms that coverage percentage is unsuitable as a milestone criterion: the same key-count fraction produces very different coverage depending on language frequency distribution.
+
+**Vocabulary coverage is displayed as motivating information, not as a milestone gate.** Coverage = frequency-weighted fraction of 3-or-more-letter words typeable with the child's current key set. It is reported live ("you can now type 1 in 3 everyday words") and announced at each key milestone, but it does not trigger level-ups.
+
+The ≥ 3 character floor serves two purposes: it aligns the metric with the lesson engine (Layer 2 starts with 3-letter words, so coverage reflects what the child actually practises), and it prevents single-character function words from distorting the number. Without the floor, Hungarian coverage jumps ~8% the moment 'a' (the definite article, a 1-letter word) is added to the key set — a spike that has nothing to do with typing skill. With the floor, the early coverage curve is honestly flat (you cannot form meaningful words from just two or three letters), then rises sharply when enough letters combine to unlock real words.
 
 Speed is not reported or targeted until Diamond and above because before that point the bottleneck is key-finding, not finger movement. The natural transition signal from Platinum to Diamond is the child succeeding in dictation mode — hearing just the whole word and typing it correctly from memory without the spelling prompt.
-
-The specific coverage percentages (25%, 50%) are tentative pending validation against actual coverage curves for target languages — see Open Questions.
 
 Each milestone triggers a distinct audio celebration — an important engagement mechanism for visually impaired children who cannot see progress bars or badges.
 
@@ -414,7 +478,9 @@ Child profiles and progress data need to persist across sessions. SQLite is the 
 - No server, no network, no account required
 - Sufficient for the data volumes involved (per-key accuracy history, session logs, milestone records)
 
-Each child has a named profile selected at startup (spoken menu). Multiple children can share one installation. Each profile stores visual display settings (on/off, text size, background color, foreground color, cursor style) — see ADR-016.
+Each child has a named profile selected at startup (spoken menu). Multiple children can share one installation. Each profile stores:
+- Visual display settings (on/off, text size, background color, foreground color, cursor style) — see ADR-016
+- Voice settings (`tts_rate`, `tts_voice`, `language` override) — see ADR-003
 
 ---
 
@@ -426,11 +492,23 @@ Each child has a named profile selected at startup (spoken menu). Multiple child
 
 For a visually impaired child, the timing and nature of feedback is critical:
 
-**Immediate sound cues** (not TTS): A short pleasant chime for a correct keypress, a gentle low tone for incorrect. These play within milliseconds of the keypress — fast enough to feel like direct cause and effect. Implemented via `pygame.mixer` with small bundled `.wav` files. TTS latency (even with fast local models) is too slow for this feedback loop.
+**Immediate sound cues** (not TTS): A short pleasant chime for a correct keypress, a gentle low tone for incorrect. These play within milliseconds of the keypress — fast enough to feel like direct cause and effect. Implemented via `pygame.mixer` with small bundled `.wav` files. TTS latency (even with fast local models) is too slow for this feedback loop. Confirmed on Windows: `pygame.mixer` initialises and plays audio without `pygame.display` — no window is opened (pygame 2.6.1, SDL 2.28.4, 22050 Hz stereo).
 
 **TTS for spoken content:** Everything else — what to type next, encouragement, instructions, milestone announcements, menu navigation — uses Piper TTS (or SAPI fallback). This content is not latency-sensitive.
 
 **Encouragement variety:** The default rule-based feedback generator cycles through a set of varied encouragement phrases per language. The optional LLM plugin can replace this with dynamically generated responses for more natural variety.
+
+**Progress encouragement — two-phase design:** Between key milestones, the app motivates continued practice by describing what unlocking the next key would gain. This uses two phases:
+
+*Phase 1 — coverage gain framing* (most of the journey, while the coverage curve is steep):
+> "Learn your next letter and you'll be able to type X% more everyday words."
+
+X is the marginal coverage gain from the next letter in frequency order. The letter itself is not named — the lesson engine controls introduction order, and revealing the next letter encourages the child to skip ahead rather than consolidate current keys. This framing is most effective while marginal gains are large (the steep middle of the coverage curve).
+
+*Phase 2 — countdown framing* (when ≤ 6 letters remain in the native alphabet):
+> "Only 5 letters of the alphabet left!"
+
+Triggered when `remaining = alpha_size − keys_mastered ≤ 6`. The coverage framing is dropped at this point because marginal gains are tiny in the tail and the countdown is more motivating. Knowing you are nearly done is a stronger motivator than being told the next letter unlocks 0.3% more words.
 
 **Word presentation protocol:**
 
@@ -464,7 +542,7 @@ A separate restart key (configurable, default Escape held or double-tap) abandon
 
 ---
 
-## ADR-013: Onboarding Language Detection
+## ADR-013: Onboarding and Profile Selection
 
 **Decision:** Detect language automatically from Windows locale on first run and begin communicating immediately in that language. If detection fails or the detected language is not supported, rotate spoken welcomes through the top 5 languages by global speaker population until the user responds or selects a language.
 
@@ -481,6 +559,29 @@ The fallback rotation handles the edge cases: unsupported locale, locale not set
 3. If not found: speak a short greeting in each of the top 5 supported languages in rotation, pausing 3 seconds between each for a voice response
 4. On voice response: detect language from response via `faster-whisper`, confirm with user, proceed
 5. If no response after one full rotation: default to English with a spoken explanation
+
+### Profile Selection at Session Startup
+
+After language is established, the app loads the child's profile.
+
+**Single profile case:** If only one profile exists on the installation, it is loaded automatically with no further interaction.
+
+**Multiple profile case:** The app speaks the available profiles — *"Who's practicing today? I have Lisa and John."* — and the child responds with their name. The standard intent recognition pipeline (ADR-017) fuzzy-matches the spoken response against the profile name list. The selected profile is confirmed audibly — *"Hi Lisa! Ready to practice?"* — before loading. The child can dissent ("no", "wait") to restart selection.
+
+No verification beyond the name match is performed. Profile selection trusts the child to identify themselves correctly. This is sufficient for the typing tutor use case; data integrity stakes are low (worst case is some lost progress for one session) and stronger verification (passwords, biometrics, voice ID) is incompatible with the audio-first, low-friction design. If usage patterns later reveal a need for verification, an opt-in question/answer mechanism can be added per profile without breaking the existing data model.
+
+### Profile Name Uniqueness
+
+Profile names must be unique within an installation. Comparison is case-insensitive and accent-insensitive (so "Lisa", "lisa", and "Lísa" all collide — they sound identical at voice-selection time).
+
+At creation:
+
+1. If the new name is unique, accept it.
+2. If it collides with an existing profile, the app prompts: *"There's already a Lisa on this computer. What should I call this one?"* The parent provides a distinguishing addition — "Lisa B", "Big Lisa", "Lisa from school", or anything else that works for that family.
+3. If the proposed name still collides after the addition, the app re-prompts. The new profile is not created until a unique name is provided.
+4. The original profile is never modified.
+
+This invariant — every profile name in the system is unique — means selection-time fuzzy matching always resolves to exactly one profile. No tiebreaking logic is needed downstream.
 
 ### Alternatives Considered
 
@@ -545,13 +646,24 @@ Downloading at first run per language is the better tradeoff:
 - Models are cached locally after first download — subsequent runs are fully offline
 - Users who need multiple languages download each model once
 
+### Voice Catalog
+
+The `piper-tts` package bundles a `voices.json` locally with metadata for every available voice: quality tier (`x_low`/`low`/`medium`/`high`), number of speakers, and file sizes. This is readable with no network call.
+
+Piper's metadata does not include a gender field — gender is not tagged in `voices.json`. The app ships a small hand-maintained `voice_catalog.yaml` per supported language that annotates each voice with a human-readable label (e.g. `"Female voice"`, `"Male voice"`) and maps it to the Piper key. File size is read at runtime from the bundled `voices.json` so it stays accurate without manual updates. `x_low` quality and multi-speaker voices are excluded from the catalog — they are unsuitable for this use case.
+
+A typical language entry has 1–4 curated voices. English has the most; many languages have only one or two.
+
 ### Download Behaviour
 
 1. On first run (or when a new language is selected), app checks local cache for the required Piper model
-2. If not cached: announce audibly that the voice model needs to be downloaded, state the approximate size, and ask for confirmation before proceeding
-3. Download with a simple progress indication (spoken percentage or periodic "still downloading" message)
-4. On failure: fall back to pyttsx3/SAPI automatically with a spoken notice
-5. Once cached: fully offline, no further internet access needed
+2. If not cached: present the available voices for that language (gender label + quality + download size) and ask the parent to choose; no download happens yet
+3. Announce the chosen voice and size audibly, then ask for explicit confirmation before downloading
+4. Download with simple spoken progress indication (periodic "still downloading" messages)
+5. On failure: fall back to pyttsx3/SAPI automatically with a spoken notice
+6. Once cached: fully offline, no further internet access needed
+
+Each voice is one download: a single `.onnx` model file plus a small `.onnx.json` config. The parent chooses once; subsequent runs load from cache.
 
 ### Fallback
 
@@ -674,6 +786,163 @@ Foreground and background are chosen independently. The only constraint: foregro
 
 ---
 
+## ADR-017: Voice Command and Intent Recognition
+
+**Decision:** Layered intent recognition pipeline running on top of Whisper transcriptions. Context-aware active intent sets per interaction mode. Confirmation-over-inference for setup. Rule-based core; optional LLM as tertiary fallback (ADR-004 / ADR-018).
+
+### Rationale
+
+Whisper gives the app a text transcription of what the child said. The intent recognition layer maps that transcription to an actionable command. This is a distinct problem with established patterns in open source voice interfaces (Mycroft Adapt/Padatious, Rhasspy, voice2json, Picovoice Rhino) and recent child-accessibility research (MEOWCROPHONE for Scratch, which demonstrated baseline free-speech recognition at 46.4% versus a layered pipeline at 82.8% — a 36-point accuracy gain critical for children's speech).
+
+Children's speech is harder to recognize than adult speech: physiological differences in the vocal tract, lower pronunciation clarity (especially in younger children), higher intra-speaker and inter-speaker variability, and higher rates of disfluencies. Whisper handles these better than most engines but still imperfectly. A robust intent layer is what bridges the gap between transcription and action.
+
+### The Layered Pipeline
+
+For each utterance, the pipeline tries layers in order and returns on the first match above a confidence threshold:
+
+**Layer 1 — Exact and synonym keyword match.** Intents are defined with keyword groups per language. "Faster" intent in English matches `{"faster", "speed up", "more speed", "quicker"}`; in German `{"schneller", "schneller bitte", "schnell"}`. This catches the majority of cases instantly with no inference cost.
+
+**Layer 2 — Phonetic match.** When Whisper produces something close-but-wrong ("vaster" instead of "faster", "schnüller" instead of "schneller"), a phonetic algorithm (Metaphone, Double Metaphone, or language-appropriate equivalent) finds the intended keyword. This is the layer that gave MEOWCROPHONE its largest accuracy gain for child speech.
+
+**Layer 3 — Fuzzy string match.** For transcription errors that are spelling-similar but not phonetically similar. Standard Levenshtein distance with a configurable per-intent threshold.
+
+**Layer 4 — LLM fallback (optional, only if available).** For genuinely flexible phrasing ("can you slow down a bit", "I want to take a break"). Runs only when Layers 1–3 return no confident match. Uses the locally-installed LLM at whatever tier the hardware supports (ADR-004). Skipped entirely on Tier 0 installations.
+
+If all available layers fail, the app responds with a clear "I didn't catch that — try again" — better than guessing wrong.
+
+### Context-Aware Intent Sets
+
+The active set of intents the pipeline considers varies by application state. The app knows what step of setup or interaction it's at, and only intents valid at that step are matched. For example:
+
+- **At "choose background color"**, active intents are: COLOR_NAME, POSITION_REFERENCE, REPEAT, GO_BACK, START_OVER, HELP. All other intents are inactive.
+- **At "type the spoken word"**, active intents are: REPEAT, READ_AGAIN, GO_BACK, RESTART_WORD, HELP, EXIT_SESSION.
+- **At "select a profile"**, active intents are: PROFILE_NAME (one per existing profile), CREATE_NEW, REPEAT, HELP.
+
+This dramatically improves accuracy because the pipeline is more aggressive within a smaller candidate set. "I think she said sky" wouldn't match a color outside color-selection context, but within it confidently resolves to Blue.
+
+This pattern is borrowed from Rhasspy and voice2json's "scoping" model.
+
+### Setup Interaction Modes
+
+Setup is architecturally distinct from steady-state operation. The interaction modes:
+
+**Mode 1 — Constrained choice (yes/no, color from palette, voice from catalog).**
+Closed set, well-known synonyms per language. Fuzzy-match against the closed set. Yes-intent synonyms include "yes", "yeah", "okay", "sure", "go ahead", "fine", and equivalents in each language. Color palette entries each have 5–10 synonyms per language (e.g. "navy"/"dark blue" → Navy; "ivory"/"off-white" → Cream). Synonym lists are a contribution path for native-speaker contributors.
+
+**Mode 2 — Free-form input (name).**
+No closed set. The app captures Whisper's transcription, reads it back for confirmation — *"I heard Lukas — is that right?"* — and proceeds on affirmative response. On dissent, the app offers to spell the name letter-by-letter via voice, which doubles as familiar typing-tutor interaction.
+
+**Mode 3 — Selection from a list (text size, voice catalog).**
+Supports both name reference ("Large", "Amy") and position reference ("the second one", "number two"). Both are recognized at equal priority.
+
+**Mode 4 — Universal escape commands (always active).**
+"Repeat", "go back", "start over", "skip", "help" are recognized at the highest priority regardless of current mode. The pipeline checks these before any context-specific intent set.
+
+### Setup Failure Modes to Avoid
+
+- **Silent failure.** Every utterance must produce immediate audible acknowledgment — either the matched intent or a clear "I didn't quite catch that."
+- **Wrong-match success.** Setup biases heavily toward confirmation over inference. A misheard color is corrected by the live preview (ADR-016); a misheard name is corrected by the read-back step.
+- **Cascading confusion.** "Go back" and "start over" commands are available at every step via Mode 4 universal escapes.
+- **Frustration loops.** After three failed attempts at the same step, the app offers a simpler path — for selection from a list, switch from name matching to spoken-number selection ("press 1, 2, or 3").
+
+### Per-Language Intent Definitions
+
+Intent definitions live in `intents/{lang}.yaml` files — one per language. The format is simple enough for non-programmer contributors. An English example:
+
+    INCREASE_RATE:
+      keywords:
+        - faster
+        - speed up
+        - more speed
+        - quicker
+    DECREASE_RATE:
+      keywords:
+        - slower
+        - slow down
+        - less speed
+    REPEAT:
+      keywords:
+        - repeat
+        - say again
+        - again
+        - what
+
+A contributor adding a new language provides a single YAML file. No code changes. This is the primary contribution path for language coverage of voice commands.
+
+### Alternatives Considered
+
+- **Whisper transcription + raw string equality:** Rejected. Fails on the predictable Whisper errors that the layered pipeline catches.
+- **LLM-only intent recognition:** Rejected. Latency, hardware dependency, and unavailable on Tier 0 installations.
+- **Single-mode pipeline (no context-aware intent sets):** Rejected. Loses meaningful accuracy gains for closed-set interactions like setup.
+- **Picovoice Rhino:** High accuracy but proprietary; doesn't fit open-source-first stance.
+- **Rhasspy as runtime dependency:** Considered but adds significant complexity for a project this size. Its intent definition patterns are borrowed; the runtime is not.
+
+---
+
+## ADR-018: Hardware-Adaptive LLM Tiering
+
+**Decision:** At setup, Takki detects hardware capability and proactively offers the best LLM tier the machine can comfortably run. Re-evaluates on major events (new hardware, app update, user request). User is never required to know about parameters, quantization, or model selection.
+
+### Rationale
+
+Hardware capability varies enormously across target users — from 10-year-old school computers to modern home machines. The cost of getting this wrong in either direction is real: offering an LLM that won't run smoothly creates frustration; not offering one when the machine can handle it loses available quality.
+
+Asking the user to figure this out themselves is the wrong answer. Most parents and teachers don't know what a parameter count is. The right pattern is: the app does the work, gives a recommendation, the user accepts or declines.
+
+This shifts the LLM from an opt-in technical decision to a guided recommendation. Most users will say yes if offered, because the framing is "make the app better" rather than "configure a language model."
+
+### Hardware Detection
+
+Detection runs at install time and stores the result. Re-runs only on specific triggers (see below).
+
+The detector combines several signals:
+
+- **Available RAM** — `psutil.virtual_memory().available`, measured with Takki running so the number reflects actual headroom, not theoretical total.
+- **CPU capability** — A short microbenchmark (small matrix multiplication, ~200ms run) gives a real-world capability number. More reliable than CPU model heuristics, which age poorly.
+- **GPU presence** — Detected but only counted if a discrete CUDA-capable GPU with sufficient VRAM is present. Integrated graphics are ignored.
+- **Disk space** — Available space in the app data directory. No point recommending a 4 GB model on a machine with 2 GB free.
+
+The combination produces a single recommended tier (0, 1, 2, or 3). Tiers are defined in ADR-004.
+
+### Tier Recommendation Flow
+
+After language and visual settings are established, the app presents the recommendation:
+
+**Tier 1 recommended (modest hardware):**
+> *"I checked your computer and you have enough power for a smart helper that makes my setup easier and helps me understand you better. It would take about 800 megabytes of download. Want to add it?"*
+
+**Tier 2 or 3 recommended (capable hardware):**
+> *"I checked your computer and you have plenty of power. I can use a smart helper that makes me much better at understanding what you say. It would take about 2 gigabytes of download. Or I can use a smaller one that's about 800 megabytes. Or I can run without it. Which would you like?"*
+
+**Tier 0 recommended (constrained hardware):**
+> *"Your computer doesn't quite have the room for an extra helper, so I'll run in my simpler mode. Don't worry — I still work great this way."*
+
+The reassurance on Tier 0 is essential. Silent absence of the offer would leave the user wondering if they're missing something.
+
+### Re-Evaluation Triggers
+
+Hardware changes over time — users upgrade RAM, replace machines, install in school labs on different machines. Triggers for re-evaluation:
+
+- **Migration to new hardware** — if the stored machine ID changes, re-check
+- **Major Takki update** — re-evaluate in case tier thresholds or available models have changed
+- **User request** — settings option "Check if my computer can use a better helper" runs the check on demand
+- **Failed LLM operation** — if the configured tier consistently fails to meet latency targets, suggest downgrading
+
+The opposite direction is just as important: if a user upgrades their machine, Takki should notice at next startup and offer the better tier — *"It looks like your computer got faster! I can use a smarter helper now if you'd like."*
+
+### What This Decision Does Not Cover
+
+Tier definitions themselves (which model maps to which tier, what RAM thresholds gate each tier) are covered in ADR-004. This ADR covers the detection mechanism and the user interaction pattern.
+
+### Alternatives Considered
+
+- **Manual user selection:** Rejected. Asks the user to understand technical details that have nothing to do with their goal.
+- **Static minimum requirements:** Rejected. Either too conservative (excludes capable users who would benefit) or too aggressive (recommends LLMs to users whose hardware can't run them well).
+- **Always-offer regardless of hardware:** Rejected. Frustrating UX on constrained hardware; user installs a slow model, has a bad experience, may abandon the app.
+- **Hide the option entirely on low-end hardware:** Rejected. Tier 0 reassurance is preferred over silent absence.
+
+---
+
 ## Component Overview
 
 ```
@@ -689,8 +958,10 @@ Foreground and background are chosen independently. The only constraint: foregro
 │    Voice Input       │    Lesson Engine                 │
 │  • faster-whisper    │  • Layer controller              │
 │    (local)           │  • Adaptive key introducer       │
-│                      │  • Drill sequence generator      │
-│                      │  • Word selector                 │
+│  • Intent recognition│  • Drill sequence generator      │
+│    pipeline (ADR-017)│  • Word selector                 │
+│  • Optional LLM      │                                  │
+│    fallback (ADR-004)│                                  │
 ├──────────────────────┼──────────────────────────────────┤
 │    Language Layer    │    Feedback Layer                │
 │  • wordfreq          │  • Rule-based (default)          │
@@ -713,6 +984,7 @@ Foreground and background are chosen independently. The only constraint: foregro
 │            visual display settings per profile          │
 │  • Global lesson progression rules config               │
 │  • Piper model cache (per language, downloaded once)    │
+│  • Hardware capability profile (LLM tier, see ADR-018)  │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -734,6 +1006,8 @@ The following were explicitly considered and excluded from v1:
 | Narrative / quest framing | Evaluated as an audio-native engagement mechanism well-suited to visually impaired children. Deferred to v2 to avoid content maintenance burden and the requirement to author story content in 40+ languages. The LLM plugin path (ADR-004) is the intended community contribution entry point for this feature. |
 | Cloud sync of progress | No server dependency; local SQLite is sufficient |
 | Multiplayer / competitive modes | Not relevant for target audience |
+| Cloud/online LLM integration | Explicitly rejected. See ADR-004. Users who want this can fork the project. |
+| Fine-tuned Takki-specific intent model | Deferred. Generic instruction-tuned models are sufficient at this stage. See ADR-004. |
 
 ---
 
@@ -742,8 +1016,6 @@ The following were explicitly considered and excluded from v1:
 The following questions remain unresolved and require research before or during implementation:
 
 1. **Minimum hardware spec** — `faster-whisper` with the `base` model requires ~1GB RAM and has CPU inference latency. Research needed: what is the realistic minimum spec in target schools and homes across different countries, and which Whisper model size should be the default recommendation? This affects installation documentation and potentially the choice of default model.
-
-2. **Vocabulary coverage curve validation** — The Silver and Gold milestones use 25% and 50% frequency-weighted token coverage as thresholds. These percentages need to be validated against actual `wordfreq` data for a representative sample of target languages to confirm they land at natural, well-paced breakpoints — not reachable in the first session, not months apart. A short Python script against `wordfreq` would resolve this before implementation begins.
 
 ---
 
