@@ -229,3 +229,6 @@ __marimo__/
 takki.spec
 # Local pre-commit cache
 .pre-commit-cache/
+# Spike artefacts — large binaries regenerated on demand
+spikes/*.onnx
+spikes/*.onnx.json
