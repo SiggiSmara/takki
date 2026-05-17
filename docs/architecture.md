@@ -658,45 +658,47 @@ The printable summary is a plain `.txt` file written to the desktop (or a config
 
 ## ADR-015: Piper Voice Model Distribution
 
-**Decision:** Download Piper voice models at first run per language, not bundled in the installer. The installer ships with one small default voice (English) only.
+**Decision:** The installer always bundles the English voice (out-of-box fallback). Additional voices are distributed as standalone downloads via the project website — the user's browser downloads the file and saves it to a known local folder; the app scans that folder on startup. No in-app download logic. SAPI is the last-resort fallback when no `.onnx` voice file is present at all.
 
-### Rationale
+Piper voices are hosted on HuggingFace (`rhasspy/piper-voices`), not GitHub releases.
 
-Piper voice models are language-specific files ranging from tens to hundreds of MB each. Bundling models for all 40 supported languages would produce an installer of several gigabytes — unreasonable for a hobby project and a significant barrier for users on slow connections or with limited disk space.
+### Bundled Voices
 
-Downloading at first run per language is the better tradeoff:
-- Installer remains small and fast to download
-- Only the models actually needed are downloaded
-- Models are cached locally after first download — subsequent runs are fully offline
-- Users who need multiple languages download each model once
+English (`en_US-lessac-low`, ~60 MB) is always included in the installer. It serves as the out-of-box voice for English lessons and as the fallback when no voice file for the lesson language is found.
+
+**Beta:** English and German (`de_DE-thorsten-low`, ~60 MB) are both bundled. Total installer size: Whisper tiny+base (~220 MB) + two voices (~120 MB) ≈ 340 MB.
+
+**V1:** Up to five voices may be bundled (decision deferred to V1). English is always one of them.
+
+### Additional Voice Distribution
+
+Voices for non-bundled languages are distributed as direct browser downloads from the project website. The website presents a table of supported languages with a download link per voice (pointing to the HuggingFace file URL) and a file size. Instructions tell the parent to save the downloaded `.onnx` file and its accompanying `.onnx.json` sidecar to `Documents\Takki\voices\`.
+
+The app creates `Documents\Takki\voices\` on first run. If the lesson language voice is absent, the app speaks once: *"For a better voice in [language], visit the Takki website and download a voice file. Save it to the Takki voices folder in your Documents."*
+
+Using the browser as the download agent is intentional: browsers handle retries, resume on failure, progress display, and file-size verification more reliably than a Python downloader, and they handle HuggingFace's changing download backends transparently.
+
+### Voice Discovery
+
+On startup the app scans `Documents\Takki\voices\` for `.onnx` files and matches them to the lesson language by filename prefix (e.g. `de_DE-*.onnx` for German). Bundled voices are stored in the app's own data directory and are always available without scanning.
+
+### Fallback Hierarchy
+
+1. Piper voice for the lesson language (from `Documents\Takki\voices\` or bundled)
+2. Bundled English Piper voice (if lesson language is not English and no matching voice file is found)
+3. pyttsx3 / SAPI (if no `.onnx` file is present at all — e.g. immediately after a fresh install for a non-bundled language before the parent has downloaded a voice)
 
 ### Voice Catalog
 
-The `piper-tts` package bundles a `voices.json` locally with metadata for every available voice: quality tier (`x_low`/`low`/`medium`/`high`), number of speakers, and file sizes. This is readable with no network call.
+The app ships a hand-maintained `voice_catalog/{lang}.yaml` per supported language listing the curated voice choices for that language: a human-readable label (e.g. `"Female voice"`, `"Male voice"`), the Piper voice key, and the expected file size. `x_low` and multi-speaker voices are excluded — they are unsuitable for a primary audio interface. File sizes in the catalog are used to validate downloaded files against expected size.
 
-Piper's metadata does not include a gender field — gender is not tagged in `voices.json`. The app ships a small hand-maintained `voice_catalog.yaml` per supported language that annotates each voice with a human-readable label (e.g. `"Female voice"`, `"Male voice"`) and maps it to the Piper key. File size is read at runtime from the bundled `voices.json` so it stays accurate without manual updates. `x_low` quality and multi-speaker voices are excluded from the catalog — they are unsuitable for this use case.
-
-A typical language entry has 1–4 curated voices. English has the most; many languages have only one or two.
-
-### Download Behaviour
-
-1. On first run (or when a new language is selected), app checks local cache for the required Piper model
-2. If not cached: present the available voices for that language (gender label + quality + download size) and ask the parent to choose; no download happens yet
-3. Announce the chosen voice and size audibly, then ask for explicit confirmation before downloading
-4. Download with simple spoken progress indication (periodic "still downloading" messages)
-5. On failure: fall back to pyttsx3/SAPI automatically with a spoken notice
-6. Once cached: fully offline, no further internet access needed
-
-Each voice is one download: a single `.onnx` model file plus a small `.onnx.json` config. The parent chooses once; subsequent runs load from cache.
-
-### Fallback
-
-The SAPI fallback (via pyttsx3) means the app is never non-functional due to a missing Piper model. Users on restricted networks or with no internet at setup get a lower-quality but working voice immediately, and can download the Piper model later when connectivity is available.
+A typical language has 1–3 curated voices. English has the most options; many languages have one or two.
 
 ### Alternatives Considered
 
-- **Bundle all models:** Rejected. Multi-gigabyte installer is unreasonable.
-- **Bundle the selected language's model only:** Partially viable but complicates the installer significantly — the language may not be known at install time in a school deployment scenario.
+- **In-app downloader:** Rejected. HuggingFace's Xet and hf_transfer backends have active Windows reliability bugs; standard HTTP requires workarounds (`HF_HUB_ENABLE_HF_TRANSFER=0`) and still has instability reports. The browser is a more reliable and familiar download agent.
+- **Bundle all ~36 supported languages:** Rejected. ~2.1 GB for voices alone is unreasonable.
+- **Per-language installers generated by the website:** Rejected as over-engineered for V1. Simple download links achieve the same outcome with no build infrastructure.
 - **Stream audio from cloud TTS:** Rejected. Breaks offline-first principle.
 
 ---
@@ -1375,7 +1377,7 @@ The following questions remain unresolved and require research before or during 
 
 2. **Session pacing and fatigue** — Audio-only practice is more cognitively taxing than sighted practice. Research needed: do other VI-focused educational tools enforce session length limits, recommend breaks, or auto-pause after a period of inactivity? Should Takki proactively suggest a break, or trust the child and parent to manage pacing? Affects ADR-010 (lesson structure) and the steady-state session loop.
 
-3. **Piper voice download reliability** — **Whisper resolved:** `tiny` and `base` are bundled in the installer; no HuggingFace downloads at runtime. Piper voice download (ADR-015) remains open. Testing revealed that HuggingFace's newer download backends (`hf_transfer`, Xet) are unreliable for large files, producing "server disconnected without sending a response" errors that the built-in 1s/5-attempt retry does not recover from. Setting `HF_HUB_ENABLE_HF_TRANSFER=0` restores stable downloads but requires multiple manual retries for larger files. The community workarounds (aria2c, custom retry loops, mirror sources) are developer tools unsuitable for a consumer app. **Decision for Whisper: bundle both models in the installer; never download from HuggingFace at runtime.** Piper voices are distributed via GitHub releases (not HuggingFace) and are smaller files, so the download story is more manageable — but the same principle applies: the default voice should be bundled and runtime downloads treated as optional upgrades initiated from a parent-facing settings panel, with spoken progress feedback, automatic retry, and graceful fallback to SAPI if the download fails. Affects ADR-015.
+3. ~~**Piper voice download reliability**~~ — **resolved.** Both Whisper models and Piper voices are hosted on HuggingFace (`rhasspy/piper-voices`); HuggingFace's Xet and hf_transfer backends have active Windows reliability bugs and the domain is frequently blocked by school content filters. The solution is the same for both: bundle what is needed, delegate optional downloads to the user's browser. English voice is always bundled; additional voices are distributed as direct download links from the project website (browser → save to `Documents\Takki\voices\`). No in-app download logic. See ADR-015.
 
 ---
 
@@ -1394,7 +1396,7 @@ This pre-ADR document captures agreed architectural decisions but is not suffici
 See [roadmap.md](roadmap.md) for the agreed phased plan (Alpha, Beta, V1), the in/out-of-scope split per phase, dependency-ordered task lists within each phase, and the "done" criteria.
 
 **3. Resolve Open Questions**
-The session pacing and fatigue question and Piper voice download reliability question should be resolved before implementing the affected components. The minimum hardware spec and Whisper model selection questions are now resolved — see open questions 1 and 3.
+The session pacing and fatigue question (open question 2) should be resolved before implementing the session loop. Open questions 1 and 3 are now resolved.
 
 **4. Repository and Contribution Setup**
 Before any code, the open source scaffolding should be in place:
