@@ -1,0 +1,127 @@
+{
+  "system": {
+    "os": "Linux 6.8.0-87-generic",
+    "python": "3.11.14",
+    "cpu_brand": "Intel(R) Celeron(R) CPU G555 @ 2.70GHz",
+    "cpu_arch": "x86_64",
+    "cpu_count_physical": 2,
+    "cpu_count_logical": 2,
+    "cpu_hz_advertised_mhz": "2.7000 GHz",
+    "cpu_relevant_flags": [
+      "sse4_1",
+      "sse4_2"
+    ],
+    "ram_total_gb": 3.69,
+    "ram_available_gb": 1.78,
+    "disk_free_gb": 11.01,
+    "gpu": "none detected (CPU-only run)"
+  },
+  "cpu_matmul_median_ms_512x512_f32": 15.98,
+  "models": [
+    {
+      "model": "tiny",
+      "load_time_s": 9.29,
+      "load_rss_delta_mb": 60.5,
+      "compute_type": "int8",
+      "clips": [
+        {
+          "clip": "short",
+          "duration_s": 0.768,
+          "latency_ms_min": 2470.7,
+          "latency_ms_median": 2726.0,
+          "latency_ms_max": 3111.6,
+          "rtf_median": 3.549,
+          "transcript": "Faster."
+        },
+        {
+          "clip": "medium",
+          "duration_s": 1.808,
+          "latency_ms_min": 2530.9,
+          "latency_ms_median": 2583.7,
+          "latency_ms_max": 2603.3,
+          "rtf_median": 1.429,
+          "transcript": "Next lesson, please."
+        },
+        {
+          "clip": "long",
+          "duration_s": 2.544,
+          "latency_ms_min": 2525.1,
+          "latency_ms_median": 2596.2,
+          "latency_ms_max": 2929.1,
+          "rtf_median": 1.021,
+          "transcript": "I want to change my voice to a different one."
+        }
+      ]
+    },
+    {
+      "model": "base",
+      "load_time_s": 5.48,
+      "load_rss_delta_mb": 84.5,
+      "compute_type": "int8",
+      "clips": [
+        {
+          "clip": "short",
+          "duration_s": 0.768,
+          "latency_ms_min": 5436.4,
+          "latency_ms_median": 5762.5,
+          "latency_ms_max": 5883.3,
+          "rtf_median": 7.503,
+          "transcript": "Faster!"
+        },
+        {
+          "clip": "medium",
+          "duration_s": 1.808,
+          "latency_ms_min": 5121.0,
+          "latency_ms_median": 5225.4,
+          "latency_ms_max": 5679.7,
+          "rtf_median": 2.89,
+          "transcript": "Next lesson, please."
+        },
+        {
+          "clip": "long",
+          "duration_s": 2.544,
+          "latency_ms_min": 5491.3,
+          "latency_ms_median": 5658.9,
+          "latency_ms_max": 5962.2,
+          "rtf_median": 2.224,
+          "transcript": "I want to change my voice to a different one."
+        }
+      ]
+    },
+    {
+      "model": "small",
+      "load_time_s": 15.52,
+      "load_rss_delta_mb": 329.6,
+      "compute_type": "int8",
+      "clips": [
+        {
+          "clip": "short",
+          "duration_s": 0.768,
+          "latency_ms_min": 19533.9,
+          "latency_ms_median": 19814.0,
+          "latency_ms_max": 20147.6,
+          "rtf_median": 25.799,
+          "transcript": "faster."
+        },
+        {
+          "clip": "medium",
+          "duration_s": 1.808,
+          "latency_ms_min": 18960.0,
+          "latency_ms_median": 19665.1,
+          "latency_ms_max": 20114.3,
+          "rtf_median": 10.877,
+          "transcript": "Next lesson, please."
+        },
+        {
+          "clip": "long",
+          "duration_s": 2.544,
+          "latency_ms_min": 20218.7,
+          "latency_ms_median": 20220.3,
+          "latency_ms_max": 20456.1,
+          "rtf_median": 7.948,
+          "transcript": "I want to change my voice to a different one."
+        }
+      ]
+    }
+  ]
+}

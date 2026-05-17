@@ -17,6 +17,15 @@ Paste the full stdout back into the Claude Code session.
 Audio fixtures are generated once via Piper TTS and cached in spikes/.
 Whisper models (~75MB tiny / ~145MB base / ~470MB small) download on first
 run and are cached by faster-whisper under ~/.cache/huggingface/.
+
+Troubleshooting downloads:
+If a model download fails with "server disconnected without sending a response",
+HuggingFace's fast-transfer backend is likely the cause. Set one of these before
+running:
+    $env:HF_HUB_ENABLE_HF_TRANSFER=0   # disables Rust hf_transfer backend (try first)
+    $env:HF_HUB_DISABLE_XET=1          # disables Xet backend (try if above doesn't help)
+Both fall back to standard HTTP downloads. Alternatively copy the model cache from
+another machine: %USERPROFILE%\\.cache\\huggingface\\hub\\
 """
 
 import gc
@@ -24,6 +33,7 @@ import json
 import os
 import platform
 import shutil
+import socket
 import statistics
 import subprocess
 import sys
@@ -31,8 +41,17 @@ import time
 import wave
 from pathlib import Path
 
+# Some hosts (incl. the headless Linux dev box) have broken IPv6 to public
+# CDNs; Python's default getaddrinfo prefers AAAA records and blocks on
+# SYN-SENT for minutes. Force IPv4-only resolution for the whole process so
+# HuggingFace / Piper downloads don't hang.
+_orig_getaddrinfo = socket.getaddrinfo
+def _ipv4_only_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):  # noqa: A002
+    return _orig_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
+socket.getaddrinfo = _ipv4_only_getaddrinfo
+
 SPIKES_DIR = Path(__file__).parent
-RESULTS_PATH = SPIKES_DIR / "whisper_spike_results.json"
+RESULTS_PATH = SPIKES_DIR / "results" / "whisper_spike_results.json"
 PIPER_VOICE = "en_US-lessac-low"
 PIPER_VOICE_PATH = SPIKES_DIR / f"{PIPER_VOICE}.onnx"
 
