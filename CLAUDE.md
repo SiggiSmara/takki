@@ -47,7 +47,7 @@ Never call platform APIs directly from application logic. Always go through thes
 
 | Component | Choice | Notes |
 |---|---|---|
-| Speech recognition | `faster-whisper` | Local only. `base` model default. CPU viable (~500–800ms). Triggered by push-to-talk (ADR-020). |
+| Speech recognition | `faster-whisper` | Local only. `tiny` and `base` both bundled in installer; auto-selected at startup by CPU microbenchmark (matmul < ~2ms → `base`, otherwise → `tiny`). Measured: `tiny` 230–800ms, `base` 400ms–1.5s depending on hardware and power state. `small` not bundled — 1.4s+ even on modern hardware, impractical without CUDA GPU. Triggered by push-to-talk (ADR-020). |
 | Voice activity detection | `webrtcvad` | End-of-utterance only (push-to-talk supplies start). Tiny C extension, no ML runtime. See ADR-021. |
 | TTS (primary) | Piper TTS | Confirmed on Windows (Python 3.11 MSVC). Load ~2.3s once, synthesis ~0.19s. |
 | TTS (fallback) | pyttsx3 / SAPI | Always available on Windows, no install needed. |
@@ -104,4 +104,5 @@ pyproject.toml
 1. ~~**Piper TTS native Windows support**~~ — **resolved.** Works natively on Windows (Python 3.11 MSVC). Model load ~2.3s (one-time), synthesis ~0.19s per phrase. ADR-003 stands.
 2. ~~**`pygame.mixer` headless on Windows**~~ — **resolved.** Confirmed: mixer initialises (22050 Hz stereo) and plays audio with no display window. `pygame.display` never touched. pygame 2.6.1 / SDL 2.28.4.
 3. ~~**Vocabulary coverage curve**~~ — **resolved.** Silver/Gold are key-count based (≥1/3 and ≥2/3 of language's full key set). Coverage displayed as motivating info only, computed over words ≥ 3 chars (aligns with Layer 2 floor; prevents single-letter articles skewing the number).
-4. **Minimum hardware spec** — affects default Whisper model recommendation.
+4. ~~**Minimum hardware spec**~~ — **resolved.** Requires AVX2; matmul benchmark >~10ms is below minimum for Whisper (Celeron-class hardware). `tiny` and `base` bundled in installer, auto-selected by matmul threshold (~2ms). See ADR-018 and ADR-002.
+5. ~~**Model downloads under a child account**~~ — **resolved for Whisper.** `tiny` + `base` bundled in installer; no runtime HuggingFace downloads for default models. Piper voice download (ADR-015) remains open — see open question 3 in architecture.md.

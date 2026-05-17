@@ -112,9 +112,17 @@ Voice control is a core feature — the app must be navigable without vision. Th
 - **Fully local** — no internet, no API keys, no privacy concerns (critical for children's data)
 - **99+ languages** out of the box with no pre-training or language-specific setup
 - **No ongoing cost** — important for a free open source project
-- **Practical hardware requirements** — the `tiny` or `base` model runs adequately on modest hardware; `small` gives better accuracy on mid-range machines
+- **Practical hardware requirements** — `tiny` and `base` are both bundled in the installer and auto-selected at startup by the CPU microbenchmark (see ADR-018). `small` is not bundled: even on a modern Intel Core Ultra 7 it takes ~1.4s per utterance and is impractical without a CUDA-capable GPU. Measured latency on target hardware (AVX2, warm cache, mains power):
 
-The small startup latency (model load time) is acceptable given that the app is not a real-time dictation tool — voice is used for navigation commands, not continuous input.
+  | model | Ryzen 7 5700U | Intel Core Ultra 7 256V |
+  |-------|--------------|------------------------|
+  | tiny  | ~400ms       | ~230ms                 |
+  | base  | ~730ms       | ~415ms                 |
+  | small | ~2,300ms     | ~1,390ms               |
+
+  On battery the Ryzen 5700U is ~2× slower (tiny ~800ms, base ~1.5s). Hardware below AVX2 (e.g. Celeron G555, SSE4.2 only) is below minimum spec — even `tiny` takes ~2.6s.
+
+The model load time after the first run is under 1s (OS filesystem cache). Model load on first ever run is 16–19s due to Windows Defender scanning new files; subsequent runs are fast.
 
 Whisper produces text transcriptions. Mapping transcriptions to actionable intents (e.g. "faster", "next", "stop") is handled by a separate intent recognition layer — see ADR-017. The microphone is closed by default and opens only via push-to-talk — see ADR-020 for the activation model and ADR-021 for end-of-utterance detection.
 
@@ -920,6 +928,20 @@ The detector combines several signals:
 
 The combination produces a single recommended tier (0, 1, 2, or 3). Tiers are defined in ADR-004.
 
+### Whisper Model Auto-Selection
+
+The same CPU microbenchmark that gates LLM tiers also selects the Whisper model at startup — no user decision required. Both `tiny` and `base` are bundled in the installer; the app picks the best one the hardware can run comfortably:
+
+| matmul result | Whisper model | Typical latency |
+|---------------|---------------|-----------------|
+| < ~2ms        | `base`        | ~400–730ms      |
+| ~2–10ms       | `tiny`        | ~400–800ms      |
+| > ~10ms       | none          | below minimum spec; voice commands unavailable |
+
+Thresholds are derived from measured spike data across three machines (Celeron G555, Ryzen 7 5700U, Intel Core Ultra 7 256V). The ~2ms threshold ensures `base` latency stays under ~800ms on mains power; above it, `tiny` provides comparable latency. The ~10ms floor reflects that SSE4.2-only CPUs (e.g. Celeron) cannot run even `tiny` within an acceptable latency budget.
+
+`small` is explicitly excluded from the installer — it requires 1.4s+ even on the fastest tested CPU and offers no practical benefit over `base` for the narrow intent recognition task without a CUDA GPU.
+
 ### Tier Recommendation Flow
 
 After language and visual settings are established, the app presents the recommendation:
@@ -1349,9 +1371,11 @@ The following were explicitly considered and excluded from v1:
 
 The following questions remain unresolved and require research before or during implementation:
 
-1. **Minimum hardware spec** — `faster-whisper` with the `base` model requires ~1GB RAM and has CPU inference latency. Research needed: what is the realistic minimum spec in target schools and homes across different countries, and which Whisper model size should be the default recommendation? This affects installation documentation and potentially the choice of default model.
+1. ~~**Minimum hardware spec**~~ — **resolved.** Measured across three machines (Celeron G555, Ryzen 7 5700U, Intel Core Ultra 7 256V). Minimum viable spec is AVX2 with a CPU microbenchmark under ~10ms (512×512 float32 matmul). Below that (e.g. Celeron, SSE4.2 only, ~16ms) even `tiny` takes ~2.6s — unusable. Above it, `tiny` runs at 400–800ms and `base` at 400ms–1.5s depending on power state. Both models are bundled in the installer and auto-selected by the matmul threshold (~2ms). See ADR-002 and ADR-018.
 
 2. **Session pacing and fatigue** — Audio-only practice is more cognitively taxing than sighted practice. Research needed: do other VI-focused educational tools enforce session length limits, recommend breaks, or auto-pause after a period of inactivity? Should Takki proactively suggest a break, or trust the child and parent to manage pacing? Affects ADR-010 (lesson structure) and the steady-state session loop.
+
+3. **Piper voice download reliability** — **Whisper resolved:** `tiny` and `base` are bundled in the installer; no HuggingFace downloads at runtime. Piper voice download (ADR-015) remains open. Testing revealed that HuggingFace's newer download backends (`hf_transfer`, Xet) are unreliable for large files, producing "server disconnected without sending a response" errors that the built-in 1s/5-attempt retry does not recover from. Setting `HF_HUB_ENABLE_HF_TRANSFER=0` restores stable downloads but requires multiple manual retries for larger files. The community workarounds (aria2c, custom retry loops, mirror sources) are developer tools unsuitable for a consumer app. **Decision for Whisper: bundle both models in the installer; never download from HuggingFace at runtime.** Piper voices are distributed via GitHub releases (not HuggingFace) and are smaller files, so the download story is more manageable — but the same principle applies: the default voice should be bundled and runtime downloads treated as optional upgrades initiated from a parent-facing settings panel, with spoken progress feedback, automatic retry, and graceful fallback to SAPI if the download fails. Affects ADR-015.
 
 ---
 
@@ -1370,7 +1394,7 @@ This pre-ADR document captures agreed architectural decisions but is not suffici
 See [roadmap.md](roadmap.md) for the agreed phased plan (Alpha, Beta, V1), the in/out-of-scope split per phase, dependency-ordered task lists within each phase, and the "done" criteria.
 
 **3. Resolve Open Questions**
-The minimum hardware spec question should be researched before finalising the choice of default Whisper model, as this affects the installation experience for the target audience.
+The session pacing and fatigue question and Piper voice download reliability question should be resolved before implementing the affected components. The minimum hardware spec and Whisper model selection questions are now resolved — see open questions 1 and 3.
 
 **4. Repository and Contribution Setup**
 Before any code, the open source scaffolding should be in place:
