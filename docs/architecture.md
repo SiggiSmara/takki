@@ -469,6 +469,18 @@ Speed is not reported or targeted until Diamond and above because before that po
 
 Each milestone triggers a distinct audio celebration — an important engagement mechanism for visually impaired children who cannot see progress bars or badges.
 
+### Session Pacing and Fatigue
+
+**Decision:** No enforced session limits, no proactive break prompts. The lesson structure provides natural stopping points, and lesson granularity is calibrated so those stopping points occur frequently enough to be useful.
+
+Audio-primary interaction produces measurable listening fatigue in children — research on children with hearing loss (who rely heavily on auditory processing, directly analogous to VI children) finds sustained audio tasks are more cognitively taxing than visual tasks. Children do not self-regulate proactively: they disengage or become irritable rather than requesting a pause.
+
+However, no VI typing tool reviewed (TypeAbility, Talking Typer, Typio/Accessibyte, APH products) enforces session limits or suggests breaks, and no accessibility standard requires it. The evidence-aligned practice is to design lessons with clear natural endpoints.
+
+Takki's lesson structure already provides this: each drill set completes, each word session ends, each milestone triggers a celebration — all natural pause points. The design constraint that follows is that individual lessons must be short enough that these stopping points occur frequently. A lesson unit should be completable in a few minutes under normal performance, so a child who is tiring always has a natural exit close ahead of them rather than mid-session.
+
+Explicit break enforcement is rejected: it is patronising for motivated children and adds complexity with no evidence of benefit over well-granulated lesson design.
+
 ### Why Lessons Are Not Authored Per Language
 
 The lesson engine is entirely language-agnostic. The same code drives German, French, English, and Polish lessons because all content is derived from frequency data at runtime. The only language-specific inputs are:
@@ -1375,7 +1387,7 @@ The following questions remain unresolved and require research before or during 
 
 1. ~~**Minimum hardware spec**~~ — **resolved.** Measured across three machines (Celeron G555, Ryzen 7 5700U, Intel Core Ultra 7 256V). Minimum viable spec is AVX2 with a CPU microbenchmark under ~10ms (512×512 float32 matmul). Below that (e.g. Celeron, SSE4.2 only, ~16ms) even `tiny` takes ~2.6s — unusable. Above it, `tiny` runs at 400–800ms and `base` at 400ms–1.5s depending on power state. Both models are bundled in the installer and auto-selected by the matmul threshold (~2ms). See ADR-002 and ADR-018.
 
-2. **Session pacing and fatigue** — Audio-only practice is more cognitively taxing than sighted practice. Research needed: do other VI-focused educational tools enforce session length limits, recommend breaks, or auto-pause after a period of inactivity? Should Takki proactively suggest a break, or trust the child and parent to manage pacing? Affects ADR-010 (lesson structure) and the steady-state session loop.
+2. ~~**Session pacing and fatigue**~~ — **resolved.** No enforced limits or break prompts. Natural lesson endpoints (drill completions, word session ends, milestone celebrations) are the evidence-aligned mechanism — the same model used by TypingClub. The design constraint is lesson granularity: individual lesson units must be short enough that a natural stopping point is always close. See ADR-010.
 
 3. ~~**Piper voice download reliability**~~ — **resolved.** Both Whisper models and Piper voices are hosted on HuggingFace (`rhasspy/piper-voices`); HuggingFace's Xet and hf_transfer backends have active Windows reliability bugs and the domain is frequently blocked by school content filters. The solution is the same for both: bundle what is needed, delegate optional downloads to the user's browser. English voice is always bundled; additional voices are distributed as direct download links from the project website (browser → save to `Documents\Takki\voices\`). No in-app download logic. See ADR-015.
 
@@ -1396,7 +1408,7 @@ This pre-ADR document captures agreed architectural decisions but is not suffici
 See [roadmap.md](roadmap.md) for the agreed phased plan (Alpha, Beta, V1), the in/out-of-scope split per phase, dependency-ordered task lists within each phase, and the "done" criteria.
 
 **3. Resolve Open Questions**
-The session pacing and fatigue question (open question 2) should be resolved before implementing the session loop. Open questions 1 and 3 are now resolved.
+All open questions (1–3) are now resolved. See the Open Questions section for decisions.
 
 **4. Repository and Contribution Setup**
 Before any code, the open source scaffolding should be in place:
