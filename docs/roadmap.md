@@ -92,7 +92,7 @@ A single child sits down, hears a letter in English, types it, hears immediate f
 
 Within each phase, work proceeds by dependency depth: foundation → glue → user-facing.
 
-Every external-interface step below is implemented as a `typing.Protocol` + real implementation + fake implementation in `tests/fakes/`, per [ADR-019](architecture.md#adr-019-testing-strategy-and-io-isolation). The fake lands in the same commit as the real implementation and is what downstream logic consumes during unit tests. This is not a separate step — it's the structure of every step that touches I/O.
+Every external-interface step below is implemented as a `typing.Protocol` + real implementation + fake implementation in `tests/fakes/`, per [ADR-019](adr/0019-testing-strategy-and-io-isolation.md). The fake lands in the same commit as the real implementation and is what downstream logic consumes during unit tests. This is not a separate step — it's the structure of every step that touches I/O.
 
 ### Alpha order
 
