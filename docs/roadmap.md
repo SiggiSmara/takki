@@ -96,12 +96,12 @@ Every external-interface step below is implemented as a `typing.Protocol` + real
 
 ### Alpha order
 
-1. Platform interfaces — `get_system_language()`, `get_home_row_keys()`, `get_fallback_tts()`. Stubs first so the rest of the codebase can call through them; real implementations land alongside the first Windows validation pass.
-2. SQLite schema + persistence module (single profile, key accuracy history, session log)
-3. `wordfreq` wrapper — letter frequency ranking and bigram generator. Spike code in [spikes/wordfreq_coverage_spike.py](../spikes/wordfreq_coverage_spike.py) proves the API.
+1. Platform interfaces — `get_system_language()`, `get_layout_positions()` (extended from the original `get_home_row_keys()` per [ADR-023](adr/0023-key-introduction-protocol.md)), `get_fallback_tts()`. Stubs first so the rest of the codebase can call through them; real implementations land alongside the first Windows validation pass.
+2. SQLite schema + persistence module (single profile, key accuracy history, session log, per-key time-since-last-practised for the spaced re-exposure mechanism in [ADR-024](adr/0024-drill-content-and-lesson-granularity.md))
+3. `wordfreq` wrapper — letter frequency ranking and bigram generator. Spike code in [spikes/wordfreq_coverage_spike.py](../spikes/wordfreq_coverage_spike.py) proves the API. Layout-invariant finger map and per-language layout tables — spike code in [spikes/key_introduction_order_spike.py](../spikes/key_introduction_order_spike.py).
 4. Audio out: pyttsx3 TTS wrapper + pygame.mixer sound cues (independent of `pygame.display`)
 5. `pynput` keyboard input wrapper, auto-reject on wrong key
-6. Lesson engine: Layer 1 drill generator, adaptive key introducer, progression thresholds, Bronze milestone detection
+6. Lesson engine: Layer 1 drill generator (per [ADR-024](adr/0024-drill-content-and-lesson-granularity.md) — four-phase ramp-up, freq-weighted bigrams, rare-key re-exposure, child-pace-adaptive drill blocks), adaptive key introducer (per [ADR-023](adr/0023-key-introduction-protocol.md) — home-row symmetric pairs then frequency-leader-per-hand, with spoken intro script), progression thresholds, Bronze milestone detection
 7. Session loop glue, runnable end-to-end
 
 ### Beta order

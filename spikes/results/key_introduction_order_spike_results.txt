@@ -1,0 +1,874 @@
+Key Introduction Order Spike — v2
+Python: 3.11.14
+Algorithms: A symmetric / B pure-freq / C freq-per-hand / D coverage-greedy
+Home row: universal symmetric-pair anchor (per ADR-023)
+Languages: en, de, fi, is, fr, es, cs, pl, lv
+
+
+  Loading en... 321,180 word entries
+
+==============================================================================
+  en — US QWERTY — introduction order  (key (side, finger) cov-grapheme%)
+==============================================================================
+  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand             
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1  f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%
+     2  j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%
+     3  d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%
+     4  k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%
+     5  s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%
+     6  l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%
+     7  a           (L,pink)   0.6%       a           (L,pink)   0.6%       a           (L,pink)   0.6%       a           (L,pink)   0.6%       a           (L,pink)   0.6%
+     8  g           (L,idx )   0.7%       g           (L,idx )   0.7%       g           (L,idx )   0.7%       g           (L,idx )   0.7%       g           (L,idx )   0.7%
+     9  h           (R,idx )   1.3%       h           (R,idx )   1.3%       h           (R,idx )   1.3%       h           (R,idx )   1.3%       h           (R,idx )   1.3%
+    10  r           (L,idx )   1.5%       e           (L,mid )   2.6%       e           (L,mid )   2.6%       n           (R,idx )   5.0%       t           (L,idx )   3.0%
+    11  u           (R,idx )   1.7%       t           (L,idx )  12.9%       n           (R,idx )   6.8%       t           (L,idx )   7.0%       n           (R,idx )   7.0%
+    12  e           (L,mid )   5.4%       n           (R,idx )  17.8%       t           (L,idx )  17.8%       e           (L,mid )  17.8%       e           (L,mid )  17.8%
+    13  i           (R,mid )   7.8%       o           (R,ring)  21.8%       o           (R,ring)  21.8%       i           (R,mid )  23.5%       i           (R,mid )  23.5%
+    14  w           (L,ring)  10.4%       r           (L,idx )  28.3%       r           (L,idx )  28.3%       r           (L,idx )  29.6%       r           (L,idx )  29.6%
+    15  o           (R,ring)  15.9%       i           (R,mid )  37.6%       i           (R,mid )  37.6%       o           (R,ring)  37.6%       o           (R,ring)  37.6%
+    16  q           (L,pink)  16.0%       u           (R,idx )  42.7%       c           (L,mid )  43.8%       w           (L,ring)  45.9%       w           (L,ring)  45.9%
+    17  p           (R,pink)  18.2%       c           (L,mid )  50.7%       u           (R,idx )  50.7%       m           (R,idx )  52.6%       m           (R,idx )  52.6%
+    18  t           (L,idx )  38.9%       m           (R,idx )  59.2%       w           (L,ring)  59.8%       c           (L,mid )  60.3%       c           (L,mid )  60.3%
+    19  y           (R,idx )  44.6%       w           (L,ring)  68.6%       m           (R,idx )  68.6%       u           (R,idx )  68.6%       u           (R,idx )  68.6%
+    20  v           (L,idx )  47.6%       y           (R,idx )  76.5%       b           (L,idx )  74.7%       y           (R,idx )  76.5%       b           (L,idx )  74.7%
+    21  m           (R,idx )  53.9%       p           (R,pink)  85.2%       y           (R,idx )  83.2%       p           (R,pink)  85.2%       y           (R,idx )  83.2%
+    22  c           (L,mid )  62.0%       b           (L,idx )  92.2%       v           (L,idx )  88.5%       b           (L,idx )  92.2%       v           (L,idx )  88.5%
+    23  x           (L,ring)  62.6%       v           (L,idx )  98.0%       p           (R,pink)  98.0%       v           (L,idx )  98.0%       p           (R,pink)  98.0%
+    24  z           (L,pink)  62.8%       x           (L,ring)  99.0%       x           (L,ring)  99.0%       x           (L,ring)  99.0%       x           (L,ring)  99.0%
+    25  b           (L,idx )  68.3%       q           (L,pink)  99.5%       q           (L,pink)  99.5%       q           (L,pink)  99.5%       q           (L,pink)  99.5%
+    26  n           (R,idx ) 100.0%       z           (L,pink) 100.0%       z           (L,pink) 100.0%       z           (L,pink) 100.0%       z           (L,pink) 100.0%
+
+==============================================================================
+  en — US QWERTY — coverage milestones (step at which X% is reached)
+==============================================================================
+  per-grapheme    Algorithm                    10%   25%   50%   75%   90%
+                  A symmetric pairs             14    18    21    26    26
+                  B pure frequency              11    14    17    20    22
+                  C freq-per-hand               12    14    17    21    23
+                  D coverage-greedy             12    14    17    20    22
+                  E coverage-per-hand           12    14    17    21    23
+
+  per-keystroke   Algorithm                    10%   25%   50%   75%   90%
+                  A symmetric pairs             14    18    21    26    26
+                  B pure frequency              11    14    17    20    22
+                  C freq-per-hand               12    14    17    21    23
+                  D coverage-greedy             12    14    17    20    22
+                  E coverage-per-hand           12    14    17    21    23
+
+==============================================================================
+  en — US QWERTY — physical keys per finger at step 10
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             1      1      1      3      2      1      1      0     10
+  B pure frequency              1      1      2      2      2      1      1      0     10
+  C freq-per-hand               1      1      2      2      2      1      1      0     10
+  D coverage-greedy             1      1      1      2      3      1      1      0     10
+  E coverage-per-hand           1      1      1      3      2      1      1      0     10
+
+==============================================================================
+  en — US QWERTY — physical keys per finger at step 16
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             2      2      2      3      3      2      2      0     16
+  B pure frequency              1      1      2      4      4      2      2      0     16
+  C freq-per-hand               1      1      3      4      3      2      2      0     16
+  D coverage-greedy             1      2      2      4      3      2      2      0     16
+  E coverage-per-hand           1      2      2      4      3      2      2      0     16
+
+==============================================================================
+  en — US QWERTY — physical keys per finger at step 26
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             3      3      3      6      6      2      2      1     26
+  B pure frequency              3      3      3      6      6      2      2      1     26
+  C freq-per-hand               3      3      3      6      6      2      2      1     26
+  D coverage-greedy             3      3      3      6      6      2      2      1     26
+  E coverage-per-hand           3      3      3      6      6      2      2      1     26
+
+  YAML draft → /home/siggi/github/takki/spikes/results/key_intro_en.yaml
+
+  Loading de... 634,502 word entries
+
+==============================================================================
+  de — German QWERTZ — introduction order  (key (side, finger) cov-grapheme%)
+==============================================================================
+  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand             
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1  f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%
+     2  j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%
+     3  d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%
+     4  k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%
+     5  s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%
+     6  l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%
+     7  a           (L,pink)   3.0%       a           (L,pink)   3.0%       a           (L,pink)   3.0%       a           (L,pink)   3.0%       a           (L,pink)   3.0%
+     8  ö           (R,pink)   3.0%       ö           (R,pink)   3.0%       ö           (R,pink)   3.0%       ö           (R,pink)   3.0%       ö           (R,pink)   3.0%
+     9  g           (L,idx )   3.0%       g           (L,idx )   3.0%       g           (L,idx )   3.0%       g           (L,idx )   3.0%       g           (L,idx )   3.0%
+    10  h           (R,idx )   3.1%       h           (R,idx )   3.1%       h           (R,idx )   3.1%       h           (R,idx )   3.1%       h           (R,idx )   3.1%
+    11  ä           (R,pink)   3.1%       ä           (R,pink)   3.1%       ä           (R,pink)   3.1%       ä           (R,pink)   3.1%       ä           (R,pink)   3.1%
+    12  r           (L,idx )   3.4%       e           (L,mid )   4.4%       e           (L,mid )   4.4%       u           (R,idx )   4.5%       e           (L,mid )   4.4%
+    13  u           (R,idx )   5.1%       n           (R,idx )   8.0%       n           (R,idx )   8.0%       n           (R,idx )   8.8%       u           (R,idx )   6.0%
+    14  e           (L,mid )  10.8%       i           (R,mid )  17.6%       r           (L,idx )  13.5%       e           (L,mid )  13.5%       r           (L,idx )  10.8%
+    15  i           (R,mid )  17.1%       r           (L,idx )  25.3%       i           (R,mid )  25.3%       i           (R,mid )  23.3%       n           (R,idx )  20.3%
+    16  w           (L,ring)  20.3%       t           (L,idx )  32.5%       t           (L,idx )  32.5%       r           (L,idx )  32.5%       t           (L,idx )  25.8%
+    17  o           (R,ring)  21.8%       u           (R,idx )  41.4%       u           (R,idx )  41.4%       t           (L,idx )  41.4%       i           (R,mid )  41.4%
+    18  p           (R,pink)  22.6%       c           (L,mid )  50.7%       c           (L,mid )  50.7%       c           (L,mid )  50.7%       c           (L,mid )  50.7%
+    19  t           (L,idx )  30.5%       m           (R,idx )  59.3%       m           (R,idx )  59.3%       m           (R,idx )  59.3%       m           (R,idx )  59.3%
+    20  z           (R,idx )  32.2%       o           (R,ring)  65.9%       b           (L,idx )  66.9%       b           (L,idx )  66.9%       b           (L,idx )  66.9%
+    21  v           (L,idx )  33.5%       b           (L,idx )  74.5%       o           (R,ring)  74.5%       o           (R,ring)  74.5%       o           (R,ring)  74.5%
+    22  m           (R,idx )  39.7%       w           (L,ring)  82.5%       w           (L,ring)  82.5%       w           (L,ring)  82.5%       w           (L,ring)  82.5%
+    23  c           (L,mid )  47.7%       z           (R,idx )  86.9%       z           (R,idx )  86.9%       v           (L,idx )  87.0%       z           (R,idx )  86.9%
+    24  y           (L,pink)  48.1%       v           (L,idx )  91.6%       v           (L,idx )  91.6%       z           (R,idx )  91.6%       v           (L,idx )  91.6%
+    25  b           (L,idx )  53.8%       p           (R,pink)  95.7%       p           (R,pink)  95.7%       p           (R,pink)  95.7%       p           (R,pink)  95.7%
+    26  n           (R,idx )  96.4%       ü           (R,pink)  99.3%       y           (L,pink)  96.4%       ü           (R,pink)  99.3%       y           (L,pink)  96.4%
+    27  ü           (R,pink) 100.0%       y           (L,pink) 100.0%       ü           (R,pink) 100.0%       y           (L,pink) 100.0%       ü           (R,pink) 100.0%
+
+==============================================================================
+  de — German QWERTZ — coverage milestones (step at which X% is reached)
+==============================================================================
+  per-grapheme    Algorithm                    10%   25%   50%   75%   90%
+                  A symmetric pairs             14    19    25    26    26
+                  B pure frequency              14    15    18    22    24
+                  C freq-per-hand               14    15    18    22    24
+                  D coverage-greedy             14    16    18    22    24
+                  E coverage-per-hand           14    16    18    22    24
+
+  per-keystroke   Algorithm                    10%   25%   50%   75%   90%
+                  A symmetric pairs             14    19    25    26    26
+                  B pure frequency              14    15    18    22    24
+                  C freq-per-hand               14    15    18    22    24
+                  D coverage-greedy             14    16    18    22    24
+                  E coverage-per-hand           14    16    18    22    24
+
+==============================================================================
+  de — German QWERTZ — physical keys per finger at step 10
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             1      1      1      2      2      1      1      1     10
+  B pure frequency              1      1      1      2      2      1      1      1     10
+  C freq-per-hand               1      1      1      2      2      1      1      1     10
+  D coverage-greedy             1      1      1      2      2      1      1      1     10
+  E coverage-per-hand           1      1      1      2      2      1      1      1     10
+
+==============================================================================
+  de — German QWERTZ — physical keys per finger at step 16
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             1      2      2      3      3      2      1      2     16
+  B pure frequency              1      1      2      4      3      2      1      2     16
+  C freq-per-hand               1      1      2      4      3      2      1      2     16
+  D coverage-greedy             1      1      2      3      4      2      1      2     16
+  E coverage-per-hand           1      1      2      4      4      1      1      2     16
+
+==============================================================================
+  de — German QWERTZ — physical keys per finger at step 27
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             2      2      3      6      6      2      2      4     27
+  B pure frequency              2      2      3      6      6      2      2      4     27
+  C freq-per-hand               2      2      3      6      6      2      2      4     27
+  D coverage-greedy             2      2      3      6      6      2      2      4     27
+  E coverage-per-hand           2      2      3      6      6      2      2      4     27
+
+  YAML draft → /home/siggi/github/takki/spikes/results/key_intro_de.yaml
+
+  Loading fi... 734,205 word entries
+
+==============================================================================
+  fi — Finnish — introduction order  (key (side, finger) cov-grapheme%)
+==============================================================================
+  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand             
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1  f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%
+     2  j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%
+     3  d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%
+     4  k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%
+     5  s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%
+     6  l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%
+     7  a           (L,pink)   0.6%       a           (L,pink)   0.6%       a           (L,pink)   0.6%       a           (L,pink)   0.6%       a           (L,pink)   0.6%
+     8  ö           (R,pink)   0.6%       ö           (R,pink)   0.6%       ö           (R,pink)   0.6%       ö           (R,pink)   0.6%       ö           (R,pink)   0.6%
+     9  g           (L,idx )   0.6%       g           (L,idx )   0.6%       g           (L,idx )   0.6%       g           (L,idx )   0.6%       g           (L,idx )   0.6%
+    10  h           (R,idx )   0.6%       h           (R,idx )   0.6%       h           (R,idx )   0.6%       h           (R,idx )   0.6%       h           (R,idx )   0.6%
+    11  ä           (R,pink)   0.8%       ä           (R,pink)   0.8%       ä           (R,pink)   0.8%       ä           (R,pink)   0.8%       ä           (R,pink)   0.8%
+    12  r           (L,idx )   0.9%       i           (R,mid )   2.6%       t           (L,idx )   1.8%       o           (R,ring)   2.9%       t           (L,idx )   1.8%
+    13  u           (R,idx )   1.6%       t           (L,idx )   5.6%       i           (R,mid )   5.6%       i           (R,mid )   6.3%       o           (R,ring)   4.9%
+    14  e           (L,mid )   2.9%       n           (R,idx )  10.7%       e           (L,mid )  10.6%       n           (R,idx )  11.6%       e           (L,mid )   8.8%
+    15  i           (R,mid )   6.9%       e           (L,mid )  20.8%       n           (R,idx )  20.8%       t           (L,idx )  18.5%       i           (R,mid )  17.7%
+    16  o           (R,ring)  12.7%       o           (R,ring)  32.1%       v           (L,idx )  25.4%       e           (L,mid )  32.1%       v           (L,idx )  22.5%
+    17  p           (R,pink)  15.2%       u           (R,idx )  43.3%       o           (R,ring)  39.6%       u           (R,idx )  43.3%       n           (R,idx )  39.6%
+    18  t           (L,idx )  31.7%       m           (R,idx )  56.9%       r           (L,idx )  45.0%       m           (R,idx )  56.9%       r           (L,idx )  45.0%
+    19  y           (R,idx )  35.1%       v           (L,idx )  68.0%       u           (R,idx )  61.4%       v           (L,idx )  68.0%       u           (R,idx )  61.4%
+    20  v           (L,idx )  44.0%       r           (L,idx )  78.2%       b           (L,idx )  61.9%       r           (L,idx )  78.2%       b           (L,idx )  61.9%
+    21  m           (R,idx )  54.5%       p           (R,pink)  88.8%       m           (R,idx )  78.8%       p           (R,pink)  88.8%       m           (R,idx )  78.8%
+    22  c           (L,mid )  54.9%       y           (R,idx )  98.6%       c           (L,mid )  79.4%       y           (R,idx )  98.6%       c           (L,mid )  79.4%
+    23  b           (L,idx )  55.4%       b           (L,idx )  99.3%       p           (R,pink)  90.1%       b           (L,idx )  99.3%       p           (R,pink)  90.1%
+    24  n           (R,idx ) 100.0%       c           (L,mid ) 100.0%       y           (R,idx ) 100.0%       c           (L,mid ) 100.0%       y           (R,idx ) 100.0%
+
+==============================================================================
+  fi — Finnish — coverage milestones (step at which X% is reached)
+==============================================================================
+  per-grapheme    Algorithm                    10%   25%   50%   75%   90%
+                  A symmetric pairs             16    18    21    24    24
+                  B pure frequency              14    16    18    20    22
+                  C freq-per-hand               14    16    19    21    23
+                  D coverage-greedy             14    16    18    20    22
+                  E coverage-per-hand           15    17    19    21    23
+
+  per-keystroke   Algorithm                    10%   25%   50%   75%   90%
+                  A symmetric pairs             16    18    21    24    24
+                  B pure frequency              14    16    18    20    22
+                  C freq-per-hand               14    16    19    21    23
+                  D coverage-greedy             14    16    18    20    22
+                  E coverage-per-hand           15    17    19    21    23
+
+==============================================================================
+  fi — Finnish — physical keys per finger at step 10
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             1      1      1      2      2      1      1      1     10
+  B pure frequency              1      1      1      2      2      1      1      1     10
+  C freq-per-hand               1      1      1      2      2      1      1      1     10
+  D coverage-greedy             1      1      1      2      2      1      1      1     10
+  E coverage-per-hand           1      1      1      2      2      1      1      1     10
+
+==============================================================================
+  fi — Finnish — physical keys per finger at step 16
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             1      1      2      3      3      2      2      2     16
+  B pure frequency              1      1      2      3      3      2      2      2     16
+  C freq-per-hand               1      1      2      4      3      2      1      2     16
+  D coverage-greedy             1      1      2      3      3      2      2      2     16
+  E coverage-per-hand           1      1      2      4      2      2      2      2     16
+
+==============================================================================
+  fi — Finnish — physical keys per finger at step 24
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             1      1      3      6      6      2      2      3     24
+  B pure frequency              1      1      3      6      6      2      2      3     24
+  C freq-per-hand               1      1      3      6      6      2      2      3     24
+  D coverage-greedy             1      1      3      6      6      2      2      3     24
+  E coverage-per-hand           1      1      3      6      6      2      2      3     24
+
+  YAML draft → /home/siggi/github/takki/spikes/results/key_intro_fi.yaml
+
+  Loading is... 42,304 word entries
+
+==============================================================================
+  is — Icelandic ISO — introduction order  (key (side, finger) cov-grapheme%)
+==============================================================================
+  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand             
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1  f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%
+     2  j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%
+     3  d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%
+     4  k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%
+     5  s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%
+     6  l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%
+     7  a           (L,pink)   0.5%       a           (L,pink)   0.5%       a           (L,pink)   0.5%       a           (L,pink)   0.5%       a           (L,pink)   0.5%
+     8  æ           (R,pink)   0.5%       æ           (R,pink)   0.5%       æ           (R,pink)   0.5%       æ           (R,pink)   0.5%       æ           (R,pink)   0.5%
+     9  g           (L,idx )   0.8%       g           (L,idx )   0.8%       g           (L,idx )   0.8%       g           (L,idx )   0.8%       g           (L,idx )   0.8%
+    10  h           (R,idx )   1.4%       h           (R,idx )   1.4%       h           (R,idx )   1.4%       h           (R,idx )   1.4%       h           (R,idx )   1.4%
+    11  r           (L,idx )   2.0%       i           (R,mid )   2.1%       r           (L,idx )   2.0%       n           (R,idx )   3.7%       t           (L,idx )   2.4%
+    12  u           (R,idx )   2.5%       r           (L,idx )   3.2%       i           (R,mid )   3.2%       i           (R,mid )   5.7%       n           (R,idx )   5.0%
+    13  e           (L,mid )   5.5%       e           (L,mid )   6.7%       e           (L,mid )   6.7%       e           (L,mid )  10.4%       e           (L,mid )   7.0%
+    14  i           (R,mid )   9.2%       n           (R,idx )  14.0%       n           (R,idx )  14.0%       t           (L,idx )  16.1%       i           (R,mid )  16.1%
+    15  o           (R,ring)  10.1%       t           (L,idx )  21.7%       t           (L,idx )  21.7%       m           (R,idx )  22.2%       r           (L,idx )  21.7%
+    16  p           (R,pink)  11.0%       u           (R,idx )  27.4%       u           (R,idx )  27.4%       r           (L,idx )  29.1%       m           (R,idx )  29.1%
+    17  t           (L,idx )  19.5%       dead-acute  (R,pink)  35.1%       v           (L,idx )  33.2%       u           (R,idx )  36.8%       v           (L,idx )  34.4%
+    18  y           (R,idx )  22.5%       m           (R,idx )  46.7%       dead-acute  (R,pink)  41.4%       dead-acute  (R,pink)  46.7%       u           (R,idx )  43.2%
+    19  v           (L,idx )  27.9%       ð           (R,pink)  54.8%       þ           (L,pink)  46.3%       ð           (R,pink)  54.8%       þ           (L,pink)  47.3%
+    20  m           (R,idx )  36.3%       v           (L,idx )  65.2%       m           (R,idx )  59.0%       v           (L,idx )  65.2%       dead-acute  (R,pink)  59.0%
+    21  c           (L,mid )  36.7%       o           (R,ring)  74.6%       b           (L,idx )  61.5%       o           (R,ring)  74.6%       b           (L,idx )  61.5%
+    22  b           (L,idx )  38.5%       þ           (L,pink)  81.4%       ð           (R,pink)  74.6%       þ           (L,pink)  81.4%       ð           (R,pink)  74.6%
+    23  n           (R,idx )  58.1%       y           (R,idx )  87.3%       c           (L,mid )  75.0%       y           (R,idx )  87.3%       c           (L,mid )  75.0%
+    24  dead-acute  (R,pink)  74.3%       b           (L,idx )  92.0%       o           (R,ring)  86.2%       b           (L,idx )  92.0%       o           (R,ring)  86.2%
+    25  ð           (R,pink)  88.7%       ö           (R,pink)  96.1%       y           (R,idx )  92.6%       ö           (R,pink)  96.1%       y           (R,idx )  92.6%
+    26  þ           (L,pink)  95.8%       p           (R,pink)  99.3%       ö           (R,pink)  96.7%       p           (R,pink)  99.3%       ö           (R,pink)  96.7%
+    27  ö           (R,pink) 100.0%       c           (L,mid ) 100.0%       p           (R,pink) 100.0%       c           (L,mid ) 100.0%       p           (R,pink) 100.0%
+
+==============================================================================
+  is — Icelandic ISO — coverage milestones (step at which X% is reached)
+==============================================================================
+  per-grapheme    Algorithm                    10%   25%   50%   75%   90%
+                  A symmetric pairs             15    19    23    25    26
+                  B pure frequency              14    16    19    22    24
+                  C freq-per-hand               14    16    20    24    25
+                  D coverage-greedy             13    16    19    22    24
+                  E coverage-per-hand           14    16    20    24    25
+
+  per-keystroke   Algorithm                    10%   25%   50%   75%   90%
+                  A symmetric pairs             15    19    23    25    26
+                  B pure frequency              14    16    19    22    25
+                  C freq-per-hand               14    16    20    24    26
+                  D coverage-greedy             13    16    19    22    25
+                  E coverage-per-hand           14    16    20    24    26
+
+==============================================================================
+  is — Icelandic ISO — physical keys per finger at step 10
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             1      1      1      2      2      1      1      1     10
+  B pure frequency              1      1      1      2      2      1      1      1     10
+  C freq-per-hand               1      1      1      2      2      1      1      1     10
+  D coverage-greedy             1      1      1      2      2      1      1      1     10
+  E coverage-per-hand           1      1      1      2      2      1      1      1     10
+
+==============================================================================
+  is — Icelandic ISO — physical keys per finger at step 16
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             1      1      2      3      3      2      2      2     16
+  B pure frequency              1      1      2      4      4      2      1      1     16
+  C freq-per-hand               1      1      2      4      4      2      1      1     16
+  D coverage-greedy             1      1      2      4      4      2      1      1     16
+  E coverage-per-hand           1      1      2      4      4      2      1      1     16
+
+==============================================================================
+  is — Icelandic ISO — physical keys per finger at step 27
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             2      1      3      6      6      2      2      5     27
+  B pure frequency              2      1      3      6      6      2      2      5     27
+  C freq-per-hand               2      1      3      6      6      2      2      5     27
+  D coverage-greedy             2      1      3      6      6      2      2      5     27
+  E coverage-per-hand           2      1      3      6      6      2      2      5     27
+
+  YAML draft → /home/siggi/github/takki/spikes/results/key_intro_is.yaml
+
+  Loading fr... 311,419 word entries
+
+==============================================================================
+  fr — French AZERTY — introduction order  (key (side, finger) cov-grapheme%)
+==============================================================================
+  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand             
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1  f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%
+     2  j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%
+     3  d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%
+     4  k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%
+     5  s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%
+     6  l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%
+     7  q           (L,pink)   0.0%       q           (L,pink)   0.0%       q           (L,pink)   0.0%       q           (L,pink)   0.0%       q           (L,pink)   0.0%
+     8  m           (R,pink)   0.0%       m           (R,pink)   0.0%       m           (R,pink)   0.0%       m           (R,pink)   0.0%       m           (R,pink)   0.0%
+     9  g           (L,idx )   0.0%       g           (L,idx )   0.0%       g           (L,idx )   0.0%       g           (L,idx )   0.0%       g           (L,idx )   0.0%
+    10  h           (R,idx )   0.0%       h           (R,idx )   0.0%       h           (R,idx )   0.0%       h           (R,idx )   0.0%       h           (R,idx )   0.0%
+    11  r           (L,idx )   0.0%       e           (L,mid )   6.2%       e           (L,mid )   6.2%       e           (L,mid )   6.2%       e           (L,mid )   6.2%
+    12  u           (R,idx )   1.1%       r           (L,idx )   6.3%       i           (R,mid )   7.0%       t           (L,idx )   9.0%       i           (R,mid )   7.0%
+    13  e           (L,mid )  10.5%       i           (R,mid )   7.5%       r           (L,idx )   7.5%       u           (R,idx )  11.7%       t           (L,idx )  10.2%
+    14  i           (R,mid )  13.8%       a           (L,pink)  10.7%       n           (R,idx )   8.6%       i           (R,mid )  15.1%       u           (R,idx )  15.1%
+    15  z           (L,ring)  13.8%       t           (L,idx )  15.6%       a           (L,pink)  14.8%       a           (L,pink)  18.6%       a           (L,pink)  18.6%
+    16  o           (R,ring)  16.4%       n           (R,idx )  21.7%       o           (R,ring)  19.3%       n           (R,idx )  25.7%       n           (R,idx )  25.7%
+    17  a           (L,pink)  20.9%       o           (R,ring)  29.7%       t           (L,idx )  29.7%       r           (L,idx )  33.5%       r           (L,idx )  33.5%
+    18  p           (R,pink)  28.6%       u           (R,idx )  45.3%       u           (R,idx )  45.3%       o           (R,ring)  45.3%       o           (R,ring)  45.3%
+    19  t           (L,idx )  40.0%       p           (R,pink)  57.4%       c           (L,mid )  55.1%       p           (R,pink)  57.4%       c           (L,mid )  55.1%
+    20  y           (R,idx )  40.6%       c           (L,mid )  68.9%       p           (R,pink)  68.9%       c           (L,mid )  68.9%       p           (R,pink)  68.9%
+    21  v           (L,idx )  44.8%       é           (L,ring)  77.8%       é           (L,ring)  77.8%       é           (L,ring)  77.8%       é           (L,ring)  77.8%
+    22  c           (L,mid )  52.6%       v           (L,idx )  86.5%       è           (R,idx )  79.7%       v           (L,idx )  86.5%       è           (R,idx )  79.7%
+    23  x           (L,ring)  54.5%       b           (L,idx )  91.7%       v           (L,idx )  88.4%       b           (L,idx )  91.7%       v           (L,idx )  88.4%
+    24  b           (L,idx )  57.3%       x           (L,ring)  94.3%       y           (R,idx )  89.8%       x           (L,ring)  94.3%       y           (R,idx )  89.8%
+    25  n           (R,idx )  85.5%       è           (R,idx )  96.4%       b           (L,idx )  95.3%       è           (R,idx )  96.4%       b           (L,idx )  95.3%
+    26  é           (L,ring)  96.6%       y           (R,idx )  97.9%       dead-circ   (R,pink)  96.4%       y           (R,idx )  97.9%       dead-circ   (R,pink)  96.4%
+    27  è           (R,idx )  98.8%       dead-circ   (R,pink)  99.1%       x           (L,ring)  99.1%       dead-circ   (R,pink)  99.1%       x           (L,ring)  99.1%
+    28  dead-circ   (R,pink) 100.0%       z           (L,ring) 100.0%       z           (L,ring) 100.0%       z           (L,ring) 100.0%       z           (L,ring) 100.0%
+
+==============================================================================
+  fr — French AZERTY — coverage milestones (step at which X% is reached)
+==============================================================================
+  per-grapheme    Algorithm                    10%   25%   50%   75%   90%
+                  A symmetric pairs             13    18    22    25    26
+                  B pure frequency              14    17    19    21    23
+                  C freq-per-hand               15    17    19    21    25
+                  D coverage-greedy             13    16    19    21    23
+                  E coverage-per-hand           13    16    19    21    25
+
+  per-keystroke   Algorithm                    10%   25%   50%   75%   90%
+                  A symmetric pairs             13    18    22    25    26
+                  B pure frequency              14    17    19    21    23
+                  C freq-per-hand               15    17    19    21    25
+                  D coverage-greedy             13    16    19    21    23
+                  E coverage-per-hand           13    16    19    21    25
+
+==============================================================================
+  fr — French AZERTY — physical keys per finger at step 10
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             1      1      1      2      2      1      1      1     10
+  B pure frequency              1      1      1      2      2      1      1      1     10
+  C freq-per-hand               1      1      1      2      2      1      1      1     10
+  D coverage-greedy             1      1      1      2      2      1      1      1     10
+  E coverage-per-hand           1      1      1      2      2      1      1      1     10
+
+==============================================================================
+  fr — French AZERTY — physical keys per finger at step 16
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             1      2      2      3      3      2      2      1     16
+  B pure frequency              2      1      2      4      3      2      1      1     16
+  C freq-per-hand               2      1      2      3      3      2      2      1     16
+  D coverage-greedy             2      1      2      3      4      2      1      1     16
+  E coverage-per-hand           2      1      2      3      4      2      1      1     16
+
+==============================================================================
+  fr — French AZERTY — physical keys per finger at step 28
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             2      4      3      6      6      2      2      3     28
+  B pure frequency              2      4      3      6      6      2      2      3     28
+  C freq-per-hand               2      4      3      6      6      2      2      3     28
+  D coverage-greedy             2      4      3      6      6      2      2      3     28
+  E coverage-per-hand           2      4      3      6      6      2      2      3     28
+
+  YAML draft → /home/siggi/github/takki/spikes/results/key_intro_fr.yaml
+
+  Loading es... 342,072 word entries
+
+==============================================================================
+  es — Spanish ISO — introduction order  (key (side, finger) cov-grapheme%)
+==============================================================================
+  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand             
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1  f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%
+     2  j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%
+     3  d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%
+     4  k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%
+     5  s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%
+     6  l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%
+     7  a           (L,pink)   1.6%       a           (L,pink)   1.6%       a           (L,pink)   1.6%       a           (L,pink)   1.6%       a           (L,pink)   1.6%
+     8  ñ           (R,pink)   1.6%       ñ           (R,pink)   1.6%       ñ           (R,pink)   1.6%       ñ           (R,pink)   1.6%       ñ           (R,pink)   1.6%
+     9  g           (L,idx )   1.6%       g           (L,idx )   1.6%       g           (L,idx )   1.6%       g           (L,idx )   1.6%       g           (L,idx )   1.6%
+    10  h           (R,idx )   1.7%       h           (R,idx )   1.7%       h           (R,idx )   1.7%       h           (R,idx )   1.7%       h           (R,idx )   1.7%
+    11  r           (L,idx )   1.8%       e           (L,mid )   4.4%       e           (L,mid )   4.4%       o           (R,ring)   5.2%       e           (L,mid )   4.4%
+    12  u           (R,idx )   2.6%       o           (R,ring)   8.5%       o           (R,ring)   8.5%       e           (L,mid )   8.5%       o           (R,ring)   8.5%
+    13  e           (L,mid )   6.7%       r           (L,idx )  10.4%       r           (L,idx )  10.4%       t           (L,idx )  11.3%       t           (L,idx )  11.3%
+    14  i           (R,mid )   7.8%       i           (R,mid )  12.0%       i           (R,mid )  12.0%       r           (L,idx )  14.4%       n           (R,idx )  13.9%
+    15  o           (R,ring)  14.2%       n           (R,idx )  15.7%       t           (L,idx )  16.7%       p           (R,pink)  19.8%       r           (L,idx )  18.7%
+    16  q           (L,pink)  19.8%       t           (L,idx )  23.7%       n           (R,idx )  23.7%       n           (R,idx )  25.1%       u           (R,idx )  23.8%
+    17  p           (R,pink)  26.2%       c           (L,mid )  33.3%       c           (L,mid )  33.3%       c           (L,mid )  31.6%       c           (L,mid )  31.4%
+    18  t           (L,idx )  33.1%       u           (R,idx )  42.4%       u           (R,idx )  42.4%       i           (R,mid )  42.4%       p           (R,pink)  40.0%
+    19  y           (R,idx )  34.2%       p           (R,pink)  53.3%       b           (L,idx )  47.1%       u           (R,idx )  53.3%       q           (L,pink)  45.7%
+    20  v           (L,idx )  36.7%       m           (R,idx )  64.9%       p           (R,pink)  58.6%       m           (R,idx )  64.9%       i           (R,mid )  59.8%
+    21  m           (R,idx )  42.5%       dead-acute  (R,pink)  74.1%       q           (L,pink)  65.1%       dead-acute  (R,pink)  74.1%       b           (L,idx )  65.1%
+    22  c           (L,mid )  52.7%       b           (L,idx )  81.7%       m           (R,idx )  77.9%       b           (L,idx )  81.7%       m           (R,idx )  77.9%
+    23  x           (L,ring)  53.1%       q           (L,pink)  88.8%       v           (L,idx )  83.1%       q           (L,pink)  88.8%       v           (L,idx )  83.1%
+    24  z           (L,pink)  54.2%       v           (L,idx )  94.7%       dead-acute  (R,pink)  94.7%       v           (L,idx )  94.7%       dead-acute  (R,pink)  94.7%
+    25  b           (L,idx )  59.1%       z           (L,pink)  96.8%       z           (L,pink)  96.8%       z           (L,pink)  96.8%       z           (L,pink)  96.8%
+    26  n           (R,idx )  87.7%       y           (R,idx )  99.0%       y           (R,idx )  99.0%       y           (R,idx )  99.0%       y           (R,idx )  99.0%
+    27  dead-acute  (R,pink) 100.0%       x           (L,ring) 100.0%       x           (L,ring) 100.0%       x           (L,ring) 100.0%       x           (L,ring) 100.0%
+
+==============================================================================
+  es — Spanish ISO — coverage milestones (step at which X% is reached)
+==============================================================================
+  per-grapheme    Algorithm                    10%   25%   50%   75%   90%
+                  A symmetric pairs             15    17    22    26    27
+                  B pure frequency              13    17    19    22    24
+                  C freq-per-hand               13    17    20    22    24
+                  D coverage-greedy             13    16    19    22    24
+                  E coverage-per-hand           13    17    20    22    24
+
+  per-keystroke   Algorithm                    10%   25%   50%   75%   90%
+                  A symmetric pairs             15    17    22    26    27
+                  B pure frequency              13    17    19    22    24
+                  C freq-per-hand               13    17    20    22    24
+                  D coverage-greedy             13    16    19    22    24
+                  E coverage-per-hand           13    17    20    22    24
+
+==============================================================================
+  es — Spanish ISO — physical keys per finger at step 10
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             1      1      1      2      2      1      1      1     10
+  B pure frequency              1      1      1      2      2      1      1      1     10
+  C freq-per-hand               1      1      1      2      2      1      1      1     10
+  D coverage-greedy             1      1      1      2      2      1      1      1     10
+  E coverage-per-hand           1      1      1      2      2      1      1      1     10
+
+==============================================================================
+  es — Spanish ISO — physical keys per finger at step 16
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             2      1      2      3      3      2      2      1     16
+  B pure frequency              1      1      2      4      3      2      2      1     16
+  C freq-per-hand               1      1      2      4      3      2      2      1     16
+  D coverage-greedy             1      1      2      4      3      1      2      2     16
+  E coverage-per-hand           1      1      2      4      4      1      2      1     16
+
+==============================================================================
+  es — Spanish ISO — physical keys per finger at step 27
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             3      2      3      6      6      2      2      3     27
+  B pure frequency              3      2      3      6      6      2      2      3     27
+  C freq-per-hand               3      2      3      6      6      2      2      3     27
+  D coverage-greedy             3      2      3      6      6      2      2      3     27
+  E coverage-per-hand           3      2      3      6      6      2      2      3     27
+
+  YAML draft → /home/siggi/github/takki/spikes/results/key_intro_es.yaml
+
+  Loading cs... 606,360 word entries
+
+==============================================================================
+  cs — Czech QWERTZ — introduction order  (key (side, finger) cov-grapheme%)
+==============================================================================
+  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand             
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1  f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%
+     2  j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%
+     3  d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%
+     4  k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%
+     5  s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%
+     6  l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%
+     7  a           (L,pink)   0.6%       a           (L,pink)   0.6%       a           (L,pink)   0.6%       a           (L,pink)   0.6%       a           (L,pink)   0.6%
+     8  ů           (R,pink)   0.6%       ů           (R,pink)   0.6%       ů           (R,pink)   0.6%       ů           (R,pink)   0.6%       ů           (R,pink)   0.6%
+     9  g           (L,idx )   0.6%       g           (L,idx )   0.6%       g           (L,idx )   0.6%       g           (L,idx )   0.6%       g           (L,idx )   0.6%
+    10  h           (R,idx )   0.6%       h           (R,idx )   0.6%       h           (R,idx )   0.6%       h           (R,idx )   0.6%       h           (R,idx )   0.6%
+    11  r           (L,idx )   0.8%       e           (L,mid )   2.1%       e           (L,mid )   2.1%       e           (L,mid )   2.1%       e           (L,mid )   2.1%
+    12  u           (R,idx )   1.0%       o           (R,ring)   3.4%       o           (R,ring)   3.4%       m           (R,idx )   3.7%       o           (R,ring)   3.4%
+    13  e           (L,mid )   2.7%       n           (R,idx )   5.2%       t           (L,idx )   5.7%       t           (L,idx )   5.5%       t           (L,idx )   5.7%
+    14  i           (R,mid )   3.3%       t           (L,idx )   8.0%       n           (R,idx )   8.0%       o           (R,ring)   8.2%       m           (R,idx )   8.2%
+    15  o           (R,ring)   6.0%       r           (L,idx )   8.9%       r           (L,idx )   8.9%       n           (R,idx )  10.8%       r           (L,idx )   9.2%
+    16  p           (R,pink)   8.4%       i           (R,mid )  11.0%       i           (R,mid )  11.0%       i           (R,mid )  13.1%       n           (R,idx )  12.0%
+    17  t           (L,idx )  12.9%       v           (L,idx )  12.5%       v           (L,idx )  12.5%       u           (R,idx )  15.9%       c           (L,mid )  13.5%
+    18  z           (R,idx )  14.0%       m           (R,idx )  16.8%       m           (R,idx )  16.8%       r           (L,idx )  18.9%       u           (R,idx )  17.0%
+    19  v           (L,idx )  16.7%       p           (R,pink)  20.5%       c           (L,mid )  19.9%       p           (R,pink)  23.2%       b           (L,idx )  19.6%
+    20  m           (R,idx )  21.8%       u           (R,idx )  26.4%       p           (R,pink)  24.2%       c           (L,mid )  27.4%       i           (R,mid )  25.3%
+    21  c           (L,mid )  25.0%       í           (R,ring)  30.8%       y           (L,pink)  27.3%       á           (R,mid )  31.2%       y           (L,pink)  29.9%
+    22  y           (L,pink)  27.8%       c           (L,mid )  36.8%       u           (R,idx )  34.8%       v           (L,idx )  36.2%       p           (R,pink)  35.7%
+    23  b           (L,idx )  33.0%       á           (R,mid )  43.0%       b           (L,idx )  40.6%       í           (R,ring)  43.0%       v           (L,idx )  40.6%
+    24  n           (R,idx )  44.3%       y           (L,pink)  47.8%       í           (R,ring)  47.4%       z           (R,idx )  48.4%       í           (R,ring)  47.4%
+    25  í           (R,ring)  52.3%       b           (L,idx )  54.7%       ě           (L,ring)  52.8%       ě           (L,ring)  54.3%       ě           (L,ring)  52.8%
+    26  á           (R,mid )  61.4%       z           (R,idx )  61.4%       á           (R,mid )  60.7%       y           (L,pink)  59.9%       á           (R,mid )  60.7%
+    27  ě           (L,ring)  68.1%       ě           (L,ring)  68.1%       ř           (L,idx )  65.6%       b           (L,idx )  68.1%       ř           (L,idx )  65.6%
+    28  ř           (L,idx )  73.6%       ř           (L,idx )  73.6%       z           (R,idx )  73.6%       ř           (L,idx )  73.6%       z           (R,idx )  73.6%
+    29  é           (R,pink)  78.9%       é           (R,pink)  78.9%       č           (L,idx )  78.2%       é           (R,pink)  78.9%       š           (L,mid )  78.4%
+    30  č           (L,idx )  84.0%       č           (L,idx )  84.0%       é           (R,pink)  84.0%       č           (L,idx )  84.0%       é           (R,pink)  83.8%
+    31  ž           (R,idx )  88.9%       ž           (R,idx )  88.9%       š           (L,mid )  88.9%       š           (L,mid )  88.9%       č           (L,idx )  88.9%
+    32  š           (L,mid )  94.0%       š           (L,mid )  94.0%       ž           (R,idx )  94.0%       ž           (R,idx )  94.0%       ž           (R,idx )  94.0%
+    33  ý           (R,idx )  99.2%       ý           (R,idx )  99.2%       ý           (R,idx )  99.2%       ý           (R,idx )  99.2%       ý           (R,idx )  99.2%
+    34  ú           (R,pink) 100.0%       ú           (R,pink) 100.0%       ú           (R,pink) 100.0%       ú           (R,pink) 100.0%       ú           (R,pink) 100.0%
+
+==============================================================================
+  cs — Czech QWERTZ — coverage milestones (step at which X% is reached)
+==============================================================================
+  per-grapheme    Algorithm                    10%   25%   50%   75%   90%
+                  A symmetric pairs             17    22    25    29    32
+                  B pure frequency              16    20    25    29    32
+                  C freq-per-hand               16    21    25    29    32
+                  D coverage-greedy             15    20    25    29    32
+                  E coverage-per-hand           16    20    25    29    32
+
+  per-keystroke   Algorithm                    10%   25%   50%   75%   90%
+                  A symmetric pairs             17    22    25    29    32
+                  B pure frequency              16    20    25    29    32
+                  C freq-per-hand               16    21    25    29    32
+                  D coverage-greedy             15    20    25    29    32
+                  E coverage-per-hand           16    20    25    29    32
+
+==============================================================================
+  cs — Czech QWERTZ — physical keys per finger at step 10
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             1      1      1      2      2      1      1      1     10
+  B pure frequency              1      1      1      2      2      1      1      1     10
+  C freq-per-hand               1      1      1      2      2      1      1      1     10
+  D coverage-greedy             1      1      1      2      2      1      1      1     10
+  E coverage-per-hand           1      1      1      2      2      1      1      1     10
+
+==============================================================================
+  cs — Czech QWERTZ — physical keys per finger at step 16
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             1      1      2      3      3      2      2      2     16
+  B pure frequency              1      1      2      4      3      2      2      1     16
+  C freq-per-hand               1      1      2      4      3      2      2      1     16
+  D coverage-greedy             1      1      2      3      4      2      2      1     16
+  E coverage-per-hand           1      1      2      4      4      1      2      1     16
+
+==============================================================================
+  cs — Czech QWERTZ — physical keys per finger at step 34
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             2      2      4      8      8      3      3      4     34
+  B pure frequency              2      2      4      8      8      3      3      4     34
+  C freq-per-hand               2      2      4      8      8      3      3      4     34
+  D coverage-greedy             2      2      4      8      8      3      3      4     34
+  E coverage-per-hand           2      2      4      8      8      3      3      4     34
+
+  YAML draft → /home/siggi/github/takki/spikes/results/key_intro_cs.yaml
+
+  Loading pl... 453,320 word entries
+
+==============================================================================
+  pl — Polish Programmers — introduction order  (key (side, finger) cov-grapheme%)
+==============================================================================
+  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand             
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1  f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%
+     2  j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%
+     3  d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%
+     4  k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%
+     5  s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%
+     6  l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%
+     7  a           (L,pink)   1.7%       a           (L,pink)   1.7%       a           (L,pink)   1.7%       a           (L,pink)   1.7%       a           (L,pink)   1.7%
+     8  g           (L,idx )   1.7%       g           (L,idx )   1.7%       g           (L,idx )   1.7%       g           (L,idx )   1.7%       g           (L,idx )   1.7%
+     9  h           (R,idx )   1.7%       h           (R,idx )   1.7%       h           (R,idx )   1.7%       h           (R,idx )   1.7%       h           (R,idx )   1.7%
+    10  r           (L,idx )   1.8%       e           (L,mid )   2.9%       e           (L,mid )   2.9%       e           (L,mid )   2.9%       e           (L,mid )   2.9%
+    11  u           (R,idx )   2.0%       i           (R,mid )   3.5%       i           (R,mid )   3.5%       t           (L,idx )   5.8%       m           (R,idx )   3.5%
+    12  e           (L,mid )   3.3%       altgr       (R,pink)   6.8%       z           (L,pink)   4.0%       o           (R,ring)   7.3%       t           (L,idx )   6.9%
+    13  i           (R,mid )   4.2%       o           (R,ring)   7.9%       altgr       (R,pink)   7.9%       n           (R,idx )   8.9%       o           (R,ring)   8.7%
+    14  w           (L,ring)   5.0%       z           (L,pink)   9.3%       r           (L,idx )   8.7%       i           (R,mid )  14.5%       r           (L,idx )   9.5%
+    15  o           (R,ring)   7.0%       n           (R,idx )  16.2%       o           (R,ring)  11.1%       altgr       (R,pink)  18.9%       n           (R,idx )  11.7%
+    16  p           (R,pink)   8.8%       r           (L,idx )  18.6%       c           (L,mid )  15.0%       m           (R,idx )  23.0%       z           (L,pink)  13.5%
+    17  t           (L,idx )  14.8%       c           (L,mid )  24.4%       n           (R,idx )  24.4%       z           (L,pink)  27.7%       i           (R,mid )  23.0%
+    18  y           (R,idx )  17.2%       t           (L,idx )  33.1%       t           (L,idx )  33.1%       c           (L,mid )  34.2%       c           (L,mid )  27.9%
+    19  m           (R,idx )  22.3%       y           (R,idx )  39.4%       y           (R,idx )  39.4%       w           (L,ring)  41.6%       altgr       (R,pink)  41.0%
+    20  c           (L,mid )  26.4%       w           (L,ring)  51.1%       w           (L,ring)  51.1%       y           (R,idx )  51.4%       w           (L,ring)  50.8%
+    21  z           (L,pink)  36.8%       m           (R,idx )  64.1%       m           (R,idx )  64.1%       r           (L,idx )  64.1%       y           (R,idx )  64.1%
+    22  b           (L,idx )  41.7%       p           (R,pink)  78.0%       b           (L,idx )  72.1%       p           (R,pink)  78.0%       b           (L,idx )  72.1%
+    23  n           (R,idx )  63.8%       u           (R,idx )  89.8%       p           (R,pink)  86.8%       u           (R,idx )  89.8%       p           (R,pink)  86.8%
+    24  altgr       (R,pink) 100.0%       b           (L,idx ) 100.0%       u           (R,idx ) 100.0%       b           (L,idx ) 100.0%       u           (R,idx ) 100.0%
+
+==============================================================================
+  pl — Polish Programmers — coverage milestones (step at which X% is reached)
+==============================================================================
+  per-grapheme    Algorithm                    10%   25%   50%   75%   90%
+                  A symmetric pairs             17    20    23    24    24
+                  B pure frequency              15    18    20    22    24
+                  C freq-per-hand               15    18    20    23    24
+                  D coverage-greedy             14    17    20    22    24
+                  E coverage-per-hand           15    18    20    23    24
+
+  per-keystroke   Algorithm                    10%   25%   50%   75%   90%
+                  A symmetric pairs             17    20    23    24    24
+                  B pure frequency              15    18    20    22    24
+                  C freq-per-hand               15    18    20    23    24
+                  D coverage-greedy             14    17    20    22    24
+                  E coverage-per-hand           15    18    20    23    24
+
+==============================================================================
+  pl — Polish Programmers — physical keys per finger at step 10
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             1      1      1      3      2      1      1      0     10
+  B pure frequency              1      1      2      2      2      1      1      0     10
+  C freq-per-hand               1      1      2      2      2      1      1      0     10
+  D coverage-greedy             1      1      2      2      2      1      1      0     10
+  E coverage-per-hand           1      1      2      2      2      1      1      0     10
+
+==============================================================================
+  pl — Polish Programmers — physical keys per finger at step 16
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             1      2      2      3      3      2      2      1     16
+  B pure frequency              2      1      2      3      3      2      2      1     16
+  C freq-per-hand               2      1      3      3      2      2      2      1     16
+  D coverage-greedy             1      1      2      3      4      2      2      1     16
+  E coverage-per-hand           2      1      2      4      4      1      2      0     16
+
+==============================================================================
+  pl — Polish Programmers — physical keys per finger at step 24
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             2      2      3      5      6      2      2      2     24
+  B pure frequency              2      2      3      5      6      2      2      2     24
+  C freq-per-hand               2      2      3      5      6      2      2      2     24
+  D coverage-greedy             2      2      3      5      6      2      2      2     24
+  E coverage-per-hand           2      2      3      5      6      2      2      2     24
+
+  YAML draft → /home/siggi/github/takki/spikes/results/key_intro_pl.yaml
+
+  Loading lv... 45,631 word entries
+
+==============================================================================
+  lv variant 1 — Latvian LVS 24-93 (AltGr path) — introduction order  (key (side, finger) cov-grapheme%)
+==============================================================================
+  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand             
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1  f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%
+     2  j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%
+     3  d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%
+     4  k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%
+     5  s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%
+     6  l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%
+     7  a           (L,pink)   1.6%       a           (L,pink)   1.6%       a           (L,pink)   1.6%       a           (L,pink)   1.6%       a           (L,pink)   1.6%
+     8  g           (L,idx )   2.0%       g           (L,idx )   2.0%       g           (L,idx )   2.0%       g           (L,idx )   2.0%       g           (L,idx )   2.0%
+     9  h           (R,idx )   2.0%       h           (R,idx )   2.0%       h           (R,idx )   2.0%       h           (R,idx )   2.0%       h           (R,idx )   2.0%
+    10  r           (L,idx )   2.1%       altgr       (R,pink)   3.0%       e           (L,mid )   2.1%       t           (L,idx )   3.6%       t           (L,idx )   3.6%
+    11  u           (R,idx )   3.8%       i           (R,mid )   4.8%       altgr       (R,pink)   3.4%       i           (R,mid )   6.1%       i           (R,mid )   6.1%
+    12  e           (L,mid )   4.1%       e           (L,mid )   6.1%       t           (L,idx )   6.1%       altgr       (R,pink)   9.0%       v           (L,idx )   8.9%
+    13  i           (R,mid )   6.6%       t           (L,idx )  11.9%       i           (R,mid )  11.9%       v           (L,idx )  12.4%       altgr       (R,pink)  12.4%
+    14  o           (R,ring)   7.6%       u           (R,idx )  15.7%       r           (L,idx )  15.5%       e           (L,mid )  17.6%       e           (L,mid )  17.6%
+    15  p           (R,pink)  11.0%       r           (L,idx )  21.8%       u           (R,idx )  21.8%       u           (R,idx )  23.0%       u           (R,idx )  23.0%
+    16  t           (L,idx )  19.3%       n           (R,idx )  26.6%       v           (L,idx )  31.4%       r           (L,idx )  31.4%       r           (L,idx )  31.4%
+    17  v           (L,idx )  26.1%       m           (R,idx )  36.1%       n           (R,idx )  39.9%       n           (R,idx )  39.9%       n           (R,idx )  39.9%
+    18  m           (R,idx )  31.0%       v           (L,idx )  50.6%       z           (L,pink)  45.3%       m           (R,idx )  50.6%       b           (L,idx )  46.9%
+    19  c           (L,mid )  32.7%       p           (R,pink)  62.0%       m           (R,idx )  58.1%       p           (R,pink)  62.0%       m           (R,idx )  58.1%
+    20  z           (L,pink)  35.2%       o           (R,ring)  73.3%       b           (L,idx )  66.4%       o           (R,ring)  73.3%       z           (L,pink)  66.4%
+    21  b           (L,idx )  39.7%       z           (L,pink)  83.2%       p           (R,pink)  79.1%       z           (L,pink)  83.2%       p           (R,pink)  79.1%
+    22  n           (R,idx )  50.8%       b           (L,idx )  93.3%       c           (L,mid )  84.7%       b           (L,idx )  93.3%       c           (L,mid )  84.7%
+    23  altgr       (R,pink) 100.0%       c           (L,mid ) 100.0%       o           (R,ring) 100.0%       c           (L,mid ) 100.0%       o           (R,ring) 100.0%
+
+==============================================================================
+  lv variant 1 — Latvian LVS 24-93 (AltGr path) — coverage milestones (step at which X% is reached)
+==============================================================================
+  per-grapheme    Algorithm                    10%   25%   50%   75%   90%
+                  A symmetric pairs             15    17    22    23    23
+                  B pure frequency              13    16    18    21    22
+                  C freq-per-hand               13    16    19    21    23
+                  D coverage-greedy             13    16    18    21    22
+                  E coverage-per-hand           13    16    19    21    23
+
+  per-keystroke   Algorithm                    10%   25%   50%   75%   90%
+                  A symmetric pairs             15    17    22    23    23
+                  B pure frequency              13    16    18    21    22
+                  C freq-per-hand               13    16    19    21    23
+                  D coverage-greedy             13    16    18    21    22
+                  E coverage-per-hand           13    16    19    21    23
+
+==============================================================================
+  lv variant 1 — Latvian LVS 24-93 (AltGr path) — physical keys per finger at step 10
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             1      1      1      3      2      1      1      0     10
+  B pure frequency              1      1      1      2      2      1      1      1     10
+  C freq-per-hand               1      1      2      2      2      1      1      0     10
+  D coverage-greedy             1      1      1      3      2      1      1      0     10
+  E coverage-per-hand           1      1      1      3      2      1      1      0     10
+
+==============================================================================
+  lv variant 1 — Latvian LVS 24-93 (AltGr path) — physical keys per finger at step 16
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             1      1      2      4      3      2      2      1     16
+  B pure frequency              1      1      2      4      4      2      1      1     16
+  C freq-per-hand               1      1      2      5      3      2      1      1     16
+  D coverage-greedy             1      1      2      5      3      2      1      1     16
+  E coverage-per-hand           1      1      2      5      3      2      1      1     16
+
+==============================================================================
+  lv variant 1 — Latvian LVS 24-93 (AltGr path) — physical keys per finger at step 23
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             2      1      3      6      5      2      2      2     23
+  B pure frequency              2      1      3      6      5      2      2      2     23
+  C freq-per-hand               2      1      3      6      5      2      2      2     23
+  D coverage-greedy             2      1      3      6      5      2      2      2     23
+  E coverage-per-hand           2      1      3      6      5      2      2      2     23
+
+  YAML draft → /home/siggi/github/takki/spikes/results/key_intro_lv_AltGr_path.yaml
+
+==============================================================================
+  lv variant 2 — Latvian LVS 24-93 (dead-key path) — introduction order  (key (side, finger) cov-grapheme%)
+==============================================================================
+  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand             
+  ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1  f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%
+     2  j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%
+     3  d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%       d           (L,mid )   0.0%
+     4  k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%       k           (R,mid )   0.0%
+     5  s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%       s           (L,ring)   0.0%
+     6  l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%       l           (R,ring)   0.0%
+     7  a           (L,pink)   1.6%       a           (L,pink)   1.6%       a           (L,pink)   1.6%       a           (L,pink)   1.6%       a           (L,pink)   1.6%
+     8  g           (L,idx )   2.0%       g           (L,idx )   2.0%       g           (L,idx )   2.0%       g           (L,idx )   2.0%       g           (L,idx )   2.0%
+     9  h           (R,idx )   2.0%       h           (R,idx )   2.0%       h           (R,idx )   2.0%       h           (R,idx )   2.0%       h           (R,idx )   2.0%
+    10  r           (L,idx )   2.1%       i           (R,mid )   3.1%       e           (L,mid )   2.1%       t           (L,idx )   3.6%       t           (L,idx )   3.6%
+    11  u           (R,idx )   3.8%       dead-macron (R,pink)   4.3%       i           (R,mid )   3.9%       i           (R,mid )   6.1%       i           (R,mid )   6.1%
+    12  e           (L,mid )   4.1%       e           (L,mid )   5.3%       t           (L,idx )   7.7%       v           (L,idx )   8.9%       v           (L,idx )   8.9%
+    13  i           (R,mid )   6.6%       t           (L,idx )  10.7%       dead-macron (R,pink)  10.7%       dead-macron (R,pink)  11.8%       dead-macron (R,pink)  11.8%
+    14  o           (R,ring)   7.6%       u           (R,idx )  14.1%       r           (L,idx )  14.2%       e           (L,mid )  16.3%       e           (L,mid )  16.3%
+    15  p           (R,pink)  11.0%       r           (L,idx )  19.7%       u           (R,idx )  19.7%       r           (L,idx )  21.5%       u           (R,idx )  21.0%
+    16  t           (L,idx )  19.3%       n           (R,idx )  23.8%       v           (L,idx )  28.9%       u           (R,idx )  28.9%       r           (L,idx )  28.9%
+    17  v           (L,idx )  26.1%       m           (R,idx )  32.1%       n           (R,idx )  35.4%       p           (R,pink)  36.3%       n           (R,idx )  35.4%
+    18  m           (R,idx )  31.0%       v           (L,idx )  44.7%       z           (L,pink)  40.1%       m           (R,idx )  44.3%       b           (L,idx )  42.1%
+    19  c           (L,mid )  32.7%       p           (R,pink)  54.8%       m           (R,idx )  50.9%       n           (R,idx )  54.8%       m           (R,idx )  51.9%
+    20  z           (L,pink)  35.2%       o           (R,ring)  64.3%       b           (L,idx )  58.8%       o           (R,ring)  64.3%       z           (L,pink)  58.8%
+    21  b           (L,idx )  39.7%       z           (L,pink)  72.4%       p           (R,pink)  70.0%       b           (L,idx )  72.8%       p           (R,pink)  70.0%
+    22  n           (R,idx )  50.8%       b           (L,idx )  81.7%       c           (L,mid )  75.2%       z           (L,pink)  81.7%       c           (L,mid )  75.2%
+    23  dead-macron (R,pink)  87.9%       dead-caron  (R,pink)  87.4%       o           (R,ring)  87.9%       c           (L,mid )  87.9%       o           (R,ring)  87.9%
+    24  dead-caron  (R,pink)  93.8%       c           (L,mid )  93.8%       dead-caron  (R,pink)  93.8%       dead-caron  (R,pink)  93.8%       dead-caron  (R,pink)  93.8%
+    25  dead-cedilla(R,pink) 100.0%       dead-cedilla(R,pink) 100.0%       dead-cedilla(R,pink) 100.0%       dead-cedilla(R,pink) 100.0%       dead-cedilla(R,pink) 100.0%
+
+==============================================================================
+  lv variant 2 — Latvian LVS 24-93 (dead-key path) — coverage milestones (step at which X% is reached)
+==============================================================================
+  per-grapheme    Algorithm                    10%   25%   50%   75%   90%
+                  A symmetric pairs             15    17    22    23    24
+                  B pure frequency              13    17    19    22    24
+                  C freq-per-hand               13    16    19    22    24
+                  D coverage-greedy             13    16    19    22    24
+                  E coverage-per-hand           13    16    19    22    24
+
+  per-keystroke   Algorithm                    10%   25%   50%   75%   90%
+                  A symmetric pairs             15    17    22    23    25
+                  B pure frequency              13    17    19    22    25
+                  C freq-per-hand               13    16    20    23    25
+                  D coverage-greedy             13    16    19    22    25
+                  E coverage-per-hand           13    16    20    23    25
+
+==============================================================================
+  lv variant 2 — Latvian LVS 24-93 (dead-key path) — physical keys per finger at step 10
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             1      1      1      3      2      1      1      0     10
+  B pure frequency              1      1      1      2      2      2      1      0     10
+  C freq-per-hand               1      1      2      2      2      1      1      0     10
+  D coverage-greedy             1      1      1      3      2      1      1      0     10
+  E coverage-per-hand           1      1      1      3      2      1      1      0     10
+
+==============================================================================
+  lv variant 2 — Latvian LVS 24-93 (dead-key path) — physical keys per finger at step 16
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             1      1      2      4      3      2      2      1     16
+  B pure frequency              1      1      2      4      4      2      1      1     16
+  C freq-per-hand               1      1      2      5      3      2      1      1     16
+  D coverage-greedy             1      1      2      5      3      2      1      1     16
+  E coverage-per-hand           1      1      2      5      3      2      1      1     16
+
+==============================================================================
+  lv variant 2 — Latvian LVS 24-93 (dead-key path) — physical keys per finger at step 25
+==============================================================================
+  Algorithm                   L     L     L     L  |  R     R     R     R  total
+                             pink   ring    mid    idx    idx    mid   ring   pink
+  A symmetric pairs             2      1      3      6      5      2      2      4     25
+  B pure frequency              2      1      3      6      5      2      2      4     25
+  C freq-per-hand               2      1      3      6      5      2      2      4     25
+  D coverage-greedy             2      1      3      6      5      2      2      4     25
+  E coverage-per-hand           2      1      3      6      5      2      2      4     25
+
+  YAML draft → /home/siggi/github/takki/spikes/results/key_intro_lv_deadkey_path.yaml
+
+==============================================================================
+  DONE
+==============================================================================
+  Results written to: /home/siggi/github/takki/spikes/results/key_introduction_order_spike_results.txt

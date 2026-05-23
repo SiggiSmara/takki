@@ -14,12 +14,24 @@
 
 This project fills a gap in the accessibility software landscape: a free, open source, multilingual touch typing tutor designed specifically for visually impaired children.
 
+### Educational Grounding
+
+Touch typing for children with vision impairment is named as a required skill in the two largest English-language VI education frameworks:
+
+- **UK — Curriculum Framework for Children and Young People with Vision Impairment (CFVI, 2022)**, jointly developed by VICTAR (University of Birmingham), RNIB, VIEW, and the Thomas Pocklington Trust. Touch typing appears in two of the eleven teaching areas: *Area 4 — Communication* (under "Writing and use of appropriate technology") and *Area 8 — Technology* ("Touch typing, including keyboard shortcuts, navigation skills, scrolling, searching, tabbing through documents"). The CFVI is being pushed toward statutory status in the UK.
+- **USA — Expanded Core Curriculum (ECC)** (originated 1996, maintained by APH, AFB, Perkins, and state schools for the blind). Keyboarding is explicitly named as a priority within the *Assistive Technology* area. The ECC literature states VI students "need to start learning skills such as keyboarding **well before their peers** in order to be proficient in these areas."
+
+Both frameworks specify outcomes, not pedagogy. Takki's adaptive lesson engine is a pedagogical mechanism for skills that the field has already named as required.
+
+**Empirical motivation.** Douglas & Long (2003), *An observation of adults with visual impairments carrying out copy-typing tasks* (Behaviour & Information Technology, 22(3): 141–153), observed ten VI adults during copy-typing and reported poor touch-typing across the cohort, rare use of keyboard shortcuts, no adjustment of equipment or copy material, and inefficient working habits. Two decades on, this skill gap is still being reported in the field. The training pipeline that produced those adults — by their own institution's later analysis — was not effective. The earlier *Touch Typing Tutor* (Douglas & Gamble, 1990s/2000, distributed via the University of Birmingham as Windows freeware, no formal efficacy study, download link now broken) was the most direct predecessor in spirit; it is effectively orphaned and unmaintained. Takki is an attempt to do this work again with modern tooling, an open development model, and a curriculum mandate to point at.
+
 ### Design Principles
 
 - **Fully offline.** The app works completely without internet access after installation. Nothing about a child's voice, typing, or progress is ever sent anywhere. Some optional components (Piper voice models, optional local LLM models) are downloaded once at setup; after that, the app never needs network access.
 - **Zero elevated privileges.** Installation and operation must not require administrator rights. This is a hard constraint for school deployment.
 - **Minimal setup friction.** The fewer decisions required of a parent or teacher at setup, the better. The ideal is: install, hand to child, done.
 - **Audio is the primary interface.** All interaction — instructions, feedback, navigation — must work without any visual reference.
+- **Useful early, not perfect late.** Takki's lesson engine prioritises early real-word typing (Layer 2 unlocks at 8 keys) over completing a textbook touch-typing curriculum before any practical output. The piano analogy is deliberate: a child who has learned a handful of chords on a piano can play songs from day one, while a child still working through scales cannot. The same logic applies to typing — early utility motivates continued practice, and full alphabet mastery still arrives in time. This principle is provisional pending empirical evidence to the contrary, but no current evidence contradicts it for the audio-first VI case.
 - **Open source contribution friendly.** Architecture should make it easy for teachers, linguists, and developers to contribute word lists and lesson content without deep Python knowledge.
 - **Start focused, don't block the future.** Build for Windows first, but architect for everywhere. Avoid Windows-specific patterns where a cross-platform alternative costs nothing extra. Platform-specific code lives behind clean interfaces so future contributors can add macOS or Linux support without unpicking assumptions throughout the codebase.
 
@@ -73,6 +85,8 @@ Individual decisions are recorded in `docs/adr/`. Each ADR is self-contained and
 | [ADR-020](adr/0020-voice-input-trigger-push-to-talk.md) | Voice Input Trigger — Push-to-Talk | Right Ctrl default; chirp-on/chirp-off cues; no wake word |
 | [ADR-021](adr/0021-voice-activity-detection.md) | Voice Activity Detection | `webrtcvad` for end-of-utterance; start signalled by talk key |
 | [ADR-022](adr/0022-localisation-strategy.md) | Localisation Strategy | YAML per language for strings, encouragement, intents, voice catalog |
+| [ADR-023](adr/0023-key-introduction-protocol.md) | Key Introduction Protocol | Home-row symmetric pairs as location anchor; post-home freq-leader-per-hand; modifier keys (AltGr, dead-acute) ranked by aggregate composite frequency; AltGr preferred over dead-key for dual-mechanism layouts (Latvian); spoken intro script with finger + relative location |
+| [ADR-024](adr/0024-drill-content-and-lesson-granularity.md) | Drill Content and Lesson Granularity | Four-phase new-key ramp-up; freq-weighted bigrams; SFBs not avoided; spaced re-exposure for rare keys; child-pace-adaptive ~100s drill blocks |
 
 ---
 

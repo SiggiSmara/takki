@@ -232,3 +232,6 @@ takki.spec
 # Spike artefacts — large binaries regenerated on demand
 spikes/*.onnx
 spikes/*.onnx.json
+
+# Local-only working documents (rough drafts kept outside the public repo)
+docs/beta-pilot-contacts.md
