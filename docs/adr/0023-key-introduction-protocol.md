@@ -1,6 +1,6 @@
 # ADR-023: Key Introduction Protocol
 
-**Status:** Proposed  
+**Status:** Accepted  
 **Date:** 2026-05-18 (revised 2026-05-18 — see [revision history](#revision-history))
 
 > Part of the [Takki architecture](../architecture.md).

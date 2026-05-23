@@ -1,6 +1,6 @@
 # ADR-024: Drill Content and Lesson Granularity
 
-**Status:** Proposed  
+**Status:** Accepted  
 **Date:** 2026-05-18
 
 > Part of the [Takki architecture](../architecture.md).
