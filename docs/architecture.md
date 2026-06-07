@@ -47,13 +47,13 @@ The v1 target is Windows, but the architecture is intentionally portable. Almost
 
 The three areas that are genuinely Windows-specific are isolated behind clean interfaces from the start:
 
-| Interface | Windows implementation | Future platform hook |
-|---|---|---|
-| `get_system_language()` | Windows locale API | `locale` module / `NSLocale` / `$LANG` |
-| `get_home_row_keys()` | Windows keyboard layout scan codes | Carbon (macOS) / xkb (Linux) |
-| `get_fallback_tts()` | pyttsx3 → SAPI | pyttsx3 → nsss (macOS) / espeak (Linux) |
+| Interface | Windows | macOS (future) | Linux (future) |
+|---|---|---|---|
+| `get_system_language()` | Windows NLS locale API | `NSLocale` | `$LANG` / `locale` |
+| `get_layout_positions()` | `MapVirtualKeyW` / `VkKeyScanExW` | Carbon / IOKit | xkb |
+| `get_fallback_tts()` | pyttsx3 → SAPI | pyttsx3 → nsss | pyttsx3 → espeak |
 
-By calling these functions rather than the platform APIs directly, adding macOS or Linux support becomes an exercise in implementing three functions — not refactoring the codebase.
+A `select_platform_interface()` factory maps `sys.platform` to the right implementation; new platforms slot in there without touching any other code. See [ADR-026](adr/0026-platform-interface-abstraction.md).
 
 ---
 
@@ -87,6 +87,8 @@ Individual decisions are recorded in `docs/adr/`. Each ADR is self-contained and
 | [ADR-022](adr/0022-localisation-strategy.md) | Localisation Strategy | YAML per language for strings, encouragement, intents, voice catalog |
 | [ADR-023](adr/0023-key-introduction-protocol.md) | Key Introduction Protocol | Home-row symmetric pairs as location anchor; post-home freq-leader-per-hand; modifier keys (AltGr, dead-acute) ranked by aggregate composite frequency; AltGr preferred over dead-key for dual-mechanism layouts (Latvian); spoken intro script with finger + relative location |
 | [ADR-024](adr/0024-drill-content-and-lesson-granularity.md) | Drill Content and Lesson Granularity | Four-phase new-key ramp-up; freq-weighted bigrams; SFBs not avoided; spaced re-exposure for rare keys; child-pace-adaptive ~100s drill blocks |
+| [ADR-025](adr/0025-configuration-system.md) | Configuration System | Three-tier config: `config.py` defaults → `takki_config.yaml` (parent) → per-profile SQLite; sound cues overridable; Alpha tones generated in pure Python |
+| [ADR-026](adr/0026-platform-interface-abstraction.md) | Platform Interface Abstraction | `PlatformInterface` Protocol with three methods; `select_platform_interface()` factory; `DevStubInterface` fallback for non-Windows dev |
 
 ---
 
