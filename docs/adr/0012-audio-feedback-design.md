@@ -7,13 +7,25 @@
 
 ---
 
-**Decision:** Two-tier audio feedback — TTS for spoken content, bundled sound cues for immediate correctness feedback.
+**Decision:** Two-tier audio feedback — TTS for spoken content, bundled sound cues for immediate correctness feedback. Five named cues are defined; each can be overridden with a custom `.wav` file via `takki_config.yaml` (ADR-025). Alpha ships with programmatically generated tones so no binary assets are committed to source; Beta replaces these with real bundled `.wav` files.
 
 ### Rationale
 
 For a visually impaired child, the timing and nature of feedback is critical:
 
-**Immediate sound cues** (not TTS): A short pleasant chime for a correct keypress, a gentle low tone for incorrect. These play within milliseconds of the keypress — fast enough to feel like direct cause and effect. Implemented via `pygame.mixer` with small bundled `.wav` files. TTS latency (even with fast local models) is too slow for this feedback loop. Confirmed on Windows: `pygame.mixer` initialises and plays audio without `pygame.display` — no window is opened (pygame 2.6.1, SDL 2.28.4, 22050 Hz stereo).
+**Immediate sound cues** (not TTS): Five named cues cover all feedback events in the lesson engine and push-to-talk pipeline:
+
+| Cue name | Event | Alpha default tone |
+|---|---|---|
+| `correct` | Key accepted on first attempt | 880 Hz, 200 ms, 30 ms fade |
+| `error` | Key rejected (wrong character) | 220 Hz, 180 ms, 20 ms fade |
+| `boundary` | Disabled key pressed (e.g. Backspace) | 440 Hz, 100 ms, 10 ms fade |
+| `chirp_on` | Microphone opened (push-to-talk) | 660 → 1100 Hz sweep, 150 ms |
+| `chirp_off` | Microphone closed | 1100 → 660 Hz sweep, 150 ms |
+
+Each cue is loaded at startup from a `.wav` file. The path for each cue resolves as: `takki_config.yaml` override path → bundled `assets/sounds/<cue>.wav` → programmatically generated tone (Alpha fallback). The generated tone is a pure sine wave (linear frequency sweep for chirps) produced in pure Python via `wave` + `struct`, with no additional dependencies. Tone parameters are defined in `config.py` (ADR-025).
+
+A short pleasant chime for a correct keypress, a gentle low tone for incorrect. These play within milliseconds of the keypress — fast enough to feel like direct cause and effect. Implemented via `pygame.mixer` with small bundled `.wav` files. TTS latency (even with fast local models) is too slow for this feedback loop. Confirmed on Windows: `pygame.mixer` initialises and plays audio without `pygame.display` — no window is opened (pygame 2.6.1, SDL 2.28.4, 22050 Hz stereo).
 
 The talk-key chirp tones (chirp-on / chirp-off, see ADR-020) use the same `pygame.mixer` pipeline. They are tonally distinct from the correct/error cues so the child never confuses "mic is open" with "you typed correctly."
 
