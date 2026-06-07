@@ -1,0 +1,169 @@
+Word-list Reality Spike
+Python: 3.11.14
+Platform: linux
+Languages (C13): en, de, es, fr, is, fi, pl
+Word length band: 3-6   Layer-2 unlock: k=8
+
+======================================================================
+  C13 — analysing languages
+======================================================================
+  en ... alpha=26  3L@8keys=419  3-6L@8keys=941
+  de ... alpha=27  3L@8keys=305  3-6L@8keys=641
+  es ... alpha=31  3L@8keys=227  3-6L@8keys=556
+  fr ... alpha=28  3L@8keys=241  3-6L@8keys=268
+  is ... alpha=32  3L@8keys=40  3-6L@8keys=129
+  fi ... alpha=24  3L@8keys=214  3-6L@8keys=502
+  pl ... alpha=31  3L@8keys=310  3-6L@8keys=629
+
+======================================================================
+  C13 — Layer-2 word availability at the >=8-key unlock
+======================================================================
+  At k = 8 keys known (the Layer-2 unlock point):
+
+  lang  alpha  graphemes  3L words  3-6L words  3-6L wcov  verdict
+  ----------------------------------------------------------------
+    en     26          8       419         941      0.9%  OK
+    de     27          8       305         641      4.1%  OK
+    es     31          8       227         556      2.5%  OK
+    fr     28          8       241         268      0.0%  OK
+    is     32          8        40         129      0.7%  OK
+    fi     24          8       214         502      1.1%  OK
+    pl     31          8       310         629      2.8%  OK
+
+======================================================================
+  C13 — readiness: smallest k reaching N distinct typeable 3-letter words
+======================================================================
+  lang  >=10  @k  >=25  @k  >=50  @k
+  ----------------------------------
+    en         3         4         5
+    de         3         4         5
+    es         3         5         5
+    fr         3         5         5
+    is         7         7         9
+    fi         4         5         5
+    pl         4         5         5
+
+  (Layer-2 unlocks at k=8. Where a tier is reached only
+   at k > 8, Layer 2 would unlock onto fewer than that many 3-letter words.)
+
+======================================================================
+  C13 — k-sweep per language (3-letter / 3-6-letter typeable word counts)
+======================================================================
+
+  en  (native alphabet 26 keys, 11707 native 3-letter words total)
+    k= 8  keys=fjdkslag                3L= 419  3-6L=  941  wcov=  0.9%
+    k=10  keys=fjdkslaghe              3L= 831  3-6L= 2930  wcov=  3.4%
+    k=12  keys=fjdkslaghent            3L=1475  3-6L= 7290  wcov= 23.6%
+    k=14  keys=fjdkslaghentor          3L=2411  3-6L=18906  wcov= 36.3%
+    k=16  keys=fjdkslaghentoric        3L=3706  3-6L=39692  wcov= 50.0%
+    sample typeable 3-letter words at k=8 (top by freq): all, ask, add, gas, ass, dad, sad, ads, las, aka, lad, fda, gal, afl, aaa
+
+  de  (native alphabet 27 keys, 10840 native 3-letter words total)
+    k= 8  keys=fjdkslaö                3L= 305  3-6L=  641  wcov=  4.1%
+    k=10  keys=fjdkslaögh              3L= 635  3-6L= 1328  wcov=  4.2%
+    k=12  keys=fjdkslaöghäe            3L= 915  3-6L= 2881  wcov=  6.0%
+    k=14  keys=fjdkslaöghäenr          3L=1563  3-6L= 9023  wcov= 17.8%
+    k=16  keys=fjdkslaöghäenrit        3L=2499  3-6L=22605  wcov= 40.6%
+    sample typeable 3-letter words at k=8 (top by freq): das, als, all, afd, las, ass, aka, dad, dsl, ssd, add, ala, ads, sal, ask
+
+  es  (native alphabet 31 keys, 8706 native 3-letter words total)
+    k= 8  keys=fjdkslañ                3L= 227  3-6L=  556  wcov=  2.5%
+    k=10  keys=fjdkslañgh              3L= 413  3-6L=  980  wcov=  2.6%
+    k=12  keys=fjdkslañgheo            3L= 892  3-6L= 3642  wcov= 13.0%
+    k=14  keys=fjdkslañgheori          3L=1562  3-6L=11111  wcov= 17.5%
+    k=16  keys=fjdkslañgheoritn        3L=2420  3-6L=24838  wcov= 31.3%
+    sample typeable 3-letter words at k=8 (top by freq): las, das, sal, ala, all, ada, afa, aaa, asa, dad, sad, sas, aka, dal, aja
+
+  fr  (native alphabet 28 keys, 8823 native 3-letter words total)
+    k= 8  keys=fjdkslqm                3L= 241  3-6L=  268  wcov=  0.0%
+    k=10  keys=fjdkslqmgh              3L= 440  3-6L=  507  wcov=  0.0%
+    k=12  keys=fjdkslqmghei            3L= 961  3-6L= 2540  wcov= 10.2%
+    k=14  keys=fjdkslqmgheirn          3L=1594  3-6L= 6160  wcov= 12.2%
+    k=16  keys=fjdkslqmgheirnao        3L=2664  3-6L=23283  wcov= 25.7%
+    sample typeable 3-letter words at k=8 (top by freq): sms, sdf, jlm, dsk, dsl, mds, jdd, lls, ssd, mmm, mls, fff, fdj, lsd, kms
+
+  is  (native alphabet 32 keys, 1242 native 3-letter words total)
+    k= 8  keys=fjdkslaæ                3L=  40  3-6L=  129  wcov=  0.7%
+    k=10  keys=fjdkslaægh              3L=  63  3-6L=  215  wcov=  1.7%
+    k=12  keys=fjdkslaæghri            3L= 128  3-6L=  712  wcov=  4.0%
+    k=14  keys=fjdkslaæghrien          3L= 253  3-6L= 2132  wcov= 16.4%
+    k=16  keys=fjdkslaæghrientu        3L= 368  3-6L= 4221  wcov= 31.1%
+    sample typeable 3-letter words at k=8 (top by freq): las, æfa, all, aka, afl, afa, ala, dal, sal, sæl, als, kaf, lak, das, læk
+
+  fi  (native alphabet 24 keys, 6329 native 3-letter words total)
+    k= 8  keys=fjdkslaö                3L= 214  3-6L=  502  wcov=  1.1%
+    k=10  keys=fjdkslaögh              3L= 380  3-6L=  879  wcov=  1.1%
+    k=12  keys=fjdkslaöghät            3L= 616  3-6L= 1751  wcov=  3.2%
+    k=14  keys=fjdkslaöghätie          3L=1171  3-6L= 7244  wcov= 16.4%
+    k=16  keys=fjdkslaöghätienv        3L=1758  3-6L=16034  wcov= 33.6%
+    sample typeable 3-letter words at k=8 (top by freq): saa, ala, jaa, all, ssa, lla, kas, aja, las, kaa, sak, ska, kaj, sjk, aaa
+
+  pl  (native alphabet 31 keys, 8096 native 3-letter words total)
+    k= 8  keys=fjdkslag                3L= 310  3-6L=  629  wcov=  2.8%
+    k=10  keys=fjdkslaghe              3L= 598  3-6L= 1694  wcov=  4.8%
+    k=12  keys=fjdkslagheiz            3L= 988  3-6L= 3985  wcov=  6.3%
+    k=14  keys=fjdkslagheiz[altgr]r    3L=1429  3-6L= 7886  wcov= 13.7%
+    k=16  keys=fjdkslagheiz[altgr]roc  3L=2353  3-6L=16554  wcov= 21.4%
+    sample typeable 3-letter words at k=8 (top by freq): jak, dla, daj, las, all, jaj, sld, aaa, dal, ala, sad, aka, fal, sal, das
+
+======================================================================
+  C9 — profanity prevalence in the short high-frequency band (en)
+======================================================================
+  Scanned the top 5000 English words of length 3-6
+  (alphabetic, native-alphabet-only), ranked by wordfreq frequency.
+
+    band (top N by freq)  # profanity hits
+  ----------------------------------------
+                 top 100                 0
+                 top 500                 4
+                top 1000                12
+                top 5000                78
+
+  Total flagged in top 5000: 78
+  Earliest hit: rank #183 ("god") — i.e. a child working
+  down the frequency list could meet it within the first ~183 words.
+
+  Flagged words with frequency rank (for blocklist design):
+    #183   god
+    #241   shit
+    #301   fuck
+    #452   sex
+    #585   hell
+    #595   damn
+    #599   kill
+    #725   ass
+    #818   stupid
+    #874   gay
+    #936   murder
+    #946   fat
+    #1027  sexual
+    #1117  bitch
+    #1252  dick
+    #1447  drunk
+    #1497  fucked
+    #1720  porn
+    #1772  rape
+    #1918  naked
+    #1965  suck
+    #1967  ugly
+    #2009  crap
+    #2027  pot
+    #2152  strip
+    #2190  virgin
+    #2231  fuckin
+    #2304  slave
+    #2398  lmao
+    #2402  nazi
+    ... and 48 more
+
+  Caveats: better-profanity ships an English list only — de/fr/pl/is
+  would each need a native-speaker blocklist (a per-language contribution
+  surface, same shape as the intent/encouragement YAML in ADR-022). Matching
+  is whole-word so substring false positives are rare but not impossible.
+
+======================================================================
+  DONE
+======================================================================
+
+  Results written to /home/siggi/github/takki/spikes/results/word_list_reality_results.txt
+  Paste the full output above back into the Claude Code session.
