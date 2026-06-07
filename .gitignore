@@ -235,3 +235,7 @@ spikes/*.onnx.json
 
 # Local-only working documents (rough drafts kept outside the public repo)
 docs/beta-pilot-contacts.md
+
+# Third-party reference material (HTML/PDF) — copyrighted; kept local only.
+# Public citations live in docs/research/references.md (not in this folder).
+docs/research/references/
