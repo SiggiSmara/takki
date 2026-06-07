@@ -6,7 +6,7 @@ Initial phased roadmap. Decisions in [architecture.md](architecture.md) are assu
 
 ### Alpha — internal/dev-only
 
-**Goal:** prove the core loop end-to-end on Linux, then validate on Windows.
+**Goal:** prove the core-loop logic on Linux against fakes/scripted I/O, then validate the real interactive loop — human typing, human listening — on Windows. The dev box is headless (no X display, no audio device) and `pynput` is currently win32-only, so the first human-in-the-loop run is necessarily on Windows; Linux carries the logic, progression, and persistence under test.
 
 A single child sits down, hears a letter in English, types it, hears immediate feedback, completes a Layer 1 drill session, and progress persists across runs.
 
@@ -136,7 +136,7 @@ Every external-interface step below is implemented as a `typing.Protocol` + real
 
 ## What "done" looks like per phase
 
-- **Alpha done:** dev can run a Bronze-level English drill session end-to-end on Windows, close the app, reopen, and see progress restored.
+- **Alpha done:** the core-loop logic runs green on Linux against fakes/scripted I/O, and a dev can run a Bronze-level English drill session end-to-end on Windows — close the app, reopen, and see progress restored.
 - **Beta done:** a friend's child can install Takki, pick a language (English or German), pick a voice, set up a profile by voice, and practise to Silver or beyond — without sighted assistance after install.
 - **V1 done:** parents/teachers download the PyInstaller bundle, install without admin rights, and a VI child can run the full audio-driven setup (including visual display configuration if desired), be offered the appropriate LLM tier for their hardware, and practise across all supported languages.
 
@@ -163,9 +163,11 @@ Underneath this: **there is no defined lifecycle for a key.** "Introduced," "cur
 *Phase: Alpha. ADRs: [010](adr/0010-lesson-structure-and-progression.md), [011](adr/0011-persistence-and-state.md), [012](adr/0012-audio-feedback-design.md).*
 Every progression gate is *first-attempt* accuracy with auto-rejections counted as failures. The two integer columns can mean per-keypress *or* per-prompt, and only one yields first-attempt accuracy. Wrong-then-right on one prompt should score as one first-attempt miss — not 1/2 = 50% per-keypress. Decide and write down: `attempt_count` = number of prompts, `correct_count` = prompts correct on the first keystroke. The field names currently suggest per-keypress, which would silently corrupt the progression math.
 
-**A4. "Prove the core loop end-to-end on Linux" overstates what the dev box can do.**
-*Phase: Alpha (roadmap framing). ADRs: [019](adr/0019-testing-strategy-and-io-isolation.md), [026](adr/0026-platform-interface-abstraction.md).*
-[pyproject.toml](../pyproject.toml) pins `pynput` to `sys_platform == 'win32'`, the dev box is a *headless* Linux machine (no X display, no audio device), and pyttsx3 needs espeak + an output device. So on the actual dev box there is **no real key-event source and nothing to hear**. "End-to-end on Linux" can only mean "driven by `ScriptedKeyStream` + recording fakes" — the first time a human actually types and listens is necessarily on Windows. Fine, but the roadmap's framing ("prove on Linux, then validate on Windows") will mislead whoever picks it up. Either say so explicitly, or unpin pynput for a Linux *desktop* dev path.
+**A4. "Prove the core loop end-to-end on Linux" overstated what the dev box can do. — framing resolved; one open decision remains.**
+*Phase: Alpha. ADRs: [019](adr/0019-testing-strategy-and-io-isolation.md), [026](adr/0026-platform-interface-abstraction.md).*
+[pyproject.toml](../pyproject.toml) pins `pynput` to `sys_platform == 'win32'`, the dev box is a *headless* Linux machine (no X display, no audio device), and pyttsx3 needs espeak + an output device. So on the actual dev box there is **no real key-event source and nothing to hear**: "end-to-end on Linux" can only mean "driven by `ScriptedKeyStream` + recording fakes," and the first human-in-the-loop run is necessarily on Windows.
+**Resolved:** the Alpha goal and done criteria above now state this explicitly (logic on Linux against fakes/scripted I/O; interactive validation on Windows).
+**Still open:** whether to unpin `pynput` for a Linux *desktop* dev path (a contributor on a Linux laptop could then run the interactive loop locally), or commit to headless-Linux-plus-fakes with Windows as the only interactive target. Low urgency — the fakes path is sufficient for Alpha — but it determines whether a non-Windows contributor can dogfood without a Windows machine.
 
 ### B. Places where two accepted ADRs disagree
 
