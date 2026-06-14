@@ -1,0 +1,104 @@
+Word-Source Validation Spike
+Python: 3.11.14   Platform: linux
+Languages: en, de   band: 3-6   top-N: 200
+better-profanity: active
+
+==============================================================================
+  en — source validation
+==============================================================================
+  wordfreq short (3-6) alpha words: 123599
+  dictionary gate: spylls hunspell (affix-aware)
+  curated list: 272 words (3-6 band) from dolch_en.txt
+  curated ∩ dictionary: 100% (sanity — curated should be almost all real)
+
+==============================================================================
+  en — metrics over top 200
+==============================================================================
+  strategy                real-word rate  approp. hits
+  ----------------------------------------------------
+  S1 wordfreq-only                  100%             1
+  S2 wordfreq∩dict                  100%             1
+  S3 curated                        100%             0
+  S4 curated∪fallback               100%             0
+
+  S1 real-word rate by depth:  top200: 100%   top1000: 100%   top3000: 99%
+  non-words S1 admits (within top 5000, gate removes): lol, centre, pre, http, usa, dont, labour, bbc, nfl, haha, thats, colour, dna, ceo, fbi
+
+  S1 appropriateness hits in top 200: god
+  S3 curated appropriateness hits (whole list): (none)
+
+==============================================================================
+  en — burial: where curated words sit in wordfreq ranking
+==============================================================================
+  curated words (3-6 band): 272   present in wordfreq: 272   absent: 0
+  median wordfreq rank of curated words: 209
+  curated words within wordfreq top-N:  ≤100: 86   ≤300: 159   ≤1000: 226   ≤3000: 269
+
+==============================================================================
+  en — first 40 words each strategy would teach
+==============================================================================
+
+  S1 wordfreq-only:
+    the        and        for        that       you        with       this       was        are        have
+    not        but        from       your       all        his        they       one        can        will
+    just       like       about      out        what       has        when       more       were       who
+    had        their      there      her        which      time       get        been       would      she
+
+  S2 wordfreq∩dict:
+    the        and        for        that       you        with       this       was        are        have
+    not        but        from       your       all        his        they       one        can        will
+    just       like       about      out        what       has        when       more       were       who
+    had        their      there      her        which      time       get        been       would      she
+
+  S3 curated:
+    and        away       big        blue       can        come       down       find       for        funny
+    help       here       jump       little     look       make       not        one        play       red
+    run        said       see        the        three      two        where      yellow     you        all
+    are        ate        black      brown      but        came       did        eat        four       get
+
+  S4 curated∪fallback:
+    and        away       big        blue       can        come       down       find       for        funny
+    help       here       jump       little     look       make       not        one        play       red
+    run        said       see        the        three      two        where      yellow     you        all
+    are        ate        black      brown      but        came       did        eat        four       get
+
+==============================================================================
+  de — source validation
+==============================================================================
+  wordfreq short (3-6) alpha words: 114006
+  dictionary gate: spylls hunspell (affix-aware)
+  curated list: ABSENT (grundwortschatz_de.txt) — running S1/S2 only.
+
+==============================================================================
+  de — metrics over top 200
+==============================================================================
+  strategy                real-word rate  approp. hits
+  ----------------------------------------------------
+  S1 wordfreq-only                   99%           n/a
+  S2 wordfreq∩dict                  100%           n/a
+
+  S1 real-word rate by depth:  top200: 99%   top1000: 96%   top3000: 89%
+  non-words S1 admits (within top 5000, gate removes): weiss, the, grosse, heisst, bzw, usa, spd, and, spass, gross, afd, ausser, cdu, liess, nen
+
+==============================================================================
+  de — first 40 words each strategy would teach
+==============================================================================
+
+  S1 wordfreq-only:
+    die        der        und        das        ich        ist        nicht      den        von        mit
+    ein        auf        für        sie        eine       sich       auch       dem        des        als
+    dass       bei        wie        aber       aus        hat        sind       nach       noch       wir
+    war        nur        wenn       oder       wird       was        werden     einen      man        haben
+
+  S2 wordfreq∩dict:
+    die        der        und        das        ich        ist        nicht      den        von        mit
+    ein        auf        für        sie        eine       sich       auch       dem        des        als
+    dass       bei        wie        aber       aus        hat        sind       nach       noch       wir
+    war        nur        wenn       oder       wird       was        werden     einen      man        haben
+
+==============================================================================
+  DONE
+==============================================================================
+
+  Results written to /home/siggi/github/takki/spikes/results/source_validation_results.txt
+  Paste the full output above back into the Claude Code session.

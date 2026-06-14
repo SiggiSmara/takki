@@ -28,7 +28,7 @@ Windows desktop (v1). Physical keyboard required. The architecture is intentiona
 
 ## License
 
-[MIT](LICENSE) — chosen for maximum adoption in educational settings.
+[GPL-3.0-or-later](LICENSE) — copyleft, to keep Takki and any derivative free, and to allow bundling the GPL-licensed lexical resources (e.g. childLex, igerman98) the word engine relies on.
 
 ## Contributing
 

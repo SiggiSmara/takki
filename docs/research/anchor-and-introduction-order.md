@@ -2,6 +2,7 @@
 
 > **Status:** Research / pre-decision (informs a future [ADR-023](../adr/0023-key-introduction-protocol.md) amendment — not itself a decision)
 > **Date:** 2026-06-07
+> **Updated:** 2026-06-14 — order-comparison spike results folded in (see "What the order-comparison spike showed").
 > **Sources:** see [references.md](references.md)
 
 **One-line summary:** Frequency data, keyboard ergonomics, and actual VI teaching
@@ -26,7 +27,7 @@ The trigger was empirical — see the C13 results in the
 [word-list reality spike](../../spikes/word_list_reality_spike.py)
 ([results](../../spikes/results/word_list_reality_results.txt)).
 
-## What the spike showed
+## What the word-list spike showed
 
 At the 8-key (home-row) mark the typeable word pool is not *count*-starved but
 *quality*-starved: weighted coverage is ~0–4% across languages, and the typeable
@@ -38,6 +39,63 @@ arrive. QWERTY/QWERTZ home rows have exactly one vowel (`a`); AZERTY has none.
 (The spike also surfaced that wordfreq is contaminated with acronyms/internet-isms
 that ADR-008's frequency+length filter does not remove — tracked separately as a
 word-list filtering gap.)
+
+## What the order-comparison spike showed
+
+The follow-up spike
+([intro_order_comparison_spike.py](../../spikes/intro_order_comparison_spike.py),
+[results](../../spikes/results/intro_order_comparison_results.txt)) ran five
+candidate orderings across seven languages — **O1** status-quo (home-row →
+frequency-per-hand), **O2** F+J → vowel-priority, **O3** coverage-greedy with no
+anchor (the engagement *upper bound*), **O4** whole-home-row → vowel-first, and
+**O5** F+J → full-finger-coverage (the per-child-calibration order proposed
+below) — and scored each on the three metrics this note cares about: anchor cost,
+real-word onset, and weighted coverage. Critically it applies the missing
+real-word filter, so counts are not inflated by the acronym junk above.
+
+**Finding 1 — the contamination is worse than the count metric suggested, and a
+cheap heuristic can't see all of it.** With a real English dictionary, only **11%**
+of wordfreq's 3-letter alpha strings are actual words (1,287 of 11,707). The
+vowel-plus-not-all-same heuristic recovers the consonant-only junk (`sms`, `dsl`)
+— its pass rate climbs sharply with length — but a second, larger noise source it
+*cannot* detect (proper nouns, foreign tokens, web spellings) keeps the
+dictionary-real fraction low at every length:
+
+| word length | heuristic pass (en/de/fr/fi) | dictionary-real (en) |
+|---|---|---|
+| 3 | 59–68% | 11% |
+| 4 | 92–98% | 17% |
+| 5 | ~100% | 17% |
+| 6 | ~100% | 19% |
+
+So longer words are cleaner of consonant junk but still ~80% non-dictionary
+words. 3-letter is kept as the primary onset band (it is Layer 2's entry per
+[ADR-010](../adr/0010-lesson-structure-and-progression.md)); the takeaway is that
+its absolute counts must be read through a dictionary, which is the
+[ADR-008](../adr/0008-word-list-strategy.md) word-list-filter work, not a reason to
+move the band.
+
+**Finding 2 — anchor cost is the robust, filter-independent win.** Home-row keys
+learned before the first off-home reach: O1/O4 force **9–10**, the F+J orderings
+(O2/O5) force **2**, the unanchored upper bound (O3) forces **0**. This is the
+"barren home row" penalty made concrete, and it holds across all seven languages.
+
+**Finding 3 — the real-word-onset prize is real but modest in English and large in
+vowel-poor layouts.** With the honest English dictionary, *all* orderings reach 25
+real 3-letter words around step 7 — English's home row carries `a` plus productive
+consonants (`all, ask, add, dad, sad, lad`), so it is not as barren as feared. The
+F+J wins there are narrower but real: first real word at step **3–5 vs 7**, and the
+50-word mark at step **7–8 vs 10**. The decisive case is **French**, whose home row
+has no vowel at all: O1/O4 need **11** keys to reach 25 real words; O2/O5 need
+**~5**.
+
+**Word quality, not just count.** O3's early words are the best (`see, she, the,
+set, eat`) but it has no anchor at all. O5 reaches contentful words (`ten, net,
+jet`) sooner than O2's vowel-cluster (`fee, off, joe`), because spreading across
+fingers hits productive consonants early — at the cost of a small *late*-coverage
+tax (it touches the weak fingers early). **Net: O5 — the per-child-calibration
+order — is the sweet spot**: anchor cost 2, good early words, near-status-quo word
+timing, only a minor late-coverage cost.
 
 ## Evidence
 
@@ -108,7 +166,12 @@ front-loading the barren home row.
 
 ## Bounded conclusion
 
-The three strands converge, so the design move is well-founded — but scoped:
+The three strands converge, so the design move is well-founded — but scoped. The
+order-comparison spike above sizes it: the anchor-cost saving is large and
+language-independent (9–10 home keys before the first reach → 2), while the
+real-word-onset gain is modest in English but large where the home row is
+vowel-poor (French: 11 keys → 5). O5 (F+J → full-finger-coverage) captures most of
+the unanchored upper bound's prize while keeping a real anchor.
 
 - **Keep:** F/J bumps as *the* anchor; the standard finger→key map (transfer-safe
   for school machines, screen-reader docs, other keyboards).
@@ -165,9 +228,15 @@ idle key and the per-profile introduction order shift.
 
 ## Next steps
 
-1. **Content spike:** extend the key-introduction / word-list spikes with
-   F/J-seeded, vowel-early orderings vs the status quo, measuring real-word unlock
-   (with the spike-3 non-word filter) and the anchor cost. Quantifies the prize.
+1. ~~**Content spike**~~ — **done**
+   ([intro_order_comparison_spike.py](../../spikes/intro_order_comparison_spike.py),
+   [results](../../spikes/results/intro_order_comparison_results.txt)). Five
+   F/J-seeded / vowel-early orderings vs the status quo, with the non-word filter.
+   Folded into "What the order-comparison spike showed" above: O5 is the sweet
+   spot; the prize is modest in English, large in vowel-poor layouts. It also
+   quantified the contamination (only ~11–19% of short wordfreq strings are real
+   dictionary words), which is now evidence for the
+   [ADR-008](../adr/0008-word-list-strategy.md) word-list filter.
 2. **Keep introduction order a swappable strategy** so the pilot can A/B
    home-row-fill vs F/J-seed vs calibrated-per-child.
 3. **Beta pilot:** run the calibration probe as an instrument; collect the human

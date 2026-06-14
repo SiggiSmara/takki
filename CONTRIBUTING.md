@@ -39,4 +39,4 @@ By participating, you agree to abide by the project's [Code of Conduct](CODE_OF_
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the [MIT License](LICENSE).
+By contributing, you agree that your contributions will be licensed under the [GNU General Public License v3.0 or later](LICENSE).

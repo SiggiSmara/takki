@@ -1,0 +1,227 @@
+Key-Introduction Order Comparison Spike
+Python: 3.11.14   Platform: linux
+Languages: en, de, es, fr, is, fi, pl
+Orderings: O1, O2, O3, O4, O5
+Word band: 3-6 letters   real-3L tiers: [1, 10, 25, 50]
+English real-word filter: heuristic only (vowel + not-all-same + initialism list).
+  For the stricter check run: uv run --with english-words python spikes/intro_order_comparison_spike.py
+
+  analysing en ... real3=6852/11707
+
+  analysing de ... real3=6364/10840
+
+  analysing es ... real3=5926/8706
+
+  analysing fr ... real3=5711/8823
+
+  analysing is ... real3=1155/1242
+
+  analysing fi ... real3=4299/6329
+
+  analysing pl ... real3=5295/8096
+
+==============================================================================
+  en — ordering comparison  (native alphabet 26 keys)
+==============================================================================
+  real 3-letter words: 6852 of 11707 raw (filter removed 4855 non-words/acronyms)
+
+  ordering                          anchor   1st >=10 >=25 >=50   cov50 cov75 cov90
+  ---------------------------------------------------------------------------------
+  O1 home-row->freq (status quo)         9     7    7    7    7      16    20    22
+  O2 F+J->vowel-priority                 2     3    3    4    5      16    19    22
+  O3 coverage-greedy (no anchor)         0     2    3    4    5      14    18    21
+  O4 whole-home-row->vowel-first         9     7    7    7    7      18    20    22
+  O5 F+J->full-finger-coverage           2     5    5    5    5      16    23    25
+
+  anchor = home-row keys learned before the first off-home reach.
+  1st/>=N = step at which that many real 3-letter words are typeable.
+  covXX = step at which XX% of real 3-6 word frequency is typeable.
+
+  First real 3-letter words to come online (word@step):
+    O1 home-row->freq (status quo)    all@7  ask@7  add@7  ass@7  dad@7  sad@7  ads@7  las@7
+    O2 F+J->vowel-priority            fee@3  eff@3  jee@3  efe@3  jef@3  eef@3  fef@3  ffe@3
+    O3 coverage-greedy (no anchor)    see@2  ses@2  sse@2  ese@2  ess@2  ees@2  she@3  hes@3
+    O4 whole-home-row->vowel-first    all@7  ask@7  add@7  ass@7  dad@7  sad@7  ads@7  las@7
+    O5 F+J->full-finger-coverage      ten@5  net@5  fee@5  jet@5  tee@5  jen@5  eff@5  ent@5
+
+==============================================================================
+  de — ordering comparison  (native alphabet 27 keys)
+==============================================================================
+  real 3-letter words: 6364 of 10840 raw (filter removed 4476 non-words/acronyms)
+
+  ordering                          anchor   1st >=10 >=25 >=50   cov50 cov75 cov90
+  ---------------------------------------------------------------------------------
+  O1 home-row->freq (status quo)        10     7    7    7    7      17    21    23
+  O2 F+J->vowel-priority                 2     3    3    4    5      18    22    24
+  O3 coverage-greedy (no anchor)         0     2    3    4    4      12    17    21
+  O4 whole-home-row->vowel-first        10     7    7    7    7      21    23    24
+  O5 F+J->full-finger-coverage           2     5    5    5    5      19    22    24
+
+  anchor = home-row keys learned before the first off-home reach.
+  1st/>=N = step at which that many real 3-letter words are typeable.
+  covXX = step at which XX% of real 3-6 word frequency is typeable.
+
+  First real 3-letter words to come online (word@step):
+    O1 home-row->freq (status quo)    das@7  als@7  all@7  afd@7  las@7  ass@7  dad@7  add@7
+    O2 F+J->vowel-priority            fee@3  eff@3  efe@3  jee@3  jef@3  eef@3  jej@3  ffe@3
+    O3 coverage-greedy (no anchor)    nen@2  nee@2  een@2  ene@2  enn@2  nne@2  ein@3  nie@3
+    O4 whole-home-row->vowel-first    das@7  als@7  all@7  afd@7  las@7  ass@7  dad@7  add@7
+    O5 F+J->full-finger-coverage      nen@5  ner@5  nee@5  fee@5  ren@5  ref@5  rer@5  fer@5
+
+==============================================================================
+  es — ordering comparison  (native alphabet 31 keys)
+==============================================================================
+  real 3-letter words: 5926 of 8706 raw (filter removed 2780 non-words/acronyms)
+
+  ordering                          anchor   1st >=10 >=25 >=50   cov50 cov75 cov90
+  ---------------------------------------------------------------------------------
+  O1 home-row->freq (status quo)        10     7    7    7    7      19    22    24
+  O2 F+J->vowel-priority                 3     3    3    4    5      16    21    25
+  O3 coverage-greedy (no anchor)         0     2    3    4    5      13    17    21
+  O4 whole-home-row->vowel-first        10     7    7    7    7      20    22    25
+  O5 F+J->full-finger-coverage           2     5    5    5    6      18    23    26
+
+  anchor = home-row keys learned before the first off-home reach.
+  1st/>=N = step at which that many real 3-letter words are typeable.
+  covXX = step at which XX% of real 3-6 word frequency is typeable.
+
+  First real 3-letter words to come online (word@step):
+    O1 home-row->freq (status quo)    las@7  das@7  sal@7  ala@7  all@7  ada@7  afa@7  asa@7
+    O2 F+J->vowel-priority            afa@3  aja@3  faa@3  jaj@3  aff@3  jaa@3  ajj@3  aaj@3
+    O3 coverage-greedy (no anchor)    ese@2  see@2  ses@2  ess@2  sse@2  ees@2  sus@3  use@3
+    O4 whole-home-row->vowel-first    las@7  das@7  sal@7  ala@7  all@7  ada@7  afa@7  asa@7
+    O5 F+J->full-finger-coverage      eje@5  efe@5  ene@5  fer@5  ren@5  ref@5  ere@5  jen@5
+
+==============================================================================
+  fr — ordering comparison  (native alphabet 28 keys)
+==============================================================================
+  real 3-letter words: 5711 of 8823 raw (filter removed 3112 non-words/acronyms)
+
+  ordering                          anchor   1st >=10 >=25 >=50   cov50 cov75 cov90
+  ---------------------------------------------------------------------------------
+  O1 home-row->freq (status quo)        10    11   11   11   11      18    20    23
+  O2 F+J->vowel-priority                 2     3    3    4    5      18    20    23
+  O3 coverage-greedy (no anchor)         0     2    3    4    5      14    17    21
+  O4 whole-home-row->vowel-first        10    11   11   11   11      22    23    24
+  O5 F+J->full-finger-coverage           2     5    5    5    5      16    21    23
+
+  anchor = home-row keys learned before the first off-home reach.
+  1st/>=N = step at which that many real 3-letter words are typeable.
+  covXX = step at which XX% of real 3-6 word frequency is typeable.
+
+  First real 3-letter words to come online (word@step):
+    O1 home-row->freq (status quo)    les@11  des@11  ses@11  mes@11  mme@11  sel@11  del@11  lee@11
+    O2 F+J->vowel-priority            fee@3  eff@3  jef@3  jee@3  ffe@3  efe@3  eje@3  fef@3
+    O3 coverage-greedy (no anchor)    lee@2  ele@2  ell@2  lel@2  lle@2  eel@2  les@3  ses@3
+    O4 whole-home-row->vowel-first    les@11  des@11  ses@11  mes@11  mme@11  sel@11  del@11  lee@11
+    O5 F+J->full-finger-coverage      fer@5  rer@5  nef@5  jen@5  ref@5  ren@5  enr@5  een@5
+
+==============================================================================
+  is — ordering comparison  (native alphabet 32 keys)
+==============================================================================
+  real 3-letter words: 1155 of 1242 raw (filter removed 87 non-words/acronyms)
+
+  ordering                          anchor   1st >=10 >=25 >=50   cov50 cov75 cov90
+  ---------------------------------------------------------------------------------
+  O1 home-row->freq (status quo)        10     7    7    7   10      19    22    25
+  O2 F+J->vowel-priority                 3     3    7    7    9      21    25    27
+  O3 coverage-greedy (no anchor)         2     2    4    6    7      16    19    23
+  O4 whole-home-row->vowel-first        10     7    7    7   10      22    25    27
+  O5 F+J->full-finger-coverage           2     5    6    7    8      19    25    27
+
+  anchor = home-row keys learned before the first off-home reach.
+  1st/>=N = step at which that many real 3-letter words are typeable.
+  covXX = step at which XX% of real 3-6 word frequency is typeable.
+
+  First real 3-letter words to come online (word@step):
+    O1 home-row->freq (status quo)    las@7  all@7  afa@7  ala@7  dal@7  sal@7  als@7  kaf@7
+    O2 F+J->vowel-priority            afa@3  afi@4  efa@5  efi@5  auf@6  ufa@6  jiu@6  eru@7
+    O3 coverage-greedy (no anchor)    all@2  ala@2  tal@3  alt@3  lat@3  att@3  ata@3  til@4
+    O4 whole-home-row->vowel-first    las@7  all@7  afa@7  ala@7  dal@7  sal@7  als@7  kaf@7
+    O5 F+J->full-finger-coverage      enn@5  fer@5  nef@5  ref@5  jen@5  fen@5  een@5  inn@6
+
+==============================================================================
+  fi — ordering comparison  (native alphabet 24 keys)
+==============================================================================
+  real 3-letter words: 4299 of 6329 raw (filter removed 2030 non-words/acronyms)
+
+  ordering                          anchor   1st >=10 >=25 >=50   cov50 cov75 cov90
+  ---------------------------------------------------------------------------------
+  O1 home-row->freq (status quo)        10     7    7    7    7      17    21    23
+  O2 F+J->vowel-priority                 3     3    3    4    5      18    22    23
+  O3 coverage-greedy (no anchor)         0     2    3    4    5      12    16    18
+  O4 whole-home-row->vowel-first        10     7    7    7    7      21    21    23
+  O5 F+J->full-finger-coverage           2     5    5    5    6      15    18    22
+
+  anchor = home-row keys learned before the first off-home reach.
+  1st/>=N = step at which that many real 3-letter words are typeable.
+  covXX = step at which XX% of real 3-6 word frequency is typeable.
+
+  First real 3-letter words to come online (word@step):
+    O1 home-row->freq (status quo)    saa@7  ala@7  jaa@7  all@7  ssa@7  lla@7  kas@7  aja@7
+    O2 F+J->vowel-priority            jaa@3  aja@3  faa@3  afa@3  aff@3  ffa@3  aaf@3  faf@3
+    O3 coverage-greedy (no anchor)    nii@2  iin@2  nin@2  inn@2  ini@2  nni@2  nai@3  ann@3
+    O4 whole-home-row->vowel-first    saa@7  ala@7  jaa@7  all@7  ssa@7  lla@7  kas@7  aja@7
+    O5 F+J->full-finger-coverage      tee@5  jne@5  een@5  jee@5  ett@5  ent@5  net@5  jen@5
+
+==============================================================================
+  pl — ordering comparison  (native alphabet 31 keys)
+==============================================================================
+  real 3-letter words: 5295 of 8096 raw (filter removed 2801 non-words/acronyms)
+
+  ordering                          anchor   1st >=10 >=25 >=50   cov50 cov75 cov90
+  ---------------------------------------------------------------------------------
+  O1 home-row->freq (status quo)         9     7    7    7    7      19    22    24
+  O2 F+J->vowel-priority                 2     3    3    4    5      20    24    24
+  O3 coverage-greedy (no anchor)         0     2    3    4    6      17    20    22
+  O4 whole-home-row->vowel-first         9     7    7    7    7      21    24    24
+  O5 F+J->full-finger-coverage           2     5    5    5    6      20    24    24
+
+  anchor = home-row keys learned before the first off-home reach.
+  1st/>=N = step at which that many real 3-letter words are typeable.
+  covXX = step at which XX% of real 3-6 word frequency is typeable.
+
+  First real 3-letter words to come online (word@step):
+    O1 home-row->freq (status quo)    jak@7  dla@7  daj@7  las@7  all@7  jaj@7  dal@7  ala@7
+    O2 F+J->vowel-priority            jej@3  fee@3  efe@3  eff@3  jee@3  ejj@3  jef@3  eej@3
+    O3 coverage-greedy (no anchor)    jej@2  jee@2  ejj@2  eej@2  eje@2  jje@2  tej@3  jet@3
+    O4 whole-home-row->vowel-first    jak@7  dla@7  daj@7  las@7  all@7  jaj@7  dal@7  ala@7
+    O5 F+J->full-finger-coverage      jej@5  ren@5  ref@5  rej@5  jen@5  fen@5  nje@5  fee@5
+
+==============================================================================
+  Cross-language summary — step to 25 real 3-letter words
+==============================================================================
+  lang       O1     O2     O3     O4     O5
+  -----------------------------------------
+    en        7      4      4      7      5
+    de        7      4      4      7      5
+    es        7      4      4      7      5
+    fr       11      4      4     11      5
+    is        7      7      6      7      7
+    fi        7      4      4      7      5
+    pl        7      4      4      7      5
+
+  NB: the dictionary filter (--with english-words) only refines en;
+  other languages use the heuristic, so their counts still include some
+  non-words. Treat cross-language word-step numbers as indicative. Anchor
+  cost below is filter-independent and so is exact across languages.
+
+==============================================================================
+  Cross-language summary — anchor cost (home keys before first reach)
+==============================================================================
+  lang       O1     O2     O3     O4     O5
+  -----------------------------------------
+    en        9      2      0      9      2
+    de       10      2      0     10      2
+    es       10      3      0     10      2
+    fr       10      2      0     10      2
+    is       10      3      2     10      2
+    fi       10      3      0     10      2
+    pl        9      2      0      9      2
+
+==============================================================================
+  DONE
+==============================================================================
+
+  Results written to /home/siggi/github/takki/spikes/results/intro_order_comparison_results.txt
+  Paste the full output above back into the Claude Code session.

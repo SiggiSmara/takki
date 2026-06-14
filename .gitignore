@@ -232,6 +232,9 @@ takki.spec
 # Spike artefacts — large binaries regenerated on demand
 spikes/*.onnx
 spikes/*.onnx.json
+# Fetched reference dictionaries for spikes (third-party, licensed — re-fetched on demand).
+# Public-domain curated lists under spikes/data/curated/ ARE committed.
+spikes/data/dict/
 
 # Local-only working documents (rough drafts kept outside the public repo)
 docs/beta-pilot-contacts.md

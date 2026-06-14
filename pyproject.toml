@@ -6,6 +6,8 @@ authors = [
     { name = "Sigurður Smárason", email = "8719966+SiggiSmara@users.noreply.github.com" }
 ]
 requires-python = ">=3.11"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
 dependencies = [
     "faster-whisper>=1.2.1",
     "pygame>=2.6.1",
