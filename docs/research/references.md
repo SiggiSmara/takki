@@ -50,6 +50,37 @@ noted per item so anyone can re-fetch them locally.
   <https://en.wikipedia.org/wiki/Touch_typing>
   Status: search summary only. Home-row-as-reference-point rationale; QWERTY ≈30% vs optimized ≈74% home-row letter frequency.
 
+## Motor learning, repetitions, and retention
+
+- **Danna et al. — *Too little, too much: A limited range of practice 'doses' is best for retaining grapho-motor skill in children***
+  <https://www.sciencedirect.com/science/article/abs/pii/S0959475219302701>
+  Status: abstract fetched (paywalled). Key finding: in 7–8 year olds, 90 repetitions (6 blocks × 15) → no long-term retention; 180 reps (12 blocks × 15) → robust gains and highest accuracy; 360 reps → similar gains but less accurate. Distributed practice (90 reps × 4 days) → outperforms massed 360 at 4–5 week follow-up. **Primary source for the Known minimum of 90 and rolling window of ~200.**
+
+- **"Not for kids: 2nd grade school children require more practice than adults to attain long-term gains in a graphomotor task"**
+  <https://www.sciencedirect.com/science/article/abs/pii/S0885201422000946>
+  Status: abstract fetched (paywalled). Adults but not children attained long-term benefits from low-dose practice. Reinforces children need more repetitions than adults for the same durable retention.
+
+- **Acquisition of Motor and Cognitive Skills through Repetition in Typically Developing Children (PMC)**
+  <https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4934913/>
+  Status: full text available. 90 typically developing children aged 6–12; three consecutive trials at a procedural task increased speed and efficiency. Supports the multi-session / spaced-practice model in the Takki age band.
+
+- **Bönstrup et al. — *A Rapid Form of Offline Consolidation in Skill Learning* (Current Biology 2019)**
+  <https://www.cell.com/current-biology/fulltext/S0960-9822(19)30219-2>
+  PMC: <https://pmc.ncbi.nlm.nih.gov/articles/PMC6482074/>
+  Status: full text available. Motor skills consolidate during brief (~10 s) rest periods interleaved with practice, not just overnight. Supports the session-design principle that rest between attempts matters even within a session.
+
+- **Cousins et al. — *Experience Playing a Musical Instrument and Overnight Sleep Enhance Performance on a Sequential Typing Task* (PMC)**
+  <https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4966959/>
+  Status: full text available. Both sleep and musical experience led to greater improvement in typing performance in the 12 hours following learning. Direct evidence for sleep-dependent motor consolidation in a typing-adjacent task.
+
+- **Danna et al. — *Practice schedule and testing per se affect children's transfer abilities in a grapho-motor task***
+  <https://www.sciencedirect.com/science/article/abs/pii/S0022096521002411>
+  Status: abstract fetched (paywalled). Follow-up to "Too little, too much." Compares single-session (24 blocks) vs. distributed (6 blocks × 4 days) in children. Key finding: by end of training and at 24h, massed practice leads in speed; by 4–5 weeks, distributed is equivalent or better and children show "delayed performance gains" (still improving) while massed shows deterioration. Distributed also outperforms on transfer tasks. **Needed: full paper for direct distributed vs. massed-12 (180 reps) comparison — not in abstract.**
+
+- **Wikipedia — *Power law of practice***
+  <https://en.wikipedia.org/wiki/Power_law_of_practice>
+  Status: fetched. Performance improves as log(repetitions); reaction time decreases linearly with log(trials). Justifies the rolling window being weighted toward recent performance (the oldest attempts are the lowest-value marginal evidence).
+
 ## Verification status of figures used in the notes
 
 - **Verified from primary/local sources:** F/J as the universal tactile anchor (NFB); "any consistent position is fine," 5–10 s resting-position readiness, and the home-row-can-cause-shutdown warning (Perkins); middle-finger length ↔ typing speed/accuracy r=0.43/0.366 in school-age students (AIJFR); touch-screen key-size > hand-size for typing performance (OhioLINK).

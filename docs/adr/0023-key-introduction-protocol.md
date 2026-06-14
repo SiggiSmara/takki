@@ -133,7 +133,7 @@ A per-profile override is flagged as an open question — a Latvian-speaking adu
 
 **Shift composites — still deferred.** Uppercase remains out of scope for v1 per [ADR-005](0005-keyboard-handling.md). Capitalisation is a separate skill, addressed after the base alphabet (including composite letters) is mastered. This is unchanged from the original ADR draft.
 
-**Milestone denominators.** Bronze/Silver/Gold thresholds count physical keys known, with composite graphemes excluded from the denominator. A child who has introduced 14 of 24 Icelandic physical keys (= 14/24 = 58%) is the same Silver percentage regardless of how many composite graphemes have become typeable in passing. This keeps the milestone metric a measure of *motor progress* rather than *vocabulary unlock*, which would otherwise inflate Silver scores in composite-heavy languages and incentivise the engine to push modifier keys early to game the metric.
+**Milestone denominators.** Bronze/Silver/Gold thresholds count distinct typeable **graphemes** (output characters) known — not physical key actuations. Modifier keys (AltGr, dead keys) produce no character on their own and are excluded from the denominator; the characters they help produce (`á`, `ð`, `ž`, etc.) are included on equal footing with direct-strike characters. This is decided in [ADR-027](0027-key-and-accuracy-state-model.md), which supersedes the earlier "physical keys" wording in this ADR. For Icelandic: the denominator is the 32 output graphemes from `get_layout_positions()`, not the 24 physical keys; a child who has mastered 14 graphemes (= 14/32 = 44%) is measured against the full grapheme set.
 
 ### Spike validation
 

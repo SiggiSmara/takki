@@ -23,7 +23,7 @@ Words from the filtered word list constrained to keys the child has already mast
 
 Progression is adaptive and continuous, not fixed-step:
 - A new key is introduced in Layer 1 when first-attempt accuracy on current keys exceeds 90% over a minimum of 50 presses (auto-rejections count as failed attempts — see ADR-012)
-- A key is considered "known" when first-attempt accuracy has been sustained above 90% across multiple sessions
+- A key is considered "known" when first-attempt accuracy ≥ 90% over ≥ 90 attempts and ≥ 2 distinct practice days, evaluated over a rolling window of 200 attempts (see ADR-027)
 - Layer 2 unlocks when ≥ 8 keys are known
 - Word length in Layer 2 advances when clean word rate exceeds 85% over 20 words
 - Clean word rate (no auto-rejections, no restarts — see ADR-012) is the sole progression gate until the child reaches sustained real-word fluency (see milestones below)
@@ -67,15 +67,23 @@ Each milestone triggers a distinct audio celebration — an important engagement
 
 ### Session Pacing and Fatigue
 
-**Decision:** No enforced session limits, no proactive break prompts. The lesson structure provides natural stopping points, and lesson granularity is calibrated so those stopping points occur frequently enough to be useful.
+**Decision:** No enforced session time limits, no proactive break prompts. The lesson structure provides natural stopping points with high enough granularity that a stopping point is always close. The engine enforces a soft per-key-per-session ceiling (~90 attempts, configurable) to prevent over-drilling within a single sitting.
 
 Audio-primary interaction produces measurable listening fatigue in children — research on children with hearing loss (who rely heavily on auditory processing, directly analogous to VI children) finds sustained audio tasks are more cognitively taxing than visual tasks. Children do not self-regulate proactively: they disengage or become irritable rather than requesting a pause.
 
-However, no VI typing tool reviewed (TypeAbility, Talking Typer, Typio/Accessibyte, APH products) enforces session limits or suggests breaks, and no accessibility standard requires it. The evidence-aligned practice is to design lessons with clear natural endpoints.
+No VI typing tool reviewed (TypeAbility, Talking Typer, Typio/Accessibyte, APH products) enforces session limits or suggests breaks, and no accessibility standard requires it. The evidence-aligned practice is to design lessons with clear natural endpoints.
 
-Takki's lesson structure already provides this: each drill set completes, each word session ends, each milestone triggers a celebration — all natural pause points. The design constraint that follows is that individual lessons must be short enough that these stopping points occur frequently. A lesson unit should be completable in a few minutes under normal performance, so a child who is tiring always has a natural exit close ahead of them rather than mid-session.
+Takki's lesson structure already provides this: each drill set completes, each word session ends, each milestone triggers a celebration — all natural pause points. The design constraint is that individual lessons must be short enough that these stopping points occur frequently. A lesson unit should be completable in a few minutes under normal performance.
 
-Explicit break enforcement is rejected: it is patronising for motivated children and adds complexity with no evidence of benefit over well-granulated lesson design.
+**Research grounding (added 2026-06-14, amended 2026-06-14, see [motor-learning-repetitions.md](../research/motor-learning-repetitions.md)):** Graphomotor research on 7–8 year olds shows that massed practice beyond ~180 per-key repetitions in a single session produces accuracy penalties and long-term deterioration. A distributed model — short sessions across multiple days — outperforms equivalent massed practice at the 4–5 week mark and continues improving where massed practice declines.
+
+The researched distributed protocol used **90 reps per character per day** across 4 days. That per-day dose is the design target for Takki: **45–90 attempts per active key per session** (configurable floor and ceiling in `takki_config.yaml`). The floor (45) represents the minimum per-session exposure for sleep-dependent consolidation to be meaningfully triggered; the ceiling (90) is where single-session accuracy penalties begin. Layer-2 word practice contributes to per-key attempt counts (one attempt per character position in a word, per ADR-027), so the target is cumulative across both layers in a session.
+
+Session length is therefore adaptive and inversely related to the number of active keys: fewer active keys means more reps each per session, more active keys means reps are spread thinner. In practice, a session targeting 45–90 per active key runs roughly 10–20 minutes of total keyboard time regardless of where in the curriculum the child is — beginners with 2–4 active keys get 90 reps each; children with 10+ active keys get 45–60 each from the combined Layer 1 + Layer 2 stream.
+
+The individual **drill block** (~90–120 seconds, per ADR-024) is the natural stopping unit within a session. "Individual lesson units must be short enough that a stopping point is always close" means the block, not the session: a child can stop after any block without losing progress, and blocks complete in under two minutes. A full session spanning enough blocks to hit the 45-per-key floor is the expected engagement; shorter practice still contributes to the rolling window but does not achieve the per-day dose the research supports.
+
+The per-key ceiling (~90) is a soft engine cap, not a hard interrupt. Explicit session time enforcement remains rejected: it is patronising for motivated children and adds complexity with no evidence of benefit over well-granulated lesson design combined with the per-key ceiling.
 
 ### Why Lessons Are Not Authored Per Language
 
