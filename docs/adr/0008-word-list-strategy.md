@@ -1,6 +1,6 @@
 # ADR-008: Word List Strategy
 
-**Status:** Accepted  
+**Status:** Superseded in part by [ADR-029](0029-word-selection-and-curation.md) — the word-*selection* decision is replaced; the family-override file and no-LLM-filtering stance are retained.  
 **Date:** 2026-05-17
 
 > Part of the [Takki architecture](../architecture.md).

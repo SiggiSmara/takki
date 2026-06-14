@@ -95,3 +95,14 @@ Two non-responsibilities to state explicitly so the gate isn't over-trusted: it 
 3. Source and assemble the German Bundesländer union (with consensus counts).
 4. Write the ADR (mechanics per §10.1).
 5. Ripple updates (§9).
+
+## 12. Status (2026-06-14)
+
+§10 resolved with the recommended defaults: new ADR (supersede), Gap B in-ADR, advisory gate policy, GPLv3 (so German GPL data bundles cleanly — separate distribution optional). **ADR written: [ADR-029](../adr/0029-word-selection-and-curation.md).**
+
+**Deferred follow-ups (todo):**
+1. **Bigram / key-transition coverage analysis** — the touch-typing-correct version of "cover the keyboard" (per-key counts done; transitions feed [ADR-024](../adr/0024-drill-content-and-lesson-granularity.md)'s bigram phase).
+2. **Assemble the Bundesländer Grundwortschatz union** (§5 UrhG amtliche Werke; BW ~870, BB ~700; consensus-count ordering).
+3. Author the per-language default appropriateness blocklists (Gap B).
+4. Confirm remaining lexicon licences (LEXIN, Lexique, Leipzig, CYP-LEX).
+5. Ripple: [ADR-010](../adr/0010-lesson-structure-and-progression.md) Layer-2 availability gate; roadmap C9/C13 cross-refs; set exact pool-size thresholds in config ([ADR-025](../adr/0025-configuration-system.md)).

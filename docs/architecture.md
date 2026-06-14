@@ -70,7 +70,7 @@ Individual decisions are recorded in `docs/adr/`. Each ADR is self-contained and
 | [ADR-005](adr/0005-keyboard-handling.md) | Keyboard Handling | `pynput`; rely on Windows layout translation; no custom layout files |
 | [ADR-006](adr/0006-language-and-keyboard-layout-scope.md) | Language and Keyboard Layout Scope | Latin-script, direct-input only; IME languages excluded |
 | [ADR-007](adr/0007-language-data-word-frequency.md) | Language Data — Word Frequency | `wordfreq` for word/letter/bigram frequency; derived at startup |
-| [ADR-008](adr/0008-word-list-strategy.md) | Word List Strategy | Algorithmic default from `wordfreq`; parent override file; no LLM filtering |
+| [ADR-008](adr/0008-word-list-strategy.md) | Word List Strategy | *Superseded in part by ADR-029.* Family override file + no-LLM-filtering retained |
 | [ADR-009](adr/0009-language-configuration.md) | Language Configuration | Hardcoded minimal config for ~40 languages; override YAML for edge cases |
 | [ADR-010](adr/0010-lesson-structure-and-progression.md) | Lesson Structure and Progression | Two-layer engine (drills + real words); milestone levels; no session limits |
 | [ADR-011](adr/0011-persistence-and-state.md) | Persistence and State | SQLite via built-in `sqlite3`; local only, no server |
@@ -89,6 +89,7 @@ Individual decisions are recorded in `docs/adr/`. Each ADR is self-contained and
 | [ADR-024](adr/0024-drill-content-and-lesson-granularity.md) | Drill Content and Lesson Granularity | Four-phase new-key ramp-up; freq-weighted bigrams; SFBs not avoided; spaced re-exposure for rare keys; child-pace-adaptive ~100s drill blocks |
 | [ADR-025](adr/0025-configuration-system.md) | Configuration System | Three-tier config: `config.py` defaults → `takki_config.yaml` (parent) → per-profile SQLite; sound cues overridable; Alpha tones generated in pure Python |
 | [ADR-026](adr/0026-platform-interface-abstraction.md) | Platform Interface Abstraction | `PlatformInterface` Protocol with three methods; `select_platform_interface()` factory; `DevStubInterface` fallback for non-Windows dev |
+| [ADR-029](adr/0029-word-selection-and-curation.md) | Word Selection and Vocabulary Curation | Positive curation (curated child lists preferred) + affix-aware dictionary fallback + default blocklist + family override; supersedes ADR-008's selection |
 
 ---
 
