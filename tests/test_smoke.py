@@ -1,4 +1,5 @@
 """Smoke test: verify takki package imports."""
+
 import takki
 
 
