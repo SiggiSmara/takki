@@ -23,7 +23,13 @@ repos:
         args: ["--fix"]
       - id: ruff-format
 
-  - repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.409
+  # pyright runs through uv so it sees the project venv (pytest, etc.) and uv's
+  # bundled node — the isolated pre-commit hook env resolves neither.
+  - repo: local
     hooks:
       - id: pyright
+        name: pyright
+        entry: uv run pyright
+        language: system
+        types: [python]
+        pass_filenames: false
