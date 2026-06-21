@@ -107,8 +107,7 @@ class SqliteStore:
                  restart_key, ptt_mode, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (name, language, tts_voice, tts_rate, talk_key, reread_key,
-             restart_key, ptt_mode, ts),
+            (name, language, tts_voice, tts_rate, talk_key, reread_key, restart_key, ptt_mode, ts),
         )
         self.conn.commit()
         return Profile(

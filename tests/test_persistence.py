@@ -77,18 +77,14 @@ class TestSessions:
     def test_start_ended_at_null(self, store: SqliteStore) -> None:
         p = store.create_profile("Alice", "en")
         sid = store.start_session(p.id, started_at="2026-01-01T10:00:00")
-        row = store.conn.execute(
-            "SELECT ended_at FROM sessions WHERE id = ?", (sid,)
-        ).fetchone()
+        row = store.conn.execute("SELECT ended_at FROM sessions WHERE id = ?", (sid,)).fetchone()
         assert row[0] is None
 
     def test_end_sets_ended_at(self, store: SqliteStore) -> None:
         p = store.create_profile("Alice", "en")
         sid = store.start_session(p.id, started_at="2026-01-01T10:00:00")
         store.end_session(sid, ended_at="2026-01-01T10:30:00")
-        row = store.conn.execute(
-            "SELECT ended_at FROM sessions WHERE id = ?", (sid,)
-        ).fetchone()
+        row = store.conn.execute("SELECT ended_at FROM sessions WHERE id = ?", (sid,)).fetchone()
         assert row[0] == "2026-01-01T10:30:00"
 
     def test_sequential_ids(self, store: SqliteStore) -> None:
@@ -180,7 +176,7 @@ class TestKeyAttempts:
         store = SqliteStore(":memory:", window_cap=3)
         p = store.create_profile("Alice", "en")
         for i in range(5):
-            store.append_attempt(p.id, "a", True, attempted_at=f"2026-01-0{i+1}T10:00:00")
+            store.append_attempt(p.id, "a", True, attempted_at=f"2026-01-0{i + 1}T10:00:00")
         rows = store.conn.execute(
             "SELECT attempted_at FROM key_attempts WHERE profile_id = ? AND key_char = ? ORDER BY attempted_at",
             (p.id, "a"),
@@ -192,8 +188,8 @@ class TestKeyAttempts:
         store = SqliteStore(":memory:", window_cap=3)
         p = store.create_profile("Alice", "en")
         for i in range(4):
-            store.append_attempt(p.id, "a", True, attempted_at=f"2026-01-0{i+1}T10:00:00")
-            store.append_attempt(p.id, "b", True, attempted_at=f"2026-01-0{i+1}T11:00:00")
+            store.append_attempt(p.id, "a", True, attempted_at=f"2026-01-0{i + 1}T10:00:00")
+            store.append_attempt(p.id, "b", True, attempted_at=f"2026-01-0{i + 1}T11:00:00")
         assert store.window_stats(p.id, "a").attempt_count == 3
         assert store.window_stats(p.id, "b").attempt_count == 3
 
