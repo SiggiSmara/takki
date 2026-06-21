@@ -63,4 +63,3 @@ they are rare
 they require more awkward reaches
 they don’t unlock many early words
 they can frustrate beginners
-

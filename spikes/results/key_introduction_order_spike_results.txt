@@ -10,7 +10,7 @@ Languages: en, de, fi, is, fr, es, cs, pl, lv
 ==============================================================================
   en — US QWERTY — introduction order  (key (side, finger) cov-grapheme%)
 ==============================================================================
-  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand             
+  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand
   ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
      1  f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%
      2  j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%
@@ -96,7 +96,7 @@ Languages: en, de, fi, is, fr, es, cs, pl, lv
 ==============================================================================
   de — German QWERTZ — introduction order  (key (side, finger) cov-grapheme%)
 ==============================================================================
-  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand             
+  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand
   ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
      1  f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%
      2  j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%
@@ -183,7 +183,7 @@ Languages: en, de, fi, is, fr, es, cs, pl, lv
 ==============================================================================
   fi — Finnish — introduction order  (key (side, finger) cov-grapheme%)
 ==============================================================================
-  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand             
+  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand
   ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
      1  f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%
      2  j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%
@@ -267,7 +267,7 @@ Languages: en, de, fi, is, fr, es, cs, pl, lv
 ==============================================================================
   is — Icelandic ISO — introduction order  (key (side, finger) cov-grapheme%)
 ==============================================================================
-  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand             
+  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand
   ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
      1  f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%
      2  j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%
@@ -354,7 +354,7 @@ Languages: en, de, fi, is, fr, es, cs, pl, lv
 ==============================================================================
   fr — French AZERTY — introduction order  (key (side, finger) cov-grapheme%)
 ==============================================================================
-  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand             
+  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand
   ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
      1  f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%
      2  j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%
@@ -442,7 +442,7 @@ Languages: en, de, fi, is, fr, es, cs, pl, lv
 ==============================================================================
   es — Spanish ISO — introduction order  (key (side, finger) cov-grapheme%)
 ==============================================================================
-  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand             
+  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand
   ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
      1  f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%
      2  j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%
@@ -529,7 +529,7 @@ Languages: en, de, fi, is, fr, es, cs, pl, lv
 ==============================================================================
   cs — Czech QWERTZ — introduction order  (key (side, finger) cov-grapheme%)
 ==============================================================================
-  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand             
+  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand
   ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
      1  f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%
      2  j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%
@@ -623,7 +623,7 @@ Languages: en, de, fi, is, fr, es, cs, pl, lv
 ==============================================================================
   pl — Polish Programmers — introduction order  (key (side, finger) cov-grapheme%)
 ==============================================================================
-  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand             
+  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand
   ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
      1  f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%
      2  j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%
@@ -707,7 +707,7 @@ Languages: en, de, fi, is, fr, es, cs, pl, lv
 ==============================================================================
   lv variant 1 — Latvian LVS 24-93 (AltGr path) — introduction order  (key (side, finger) cov-grapheme%)
 ==============================================================================
-  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand             
+  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand
   ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
      1  f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%
      2  j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%
@@ -788,7 +788,7 @@ Languages: en, de, fi, is, fr, es, cs, pl, lv
 ==============================================================================
   lv variant 2 — Latvian LVS 24-93 (dead-key path) — introduction order  (key (side, finger) cov-grapheme%)
 ==============================================================================
-  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand             
+  step  A symmetric pairs                 B pure frequency                  C freq-per-hand                   D coverage-greedy                 E coverage-per-hand
   ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
      1  f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%       f           (L,idx )   0.0%
      2  j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%       j           (R,idx )   0.0%
