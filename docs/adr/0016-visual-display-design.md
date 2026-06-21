@@ -9,6 +9,12 @@
 
 **Decision:** Optional secondary visual display, off by default, child-configured. Consistent two-line layout across both lesson layers. Visual cues appear after or simultaneously with audio — never before. Display shows only what is directly part of the current task.
 
+### Always-on window, opt-in visual content (added 2026-06-21)
+
+ADR-028's revised keyboard-ownership model scopes keyboard capture by OS focus rather than by a global suppressing hook, which requires Takki to own a real OS window at all times. That window is **this** window: the single SDL/pygame surface is created on every run as the focus anchor, regardless of profile. What stays opt-in is the *visual content* — when the visual display is off (the default), the window holds no lesson information and the child, who navigates by audio, never needs to look at it; when on, it renders the two-line layout below.
+
+This narrows but does not break the audio-first invariant: every user-facing interaction still works without the child viewing the screen. It does change the earlier "`pygame.display` is never touched in audio-only mode" property — SDL video now initialises always (headless dev and CI use `SDL_VIDEODRIVER=dummy`, stood in for by the `FocusSource` fake). The observer invariant still holds: a blank or audio-subtitle window surfaces no information the child has not already heard.
+
 ### Rationale
 
 Literature on learned helplessness in visually impaired children establishes that over-assistance from observers who have more information than the child is a documented harm. A visual display that surfaces per-keypress error data to an observer before the child has processed their own audio feedback creates exactly the information asymmetry that produces this effect. VI children themselves report feeling their independence limited by parents and support teachers who intervene on the basis of what they observe.

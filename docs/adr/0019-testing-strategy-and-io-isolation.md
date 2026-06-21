@@ -35,8 +35,9 @@ Each protocol is introduced when its consuming component is first built. Real im
 | `Clock` | `SystemClock` | `FakeClock` |
 | `LLMRunner` | `LlamaCppRunner` | `ScriptedLLMRunner` |
 | `HardwareProbe` | `RealHardwareProbe` | `FixedHardwareProbe` |
+| `FocusSource` | `PygameFocusSource` (always-on SDL window; emits foreground gained/lost, handles re-acquire requests) | `FakeFocusSource` |
 
-The three platform functions in CLAUDE.md (`get_system_language`, `get_home_row_keys`, `get_fallback_tts`) are the Windows-specific instances of this same pattern.
+The platform functions bundled in `PlatformInterface` (`get_system_language`, `get_layout_positions`, `get_fallback_tts`, and `detect_screen_reader` — ADR-026) are the Windows-specific instances of this same pattern.
 
 **The Protocol boundary is also the plugin boundary.** Any third-party or community-contributed alternative — a different TTS engine, an alternative wake-word handler, a cloud-LLM adapter forked downstream — is a new Protocol implementation drop-in. There is no separate plugin framework; the Protocol set above is the public extension surface.
 

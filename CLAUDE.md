@@ -6,7 +6,7 @@ Typing tutor for visually impaired children. Audio is the primary interface. See
 
 - **Never run `python` directly.** Always `uv run python` or `uv run pytest`. No exceptions.
 - **Never `cd` before a command.** All commands run from the repo root. Use absolute or repo-relative paths.
-- **All external I/O behind a `typing.Protocol`.** Lesson engine, intent pipeline, and progression logic depend on the Protocol, not the implementation. No direct calls to Piper, pynput, Whisper, `pygame`, etc. from logic code. The three Windows-specific platform interfaces below are the most prominent case; the rule applies to every external interface. See ADR-019.
+- **All external I/O behind a `typing.Protocol`.** Lesson engine, intent pipeline, and progression logic depend on the Protocol, not the implementation. No direct calls to Piper, pynput, Whisper, `pygame`, etc. from logic code. The Windows-specific platform interfaces below are the most prominent case; the rule applies to every external interface. See ADR-019.
 - **Tests use fakes by default.** Each Protocol ships with a fake implementation in `tests/fakes/`. Hardware- and model-dependent tests are gated by pytest markers (`audio`, `model`, `windows_only`, `slow`) and excluded from the default `uv run pytest`. See ADR-019.
 
 ## Development environment
@@ -23,7 +23,7 @@ These are decided. Do not introduce code that violates them without opening a di
 
 - **Offline after install.** No network calls at runtime except the one-time Piper model download (with explicit user confirmation).
 - **No elevated privileges.** Nothing that requires admin/UAC on Windows.
-- **Audio first.** Every user-facing interaction must work without a visual display. The visual display (pygame window) is opt-in per child profile.
+- **Audio first.** Every user-facing interaction must work without a visual display. The *visual content* is opt-in per child profile; the window itself is always created as the keyboard-focus anchor (ADR-016/ADR-028) and stays blank in audio-only mode.
 - **Language-agnostic lesson engine.** No language-specific logic inside the lesson engine. All language inputs come from the language layer (wordfreq + config).
 - **No LLM for word filtering.** Explicitly decided against. See ADR-008.
 - **LLM for intent recognition only, hardware-gated.** Optional tertiary fallback in the layered intent pipeline (ADR-017). Never used for word filtering, encouragement generation, or real-time lesson content. Hardware tier (0–3) determined automatically at setup. See ADR-004, ADR-018.
@@ -33,12 +33,13 @@ These are decided. Do not introduce code that violates them without opening a di
 
 ## Platform interfaces
 
-Three functions isolate all Windows-specific code. Implement these first; call them everywhere else.
+Four functions isolate all Windows-specific code. Implement these first; call them everywhere else.
 
 ```
 get_system_language()   # Windows locale API → language code
-get_home_row_keys()     # Windows keyboard scan codes → list of characters
+get_layout_positions()  # Windows keyboard scan codes → Layout (keys + graphemes)
 get_fallback_tts()      # pyttsx3 → SAPI
+detect_screen_reader()  # SPI_GETSCREENREADER + process scan → reader id | None
 ```
 
 Never call platform APIs directly from application logic. Always go through these interfaces.
@@ -56,7 +57,7 @@ Never call platform APIs directly from application logic. Always go through thes
 | Language data | `wordfreq` | ~40 languages, bundled, no network. |
 | Persistence | SQLite (`sqlite3`) | Built-in, single file, no server. |
 | Audio cues | `pygame.mixer` | Immediate low-latency feedback. Initialised independently of display. |
-| Visual display | `pygame.display` | Conditional — only initialised if visual display enabled in profile. |
+| Visual display | `pygame.display` | Window always created as the keyboard-focus anchor (ADR-028); visual *content* rendered only if visual display enabled in profile. Headless/CI: `SDL_VIDEODRIVER=dummy`. |
 | LLM (intent fallback) | `llama-cpp-python` | Optional, hardware-adaptive tiers 0–3. Fallback for intent recognition only. See ADR-004, ADR-018. |
 | Distribution | PyInstaller | Must be built on Windows. |
 
@@ -102,7 +103,7 @@ pyproject.toml
 ## Open questions (resolve before implementing affected components)
 
 1. ~~**Piper TTS native Windows support**~~ — **resolved.** Works natively on Windows (Python 3.11 MSVC). Model load ~2.3s (one-time), synthesis ~0.19s per phrase. ADR-003 stands.
-2. ~~**`pygame.mixer` headless on Windows**~~ — **resolved.** Confirmed: mixer initialises (22050 Hz stereo) and plays audio with no display window. `pygame.display` never touched. pygame 2.6.1 / SDL 2.28.4.
+2. ~~**`pygame.mixer` headless on Windows**~~ — **resolved.** Confirmed: mixer initialises (22050 Hz stereo) and plays audio with no display window. pygame 2.6.1 / SDL 2.28.4. *Update (2026-06-21, ADR-028): `pygame.display` is now initialised on every run — an always-on window is the keyboard-focus anchor (ADR-016). The window is blank in audio-only mode; headless dev and CI use `SDL_VIDEODRIVER=dummy`, stood in for by the `FocusSource` fake.*
 3. ~~**Vocabulary coverage curve**~~ — **resolved.** Silver/Gold are key-count based (≥1/3 and ≥2/3 of language's full key set). Coverage displayed as motivating info only, computed over words ≥ 3 chars (aligns with Layer 2 floor; prevents single-letter articles skewing the number).
 4. ~~**Minimum hardware spec**~~ — **resolved.** Requires AVX2; matmul benchmark >~10ms is below minimum for Whisper (Celeron-class hardware). `tiny` and `base` bundled in installer, auto-selected by matmul threshold (~2ms). See ADR-018 and ADR-002.
 5. ~~**Model downloads under a child account**~~ — **resolved.** `tiny` + `base` bundled in installer; no runtime HuggingFace downloads for Whisper. English Piper voice always bundled; additional voices distributed as browser downloads via the project website (save to `Documents\Takki\voices\`). No in-app download logic. See ADR-015.

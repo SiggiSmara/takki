@@ -7,9 +7,9 @@
 
 ---
 
-**Decision:** Exactly three functions isolate all platform-specific behaviour behind a single `PlatformInterface` Protocol. A `select_platform_interface()` factory maps `sys.platform` to the right concrete implementation; new platforms slot in here without touching any other code. A `DevStubInterface` acts as the fallback for platforms that do not yet have a real implementation, so the full codebase runs on any platform during development. The `Layout` / `PhysicalKey` / `Grapheme` data model from the key-introduction spike becomes the canonical return type for `get_layout_positions()` and lives in `src/takki/platform/layout.py`.
+**Decision:** Four functions isolate all platform-specific behaviour behind a single `PlatformInterface` Protocol (three from the original cut; `detect_screen_reader()` added 2026-06-21 per ADR-028). A `select_platform_interface()` factory maps `sys.platform` to the right concrete implementation; new platforms slot in here without touching any other code. A `DevStubInterface` acts as the fallback for platforms that do not yet have a real implementation, so the full codebase runs on any platform during development. The `Layout` / `PhysicalKey` / `Grapheme` data model from the key-introduction spike becomes the canonical return type for `get_layout_positions()` and lives in `src/takki/platform/layout.py`.
 
-### Why Exactly Three Functions
+### Why These Functions
 
 The boundary is: *the underlying system API is unavoidably platform-specific and cannot be replaced by a pure-Python cross-platform library*.
 
@@ -18,8 +18,9 @@ The boundary is: *the underlying system API is unavoidably platform-specific and
 | `get_system_language()` | Windows NLS locale API | `NSLocale` | `$LANG` / `locale` |
 | `get_layout_positions()` | `MapVirtualKeyW` / `VkKeyScanExW` | Carbon / IOKit | xkb |
 | `get_fallback_tts()` | pyttsx3 → SAPI | pyttsx3 → nsss | pyttsx3 → espeak |
+| `detect_screen_reader()` | `SPI_GETSCREENREADER` + process scan | `NSWorkspace` / AX API | AT-SPI / process scan |
 
-`get_app_data_dir()` is **not** in this set — `platformdirs` handles that across Windows, macOS, and Linux with no platform-specific code required (see ADR-025).
+`detect_screen_reader()` was added by ADR-028's 2026-06-21 revision and passes the same test that `get_app_data_dir()` failed: there is no maintained pure-Python cross-platform library that reports whether an assistive screen reader is active, whereas `platformdirs` covers app-data paths across Windows, macOS, and Linux with no platform-specific code (see ADR-025). The boundary admits exactly what the test admits.
 
 ### Protocol Definition
 
@@ -28,9 +29,10 @@ class PlatformInterface(Protocol):
     def get_system_language(self) -> str: ...
     def get_layout_positions(self) -> Layout: ...
     def get_fallback_tts(self) -> TTSEngine: ...
+    def detect_screen_reader(self) -> str | None: ...
 ```
 
-`TTSEngine` is the TTS Protocol defined in ADR-003. All three methods on concrete implementations are called once at startup and their results cached by the caller.
+`TTSEngine` is the TTS Protocol defined in ADR-003. All four methods on concrete implementations are called once at startup and their results cached by the caller.
 
 ### Platform Selection
 
@@ -84,16 +86,21 @@ Finger assignment is derived from `col` via a universal `COL_TO_FINGER` mapping 
 
 Returns a fully initialised pyttsx3 engine with the appropriate backend for the platform. Pre-initialised because pyttsx3 has real startup cost and is not designed for repeated construction. The engine is a single shared instance; callers must not use it concurrently. This assumption is safe because ADR-012's TTS interrupt rule makes concurrent TTS structurally impossible in the lesson engine — any future contributor who adds a background audio path must revisit this.
 
+**`detect_screen_reader() -> str | None`**
+
+Returns a short identifier for an active screen reader (`"nvda"`, `"jaws"`, `"narrator"`, …) or `None` if none is detected. The Windows implementation combines `SystemParametersInfo(SPI_GETSCREENREADER)` — cheap but unreliable, since not every reader sets the flag (NVDA notably does not by default) — with a process-name scan for the known readers, which is what makes the result dependable. Called once at startup; the result feeds the onboarding self-voicing suggestion (ADR-013) and is otherwise advisory. Takki never reconfigures the reader from its own process.
+
 ### Concrete Implementations
 
 **`WindowsPlatformInterface`** — `src/takki/platform/windows.py`  
-Real implementations calling Windows APIs. Only imported on `win32`.
+Real implementations calling Windows APIs. Only imported on `win32`. `detect_screen_reader()` uses `SPI_GETSCREENREADER` plus a process-name scan.
 
 **`DevStubInterface`** — `src/takki/platform/dev_stub.py`  
 Fallback for platforms without a real implementation. Logs a startup warning so it is never silently used in production:
 - `get_system_language()` → parses `$LANG` / `locale.getlocale()`, falls back to `"en"`
 - `get_layout_positions()` → returns the hardcoded US QWERTY `Layout` (the `build_en()` logic from the spike, moved here)
 - `get_fallback_tts()` → pyttsx3 with whatever backend pyttsx3 finds on the current platform
+- `detect_screen_reader()` → returns `None` (no cross-platform detection in the stub)
 
 The stub produces real output — pyttsx3 speaks, the layout is valid — but cannot reflect the user's actual keyboard layout or system language beyond what `$LANG` reports. Acceptable for development; not acceptable for a shipped product targeting a specific platform.
 
@@ -104,6 +111,7 @@ Configurable fake for unit tests:
 - `get_system_language()` → returns a configurable string, default `"en"`
 - `get_layout_positions()` → returns a configurable `Layout`, default US QWERTY
 - `get_fallback_tts()` → returns a `FakeTTSEngine` (already defined in `tests/fakes/`)
+- `detect_screen_reader()` → returns a configurable value, default `None`
 
 All logic code depends on `PlatformInterface`, not on a concrete class. Tests instantiate `FakePlatformInterface` directly — no monkey-patching.
 
@@ -116,4 +124,4 @@ The original name in the architecture doc was `get_home_row_keys()`. ADR-023's k
 - **Binary Windows / non-Windows dispatch.** Simpler initially but breaks cleanly as soon as a third platform needs a real implementation. The selector function costs nothing and makes the extension path obvious.
 - **Three standalone module-level functions instead of a Protocol.** Harder to swap wholesale — callers would import individual functions rather than accepting an interface. A single Protocol is one injection point.
 - **Lazy initialisation for `get_fallback_tts()` (return a factory, not an engine).** Avoids the stateful interface but complicates every caller. Rejected because the single-caller constraint already holds by design — the crosstalk risk that motivates lazy/per-call construction does not apply here.
-- **`get_app_data_dir()` as a fourth platform function.** Rejected — `platformdirs` provides a tested, well-maintained implementation covering all relevant platforms.
+- **`get_app_data_dir()` as an additional platform function.** Rejected — `platformdirs` provides a tested, well-maintained implementation covering all relevant platforms. (Contrast `detect_screen_reader()`, added later, for which no such cross-platform library exists.)

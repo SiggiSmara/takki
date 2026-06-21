@@ -23,6 +23,10 @@ This means:
 
 The push-to-talk key (ADR-020) is captured via the same `pynput` pipeline as any other key; the lesson engine consumes character events and ignores the talk key, while the voice subsystem subscribes to talk-key events and ignores character keys.
 
+### Focus-gated dispatch (added 2026-06-21, per ADR-028)
+
+`pynput` remains the key source, but it no longer runs with `suppress=True`. Key events are processed as drill input only while Takki's window holds OS foreground; while it does not, the OS routes keys to whatever is focused and Takki is paused. The character-translation behaviour above is unchanged — only *when* an event counts as lesson input is now gated on focus. See [ADR-028 §C8](0028-composite-input-and-keyboard-ownership.md) for the full ownership model and the `FocusSource` Protocol.
+
 ### Alternatives Considered
 
 - **Custom layout definition files (JSON):** Rejected. Unnecessary duplication of information Windows already has. Maintenance burden. Risk of mismatch between app definition and actual system layout.

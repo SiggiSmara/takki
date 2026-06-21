@@ -1,14 +1,15 @@
 # ADR-028: Composite Input and Keyboard Ownership
 
 **Status:** Accepted  
-**Date:** 2026-06-14
+**Date:** 2026-06-14  
+**Revised:** 2026-06-21 — §C8 keyboard ownership reworked: global `suppress=True` replaced by focus-gated dispatch over an always-on window.
 
 > Part of the [Takki architecture](../architecture.md).  
-> Closes roadmap issues B5, B7, and C8. Amends [ADR-024](0024-drill-content-and-lesson-granularity.md). Extends [ADR-005](0005-keyboard-handling.md).
+> Closes roadmap issues B5, B7, and C8. Amends [ADR-024](0024-drill-content-and-lesson-granularity.md), and (per the 2026-06-21 revision) [ADR-016](0016-visual-display-design.md) and [ADR-026](0026-platform-interface-abstraction.md). Extends [ADR-005](0005-keyboard-handling.md) and adds the `FocusSource` Protocol to [ADR-019](0019-testing-strategy-and-io-isolation.md).
 
 ---
 
-**Decision:** The lesson engine processes only complete character events from pynput; raw modifier key events (dead-key arm presses, AltGr-alone presses) are filtered at the event consumer before any lesson logic runs. Composites are drilled as whole graphemes — the modifier is never a drill prompt in isolation. Phase 2 pairs with two typeable characters use interleaved Phase A (L-R-L-R); pairs where one member is a modifier give Phase A/B to the typeable member only. pynput runs with `suppress=True`, making the app the exclusive keyboard owner during lessons; all non-lesson keypresses are swallowed.
+**Decision:** The lesson engine processes only complete character events from pynput; raw modifier key events (dead-key arm presses, AltGr-alone presses) are filtered at the event consumer before any lesson logic runs. Composites are drilled as whole graphemes — the modifier is never a drill prompt in isolation. Phase 2 pairs with two typeable characters use interleaved Phase A (L-R-L-R); pairs where one member is a modifier give Phase A/B to the typeable member only. Keyboard ownership is scoped by an always-on focus-owning window, not by global suppression (revised 2026-06-21): pynput key events drive a drill only while Takki holds OS foreground, and Takki pauses the instant focus moves elsewhere — intentional task-switch, focus theft, or OS secure desktop alike. See *Keyboard focus and ownership (C8)* below.
 
 ### What ADR-005/023/024 decided, and what was missing
 
@@ -85,40 +86,59 @@ Phase 2 introduces one left-hand key and one right-hand key per step (ADR-023). 
 
 ### Keyboard focus and ownership (C8)
 
-**pynput starts with `suppress=True`.** All keypresses are consumed by the app and not forwarded to the OS message queue or any focused window. This is necessary in audio-only mode (no app window): without suppression, every character the child types also reaches whatever is focused in the background — a browser address bar, a desktop rename dialog, a file search box. Suppress eliminates the bleed entirely. The Windows key cannot open the Start menu mid-lesson; F-keys cannot trigger OS shortcuts; nothing typed during a drill leaks.
+> **Originally decided (2026-06-14):** pynput started with `suppress=True`, making Takki the exclusive system-wide keyboard owner during a lesson — every keypress consumed, nothing forwarded to the OS or any focused window. The aim was to eliminate input bleed in audio-only mode (no window): without suppression, every character the child types also reaches whatever is focused in the background — a browser address bar, a rename dialog, a search box.
+>
+> **Revised (2026-06-21):** global suppression is replaced by **focus-gated dispatch over an always-on window.** Suppress prevented the leak but created two worse problems it never addressed. It *trapped* the user: a child or parent could not switch to another app without killing Takki — even Alt+Tab was swallowed. And it was *blind to OS preemption*: on the secure desktop (UAC, Ctrl+Alt+Del, lock, fast-user-switch) a low-level hook receives nothing, so the child typed into silence with no feedback and Takki could not tell it had lost the keyboard. The governing reframe is that the child is not learning to type in a vacuum — navigating the OS is part of what they are learning — so a keystroke that opens the Start menu and pauses the lesson is correct cooperative behaviour, not a leak to be suppressed.
 
-**Listener lifecycle.** The pynput listener is created once at application startup and runs until the application exits. It is not paused or restarted between lessons. What determines how an event is dispatched is the lesson engine's active state, not the listener's configuration.
+**Always-on focus-owning window.** Takki always creates an OS window — the same SDL/pygame window used for the optional visual display (ADR-016), blank when the visual profile is off. The window is the focus anchor; the child, who navigates by audio, never needs to see it. Keyboard capture is thereby *scoped by focus* instead of by a global suppressing hook.
 
-**Keypress taxonomy.** The `on_press` handler classifies every event before dispatching:
+**pynput stays the key source; dispatch is focus-gated.** pynput remains the keyboard interface (ADR-005) and the event model above is unchanged — `ToUnicodeEx` translation, the `KeyCode`-with-printable-`char` filter, and composite handling all stand. What changes is that `on_press` processes an event as drill input **only while Takki's window holds OS foreground.** While it does, the focused window consumes the keystrokes, so nothing leaks; while it does not, Takki is paused by definition. `suppress=True` is dropped entirely.
+
+**Focus is the single active/paused signal.** Intentional task-switch, a focus-stealing notification, and OS secure-desktop preemption all manifest as the same event: Takki's window is no longer foreground. One mechanism — window focus events (`WINDOWFOCUSGAINED` / `WINDOWFOCUSLOST`) behind the `FocusSource` Protocol (ADR-019) — covers what were three separate problems. On focus loss Takki enters PAUSED and announces it; a foreground poll backs up the event in case a secure-desktop transition does not deliver one.
+
+**Resume — three converging paths:** the voice "resume" intent (ADR-017), a configurable held-key (works if the mic is unreliable), and simply Alt+Tab back to Takki (native, and announced by any running screen reader). The first two attempt a programmatic re-foreground; Windows' foreground-activation lock may downgrade that to a taskbar flash, in which case the spoken hint falls back to "press Alt+Tab to come back to Takki." The held-key and voice triggers are seen even while unfocused because pynput's hook is global.
+
+**Screen-reader cooperation.** A VI child's machine very likely runs a screen reader (NVDA, JAWS, Narrator), and the focus-owning window cooperates with it rather than fighting it:
+- The reader announcing the new foreground app on focus loss is a *second* channel telling the child they have left a drill — reinforcing Takki's own announcement.
+- Its keystroke echo would otherwise double Takki's chimes during a drill. Takki is a **self-voicing application**; the intended fix is the reader's own mechanism for that case — NVDA's **sleep mode**, which is scoped to the focused app, so it silences echo *while Takki is focused* yet wakes to announce the moment focus leaves. Takki does not reconfigure the reader from its own process; it detects the reader (`detect_screen_reader()`, ADR-026) and offers a one-time setup suggestion (ADR-013).
+
+**Keypress taxonomy.** The `on_press` handler classifies every event while Takki is foreground; while it is not, every event is ignored and the OS routes keys to whatever now holds focus.
 
 | Class | Condition | Action |
 |---|---|---|
-| **Talk key** | Matches configured PTT key (default: Right Ctrl) | Dispatch to voice subsystem; suppress from OS |
+| **Talk key** | Matches configured PTT key (default: Right Ctrl) | Dispatch to voice subsystem |
 | **Escape** | `Key.esc` | Dispatch to lesson controller (re-read / restart per ADR-025) |
+| **Resume hold** | Configured held-key, while PAUSED | Re-acquire foreground; resume |
 | **Expected** | `KeyCode` with printable `char` matching current prompt | Correct-chime; advance; record correct in `key_attempts` |
 | **Wrong** | `KeyCode` with printable `char` not matching current prompt | Auto-reject sound; re-prompt; record wrong in `key_attempts` |
 | **Composing** | `KeyCode` with `char is None` or non-printable | Discard silently — compose in progress |
-| **Boundary** | `Key.backspace`, `Key.tab`, `Key.delete`, `Key.enter` | Suppress and ignore (Backspace disabled per ADR-012) |
-| **System** | All remaining `Key.*` events | Suppress and ignore |
+| **Boundary** | `Key.backspace`, `Key.tab`, `Key.delete`, `Key.enter` | Ignore (Backspace disabled per ADR-012) |
+| **System** | All remaining `Key.*` events | Ignore — they reach the OS normally; if one moves focus (Win key → Start menu), the resulting focus-loss pauses the lesson |
 
-The "wrong" class handles accidental composites: if the engine prompted `a` and the child produced `á` (stale dead-key state from a previous sequence), `á` is a wrong answer for `a`; auto-reject fires, the dead-key state is consumed, re-prompt follows. No special case required.
+The "wrong" class still handles accidental composites: if the engine prompted `a` and the child produced `á` (stale dead-key state), `á` is a wrong answer for `a`; auto-reject fires, the dead-key state is consumed, re-prompt follows. No special case required. The "suppress from OS" column is gone — Takki no longer swallows system keys, because losing focus to them is now the intended pause trigger rather than a leak.
 
-**App exit.** With `suppress=True` and no display window, the conventional close paths (Ctrl+C at the terminal on Windows, Alt+F4 with no window) may not reach the app. The app must register OS signal handlers (`signal.SIGINT`, `signal.SIGTERM`) at startup so Task Manager and shell termination work correctly. The primary in-lesson exit is the voice "stop" intent (ADR-017), which remains available via the talk key. Whether a secondary keyboard-driven emergency exit is needed (e.g., hold Escape for 5 seconds) is an open question deferred to Beta; for Alpha (developer use only) signal handlers plus Task Manager are sufficient.
+**Listener lifecycle.** The pynput listener is still created once at startup and runs until exit — now without `suppress`. What determines dispatch is the pairing of the lesson engine's active state and the window's focus state, not the listener's configuration.
 
-### Pre-V1 validation: dead key + suppress
+**App exit.** Removing global suppress makes the conventional paths work again: Alt+Tab away and close, or Task Manager, are always reachable. Signal handlers (`signal.SIGINT`, `signal.SIGTERM`) are still registered at startup for shell and Task-Manager termination, and the voice "stop" intent (ADR-017) remains the primary in-lesson exit. The keyboard-driven emergency exit is correspondingly less acute (see open questions); for Alpha (developer use only) signal handlers plus Task Manager are sufficient.
 
-The event model above relies on pynput's `ToUnicodeEx` threading dead-key compose state correctly through the low-level keyboard hook (`WH_KEYBOARD_LL`) under `suppress=True`. English (Alpha) and German (Beta) use direct-strike characters only; no dead-key behavior is exercised. Before adding the first dead-key language (Icelandic, French, Czech, or similar in the V1 validation pass), run a one-session spike:
+**Residual leak window.** One keystroke can still land in another app in the gap between focus silently moving and Takki processing the focus-loss event. This is far smaller than the trap it replaces — focus loss is event-driven, not polled — and is double-covered by the screen reader's own focus announcement. Accepted.
+
+### Pre-V1 validation: dead key compose
+
+The event model above relies on pynput's `ToUnicodeEx` threading dead-key compose state correctly through the low-level keyboard hook (`WH_KEYBOARD_LL`). Dropping `suppress=True` removes one variable from this spike — there is no longer a suppressing hook to thread compose state through — but the compose behaviour itself still needs confirming. English (Alpha) and German (Beta) use direct-strike characters only; no dead-key behavior is exercised. Before adding the first dead-key language (Icelandic, French, Czech, or similar in the V1 validation pass), run a one-session spike:
 
 1. On Windows, configure a dead-key layout (e.g., US International with dead keys, or Icelandic).
-2. Start a pynput `keyboard.Listener(suppress=True)`.
+2. Start a pynput `keyboard.Listener()` (no `suppress`), with Takki's window focused.
 3. Print `type(key)` and `key.char` for every `on_press` event while typing `dead-acute + a`, `dead-acute + e`, and AltGr + a.
 4. Confirm: dead-key arm event has `char=None` (or is otherwise filtered by the `KeyCode` + printable check); composed result has the correct `char`.
 
-If `ToUnicodeEx` does not thread compose state through the suppressing hook, the app must maintain its own compose buffer using layout data from `get_layout_positions()`. That would require a follow-up amendment to this ADR and to ADR-005.
+If `ToUnicodeEx` does not thread compose state correctly, the app must maintain its own compose buffer using layout data from `get_layout_positions()`. That would require a follow-up amendment to this ADR and to ADR-005.
 
 ### Open questions
 
-1. **Emergency keyboard exit.** Define a held-key exit for Beta (e.g., hold Escape for 5 seconds, configurable in `takki_config.yaml`) so a parent can close the app if voice control is unavailable. The exit must bypass `suppress=True` by detecting the hold duration in the listener itself and calling `os.kill(os.getpid(), signal.SIGTERM)`.
+1. **Emergency keyboard exit.** Less acute now that global suppress is gone — Alt+Tab away plus window close, or Task Manager, are always reachable, and the voice "stop" intent remains. A held-key exit (e.g., hold Escape 5 seconds, configurable in `takki_config.yaml`) detecting the hold duration in the listener and calling `os.kill(os.getpid(), signal.SIGTERM)` is still worth defining for Beta as a no-voice, no-mouse fallback, but it no longer compensates for a system-wide trap. Deferred to Beta.
+
+4. **NVDA app-module auto-sleep.** Optionally ship an NVDA app module that auto-enables sleep mode for the Takki executable, making the self-voicing echo suppression automatic rather than a one-time setup suggestion (ADR-013). NVDA-specific, no admin needed, but adds an installer artifact and touches the user's NVDA add-ons directory. Decide in Beta alongside real NVDA/JAWS coexistence testing.
 
 2. **Per-profile mechanism override for dual-path languages.** Inherited from ADR-023 open question 1: a Latvian adult who already uses dead-key paths may want to keep that motor pattern. Hard-default to AltGr for v1 child learners. No decision needed before Beta (Latvian is not in the Beta language set).
 

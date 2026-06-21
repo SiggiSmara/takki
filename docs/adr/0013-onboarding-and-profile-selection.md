@@ -23,6 +23,17 @@ The fallback rotation handles the edge cases: unsupported locale, locale not set
 4. On voice response: detect language from response via `faster-whisper`, confirm with user, proceed
 5. If no response after one full rotation: default to English with a spoken explanation
 
+### Screen-Reader Coexistence (added 2026-06-21)
+
+A visually impaired child's machine very likely runs a screen reader. At first-run setup the app calls `detect_screen_reader()` (ADR-026); if one is found, it speaks a one-time, reader-specific suggestion (localised per ADR-022) and records that it has been offered so it is not repeated every session.
+
+Takki is a **self-voicing application** — it provides its own speech and chimes — so an active reader's keystroke echo would otherwise double every prompt during a drill. The suggestion points at the reader's own mechanism rather than changing any global setting:
+
+- **NVDA:** enable **sleep mode** for Takki. Sleep mode is scoped to the focused app, so it silences the echo while Takki is in front yet still lets NVDA announce the new window when focus leaves a drill (ADR-028's focus-loss pause channel). Exact gesture/setup to be confirmed on Windows before the wording is finalised.
+- **JAWS / Narrator:** no app-scoped equivalent; suggest turning off keyboard (typed-character) echo.
+
+Takki never reconfigures the reader from its own process. Auto-enabling NVDA sleep mode via a shipped app module is an open question deferred to Beta (ADR-028).
+
 ### Profile Selection at Session Startup
 
 After language is established, the app loads the child's profile.
