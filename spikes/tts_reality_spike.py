@@ -93,6 +93,11 @@ def pyttsx3_engine():
     return pyttsx3.init()
 
 
+def _say_live(eng, text: str) -> None:
+    eng.say(text)
+    eng.runAndWait()
+
+
 def pyttsx3_letters() -> bool:
     section("1. pyttsx3 / SAPI — isolated letter names")
     try:
@@ -103,6 +108,23 @@ def pyttsx3_letters() -> bool:
 
     driver = eng.getProperty("voice")
     print(f"  engine up. active voice id: {driver}")
+
+    # SAPI's save_to_file + runAndWait hangs on many Windows setups (the
+    # file-stream 'done' event never fires). Play letters LIVE instead — the
+    # whole point is to hear them. espeak/Linux saves fine, keep files there.
+    if sys.platform == "win32":
+        print("  win32: playing letters LIVE (SAPI save_to_file hangs).")
+        print("  LISTEN: each should be the letter NAME (a=/eɪ/, e=/iː/), not a word/schwa.")
+        for i, ch in enumerate(LETTERS, 1):
+            print(f"    {i:02d} {ch}", flush=True)
+            _say_live(eng, ch)
+        print("  confusables — bare letter, then 'X as in <word>':")
+        for ch, word in CONFUSABLES.items():
+            print(f"    {ch}  /  {ch} as in {word}", flush=True)
+            _say_live(eng, ch)
+            _say_live(eng, f"{ch}, as in {word}")
+        return True
+
     LETTERS_DIR.mkdir(exist_ok=True)
 
     per_letter: list[Path] = []

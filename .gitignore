@@ -232,6 +232,11 @@ takki.spec
 # Spike artefacts — large binaries regenerated on demand
 spikes/*.onnx
 spikes/*.onnx.json
+# Generated TTS audio (tts_reality_spike.py) — regenerated on demand.
+# Scoped to tts_* so the committed whisper_fixture_*.wav fixtures stay tracked.
+spikes/tts_letters/
+spikes/tts_letters_*.wav
+spikes/tts_confusables_*.wav
 # Fetched reference dictionaries for spikes (third-party, licensed — re-fetched on demand).
 # Public-domain curated lists under spikes/data/curated/ ARE committed.
 spikes/data/dict/
