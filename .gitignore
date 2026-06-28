@@ -232,6 +232,9 @@ takki.spec
 # Spike artefacts — large binaries regenerated on demand
 spikes/*.onnx
 spikes/*.onnx.json
+# Generated TTS audio (per-letter clips + stitched comparison WAVs)
+spikes/*.wav
+spikes/tts_letters/
 # Fetched reference dictionaries for spikes (third-party, licensed — re-fetched on demand).
 # Public-domain curated lists under spikes/data/curated/ ARE committed.
 spikes/data/dict/
