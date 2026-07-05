@@ -1,7 +1,8 @@
 # ADR-009: Language Configuration
 
 **Status:** Accepted  
-**Date:** 2026-05-17
+**Date:** 2026-05-17  
+**Revised:** 2026-07-05 — isolated-letter spoken names are resolved via the `LetterAudioSource` chain ([ADR-003](0003-text-to-speech.md), revised), not runtime TTS; no letter-name map lives in language config. See [tts-letter-pronunciation](../research/tts-letter-pronunciation.md).
 
 > Part of the [Takki architecture](../architecture.md).
 
@@ -26,7 +27,7 @@ LANGUAGE_CONFIGS = {
 
 **What was removed from config through derivation:**
 - **Home row definition** — derived from Windows keyboard layout API at runtime by querying characters at the 10 home row scan code positions, then applying the exclude list
-- **Character spoken names** — handled by TTS engine directly (neural TTS pronounces letter names correctly in the target language)
+- **Character spoken names** — no per-language letter-name map lives in language config. *Isolated* letter names are resolved by the audio layer through the `LetterAudioSource` priority chain ([ADR-003](0003-text-to-speech.md), revised 2026-07-05), not by runtime TTS; in-word/connected pronunciation is still handled by TTS directly. The derivation-removal decision stands — the mechanism moved from "TTS says letters" to "the audio layer owns letter clips," so language config still carries no name table. If a runtime-TTS fallback tier ever needs a name map, it is owned by the audio layer, not here.
 - **Special key spoken names** — handled by TTS engine directly (Spacebar, Enter are ordinary words in each language; Backspace is disabled in the lesson engine and never instructed)
 
 **The override file** (`language_override.yaml` in the app data folder) is checked before the hardcoded config at startup. It exists for:
