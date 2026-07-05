@@ -28,7 +28,27 @@ Audio feedback is the primary output modality. Quality matters — a robotic or 
 
 **Character and key name pronunciation.** In *connected* speech (words, encouragement, instructions) neural TTS pronounces characters correctly in context (e.g. a German voice reads "ä" correctly inside a word); explicit overrides are added only when testing reveals specific mispronunciations — this list is expected to be very small. *Isolated* letter names are handled separately — see the revision note below.
 
-> **Revised (2026-07-05):** the original claim that "neural TTS engines correctly pronounce letter names" is **false for isolated letters.** The [letter-pronunciation spike](../research/tts-letter-pronunciation.md) found neural TTS (Piper) is *structurally* bad at ultra-short 1–3 phoneme utterances at every quality tier: the phonemes espeak feeds it are correct, but the VITS acoustic model — trained on sentences — distorts them, and no text/SSML/tier trick fixes it. SAPI speaks letters cleanly but only for installed Windows voices (no Icelandic); espeak-ng is reliable and multilingual but robotic. Isolated letters are a **closed, fixed per-language set**, so they are resolved through the `LetterAudioSource` Protocol's priority chain (per-profile recording → bundled curated clip, human-verified and rendered with the best engine per language → runtime TTS fallback), not by general synthesis. This applies to isolated letters only; Piper remains the default for all connected speech.
+> **Revised (2026-07-05):** the original claim that "neural TTS engines correctly pronounce letter names" is **false for isolated letters.** The [letter-pronunciation spike](../research/tts-letter-pronunciation.md) found neural TTS (Piper) is *structurally* bad at ultra-short 1–3 phoneme utterances at every quality tier: the phonemes espeak feeds it are correct, but the VITS acoustic model — trained on sentences — distorts them, and no text/SSML/tier trick fixes it. SAPI speaks letters cleanly but only for installed Windows voices (no Icelandic); espeak-ng is reliable and multilingual but robotic. Isolated letters are a **closed, fixed per-language set**, so they are resolved through the `LetterAudioSource` Protocol's three-layer priority chain (below), not by general synthesis. This applies to isolated letters only; Piper remains the default for all connected speech.
+
+### Letter audio: the three-layer model
+
+*(Canonical home for the letter-audio layering. Added with the revision note above, 2026-07-05.)*
+
+Isolated-letter audio resolves through `LetterAudioSource` ([`src/takki/audio/letters.py`](../../src/takki/audio/letters.py)) as three named layers, highest priority first. Resolution **walks down** until it finds audio for the requested letter; a lower layer is consulted only when every layer above it is absent for that letter.
+
+| Priority | Layer | Voice | Scope | Source | Progress-gated |
+|---|---|---|---|---|---|
+| 1 (wins) | **Personal** | the child's own | per **profile** | recorded in-app — the *reward* workflow ([ADR-030](0030-personal-letter-recordings.md)) | ✅ offered per learned letter |
+| 2 | **Base** | a human's | per **language** | bundled curated clips (human-verified, best engine per language), or community-contributed | no |
+| 3 (floor) | **Synthetic** | machine | universal | runtime TTS — SAPI where a Windows voice exists, espeak-ng otherwise | no |
+
+**Invariant — Synthetic is the floor and can never be empty.** espeak-ng produces a full, correct (if robotic) letter alphabet for every target language, offline. So resolution always terminates in audio: Personal and Base are quality *upgrades* over the floor, never prerequisites. A missing, muted, or corrupt higher layer degrades exactly one step — never to silence.
+
+**Naming is fixed and internally consistent:** the three *layers* are **Personal / Base / Synthetic**. `reward` names the workflow that populates Personal ([ADR-030](0030-personal-letter-recordings.md)) — it is not a layer. `floor` is informal shorthand for "Synthetic is guaranteed." User-facing copy may use warmer phrasing ("record it in your own voice"), but code, tables, and ADRs use the three layer names.
+
+- **Base subsumes shipped *and* contributed clips** — same layer, same per-language scope. A parent/teacher-recorded alphabet is the community-contribution surface and is curatable into a later shipped bundle. The *contribution* recording workflow (a human supplies a language Base) is **deferred**: with the Synthetic floor there is no silent-language failure to rescue, so it is a post-Alpha feature and gets its own ADR when built.
+- **Personal is per-profile** and lives in the profile database ([ADR-011](0011-persistence-and-state.md), [ADR-030](0030-personal-letter-recordings.md)); Base clips are read-only per-language assets, not per-profile.
+- This model covers **isolated letters only**. Connected speech (words, encouragement, instructions) is unchanged — Piper per the main decision above.
 
 **Per-student voice settings** are stored in the child profile (see ADR-011):
 

@@ -90,6 +90,7 @@ Individual decisions are recorded in `docs/adr/`. Each ADR is self-contained and
 | [ADR-025](adr/0025-configuration-system.md) | Configuration System | Three-tier config: `config.py` defaults → `takki_config.yaml` (parent) → per-profile SQLite; sound cues overridable; Alpha tones generated in pure Python |
 | [ADR-026](adr/0026-platform-interface-abstraction.md) | Platform Interface Abstraction | `PlatformInterface` Protocol with three methods; `select_platform_interface()` factory; `DevStubInterface` fallback for non-Windows dev |
 | [ADR-029](adr/0029-word-selection-and-curation.md) | Word Selection and Vocabulary Curation | Positive curation (curated child lists preferred) + affix-aware dictionary fallback + default blocklist + family override; supersedes ADR-008's selection |
+| [ADR-030](adr/0030-personal-letter-recordings.md) | Personal Letter Recordings | Child records letters in their own voice as an opt-in reward (Personal layer of ADR-003); end-of-session + menu offer, gated on Known; active/muted, reversibility over a parent gate; audio BLOBs in the profile SQLite |
 
 ---
 
