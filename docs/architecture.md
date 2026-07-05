@@ -27,7 +27,7 @@ Both frameworks specify outcomes, not pedagogy. Takki's adaptive lesson engine i
 
 ### Design Principles
 
-- **Fully offline.** The app works completely without internet access after installation. Nothing about a child's voice, typing, or progress is ever sent anywhere. Some optional components (Piper voice models, optional local LLM models) are downloaded once at setup; after that, the app never needs network access.
+- **Fully offline.** The app works completely without internet access after installation. Nothing about a child's voice, typing, or progress is ever sent anywhere. Additional Piper voice models are one-time plain browser downloads ([ADR-015](adr/0015-piper-voice-model-distribution.md)); the app itself never needs network access.
 - **Zero elevated privileges.** Installation and operation must not require administrator rights. This is a hard constraint for school deployment.
 - **Minimal setup friction.** The fewer decisions required of a parent or teacher at setup, the better. The ideal is: install, hand to child, done.
 - **Audio is the primary interface.** All interaction — instructions, feedback, navigation — must work without any visual reference.
@@ -66,7 +66,7 @@ Individual decisions are recorded in `docs/adr/`. Each ADR is self-contained and
 | [ADR-001](adr/0001-runtime-and-distribution.md) | Runtime and Distribution | Python 3.11+, PyInstaller standalone bundle |
 | [ADR-002](adr/0002-speech-recognition.md) | Speech Recognition | `faster-whisper` local Whisper; `tiny`+`base` bundled, auto-selected by CPU benchmark |
 | [ADR-003](adr/0003-text-to-speech.md) | Text-to-Speech | Piper TTS default; pyttsx3/SAPI fallback |
-| [ADR-004](adr/0004-llm-integration.md) | LLM Integration | Local only, optional, hardware-adaptive tiers 0–3; intent fallback only |
+| [ADR-004](adr/0004-llm-integration.md) | LLM Integration | *Superseded by ADR-031.* Negative decisions (no cloud LLM, no encouragement generation, no word filtering) carried forward |
 | [ADR-005](adr/0005-keyboard-handling.md) | Keyboard Handling | `pynput`; rely on Windows layout translation; no custom layout files |
 | [ADR-006](adr/0006-language-and-keyboard-layout-scope.md) | Language and Keyboard Layout Scope | Latin-script, direct-input only; IME languages excluded |
 | [ADR-007](adr/0007-language-data-word-frequency.md) | Language Data — Word Frequency | `wordfreq` for word/letter/bigram frequency; derived at startup |
@@ -79,8 +79,8 @@ Individual decisions are recorded in `docs/adr/`. Each ADR is self-contained and
 | [ADR-014](adr/0014-progress-reporting.md) | Progress Reporting | Spoken child summary + plain text parent/teacher report |
 | [ADR-015](adr/0015-piper-voice-model-distribution.md) | Piper Voice Model Distribution | English always bundled; additional voices via browser download links |
 | [ADR-016](adr/0016-visual-display-design.md) | Visual Display Design | Optional, off by default; observer invariant; two-line layout |
-| [ADR-017](adr/0017-voice-command-and-intent-recognition.md) | Voice Command and Intent Recognition | Layered pipeline: keyword → phonetic → fuzzy → LLM fallback |
-| [ADR-018](adr/0018-hardware-adaptive-llm-tiering.md) | Hardware-Adaptive LLM Tiering | Auto-detect at setup; Whisper model also auto-selected by CPU benchmark |
+| [ADR-017](adr/0017-voice-command-and-intent-recognition.md) | Voice Command and Intent Recognition | Layered pipeline: keyword → phonetic → fuzzy; rule-based only (Layer-4 LLM fallback removed by ADR-031) |
+| [ADR-018](adr/0018-hardware-adaptive-llm-tiering.md) | Hardware-Adaptive LLM Tiering | *Superseded by ADR-031.* Whisper auto-selection re-homed to ADR-002 |
 | [ADR-019](adr/0019-testing-strategy-and-io-isolation.md) | Testing Strategy and I/O Isolation | `typing.Protocol` for all external I/O; fakes in `tests/fakes/`; tiered CI |
 | [ADR-020](adr/0020-voice-input-trigger-push-to-talk.md) | Voice Input Trigger — Push-to-Talk | Right Ctrl default; chirp-on/chirp-off cues; no wake word |
 | [ADR-021](adr/0021-voice-activity-detection.md) | Voice Activity Detection | `webrtcvad` for end-of-utterance; start signalled by talk key |
@@ -89,8 +89,11 @@ Individual decisions are recorded in `docs/adr/`. Each ADR is self-contained and
 | [ADR-024](adr/0024-drill-content-and-lesson-granularity.md) | Drill Content and Lesson Granularity | Four-phase new-key ramp-up; freq-weighted bigrams; SFBs not avoided; spaced re-exposure for rare keys; child-pace-adaptive ~100s drill blocks |
 | [ADR-025](adr/0025-configuration-system.md) | Configuration System | Three-tier config: `config.py` defaults → `takki_config.yaml` (parent) → per-profile SQLite; sound cues overridable; Alpha tones generated in pure Python |
 | [ADR-026](adr/0026-platform-interface-abstraction.md) | Platform Interface Abstraction | `PlatformInterface` Protocol with three methods; `select_platform_interface()` factory; `DevStubInterface` fallback for non-Windows dev |
+| [ADR-027](adr/0027-key-and-accuracy-state-model.md) | Key and Accuracy State Model | Active/Known two-state model; Known = ≥90 attempts at ≥90% accuracy across ≥2 practice days over a rolling 200-attempt window; first-attempt counting semantics; grapheme-based milestone denominator |
+| [ADR-028](adr/0028-composite-input-and-keyboard-ownership.md) | Composite Input and Keyboard Ownership | Focus-gated dispatch over an always-on window (no global suppress); composites drilled as whole graphemes; keypress taxonomy; pair ramp-up semantics |
 | [ADR-029](adr/0029-word-selection-and-curation.md) | Word Selection and Vocabulary Curation | Positive curation (curated child lists preferred) + affix-aware dictionary fallback + default blocklist + family override; supersedes ADR-008's selection |
 | [ADR-030](adr/0030-personal-letter-recordings.md) | Personal Letter Recordings | Child records letters in their own voice as an opt-in reward (Personal layer of ADR-003); end-of-session + menu offer, gated on Known; active/muted, reversibility over a parent gate; audio BLOBs in the profile SQLite |
+| [ADR-031](adr/0031-no-llm-integration.md) | No LLM Integration | LLM removed entirely; intent pipeline is Layers 1–3 only; supersedes ADR-004/ADR-018; Protocol boundary (ADR-019) is the fork path |
 
 ---
 
@@ -110,13 +113,12 @@ Individual decisions are recorded in `docs/adr/`. Each ADR is self-contained and
 │  • faster-whisper    │  • Layer controller              │
 │    (local)           │  • Adaptive key introducer       │
 │  • Intent recognition│  • Drill sequence generator      │
-│    pipeline          │  • Word selector                 │
-│  • Optional LLM      │                                  │
-│    fallback          │                                  │
+│    pipeline (rule-   │  • Word selector                 │
+│    based, Layers 1–3)│                                  │
 ├──────────────────────┼──────────────────────────────────┤
 │    Language Layer    │    Feedback Layer                │
-│  • wordfreq          │  • Rule-based (default)          │
-│  • Letter freq       │  • LLM plugin (optional)         │
+│  • wordfreq          │  • Rule-based phrase             │
+│  • Letter freq       │    bank per language             │
 │  • Bigram model      │                                  │
 │  • Word list filter  │                                  │
 │  • Parent override   │                                  │
@@ -135,7 +137,6 @@ Individual decisions are recorded in `docs/adr/`. Each ADR is self-contained and
 │            visual display settings per profile          │
 │  • Global lesson progression rules config               │
 │  • Piper model cache (per language, downloaded once)    │
-│  • Hardware capability profile (LLM tier)               │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -154,11 +155,11 @@ The following were explicitly considered and excluded from v1:
 | Keyboard shortcuts curriculum | Separate topic; addressed after core typing is established |
 | One-handed typing support | Future implementation; architecture does not preclude it |
 | Braille keyboard support | Future implementation; architecture is compatible |
-| Narrative / quest framing | Evaluated as an audio-native engagement mechanism well-suited to visually impaired children. Deferred to v2 to avoid content maintenance burden and the requirement to author story content in 40+ languages. The LLM plugin path ([ADR-004](adr/0004-llm-integration.md)) is the intended community contribution entry point for this feature. |
+| Narrative / quest framing | Evaluated as an audio-native engagement mechanism well-suited to visually impaired children. Deferred to v2 to avoid content maintenance burden and the requirement to author story content in 40+ languages. The Protocol plugin boundary ([ADR-019](adr/0019-testing-strategy-and-io-isolation.md)) is the intended community contribution entry point for this feature. |
 | Cloud sync of progress | No server dependency; local SQLite is sufficient |
 | Multiplayer / competitive modes | Not relevant for target audience |
-| Cloud/online LLM integration | Explicitly rejected. See [ADR-004](adr/0004-llm-integration.md). Users who want this can fork the project. |
-| Fine-tuned Takki-specific intent model | Deferred. Generic instruction-tuned models are sufficient at this stage. See [ADR-004](adr/0004-llm-integration.md). |
+| LLM integration (local or cloud) | Rejected entirely. Intent recognition is rule-based Layers 1–3; the Protocol boundary ([ADR-019](adr/0019-testing-strategy-and-io-isolation.md)) is the fork path for anyone who wants one. See [ADR-031](adr/0031-no-llm-integration.md). |
+| Fine-tuned Takki-specific intent model | Rejected with the rest of LLM integration. If the Beta pilot exposes intent gaps, richer YAML synonym banks are the first response. See [ADR-031](adr/0031-no-llm-integration.md). |
 
 ---
 
@@ -166,7 +167,7 @@ The following were explicitly considered and excluded from v1:
 
 All three pre-implementation questions are resolved:
 
-1. ~~**Minimum hardware spec**~~ — **resolved.** Minimum viable spec is AVX2 with CPU microbenchmark under ~10ms (512×512 float32 matmul). Both `tiny` and `base` bundled in installer, auto-selected by matmul threshold (~2ms). See [ADR-002](adr/0002-speech-recognition.md) and [ADR-018](adr/0018-hardware-adaptive-llm-tiering.md).
+1. ~~**Minimum hardware spec**~~ — **resolved.** Minimum viable spec is AVX2 with CPU microbenchmark under ~10ms (512×512 float32 matmul). Both `tiny` and `base` bundled in installer, auto-selected by matmul threshold (~2ms). See [ADR-002](adr/0002-speech-recognition.md) (the auto-selection moved there from superseded ADR-018).
 
 2. ~~**Session pacing and fatigue**~~ — **resolved.** No enforced limits or break prompts. Natural lesson endpoints are the evidence-aligned mechanism. The design constraint is lesson granularity: individual lesson units must be short enough that a natural stopping point is always close. See [ADR-010](adr/0010-lesson-structure-and-progression.md).
 

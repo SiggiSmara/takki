@@ -31,7 +31,7 @@ The talk-key chirp tones (chirp-on / chirp-off, see ADR-020) use the same `pygam
 
 **TTS for spoken content:** Everything else — what to type next, encouragement, instructions, milestone announcements, menu navigation — uses Piper TTS (or SAPI fallback). This content is not latency-sensitive.
 
-**Encouragement variety:** The default rule-based feedback generator cycles through a set of varied encouragement phrases per language. The optional LLM plugin can replace this with dynamically generated responses for more natural variety.
+**Encouragement variety:** The rule-based feedback generator cycles through a set of varied encouragement phrases per language. The generator sits behind a Protocol boundary (ADR-019), so a downstream fork could substitute a generative implementation — Takki itself ships rule-based only ([ADR-031](0031-no-llm-integration.md)).
 
 **Progress encouragement — two-phase design:** Between key milestones, the app motivates continued practice by describing what unlocking the next key would gain. This uses two phases:
 

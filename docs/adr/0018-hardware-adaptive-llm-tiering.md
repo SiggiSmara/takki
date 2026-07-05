@@ -1,6 +1,6 @@
 # ADR-018: Hardware-Adaptive LLM Tiering
 
-**Status:** Accepted  
+**Status:** Superseded by [ADR-031](0031-no-llm-integration.md) — the LLM tier model is removed entirely. The Whisper Model Auto-Selection section below survives unchanged and is re-homed to [ADR-002](0002-speech-recognition.md), which is now its canonical location.  
 **Date:** 2026-05-17
 
 > Part of the [Takki architecture](../architecture.md).

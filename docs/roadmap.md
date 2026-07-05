@@ -27,7 +27,6 @@ A single child sits down, hears a letter in English, types it, hears immediate f
 - Layer 2 real words
 - Visual display
 - Multi-profile, multi-language
-- LLM, hardware detection
 - Milestones beyond Bronze
 - PyInstaller packaging
 
@@ -45,8 +44,8 @@ A single child sits down, hears a letter in English, types it, hears immediate f
 - Layer controller with weighted mix per ADR-010
 - Milestones: Silver, Gold, Platinum, Diamond (key-count based)
 - Two-phase encouragement messaging (coverage framing → countdown framing)
-- `faster-whisper` wrapper
-- Intent pipeline Layers 1–3 (exact, phonetic, fuzzy) + per-language YAML loader + context-aware active intent sets
+- `faster-whisper` wrapper, including Whisper model auto-selection via the `HardwareProbe` CPU microbenchmark ([ADR-002](adr/0002-speech-recognition.md); moved from V1 hardware detection by [ADR-031](adr/0031-no-llm-integration.md))
+- Intent pipeline Layers 1–3 (exact, phonetic, fuzzy) + per-language YAML loader + context-aware active intent sets — the complete pipeline; there is no LLM layer ([ADR-031](adr/0031-no-llm-integration.md))
 - Onboarding: locale detection → language selection → profile selection (multi-profile, voice-driven)
 - Parent override file (`custom_words.txt`) and `language_override.yaml`
 - Basic progress reporting (child summary spoken, parent text file)
@@ -54,16 +53,15 @@ A single child sits down, hears a letter in English, types it, hears immediate f
 - Bundled sound asset set: correct-keypress chime, error tone, boundary tone for disabled keys. Source from CC0 libraries (Freesound.org) or commission/generate. License and attribution captured in `assets/AUDIO_LICENSES.md`.
 - Decide and enable a community channel (likely GitHub Discussions) before pilot invitations go out
 - Begin VI community outreach for pilot recruitment — RNIB (UK), AFB (US), Perkins, local schools for the blind. Goal: 3–5 participating families by end of Beta.
+- **Unsigned PyInstaller Windows bundle** — built in CI (`windows-latest`, the [ADR-019](adr/0019-testing-strategy-and-io-isolation.md) tier-5 job pulled forward from V1) and published as a GitHub pre-release. Pulled forward (2026-07-05) because Beta's done-criterion is "a friend's child can install Takki" — that requires an installable artifact, not a `uv` checkout. The SmartScreen click-through on an unsigned binary is documented in the pilot instructions (may need sighted assistance once, at install). Code signing itself stays out; see [research/windows-code-signing.md](research/windows-code-signing.md).
 
 **Out of scope:**
 - Visual display
-- LLM tier and Layer 4 intent fallback
-- Hardware detection
-- PyInstaller bundle
+- Code signing (unsigned bundle for Beta; SignPath signatures arrive at first public release — see [research/windows-code-signing.md](research/windows-code-signing.md))
 - Milestone audio celebrations polish (placeholder cues acceptable for Beta)
 - Per-key accuracy breakdown / WPM trend in parent summary
 
-**Rationale for cuts:** Visual display is opt-in per profile and does not block a VI child from practising. LLM is strictly a tertiary fallback in the intent pipeline — the rule-based pipeline must be proven sufficient first. Hardware detection only matters once the LLM tier exists.
+**Rationale for cuts:** Visual display is opt-in per profile and does not block a VI child from practising. The remaining cuts are polish on an experience that already works end-to-end.
 
 ---
 
@@ -75,14 +73,10 @@ A single child sits down, hears a letter in English, types it, hears immediate f
 - Native alphabet derivation from keyboard layout (replaces the statistical approximation used in the wordfreq spike)
 - Visual display: two-line layout for both lesson layers
 - Visual setup workflow with audio-driven color palette selection
-- Hardware capability detection (ADR-018)
-- LLM tier offer flow + `llama-cpp-python` integration + per-tier model download
-- Intent pipeline Layer 4 (LLM fallback)
-- Milestone audio celebrations
 - Expanded parent/teacher printable summary (per-key accuracy, WPM trend, session history, milestone dates)
 - Validation pass over remaining ~40 language configs
-- PyInstaller Windows bundle + install testing
-- Code signing for the Windows `.exe` (or distribution path that avoids SmartScreen warnings — winget / Microsoft Store). Budget item if using a cert (~$200–500/yr).
+- PyInstaller bundle hardening + install testing on target hardware (the unsigned bundle itself ships from Beta)
+- Distribution trust: Microsoft Store (MSIX, $19 one-time, store-signed — no SmartScreen) as primary channel, winget as secondary, SignPath Foundation signatures on direct-download bundles. No paid certificate — decided 2026-07-05, see [research/windows-code-signing.md](research/windows-code-signing.md). Requires an MSIX/`runFullTrust` pynput spike before Store commitment.
 - Milestone audio celebrations (final assets, replacing placeholder cues from Beta)
 - Language pack contribution documentation (template was already in place from Alpha)
 
@@ -117,28 +111,28 @@ Every external-interface step below is implemented as a `typing.Protocol` + real
 9. Parent override (`custom_words.txt`) + `language_override.yaml`
 10. Basic progress summary (child spoken + parent text file)
 11. German language pack: intent YAML, voice catalog entry, exclude list, end-to-end test
+12. Unsigned PyInstaller Windows bundle: CI build on `windows-latest`, published as a GitHub pre-release; SmartScreen click-through documented in pilot instructions
 
 ### V1 order
 
 1. Native alphabet from keyboard layout (replaces wordfreq statistical approximation; updates ADR-007 implementation note)
 2. Visual display module: two-line layout for Layer 1 and Layer 2
 3. Visual setup workflow + color palette voice selection (background-first, foreground-second with live preview)
-4. Hardware detection (RAM, CPU microbenchmark, GPU presence, disk space)
-5. LLM tier offer + `llama-cpp-python` integration + per-tier model download
-6. Intent pipeline Layer 4 (LLM fallback, skipped on Tier 0)
-7. Milestone audio celebrations + general polish pass
-8. Parent/teacher summary expansion (per-key accuracy, WPM trend)
-9. Validation pass: remaining language configs (`LANGUAGE_CONFIGS` dictionary)
-10. PyInstaller Windows build + install testing on target hardware
-11. Contributor scaffolding: language pack contribution docs, GitHub issue templates
+4. Milestone audio celebrations + general polish pass
+5. Parent/teacher summary expansion (per-key accuracy, WPM trend)
+6. Validation pass: remaining language configs (`LANGUAGE_CONFIGS` dictionary)
+7. PyInstaller bundle hardening + install testing on target hardware; signed/Store distribution per the distribution-trust bullet above
+8. Contributor scaffolding: language pack contribution docs, GitHub issue templates
+
+*(2026-07-05: former items 4–6 — hardware detection, LLM tier offer + `llama-cpp-python`, intent pipeline Layer 4 — removed by [ADR-031](adr/0031-no-llm-integration.md). The Whisper part of hardware detection moved to Beta step 6.)*
 
 ---
 
 ## What "done" looks like per phase
 
 - **Alpha done:** the core-loop logic runs green on Linux against fakes/scripted I/O, and a dev can run a Bronze-level English drill session end-to-end on Windows — close the app, reopen, and see progress restored.
-- **Beta done:** a friend's child can install Takki, pick a language (English or German), pick a voice, set up a profile by voice, and practise to Silver or beyond — without sighted assistance after install.
-- **V1 done:** parents/teachers download the PyInstaller bundle, install without admin rights, and a VI child can run the full audio-driven setup (including visual display configuration if desired), be offered the appropriate LLM tier for their hardware, and practise across all supported languages.
+- **Beta done:** a friend's child can install Takki from the unsigned pre-release bundle (the SmartScreen click-through at install may need sighted help, once), pick a language (English or German), pick a voice, set up a profile by voice, and practise to Silver or beyond — without sighted assistance after install.
+- **V1 done:** parents/teachers download the Takki bundle, install without admin rights, and a VI child can run the full audio-driven setup (including visual display configuration if desired) and practise across all supported languages.
 
 ---
 

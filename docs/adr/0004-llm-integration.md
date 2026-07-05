@@ -1,6 +1,6 @@
 # ADR-004: LLM Integration
 
-**Status:** Accepted  
+**Status:** Superseded by [ADR-031](0031-no-llm-integration.md) — LLM integration is removed entirely. The "No LLM at all" alternative below is now the decision. This ADR's negative decisions (no cloud LLM, no encouragement generation, no word filtering) are carried forward by ADR-031.  
 **Date:** 2026-05-17
 
 > Part of the [Takki architecture](../architecture.md).

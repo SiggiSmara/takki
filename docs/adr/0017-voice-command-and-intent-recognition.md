@@ -1,13 +1,13 @@
 # ADR-017: Voice Command and Intent Recognition
 
 **Status:** Accepted  
-**Date:** 2026-05-17
+**Date:** 2026-05-17. Amended 2026-07-05 by [ADR-031](0031-no-llm-integration.md): the Layer 4 LLM fallback is removed; the pipeline is Layers 1–3 rule-based only.
 
 > Part of the [Takki architecture](../architecture.md).
 
 ---
 
-**Decision:** Layered intent recognition pipeline running on top of Whisper transcriptions. Context-aware active intent sets per interaction mode. Confirmation-over-inference for setup. Rule-based core; optional LLM as tertiary fallback (ADR-004 / ADR-018).
+**Decision:** Layered intent recognition pipeline running on top of Whisper transcriptions. Context-aware active intent sets per interaction mode. Confirmation-over-inference for setup. Rule-based only — three layers ([ADR-031](0031-no-llm-integration.md) removed the formerly-planned LLM fallback layer).
 
 ### Rationale
 
@@ -25,9 +25,9 @@ For each utterance, the pipeline tries layers in order and returns on the first 
 
 **Layer 3 — Fuzzy string match.** For transcription errors that are spelling-similar but not phonetically similar. Standard Levenshtein distance with a configurable per-intent threshold.
 
-**Layer 4 — LLM fallback (optional, only if available).** For genuinely flexible phrasing ("can you slow down a bit", "I want to take a break"). Runs only when Layers 1–3 return no confident match. Uses the locally-installed LLM at whatever tier the hardware supports (ADR-004). Skipped entirely on Tier 0 installations.
+**Layer 4 — LLM fallback: removed** *(2026-07-05, [ADR-031](0031-no-llm-integration.md))*. This layer was an optional, hardware-gated LLM pass for genuinely flexible phrasing ("can you slow down a bit"). It is gone: the pipeline ends at Layer 3. Its failure mode is already handled by the explicit no-match response below and, on repeated failure, the simpler-path fallback (three failed attempts → spoken-number selection, see Setup Failure Modes). A downstream fork can reinstate an equivalent behind the intent-resolution Protocol boundary (ADR-019).
 
-If all available layers fail, the app responds with a clear "I didn't catch that — try again" — better than guessing wrong.
+If all three layers fail, the app responds with a clear "I didn't catch that — try again" — better than guessing wrong.
 
 ### Context-Aware Intent Sets
 
@@ -91,7 +91,7 @@ A contributor adding a new language provides a single YAML file. No code changes
 ### Alternatives Considered
 
 - **Whisper transcription + raw string equality:** Rejected. Fails on the predictable Whisper errors that the layered pipeline catches.
-- **LLM-only intent recognition:** Rejected. Latency, hardware dependency, and unavailable on Tier 0 installations.
+- **LLM-only intent recognition:** Rejected. Latency and hardware dependency; ADR-031 subsequently removed LLM use from the pipeline entirely.
 - **Single-mode pipeline (no context-aware intent sets):** Rejected. Loses meaningful accuracy gains for closed-set interactions like setup.
 - **Picovoice Rhino:** High accuracy but proprietary; doesn't fit open-source-first stance.
 - **Rhasspy as runtime dependency:** Considered but adds significant complexity for a project this size. Its intent definition patterns are borrowed; the runtime is not.

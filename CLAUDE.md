@@ -25,8 +25,7 @@ These are decided. Do not introduce code that violates them without opening a di
 - **No elevated privileges.** Nothing that requires admin/UAC on Windows.
 - **Audio first.** Every user-facing interaction must work without a visual display. The *visual content* is opt-in per child profile; the window itself is always created as the keyboard-focus anchor (ADR-016/ADR-028) and stays blank in audio-only mode.
 - **Language-agnostic lesson engine.** No language-specific logic inside the lesson engine. All language inputs come from the language layer (wordfreq + config).
-- **No LLM for word filtering.** Explicitly decided against. See ADR-008.
-- **LLM for intent recognition only, hardware-gated.** Optional tertiary fallback in the layered intent pipeline (ADR-017). Never used for word filtering, encouragement generation, or real-time lesson content. Hardware tier (0–3) determined automatically at setup. See ADR-004, ADR-018.
+- **No LLM. Anywhere.** LLM integration is rejected entirely — no intent fallback, no word filtering, no encouragement generation, no lesson content. The intent pipeline is rule-based Layers 1–3 only (ADR-017). The Protocol boundary (ADR-019) is the fork path for anyone who wants one. See ADR-031 (supersedes ADR-004, ADR-018).
 - **No backspace in lesson engine.** Wrong keypresses are auto-rejected. Backspace is disabled. See ADR-012.
 - **Push-to-talk only.** The microphone is closed by default and opens only when the child presses the configurable talk key (default Right Ctrl). No wake word, no always-listening, no continuous transcription. See ADR-020.
 - **YAML for all localisation.** Runtime UI strings, encouragement bank, intent definitions, and voice catalog are all per-language YAML files. No gettext, no `.po`/`.mo` workflow. See ADR-022.
@@ -58,8 +57,7 @@ Never call platform APIs directly from application logic. Always go through thes
 | Persistence | SQLite (`sqlite3`) | Built-in, single file, no server. |
 | Audio cues | `pygame.mixer` | Immediate low-latency feedback. Initialised independently of display. |
 | Visual display | `pygame.display` | Window always created as the keyboard-focus anchor (ADR-028); visual *content* rendered only if visual display enabled in profile. Headless/CI: `SDL_VIDEODRIVER=dummy`. |
-| LLM (intent fallback) | `llama-cpp-python` | Optional, hardware-adaptive tiers 0–3. Fallback for intent recognition only. See ADR-004, ADR-018. |
-| Distribution | PyInstaller | Must be built on Windows. |
+| Distribution | PyInstaller | Must be built on Windows. Unsigned CI-built bundle ships as a GitHub pre-release from Beta; signing/Store distribution at V1 (see docs/research/windows-code-signing.md). |
 
 ## Project structure (target)
 
@@ -97,7 +95,7 @@ pyproject.toml
 - Default `uv run pytest` runs only fast deterministic tests against fakes. Slow tests opt in via markers.
 - GitHub Actions runs the tiered pyramid: unit + integration + Windows platform smoke on every PR; slow integration nightly; PyInstaller on release tags.
 - Headless audio/video on CI via `SDL_AUDIODRIVER=dummy` / `SDL_VIDEODRIVER=dummy`.
-- Whisper, Piper, and LLM models are cached in CI via `actions/cache`; integration tests against real models cost seconds after warm-up.
+- Whisper and Piper models are cached in CI via `actions/cache`; integration tests against real models cost seconds after warm-up.
 - See ADR-019 for the full pyramid, protocol catalog, and CI strategy.
 
 ## Open questions (resolve before implementing affected components)

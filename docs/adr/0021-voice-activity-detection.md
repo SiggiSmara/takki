@@ -31,10 +31,10 @@ The cost of adding `silero-vad` (the obvious neural alternative) is substantial:
 | Install size | ~30 KB | ~200 MB (CPU-only Torch wheels) | ~50 MB |
 | Bundle impact (PyInstaller) | negligible | +500 MB – 1 GB | ~60 MB |
 | Cold-start time | instant | 1–2s Torch import | <500ms |
-| ML runtime count | 0 | 3 (Torch + CTranslate2 + llama.cpp) | 3 (onnxruntime + CTranslate2 + llama.cpp) |
+| ML runtime count | 0 | 2 (Torch + CTranslate2) | 2 (onnxruntime + CTranslate2) |
 | Accuracy on quiet speech | OK | Better | Better |
 
-For end-of-utterance under push-to-talk, the accuracy gain does not justify the added runtime weight. The most expensive part of the project's distribution story is already the PyInstaller bundle plus Piper models plus optional LLM models. Adding 500 MB+ for a marginal VAD upgrade would dominate the install size for a feature most children will never notice working correctly.
+For end-of-utterance under push-to-talk, the accuracy gain does not justify the added runtime weight. The most expensive part of the project's distribution story is already the PyInstaller bundle plus the bundled Whisper and Piper models. Adding 500 MB+ for a marginal VAD upgrade would dominate the install size for a feature most children will never notice working correctly.
 
 ### How It Works in Takki
 
