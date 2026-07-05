@@ -133,6 +133,8 @@ A per-profile override is flagged as an open question — a Latvian-speaking adu
 
 **Shift composites — still deferred.** Uppercase remains out of scope for v1 per [ADR-005](0005-keyboard-handling.md). Capitalisation is a separate skill, addressed after the base alphabet (including composite letters) is mastered. This is unchanged from the original ADR draft.
 
+**The space bar is likewise never introduced** (scope line added 2026-07-05). Nothing in the curriculum teaches it: Layer 1 drills and Layer 2 word prompts are single units typed without separators. Space, Shift, and punctuation together form the post-V1 "full text" stage of the curriculum; until then Takki teaches letters only, and says so.
+
 **Milestone denominators.** Bronze/Silver/Gold thresholds count distinct typeable **graphemes** (output characters) known — not physical key actuations. Modifier keys (AltGr, dead keys) produce no character on their own and are excluded from the denominator; the characters they help produce (`á`, `ð`, `ž`, etc.) are included on equal footing with direct-strike characters. This is decided in [ADR-027](0027-key-and-accuracy-state-model.md), which supersedes the earlier "physical keys" wording in this ADR. For Icelandic: the denominator is the 32 output graphemes from `get_layout_positions()`, not the 24 physical keys; a child who has mastered 14 graphemes (= 14/32 = 44%) is measured against the full grapheme set.
 
 ### Spike validation

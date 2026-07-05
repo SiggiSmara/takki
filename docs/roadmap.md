@@ -49,6 +49,7 @@ A single child sits down, hears a letter in English, types it, hears immediate f
 - Onboarding: locale detection → language selection → profile selection (multi-profile, voice-driven)
 - Parent override file (`custom_words.txt`) and `language_override.yaml`
 - Basic progress reporting (child summary spoken, parent text file)
+- Personal letter recordings — the [ADR-030](adr/0030-personal-letter-recordings.md) reward workflow: end-of-session offer gated on Known, "my letters" menu, `letter_recordings` blobs in the profile DB. Rides on the push-to-talk mic plumbing (record mode, not the intent pipeline). *(Scheduled 2026-07-05 — the ADR previously appeared in no phase list.)*
 - Second language pack: **German** — pressure-tests language-agnostic claims (QWERTZ, ä/ö/ü/ß, German intent YAML)
 - Bundled sound asset set: correct-keypress chime, error tone, boundary tone for disabled keys. Source from CC0 libraries (Freesound.org) or commission/generate. License and attribution captured in `assets/AUDIO_LICENSES.md`.
 - Decide and enable a community channel (likely GitHub Discussions) before pilot invitations go out
@@ -105,6 +106,9 @@ Every external-interface step below is implemented as a `typing.Protocol` + real
 3. Layer controller — weighted mix between Layer 1 and Layer 2 per ADR-010 table
 4. Milestones Silver/Gold/Platinum/Diamond (key-count gates)
 5. Two-phase encouragement messaging
+
+   > **Pilot-ready checkpoint (added 2026-07-05).** After step 5 the complete *practice* experience — Piper voice, Layer 1 + Layer 2, milestones, encouragement — works end-to-end with keyboard-only interaction. Pilot recruitment, scheduling, and instruction-writing proceed from this point; the voice stack (steps 6–8) improves the experience but must not gate the pilot. If Whisper/intents slip, the pilot starts without voice commands rather than waiting.
+
 6. `faster-whisper` wrapper
 7. Intent pipeline Layers 1–3 + intent YAML loader + context-aware active intent sets per interaction mode
 8. Onboarding: locale detection → language fallback rotation → profile selection (multi-profile)
@@ -112,6 +116,7 @@ Every external-interface step below is implemented as a `typing.Protocol` + real
 10. Basic progress summary (child spoken + parent text file)
 11. German language pack: intent YAML, voice catalog entry, exclude list, end-to-end test
 12. Unsigned PyInstaller Windows bundle: CI build on `windows-latest`, published as a GitHub pre-release; SmartScreen click-through documented in pilot instructions
+13. Personal letter recordings ([ADR-030](adr/0030-personal-letter-recordings.md)): record mode on the push-to-talk plumbing (depends on step 6), `letter_recordings` table, end-of-session offer, "my letters" menu. Sequenced last — a reward layer that iterates via pre-release updates; it must not delay the pilot-critical path.
 
 ### V1 order
 
@@ -133,6 +138,8 @@ Every external-interface step below is implemented as a `typing.Protocol` + real
 - **Alpha done:** the core-loop logic runs green on Linux against fakes/scripted I/O, and a dev can run a Bronze-level English drill session end-to-end on Windows — close the app, reopen, and see progress restored.
 - **Beta done:** a friend's child can install Takki from the unsigned pre-release bundle (the SmartScreen click-through at install may need sighted help, once), pick a language (English or German), pick a voice, set up a profile by voice, and practise to Silver or beyond — without sighted assistance after install.
 - **V1 done:** parents/teachers download the Takki bundle, install without admin rights, and a VI child can run the full audio-driven setup (including visual display configuration if desired) and practise across all supported languages.
+
+**What is deliberately never taught, in any phase:** Takki teaches the letter keys only. The **space bar** is never introduced — drills and word prompts are single units typed without separators — and **Shift/capitalisation** stays out of scope per [ADR-005](adr/0005-keyboard-handling.md)/[ADR-023](adr/0023-key-introduction-protocol.md). A child who reaches the top milestone can type every letter of their alphabet but has never typed a space or a capital. Full-text typing — spaces, capitals, punctuation — is post-V1 curriculum. *(Scope line added 2026-07-05.)*
 
 ---
 
@@ -212,6 +219,8 @@ ADR-023's own composite *script* ("press the accent key first, then the base let
 - When the Windows locale **is** found, the flow proceeds in that language and **never asks if it's right** (ADR-013 step 2). A German child on a school PC set to English locale gets English lessons with no offered switch — and there's no documented in-app language-change flow afterward (`profiles.language` is set once at creation).
 - "Spell it by voice" as the name fallback needs Whisper to map spoken letter names to letters — the same unreliable single-letter recognition as A1, in reverse.
 
+**Promoted to a pre-Beta decision (2026-07-05 design-review follow-up):** decide the onboarding input model — typed name (and keypress-driven confirm/choose) as a first-class channel alongside voice, whether the locale-detected language is confirmed rather than assumed, and whether a post-creation language change exists — *before* Beta order step 8 freezes the onboarding flow. The outcome amends [ADR-013](adr/0013-onboarding-and-profile-selection.md).
+
 **C12. "TTS interrupt on keypress" is hard to honor with the Alpha TTS specifically.**
 *Phase: Alpha. ADRs: [012](adr/0012-audio-feedback-design.md), [026](adr/0026-platform-interface-abstraction.md).*
 [ADR-012](adr/0012-audio-feedback-design.md) requires immediate per-utterance TTS cancellation on keypress. With Piper you own the buffer and can stop. With **pyttsx3/SAPI** (Alpha default), `runAndWait()` is blocking and `stop()` is famously flaky — interrupting mid-utterance often doesn't work cleanly. The requirement may simply be unmet on the Alpha path. Decide whether Alpha relaxes the interrupt rule (acceptable — confident typers are rare among absolute beginners) or whether SAPI is driven in a way that supports interruption.
@@ -220,6 +229,10 @@ ADR-023's own composite *script* ("press the accent key first, then the base let
 **C13. Layer 2 can starve: ≥8 keys does not guarantee typeable 3-letter words exist.**
 *Phase: Beta. ADRs: [010](adr/0010-lesson-structure-and-progression.md).*
 [ADR-010](adr/0010-lesson-structure-and-progression.md) unlocks Layer 2 at 8 keys and immediately allocates it 40% of the session. But coverage at the 8-key mark ranges from ~5% (Slovenian) upward, and the constrained 3-letter-word list at exactly the first 8 frequency-leader keys could be nearly empty in some languages. No defined behavior for "Layer 2 is due but the typeable word list is empty/tiny" (fall back to 100% Layer 1? widen length? wait?). Gate Layer 2 on **word availability**, not just key count.
+
+**C14. Audio output device death: when the headphones die, the entire UI disappears.** *(added from the 2026-07-05 design-review follow-ups)*
+*Phase: Beta (before the pilot). ADRs: [012](adr/0012-audio-feedback-design.md), [003](adr/0003-text-to-speech.md), [026](adr/0026-platform-interface-abstraction.md).*
+In an audio-first app the audio device *is* the UI. A yanked headphone jack, a Bluetooth headset powering off, or Windows switching default devices mid-lesson leaves Takki running but silent — indistinguishable from a crash for a child who cannot see the screen, and pilot families will hit it (children fidget with headphone cables). Neither `pygame.mixer` nor SAPI/Piper playback re-binds to a new default output device automatically. Nothing currently detects the condition or defines recovery. Needed: detection (playback failure and/or device-change notification), behavior (pause the lesson, re-initialise the mixer/TTS against the new default device, retry), and a spoken "you're back" announcement once output returns. Decide and implement before pilot installs; until then document "restart the app after changing headphones" in pilot instructions as the floor.
 
 ### D. Smaller gaps worth a line in the relevant ADR
 
@@ -237,4 +250,4 @@ These don't all need ADRs, but the high-severity clusters do. Candidate write-up
 
 1. **ADR-027 "Key & accuracy state model"** ✓ *Written and accepted 2026-06-14.* — the introduced→known→mastered lifecycle, first-attempt counting semantics, rolling `key_attempts` window, and reconciling Bronze with the Alpha schema (A2, A3, B6).
 2. **ADR-028 "Composite input & keyboard ownership"** ✓ *Written and accepted 2026-06-14.* — dead-key/AltGr drilling, compose-state flushing, focus/suppression, the keypress taxonomy, and the pair-vs-single ramp-up integration (B5, B7, C8).
-3. The remainder (A1, A4, C9–C13, all of D) are amendments to existing ADRs or roadmap-scope notes; each is tracked above until closed.
+3. The remainder (A1, A4, C9–C14, all of D) are amendments to existing ADRs or roadmap-scope notes; each is tracked above until closed. *(2026-07-05: the follow-up design review's smaller findings were applied — C14 added, C11 promoted to a pre-Beta decision, ADR-030 scheduled as Beta step 13, pilot-ready checkpoint added after Beta step 5, space/Shift scope line written, `SqliteStore` WAL pragmas applied, ADR-019 fake naming aligned with shipped code. The concurrency model is defined in [concurrency-model.md](concurrency-model.md), gating alpha session 6.)*

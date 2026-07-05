@@ -82,6 +82,10 @@ _PROFILE_SELECT = """
 class SqliteStore:
     def __init__(self, path: str, *, window_cap: int = 200) -> None:
         self.conn = sqlite3.connect(path)
+        # The engine writes key_attempts per keystroke mid-drill; WAL +
+        # synchronous=NORMAL avoids an fsync stall on every keypress.
+        self.conn.execute("PRAGMA journal_mode = WAL")
+        self.conn.execute("PRAGMA synchronous = NORMAL")
         self.conn.execute("PRAGMA foreign_keys = ON")
         self.conn.executescript(_SCHEMA)
         self._cap = window_cap

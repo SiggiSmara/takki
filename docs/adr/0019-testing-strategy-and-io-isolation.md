@@ -27,8 +27,8 @@ Each protocol is introduced when its consuming component is first built. Real im
 
 | Protocol | Real implementation(s) | Fake |
 |---|---|---|
-| `TTSEngine` | `PiperTTS`, `FallbackTTS` (pyttsx3/SAPI) | `RecordingTTS` |
-| `SoundCuePlayer` | `PygameMixerCues` | `RecordingCues` |
+| `TTSEngine` | `PiperTTS`, `FallbackTTS` (pyttsx3/SAPI) | `FakeTTSEngine` |
+| `SoundCuePlayer` | `PygameMixerCues` | `FakeSoundCues` |
 | `KeyEventStream` | `PynputKeyStream` | `ScriptedKeyStream` |
 | `VoiceTranscriber` | `WhisperTranscriber` | `ScriptedTranscriber` |
 | `WordSource` | `WordfreqSource` | `FixedListSource` |
