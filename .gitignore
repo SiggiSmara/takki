@@ -237,6 +237,10 @@ spikes/*.onnx.json
 spikes/tts_letters/
 spikes/tts_letters_*.wav
 spikes/tts_confusables_*.wav
+# Generated TTS audio (per-letter clips + stitched comparison WAVs)
+spikes/*.wav
+spikes/tts_letters/
+spikes/tts_fix/
 # Fetched reference dictionaries for spikes (third-party, licensed — re-fetched on demand).
 # Public-domain curated lists under spikes/data/curated/ ARE committed.
 spikes/data/dict/
