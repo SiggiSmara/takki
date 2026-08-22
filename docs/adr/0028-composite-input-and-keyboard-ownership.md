@@ -104,9 +104,11 @@ Phase 2 introduces one left-hand key and one right-hand key per step (ADR-023). 
 
 1. Call `request_foreground()`; set a deadline.
 2. A `FocusGained` arriving before the deadline **is** the success signal — no separate confirmation exists or is needed, and it arrives by the same path as a manual Alt+Tab, so both resume routes converge on one code path.
-3. Deadline expiry is the failure signal, and is what triggers the spoken *"press Alt+Tab to come back to Takki"* fallback.
+3. Deadline expiry (`RESUME_REQUEST_TIMEOUT_MS`) is the failure signal, and is what triggers the spoken *"press Alt+Tab to come back to Takki"* fallback.
 
-The consequence for the taxonomy's **Resume hold** row is that the held key initiates a request; it does not itself resume. Only the returning `FocusGained` does. Implementing this is [session 6b](../alpha-plan.md); the boundary it builds on landed in 6a.
+The consequence for the taxonomy's **Resume hold** row is that the held key initiates a request; it does not itself resume. Only the returning `FocusGained` does. Implemented in [session 6b](../alpha-plan.md) (`FocusModel`); the boundary it builds on landed in 6a.
+
+**The FSM's starting state arrives as an event** (added 2026-08-22, session 6b). `FocusSource` deliberately exposes no focus *query* — the paragraph above is why one would mislead — and the focus events are edge-triggered, so a window that comes up **unfocused** would emit nothing and leave the FSM wrongly ACTIVE for the whole run, dispatching another application's keystrokes into the lesson with no pause announcement. `FocusSource` implementations therefore emit their initial state once at construction, before any key event can arrive; the FSM starts ACTIVE and that seed corrects it. A seeded `FocusGained` on the normal path is silently absorbed, since the FSM is already ACTIVE.
 
 This is also why an always-on window is load-bearing beyond focus ownership: without a window there is nothing to raise, and the resume paths would have no mechanism at all.
 
@@ -120,12 +122,14 @@ This is also why an always-on window is load-bearing beyond focus ownership: wit
 |---|---|---|
 | **Talk key** | Matches configured PTT key (default: Right Ctrl) | Dispatch to voice subsystem |
 | **Escape** | `Key.esc` | Dispatch to lesson controller (re-read / restart per ADR-025) |
-| **Resume hold** | Configured held-key, while PAUSED | Re-acquire foreground; resume |
+| **Resume hold** | `RESUME_KEY` held for `RESUME_HOLD_MS`, while PAUSED ([ADR-025](0025-configuration-system.md), added 2026-08-22) | Request foreground; the returning `FocusGained` is what resumes |
 | **Expected** | `KeyCode` with printable `char` matching current prompt | Correct-chime; advance; record correct in `key_attempts` |
 | **Wrong** | `KeyCode` with printable `char` not matching current prompt | Auto-reject sound; re-prompt; record wrong in `key_attempts` |
 | **Composing** | `KeyCode` with `char is None` or non-printable | Discard silently — compose in progress |
 | **Boundary** | `Key.backspace`, `Key.tab`, `Key.delete`, `Key.enter` | Ignore (Backspace disabled per ADR-012) |
 | **System** | All remaining `Key.*` events | Ignore — they reach the OS normally; if one moves focus (Win key → Start menu), the resulting focus-loss pauses the lesson |
+
+**The space bar lands in System, deliberately.** pynput reports it as `Key.space`, so it falls through to *ignore* — which is correct: [ADR-023](0023-key-introduction-protocol.md) § "The space bar is likewise never introduced" scopes it out of the curriculum until the post-V1 full-text stage (pointer added 2026-08-22, session 6b, so the taxonomy is not re-derived each time it is implemented).
 
 The "wrong" class still handles accidental composites: if the engine prompted `a` and the child produced `á` (stale dead-key state), `á` is a wrong answer for `a`; auto-reject fires, the dead-key state is consumed, re-prompt follows. No special case required. The "suppress from OS" column is gone — Takki no longer swallows system keys, because losing focus to them is now the intended pause trigger rather than a leak.
 

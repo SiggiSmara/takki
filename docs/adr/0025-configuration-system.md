@@ -55,10 +55,13 @@ LAYER_PROPORTIONS = [        # (max_keys_known_exclusive, layer1_frac, layer2_fr
 
 # Key bindings (pynput key name strings)
 TALK_KEY    = "ctrl_r"
-REREAD_KEY  = "escape"
-RESTART_KEY = "escape"       # held; tap on the same key re-reads — see ADR-012
+REREAD_KEY  = "esc"
+RESTART_KEY = "esc"          # held; tap on the same key re-reads — see ADR-012
 RESTART_HOLD_MS = 800        # hold duration that separates restart from re-read;
                              # unused when reread_key and restart_key differ
+RESUME_KEY  = "f1"           # held while PAUSED, to re-acquire foreground — see ADR-028 §C8
+RESUME_HOLD_MS = 1000        # hold duration before the foreground request is made
+RESUME_REQUEST_TIMEOUT_MS = 1500   # request_foreground() deadline; expiry speaks the Alt+Tab hint
 
 # Voice
 TTS_RATE          = 1.0
@@ -82,6 +85,16 @@ TONE_CHIRP_ON  = dict(freq_start=660,  freq_end=1100, duration_ms=150)
 TONE_CHIRP_OFF = dict(freq_start=1100, freq_end=660,  duration_ms=150)
 ```
 
+**Amended 2026-08-22 (alpha session 6b), two corrections to the block above.**
+
+**The resume binding was missing.** [ADR-028 §C8](0028-composite-input-and-keyboard-ownership.md)'s keypress taxonomy has a **Resume hold** row — "configured held-key, while PAUSED" — but this ADR's binding list never defined it, so implementing the focus model had no key and no threshold to read. `RESUME_KEY`, `RESUME_HOLD_MS`, and `RESUME_REQUEST_TIMEOUT_MS` close that.
+
+The binding is chosen against a constraint the other three do not have: this key is held *while another application has focus*, so it must be one nobody holds for a second by accident. That rules out the bare modifiers — Ctrl (Ctrl+click, Ctrl+scroll, Ctrl+Shift+arrow) and Shift (Shift+arrow selection) are routinely held past a second, and Right Shift held 8 s additionally trips Windows FilterKeys, a trap for exactly this audience. `f1` is held by nobody, needs no chord, and is located by edge and by its neighbour Escape rather than by counting or by F-group gaps, which laptops and dense keyboards do not have. Its one side effect — opening the foreground app's help — costs a window Takki is about to raise past anyway. The Escape adjacency cuts the right way: Escape is live only while ACTIVE and `RESUME_KEY` only while PAUSED, so the two never contend, and a child groping for their reflex recovery key while paused lands on the key that brings them back.
+
+`RESUME_HOLD_MS` is longer than `RESTART_HOLD_MS` for the same reason. `RESUME_REQUEST_TIMEOUT_MS` is not a preference but the deadline that stands in for a return value: `request_foreground()` cannot report success (ADR-028 § Re-acquire has no synchronous answer), so a `FocusGained` inside this window is the success signal and expiry is the failure signal that speaks the Alt+Tab hint.
+
+**`"escape"` is not a pynput key name.** These values are `pynput.keyboard.Key` member names — what `Key.<member>.name` returns, which is what the keyboard stream puts in `KeyEvent.name`. pynput's member is `Key.esc`, so `"escape"` matched nothing: Escape would have fallen through to the taxonomy's **System** row and re-read would silently never have worked. Corrected to `"esc"` above.
+
 ### `takki_config.yaml` — App-Level Overrides
 
 Created in the app data directory on first run (empty file with inline comments). Any key present overrides the matching `config.py` constant. Unknown keys are ignored with a startup warning.
@@ -98,9 +111,12 @@ sounds:
 
 keys:
   talk:    "ctrl_r"       # pynput key name; also overridable per profile
-  reread:  "escape"
-  restart: "escape"      # same key as reread → tap re-reads, hold restarts
+  reread:  "esc"
+  restart: "esc"         # same key as reread → tap re-reads, hold restarts
   restart_hold_ms: 800   # ignored when reread and restart are bound to different keys
+  resume:  "f1"          # held while paused, to bring Takki back to the foreground
+  resume_hold_ms: 1000
+  resume_request_timeout_ms: 1500
 
 voice:
   tts_rate:          1.0             # speech rate multiplier; also overridable per profile

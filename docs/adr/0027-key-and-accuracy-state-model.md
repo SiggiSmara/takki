@@ -76,6 +76,12 @@ The **first** keystroke response to a prompt determines the outcome for that pro
 
 **Timeouts:** a configurable auto-advance timeout (Layer-1, see ADR-012) that fires when the child has not responded does not affect `key_stats`. The prompt is silently re-issued. Only a keystroke response triggers counting.
 
+**Held keys and OS auto-repeat — open, and it must be closed here** (raised 2026-08-22 by alpha session 6b). Holding a key makes Windows emit repeated press events, and [ADR-005](0005-keyboard-handling.md)/session 5 pass them through faithfully. The focus model suppresses repeats only for its own *gesture* keys (Escape's tap/hold, the resume hold), because whether a held **character** counts as repeated attempts is a counting question, not a gating one — so the engine receives every repeat.
+
+The rule above absorbs the harmless case: repeats of a *wrong* press are already ignored until the correct character arrives. The damaging case is a held *correct* key — the first press is counted and advances the prompt, and the repeats that follow land on the **next** prompt as wrong first presses, each one incrementing `attempt_count` with `correct_count + 0` and firing an auto-rejection. One key held a beat too long can therefore tank the accuracy of a character the child never actually got wrong, and on a rolling 200-attempt window that distortion persists for a long time.
+
+Session 7 must decide the rule and state it here. The likely shape is that a press repeating a key already down is not an attempt at all — but a plain de-duplication is not obviously right either, since a child legitimately typing a doubled letter (`ll` in "hello") releases between presses, and one who does not is arguably not typing it. Whatever is chosen, it belongs in this section, not in the input layer.
+
 **Consequence:** `correct_count / attempt_count` is true first-attempt accuracy. It cannot be inflated by retry presses.
 
 ### Bronze Criterion
