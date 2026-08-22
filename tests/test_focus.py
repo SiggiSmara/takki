@@ -85,12 +85,22 @@ class TestPygameFocusSourceUnderDummyDriver:
         source = PygameFocusSource(outbound)
         source.close()
 
+    def test_construction_seeds_the_initial_focus_state(self) -> None:
+        # The FSM cannot query focus, so the starting state has to arrive as an
+        # event. The dummy driver's window is never focused, hence FocusLost.
+        outbound: queue.Queue[FocusEvent] = queue.Queue()
+        source = PygameFocusSource(outbound)
+        assert outbound.get_nowait() == FocusLost()
+        assert outbound.qsize() == 0
+        source.close()
+
     def test_poll_does_not_crash_and_does_not_enqueue_spurious_events(self) -> None:
         # The dummy driver reports a constant, unfocused state -- poll()'s
         # backup check should see no change from the state read at
-        # construction and therefore synthesise nothing.
+        # construction and therefore synthesise nothing beyond the seed.
         outbound: queue.Queue[FocusEvent] = queue.Queue()
         source = PygameFocusSource(outbound)
+        outbound.get_nowait()
         source.poll()
         assert outbound.qsize() == 0
         source.close()
@@ -110,6 +120,7 @@ class TestPygameFocusSourceUnderDummyDriver:
         # poll re-reads the same state every tick. 6b's FSM wants transitions.
         outbound: queue.Queue[FocusEvent] = queue.Queue()
         source = PygameFocusSource(outbound)
+        outbound.get_nowait()
         pygame.event.post(pygame.event.Event(pygame.WINDOWFOCUSGAINED))
         source.poll()
         assert outbound.qsize() == 1

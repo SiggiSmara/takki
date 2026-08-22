@@ -49,6 +49,12 @@ class PygameFocusSource:
         pygame.display.set_caption(config.WINDOW_TITLE)
         self._outbound = outbound
         self._focused = pygame.key.get_focused()
+        # Seed the initial state. The FSM downstream (session 6b) has no way to
+        # read focus -- FocusSource deliberately offers no query, since a raise
+        # has no synchronous answer -- and poll() below is edge-triggered, so a
+        # window that comes up unfocused would otherwise never produce an event
+        # and leave the FSM wrongly ACTIVE for the whole run.
+        self._outbound.put(FocusGained() if self._focused else FocusLost())
 
     def poll(self) -> None:
         # Type-filtered: an unfiltered get() drains the whole SDL queue, which
