@@ -53,39 +53,60 @@ class Layout:
     graphemes: dict[str, Grapheme]  # char → Grapheme
 
 
-def build_en() -> Layout:
-    """US QWERTY layout — 26 direct lowercase letters."""
-    direct: dict[str, tuple[int, int]] = {
-        "q": (2, 1),
-        "w": (2, 2),
-        "e": (2, 3),
-        "r": (2, 4),
-        "t": (2, 5),
-        "y": (2, 6),
-        "u": (2, 7),
-        "i": (2, 8),
-        "o": (2, 9),
-        "p": (2, 10),
-        "a": (3, 1),
-        "s": (3, 2),
-        "d": (3, 3),
-        "f": (3, 4),
-        "g": (3, 5),
-        "h": (3, 6),
-        "j": (3, 7),
-        "k": (3, 8),
-        "l": (3, 9),
-        "z": (4, 1),
-        "x": (4, 2),
-        "c": (4, 3),
-        "v": (4, 4),
-        "b": (4, 5),
-        "n": (4, 6),
-        "m": (4, 7),
-    }
+def _direct_layout(lang: str, direct: dict[str, tuple[int, int]]) -> Layout:
     keys: dict[str, PhysicalKey] = {}
     graphemes: dict[str, Grapheme] = {}
     for char, (row, col) in direct.items():
         keys[char] = PhysicalKey(char, row, col)
         graphemes[char] = Grapheme(char, "direct", (char,), 1)
-    return Layout(lang="en", keys=keys, graphemes=graphemes)
+    return Layout(lang=lang, keys=keys, graphemes=graphemes)
+
+
+# Positions shared by every QWERTY-derived layout in the v1 target set — the
+# letters that don't move between US QWERTY and German QWERTZ.
+_QWERTY_COMMON: dict[str, tuple[int, int]] = {
+    "q": (2, 1),
+    "w": (2, 2),
+    "e": (2, 3),
+    "r": (2, 4),
+    "t": (2, 5),
+    "u": (2, 7),
+    "i": (2, 8),
+    "o": (2, 9),
+    "p": (2, 10),
+    "a": (3, 1),
+    "s": (3, 2),
+    "d": (3, 3),
+    "f": (3, 4),
+    "g": (3, 5),
+    "h": (3, 6),
+    "j": (3, 7),
+    "k": (3, 8),
+    "l": (3, 9),
+    "x": (4, 2),
+    "c": (4, 3),
+    "v": (4, 4),
+    "b": (4, 5),
+    "n": (4, 6),
+    "m": (4, 7),
+}
+
+
+def build_en() -> Layout:
+    """US QWERTY layout — 26 direct lowercase letters."""
+    direct: dict[str, tuple[int, int]] = {**_QWERTY_COMMON, "y": (2, 6), "z": (4, 1)}
+    return _direct_layout("en", direct)
+
+
+def build_de() -> Layout:
+    """German QWERTZ layout — 26 direct lowercase letters plus ä, ö, ü, ß."""
+    direct: dict[str, tuple[int, int]] = {
+        **_QWERTY_COMMON,
+        "z": (2, 6),
+        "y": (4, 1),
+        "ü": (2, 11),
+        "ö": (3, 10),
+        "ä": (3, 11),
+        "ß": (1, 11),
+    }
+    return _direct_layout("de", direct)
