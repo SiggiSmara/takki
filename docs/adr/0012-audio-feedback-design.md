@@ -86,6 +86,32 @@ When the child types while TTS is still speaking the prompt, the TTS is cancelle
 
 This applies in both layers and to any non-essential TTS (encouragement, between-word remarks). Universal voice commands and milestone announcements complete their utterance and are not interrupted by keypresses, since they are not part of the current type-this-character loop.
 
+### TTS utterance sequencing and cancellation
+
+*(Decided 2026-08-22. Closes a gap found while reviewing alpha session 4: `TTSWorker.stop()` cancels the utterance in flight, but nothing said what becomes of a prompt's remaining utterances.)*
+
+**Multi-utterance prompts are sequenced by the core, one utterance at a time.** The word presentation protocol above — *"house — h, o, u, s, e"* — is six utterances, not one. The core holds the remainder as ordinary main-thread state and enqueues the next only when `SpeechFinished` arrives, so the TTS worker's command queue never carries a backlog.
+
+Cancelling is therefore two steps at two levels:
+
+| Level | Call | Cancels |
+|---|---|---|
+| Worker | `TTSEngine.stop()` | the utterance currently audible — the single sanctioned cross-thread call ([concurrency-model.md](../concurrency-model.md)) |
+| Core | clear the pending sequence | the utterances not yet spoken — a plain field on the thread that owns it |
+
+Having the worker drain its own command queue inside `stop()` was considered and rejected: it races the worker popping the next command, and it makes `stop()` do two unrelated things. Keeping the backlog in core state means there is no cross-thread queue to drain and no lock to reason about.
+
+**Utterance ids guard the completion race.** A keypress can arrive microseconds after the worker finished naturally and posted `SpeechFinished(N, completed)` — that event is still sitting in the inbound queue while the core starts the next prompt. The core ignores any `SpeechFinished` whose id is not the one in flight; without that check the stale event would advance the *new* sequence by one, skipping an utterance that was never spoken. This is the concrete case behind concurrency-model.md's "a cancel racing a natural completion cannot double-advance a prompt."
+
+**Sequences are interruptible or not,** which formalises the paragraph above as a flag the core carries alongside the pending sequence:
+
+- *Interruptible* — the type-this-character loop: character and word prompts, the spelling step, encouragement, between-word remarks. A keypress stops what is audible and clears the remainder.
+- *Not interruptible* — milestone announcements and voice-command responses. The keypress is processed normally (accepted or auto-rejected, with its cue), but the speech runs to completion.
+
+This refines "the cancellation is per-utterance" above: the audio pipeline is never torn down, but an interrupted *prompt* loses its unspoken remainder, not only the utterance in flight.
+
+**Left open,** because it needs the lesson engine's state machine in view (alpha session 11): what happens when a prompt becomes due while a non-interruptible utterance is still speaking. Holding it, dropping it, and speaking it afterwards are all defensible.
+
 **Wrong character handling — auto-reject:**
 
 When the child types an incorrect character, the keypress is auto-rejected: it is never committed to the typed sequence. The error tone fires immediately (low-latency sound cue, not TTS). TTS then re-prompts the current character. The child simply tries again. This means every character that has been accepted is correct by definition — the child is always at a known position with a clean sequence behind them.
@@ -122,4 +148,4 @@ The `correct` cue does real work for keys that are **not yet Known** (ADR-027) �
 
 The acknowledgement is its own cue class and so takes a third reserved channel. A click and a tone occupy different spectral space, so the outcome cue overlapping the tail of a click reads as an attack transient rather than as mud.
 
-**3. Hard upper bound on cue duration once cues are user-configurable.** When `takki_config.yaml` can point a cue at an arbitrary `.wav` (ADR-025), a multi-second file breaks the assumptions above: it masks the TTS prompt for the next character, bleeds across drill-block boundaries, and makes the monophonic newest-wins policy truncate constantly. Validate `Sound.get_length()` at load — a system boundary, which is where validation belongs — and on violation fall back to the bundled or generated cue with a warning rather than truncating, since a hard cut produces its own click artifact. The cap belongs in the same change that introduces cue-file overrides, not in a later pass.
+**3. Hard upper bound on cue duration once cues are user-configurable.** When `takki_config.yaml` can point a cue at an arbitrary `.wav` (ADR-025), a multi-second file breaks the assumptions above: it masks the TTS prompt for the next character, bleeds across drill-block boundaries, and makes the monophonic newest-wins policy truncate constantly. Validate `Sound.get_length()` at load — a system boundary, which is where validation belongs — and on violation fall back to the bundled or generated cue with a warning rather than truncating, since a hard cut produces its own click artifact. The cap belongs in the same change that introduces cue-file overrides, not in a later pass. The same boundary check covers the generated-tone parameters (`TONE_*` in `config.py`, also overridable): a fade longer than half the tone's duration makes the fade-in and fade-out windows overlap, so the tone jumps to near-full amplitude partway through and ends on the click the fade exists to prevent.

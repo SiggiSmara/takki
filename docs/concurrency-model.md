@@ -40,6 +40,7 @@ while running:
 - The worker **owns the engine**; all `say`/`runAndWait` calls happen there. The core requests speech by enqueueing `Speak(text, utterance_id)` and learns the outcome from the `SpeechFinished` event — it never waits.
 - **Interrupt on keypress** (ADR-012): the core calls `tts.stop()` directly from the main thread. This is the single cross-thread engine call, and it is exactly what the C12 spike validated on SAPI (a ~12 s utterance cut at ~2.2 s, `stop()` issued from a second thread). The worker's blocked `runAndWait()` returns early and posts `SpeechFinished(cancelled)`.
 - Utterance ids keep the core honest: a `SpeechFinished` for a superseded utterance is ignored, so a cancel racing a natural completion cannot double-advance a prompt.
+- **Multi-utterance prompts** are sequenced by the core one at a time, so the command queue never holds a backlog; interrupting therefore clears the core's pending sequence as well as calling `stop()`. Rules and the interruptible/non-interruptible split are in [ADR-012 § TTS utterance sequencing and cancellation](adr/0012-audio-feedback-design.md#tts-utterance-sequencing-and-cancellation).
 - **Piper (Beta)** slots into the same worker with a different cancel mechanism (stop feeding the audio buffer). The Protocol surface (`speak`, `stop`) doesn't change.
 
 ## Timers
@@ -57,6 +58,8 @@ SQLite stays on the main thread. Per-keystroke `key_attempts` writes are sub-mil
 Alpha's case is the language layer. `WordfreqSource` ([ADR-007](adr/0007-language-data-word-frequency.md), landed alpha session 3) caches its two full-corpus scans — grapheme weights and bigram weights — per layout, so warm calls cost microseconds. The **cold** build does not: measured 2026-08-22 on the Celeron G555 dev box, ~767 ms for English (321,180-word corpus) and ~1,977 ms for German. `bigrams()` generates drill content and is therefore called from inside the loop, so a lazy first call would stall it for most of a second — roughly 50× the 16 ms budget. Warm both tables for the profile's language before entering the loop.
 
 The same rule covers every other one-time cost as it arrives: TTS engine construction, sound-cue tone generation, and in Beta the Piper model load (~2.3 s, [ADR-003](adr/0003-text-to-speech.md)) and the Whisper model load ([ADR-002](adr/0002-speech-recognition.md)).
+
+Ownership of the sequence belongs to the entrypoint, not to each component: `PygameMixerCues` currently calls `pygame.mixer.init()` from its own constructor, which is fine while it is the only pygame consumer but needs sequencing against `pygame.display` init ([ADR-028](adr/0028-composite-input-and-keyboard-ownership.md)) once session 11 creates both.
 
 Note that ADR-007's "letter frequency ranking: sub-100ms for any language" was not reproducible on the dev box (~620 ms for the ranking alone). The figure is hardware-dependent in a way that ADR does not state, which is a further reason not to let any of this happen lazily.
 
