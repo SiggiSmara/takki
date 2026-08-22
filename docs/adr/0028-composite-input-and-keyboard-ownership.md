@@ -62,6 +62,8 @@ A modifier key (AltGr, dead-acute, dead-macron, etc.) enters Phase 2 at its aggr
 2. The modifier does **not** enter Phase A or Phase B. No drill loop runs for the modifier in isolation.
 3. Every composite grapheme whose prerequisites are now fully Active (both modifier and base letter have `key_stats` rows) becomes typeable. The first time drill content surfaces such a composite, the engine plays the composite introduction script from ADR-023.
 
+**Open — item 3's test cannot be met by a modifier** *(raised 2026-08-22 by alpha session 7; see [roadmap B8](../roadmap.md#b-places-where-two-accepted-adrs-disagree)).* [ADR-027](0027-key-and-accuracy-state-model.md) § First-Attempt Counting creates a `key_stats` row on the first counted keystroke against that character as a prompt target. A modifier is never a prompt target (item 2), never runs Phase A or B, and its raw events are discarded at the boundary (§ Composite event filtering) — so it can never acquire a row and never becomes Active, and no composite depending on it ever becomes typeable. English and German are direct-strike, so nothing in Alpha or the first Beta language is blocked; this must be settled before the first dead-key language. Do not work around it by adding a second definition of Active.
+
 The modifier's "introduction step" is therefore a spoken announcement, immediately followed by the four-phase ramp-up for its typeable pair partner (see below).
 
 ### Pair ramp-up (B7)
