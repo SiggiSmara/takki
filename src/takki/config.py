@@ -26,3 +26,10 @@ MIXER_FREQUENCY = 22050
 MIXER_SIZE = -16  # signed 16-bit
 MIXER_CHANNELS = 2  # stereo
 MIXER_BUFFER = 512
+
+# Always-on focus-owning window (ADR-016/ADR-028). Blank in audio-only mode --
+# size is irrelevant to the child, who navigates by audio; the title is what a
+# screen reader announces on Alt+Tab.
+WINDOW_WIDTH = 640
+WINDOW_HEIGHT = 480
+WINDOW_TITLE = "Takki"
