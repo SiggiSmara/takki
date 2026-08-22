@@ -98,6 +98,18 @@ Phase 2 introduces one left-hand key and one right-hand key per step (ADR-023). 
 
 **Resume — three converging paths:** the voice "resume" intent (ADR-017), a configurable held-key (works if the mic is unreliable), and simply Alt+Tab back to Takki (native, and announced by any running screen reader). The first two attempt a programmatic re-foreground; Windows' foreground-activation lock may downgrade that to a taskbar flash, in which case the spoken hint falls back to "press Alt+Tab to come back to Takki." The held-key and voice triggers are seen even while unfocused because pynput's hook is global.
 
+**Re-acquire has no synchronous answer** (added 2026-08-22, from session 6a implementation). The paragraph above says the re-foreground attempt "may be downgraded to a taskbar flash," which reads as though the caller learns which happened. It does not, and cannot. `SDL_RaiseWindow` — the mechanism behind `FocusSource.request_foreground()` — is asynchronous: it posts an activation request to the OS and returns before Windows has ruled on it. Querying focus immediately afterwards reads the *pre-call* state, which while PAUSED is always "not focused," so a success-boolean would report failure even on the raises that worked.
+
+`request_foreground()` therefore returns nothing. Re-acquire is a **request plus a deadline**, resolved by the same tick-checked mechanism as every other timed behaviour ([concurrency-model](../concurrency-model.md) § Timers):
+
+1. Call `request_foreground()`; set a deadline.
+2. A `FocusGained` arriving before the deadline **is** the success signal — no separate confirmation exists or is needed, and it arrives by the same path as a manual Alt+Tab, so both resume routes converge on one code path.
+3. Deadline expiry is the failure signal, and is what triggers the spoken *"press Alt+Tab to come back to Takki"* fallback.
+
+The consequence for the taxonomy's **Resume hold** row is that the held key initiates a request; it does not itself resume. Only the returning `FocusGained` does. Implementing this is [session 6b](../alpha-plan.md); the boundary it builds on landed in 6a.
+
+This is also why an always-on window is load-bearing beyond focus ownership: without a window there is nothing to raise, and the resume paths would have no mechanism at all.
+
 **Screen-reader cooperation.** A VI child's machine very likely runs a screen reader (NVDA, JAWS, Narrator), and the focus-owning window cooperates with it rather than fighting it:
 - The reader announcing the new foreground app on focus loss is a *second* channel telling the child they have left a drill — reinforcing Takki's own announcement.
 - Its keystroke echo would otherwise double Takki's chimes during a drill. Takki is a **self-voicing application**; the intended fix is the reader's own mechanism for that case — NVDA's **sleep mode**, which is scoped to the focused app, so it silences echo *while Takki is focused* yet wakes to announce the moment focus leaves. Takki does not reconfigure the reader from its own process; it detects the reader (`detect_screen_reader()`, ADR-026) and offers a one-time setup suggestion (ADR-013).
