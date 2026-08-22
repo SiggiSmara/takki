@@ -50,6 +50,16 @@ No `threading.Timer`, no timer threads. Every timed behaviour — Layer-1 auto-a
 
 SQLite stays on the main thread. Per-keystroke `key_attempts` writes are sub-millisecond under WAL + `synchronous=NORMAL` (applied 2026-07-05), so they fit inside the frame budget; keeping the store single-threaded means sqlite3's default same-thread check stays on as a free correctness assertion.
 
+## Startup
+
+**One-time work that would blow the frame budget happens before the loop starts, never lazily on first use inside it.** If a value is expensive and derivable, derive it during startup and let the loop only read it; if it is expensive and genuinely unavoidable at runtime, it belongs on a worker thread with the result delivered back as an event.
+
+Alpha's case is the language layer. `WordfreqSource` ([ADR-007](adr/0007-language-data-word-frequency.md), landed alpha session 3) caches its two full-corpus scans — grapheme weights and bigram weights — per layout, so warm calls cost microseconds. The **cold** build does not: measured 2026-08-22 on the Celeron G555 dev box, ~767 ms for English (321,180-word corpus) and ~1,977 ms for German. `bigrams()` generates drill content and is therefore called from inside the loop, so a lazy first call would stall it for most of a second — roughly 50× the 16 ms budget. Warm both tables for the profile's language before entering the loop.
+
+The same rule covers every other one-time cost as it arrives: TTS engine construction, sound-cue tone generation, and in Beta the Piper model load (~2.3 s, [ADR-003](adr/0003-text-to-speech.md)) and the Whisper model load ([ADR-002](adr/0002-speech-recognition.md)).
+
+Note that ADR-007's "letter frequency ranking: sub-100ms for any language" was not reproducible on the dev box (~620 ms for the ranking alone). The figure is hardware-dependent in a way that ADR does not state, which is a further reason not to let any of this happen lazily.
+
 ## Shutdown
 
 Signal handlers (delivered to the main thread — another reason the core lives there) set `running = False`. The loop then: enqueues `Shutdown` on the TTS command queue, calls `listener.stop()`, joins workers with a short timeout, and exits. A worker that won't die inside the timeout is abandoned, not waited on forever — the process is exiting anyway.
