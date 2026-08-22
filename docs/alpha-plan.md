@@ -8,8 +8,14 @@ Session-by-session breakdown of [Alpha](roadmap.md#alpha--internaldev-only). Seq
 1. Open the session table, find the first unchecked row.
 2. Launch a Claude Code session with the **model** named in that row.
 3. Implement only that chunk. Check the relevant carry-forward decisions first (see below).
-4. On green, run `/code-review` (step 5), then **you** commit, tick the box, fill in the commit SHA, and close the session. Generated session prompts stop at green + clean review and leave staging/commit to you.
-5. For Sonnet/Haiku chunks, run `/code-review` (medium/high effort) in-session before handing back — same context, no separate review session. Escalate to an Opus pass only if it flags something structural.
+4. On green, run `/code-review` (step 6), sweep the findings (step 5), then **you** commit, tick the box, fill in the commit SHA, and close the session. Generated session prompts stop at green + clean review + filed findings, and leave staging/commit to you.
+5. **Findings sweep — every session, after the review and before handing back.** Go back over what the session surfaced that is not already fixed in code or written into an ADR it amended: places two accepted ADRs disagree, assumptions only confirmable on Windows, behaviour a later session must verify or could unknowingly undo, and decisions taken that no ADR records. Each one either dies with the session — drop it — or has to reach a later session, and then it gets filed where that session will actually look:
+    - an amendment in the ADR section whose reader needs it, dated and attributed to the session (the default, and the most likely to be read);
+    - [roadmap.md](roadmap.md) § B for a genuine conflict between two accepted ADRs, § D for a smaller gap worth a line;
+    - the carry-forward table below when it gates one specific numbered session, or that session's own row when it is a hand-verification item.
+
+    Use those documents; do not create new ones, and do not file something already fixed and covered by a regression test. A finding that exists only in the session's chat report is lost. Generated session prompts carry this step in their finish line, and pass it on to the prompt they draft for the next session.
+6. For Sonnet/Haiku chunks, run `/code-review` (medium/high effort) in-session before handing back — same context, no separate review session. Escalate to an Opus pass only if it flags something structural.
 
 **Model strategy.** Opus is reserved for the judgment chunks (the focus state machine and the engine core, #6–#10, plus Windows interpretation #12), where a subtle slip silently corrupts progression math or input handling. Everything else is specced tightly enough by the ADRs for Sonnet; scaffolding goes to Haiku. **Tripwire:** if a Sonnet chunk starts needing real architectural decisions mid-session, that is a signal the ADR underspecified it — stop, tighten the spec (or promote the chunk to Opus) rather than letting the model guess.
 
