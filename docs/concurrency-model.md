@@ -31,7 +31,7 @@ while running:
     clock.tick(60)                         # ~16 ms/frame ceiling on added latency
 ```
 
-- **One inbound queue** (`queue.Queue`, unbounded). Every stimulus the core reacts to is a typed event on one stream: `KeyEvent`, `FocusGained`/`FocusLost` (translated from the pygame pump on the main thread — not cross-thread, but normalised into the same dispatch path), `SpeechFinished`, `Quit`. Serialising everything through one stream is what makes the focus FSM and first-attempt accounting race-free by construction.
+- **One inbound queue** (`queue.Queue`, unbounded). Unbounded is a requirement, not a default: the pynput callback runs inside a Windows `WH_KEYBOARD_LL` hook, and blocking past the OS hook timeout gets the hook silently unregistered. A bounded `put()` that ever waits would take keyboard input down with it (session 5). Every stimulus the core reacts to is a typed event on one stream: `KeyEvent`, `FocusGained`/`FocusLost` (translated from the pygame pump on the main thread — not cross-thread, but normalised into the same dispatch path), `SpeechFinished`, `Quit`. Serialising everything through one stream is what makes the focus FSM and first-attempt accounting race-free by construction.
 - **Focus gating happens at dispatch** (ADR-028): while the window is not foreground, `KeyEvent`s are dropped at the top of `dispatch`, before any lesson logic.
 - **Latency budget:** at 60 Hz the loop adds ≤ ~16 ms between a keypress and its cue trigger — well inside the "immediate" feel ADR-012 requires. `pygame.mixer.Sound.play()` is non-blocking and fires from the main thread. Tick rate is a compiled default in `config.py` (not parent-facing).
 
@@ -66,6 +66,8 @@ Note that ADR-007's "letter frequency ranking: sub-100ms for any language" was n
 ## Shutdown
 
 Signal handlers (delivered to the main thread — another reason the core lives there) set `running = False`. The loop then: enqueues `Shutdown` on the TTS command queue, calls `listener.stop()`, joins workers with a short timeout, and exits. A worker that won't die inside the timeout is abandoned, not waited on forever — the process is exiting anyway.
+
+`stop()` is reachable through the `KeyEventStream` Protocol; `join()` is not — that surface is `start`/`stop` only (session 5), so the wiring holds the concrete stream to join it. Joining is also the only place a dead listener becomes visible: pynput stops the listener and re-raises a callback exception at `join()`, so an unjoined listener that died mid-run is indistinguishable from an idle one — the keyboard just stops responding, with nothing logged.
 
 ## Rules for all future code
 
