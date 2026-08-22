@@ -69,9 +69,12 @@ src/
     lesson/         # Layer controller, drill generator, word selector
     audio/          # TTS wrapper, sound cues, feedback generator
     persistence/    # SQLite schema and access
-    display/        # pygame visual display (conditional)
+    display/        # pygame visual display (conditional) + focus source
+    input/          # keyboard stream, keypress taxonomy
     voice/          # faster-whisper wrapper
-    config.py       # Global lesson progression thresholds
+    clock.py        # Clock Protocol + SystemClock — all timing is deadline checks
+    config.py       # Global lesson progression thresholds, key bindings, compiled defaults
+    focus_model.py  # ACTIVE/PAUSED FSM, focus-gated dispatch
 docs/
   architecture.md
 intents/            # Per-language intent definitions (lang.yaml)
@@ -96,6 +99,7 @@ pyproject.toml
 - GitHub Actions runs the tiered pyramid: unit + integration + Windows platform smoke on every PR; slow integration nightly; PyInstaller on release tags.
 - Headless audio/video on CI via `SDL_AUDIODRIVER=dummy` / `SDL_VIDEODRIVER=dummy`.
 - Whisper and Piper models are cached in CI via `actions/cache`; integration tests against real models cost seconds after warm-up.
+- **Assert exact event sequences and counts, not that something was emitted.** Session 6a shipped a bug — a backup focus poll cancelling real focus events — through a clean review and a full green suite, because the tests asserted an event was present rather than which events, in what order, and how many.
 - See ADR-019 for the full pyramid, protocol catalog, and CI strategy.
 
 ## Open questions (resolve before implementing affected components)

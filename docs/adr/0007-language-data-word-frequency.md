@@ -32,7 +32,7 @@ In the spike script (`spikes/wordfreq_coverage_spike.py`), native alphabet membe
 
 **Startup cost (measured across 20 Latin-script languages):**
 - `get_frequency_dict()` load: 25–400ms for most languages. Polish (1.2s) and Finnish (0.8s) are outliers due to large word counts (450k and 725k words respectively). On Windows, file I/O is slower — lazy loading on first language access is preferred over loading all at startup.
-- Letter frequency ranking: sub-100ms for any language — just a weighted sum over the frequency dict.
+- Letter frequency ranking: sub-100ms for any language — just a weighted sum over the frequency dict. **Not reproducible on slower hardware** (added 2026-08-22): ~620 ms for the ranking alone on the Celeron G555 dev box, and the full derived-table cold build is ~767 ms (en) / ~1,977 ms (de) against a 16 ms frame budget. These figures are hardware-dependent in a way this ADR does not state, which is why the tables are warmed before the core loop starts rather than built lazily inside it — see [concurrency-model.md § Startup](../concurrency-model.md).
 - Full coverage curve (all 26 steps): 200ms–14s depending on word count. **Never compute the full curve at startup.** The app only needs the letter ordering (cheap) at startup; coverage for the child's current key set is computed incrementally as keys are mastered.
 
 This approach avoids cache invalidation complexity. If lazy loading is insufficient for the Polish/Finnish case, a pre-computed letter ordering can be bundled as a small static file alongside the language config.
