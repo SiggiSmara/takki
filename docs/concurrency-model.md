@@ -1,6 +1,6 @@
 # Takki — Concurrency and Event-Loop Model
 
-> **Status:** Design note — Proposed 2026-07-05 (design-review follow-up). Review and accept before alpha session 6; sessions 4, 6, and 11 implement against it.
+> **Status:** Design note — Accepted 2026-08-22 (drafted 2026-07-05 as a design-review follow-up). Sessions 4, 6, and 11 implement against it.
 > Part of the [Takki architecture](architecture.md). Grounds [ADR-028](adr/0028-composite-input-and-keyboard-ownership.md) (focus-gated dispatch), [ADR-012](adr/0012-audio-feedback-design.md) (TTS interrupt, sound cues), [ADR-005](adr/0005-keyboard-handling.md) (pynput), and [ADR-019](adr/0019-testing-strategy-and-io-isolation.md) (fakes and testability). Informed by the C12 spike ([research/tts-letter-pronunciation.md](research/tts-letter-pronunciation.md)).
 
 The problem this note settles: Takki combines four things that each bring their own threading story — a pynput listener (callbacks on its own hook thread), a pygame/SDL window whose event pump must run on the main thread, a blocking TTS engine (`pyttsx3.runAndWait()` does not return until the utterance ends), and timers (auto-advance timeout, Escape tap/hold, pace adaptation). Without a declared model, each session invents its own and the engine grows locks. This note declares the model once.
