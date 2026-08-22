@@ -3,10 +3,10 @@ import struct
 
 from takki import config
 
-# Headroom below int16 full-scale: chirp (ptt) and keypress cues live on
-# separate reserved channels (ADR-012) and can sound at the same instant, so
-# their summed peak must not clip.
-_PEAK_AMPLITUDE = 20000
+# Chirp (ptt) and keypress cues live on separate reserved channels (ADR-012)
+# and can sound at the same instant, so the mixer sums them. Half of int16
+# full-scale is the largest per-cue peak whose sum still cannot clip.
+PEAK_AMPLITUDE = 16383
 
 _PACKER = struct.Struct("<h")
 
@@ -26,7 +26,7 @@ def sweep_frequency(index: int, total: int, freq_start: float, freq_end: float) 
 
 
 def _pack_frame(sample: float) -> bytes:
-    frame = _PACKER.pack(int(sample * _PEAK_AMPLITUDE))
+    frame = _PACKER.pack(int(sample * PEAK_AMPLITUDE))
     return frame * config.MIXER_CHANNELS
 
 

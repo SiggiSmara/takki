@@ -1,7 +1,7 @@
 import queue
 import threading
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, Protocol
 
 from takki.audio.tts import TTSEngine
 
@@ -28,10 +28,17 @@ class SpeechFinished:
     status: SpeechStatus
 
 
+class EventSink(Protocol):
+    # Not queue.Queue[SpeechFinished]: session 11 passes the core's single
+    # inbound queue, which carries every event type, and Queue's parameter is
+    # invariant. Structural put() is what the worker actually needs.
+    def put(self, item: SpeechFinished, /) -> None: ...
+
+
 class TTSWorker:
     """Owns a TTSEngine exclusively; commands in, SpeechFinished out (concurrency-model.md § TTS)."""
 
-    def __init__(self, engine: TTSEngine, outbound: "queue.Queue[SpeechFinished]") -> None:
+    def __init__(self, engine: TTSEngine, outbound: EventSink) -> None:
         self._engine = engine
         self._outbound = outbound
         self._commands: queue.Queue[Command] = queue.Queue()

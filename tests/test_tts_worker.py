@@ -93,7 +93,7 @@ class TestTTSWorkerRunOne:
 class TestTTSWorkerStop:
     def test_stop_calls_engine_stop(self) -> None:
         engine = FakeTTSEngine()
-        worker = TTSWorker(engine, queue.Queue())
+        worker = TTSWorker(engine, queue.Queue[SpeechFinished]())
         worker.stop()
         assert engine.stopped == 1
 

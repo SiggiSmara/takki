@@ -1,7 +1,13 @@
 import struct
 
 from takki import config
-from takki.audio.tone import fade_multiplier, generate_sweep, generate_tone, sweep_frequency
+from takki.audio.tone import (
+    PEAK_AMPLITUDE,
+    fade_multiplier,
+    generate_sweep,
+    generate_tone,
+    sweep_frequency,
+)
 
 _PACKER = struct.Struct("<h")
 
@@ -34,7 +40,16 @@ class TestGenerateTone:
     def test_zero_fade_reaches_full_amplitude(self) -> None:
         pcm = generate_tone(freq=440, duration_ms=50, fade_ms=0)
         samples = _unpack_left_channel(pcm)
-        assert max(abs(s) for s in samples) > 19000
+        assert max(abs(s) for s in samples) > PEAK_AMPLITUDE * 0.99
+
+    def test_two_simultaneous_cues_cannot_clip(self) -> None:
+        # The two cue classes have separate reserved channels (ADR-012) and can
+        # sound at once, so the mixer sums them. Guards the headroom invariant
+        # PEAK_AMPLITUDE exists for.
+        keypress = _unpack_left_channel(generate_tone(freq=880, duration_ms=50, fade_ms=0))
+        chirp = _unpack_left_channel(generate_sweep(freq_start=660, freq_end=1100, duration_ms=50))
+        worst_case = max(abs(a) for a in keypress) + max(abs(b) for b in chirp)
+        assert worst_case <= 32767
 
     def test_stereo_channels_are_identical(self) -> None:
         pcm = generate_tone(freq=440, duration_ms=20, fade_ms=0)
