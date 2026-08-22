@@ -2,6 +2,7 @@ import locale
 import logging
 import os
 
+from takki.audio.fallback_tts import FallbackTTS
 from takki.audio.tts import TTSEngine
 from takki.platform.layout import Layout, build_en
 
@@ -31,7 +32,7 @@ class DevStubInterface:
         return build_en()
 
     def get_fallback_tts(self) -> TTSEngine:
-        raise NotImplementedError("pyttsx3 TTS wiring lands in session 4")
+        return FallbackTTS()
 
     def detect_screen_reader(self) -> str | None:
         return None

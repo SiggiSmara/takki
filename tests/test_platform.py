@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
+from takki.audio.fallback_tts import FallbackTTS
 from takki.platform import select_platform_interface
 from takki.platform.dev_stub import DevStubInterface
 from takki.platform.layout import COL_TO_FINGER, Layout, PhysicalKey, build_en
@@ -108,9 +109,11 @@ class TestDevStubInterface:
     def test_detect_screen_reader_is_none(self) -> None:
         assert DevStubInterface().detect_screen_reader() is None
 
-    def test_get_fallback_tts_raises_not_implemented(self) -> None:
-        with pytest.raises(NotImplementedError, match="session 4"):
-            DevStubInterface().get_fallback_tts()
+    @pytest.mark.audio
+    def test_get_fallback_tts_returns_fallback_tts(self) -> None:
+        # audio-marked: constructs a real pyttsx3 engine (espeak-ng/SAPI),
+        # not guaranteed present on every CI runner.
+        assert isinstance(DevStubInterface().get_fallback_tts(), FallbackTTS)
 
     def test_get_system_language_from_lang_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("LANG", "de_DE.UTF-8")
