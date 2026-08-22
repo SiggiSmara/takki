@@ -63,6 +63,12 @@ RESUME_KEY  = "f1"           # held while PAUSED, to re-acquire foreground — s
 RESUME_HOLD_MS = 1000        # hold duration before the foreground request is made
 RESUME_REQUEST_TIMEOUT_MS = 1500   # request_foreground() deadline; expiry speaks the Alt+Tab hint
 
+# Key & accuracy state model (ADR-027)
+ATTEMPT_WINDOW          = 200    # rolling key_attempts window per (profile, key)
+KNOWN_MIN_ATTEMPTS      = 90     # graphomotor retention floor
+KNOWN_MIN_ACCURACY      = 0.90   # first-attempt accuracy over the window
+KNOWN_MIN_DISTINCT_DAYS = 2      # calendar days — one night of consolidation
+
 # Voice
 TTS_RATE          = 1.0
 PUSH_TO_TALK_MODE = "press_release"   # "press_release" or "hold"
@@ -94,6 +100,14 @@ The binding is chosen against a constraint the other three do not have: this key
 `RESUME_HOLD_MS` is longer than `RESTART_HOLD_MS` for the same reason. `RESUME_REQUEST_TIMEOUT_MS` is not a preference but the deadline that stands in for a return value: `request_foreground()` cannot report success (ADR-028 § Re-acquire has no synchronous answer), so a `FocusGained` inside this window is the success signal and expiry is the failure signal that speaks the Alt+Tab hint.
 
 **`"escape"` is not a pynput key name.** These values are `pynput.keyboard.Key` member names — what `Key.<member>.name` returns, which is what the keyboard stream puts in `KeyEvent.name`. pynput's member is `Key.esc`, so `"escape"` matched nothing: Escape would have fallen through to the taxonomy's **System** row and re-read would silently never have worked. Corrected to `"esc"` above.
+
+**Amended 2026-08-22 (alpha session 7). ADR-027's four numbers were configurable only on paper.**
+
+[ADR-027](0027-key-and-accuracy-state-model.md) says twice that its thresholds are "configurable (ADR-025)", but this ADR's listing never carried them, and the 200-attempt window existed only as a constructor default duplicated across `SqliteStore` and `FakeStore`. `ATTEMPT_WINDOW`, `KNOWN_MIN_ATTEMPTS`, `KNOWN_MIN_ACCURACY` and `KNOWN_MIN_DISTINCT_DAYS` close that; both stores now default their cap to `config.ATTEMPT_WINDOW`, and `KnownCriterion` (`takki.lesson.key_state`) takes the three floors as its field defaults, in the shape `KeyBindings` already uses for tier 1 — the yaml and per-profile tiers override by *constructing* `KnownCriterion(...)` and passing `window_cap`, never by mutating the `config` module after import.
+
+These four are not preferences. They are research floors — see [motor-learning-repetitions.md](../research/motor-learning-repetitions.md) — and lowering any of them makes Known mean less than it says. They are exposed here because ADR-027 promised they would be and because a pilot may need to shorten them to demo progression, not because a parent should tune them; whether they surface in `takki_config.yaml` at all is a Beta question.
+
+Note the distinction from the lesson-progression block above: `NEW_KEY_MIN_PRESSES = 50` / `NEW_KEY_ACCURACY_THRESHOLD = 0.90` gate *introducing the next key* ([ADR-010](0010-lesson-structure-and-progression.md)); the `KNOWN_*` floors gate *Known*, which is a much higher bar and the one milestones count. They are deliberately different numbers for different questions.
 
 ### `takki_config.yaml` — App-Level Overrides
 

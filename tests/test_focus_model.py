@@ -413,3 +413,86 @@ class TestEventOrdering:
         harness.drain()
         assert harness.commands == [TypedCharacter("a"), TypedCharacter("c")]
         assert harness.spoken() == [PAUSED_ANNOUNCEMENT, RESUMED_ANNOUNCEMENT]
+
+
+class TestCharacterRepeats:
+    def test_a_first_press_is_not_a_repeat(self) -> None:
+        harness = Harness()
+        harness.press(char="f")
+        assert harness.commands == [TypedCharacter("f", repeat=False)]
+
+    def test_a_held_character_repeats_are_labelled_not_swallowed(self) -> None:
+        # ADR-027 § Held keys: the engine must see every repeat -- it decides
+        # they are not attempts -- so the count here is three, not one.
+        harness = Harness()
+        harness.press(char="f")
+        harness.press(char="f")
+        harness.press(char="f")
+        assert harness.commands == [
+            TypedCharacter("f", repeat=False),
+            TypedCharacter("f", repeat=True),
+            TypedCharacter("f", repeat=True),
+        ]
+
+    def test_a_release_ends_the_repeat_run(self) -> None:
+        harness = Harness()
+        harness.press(char="l")
+        harness.release(char="l")
+        harness.press(char="l")
+        assert harness.commands == [
+            TypedCharacter("l", repeat=False),
+            TypedCharacter("l", repeat=False),
+        ]
+
+    def test_repeats_are_tracked_per_character(self) -> None:
+        harness = Harness()
+        harness.press(char="f")
+        harness.press(char="j")
+        harness.press(char="f")
+        assert harness.commands == [
+            TypedCharacter("f", repeat=False),
+            TypedCharacter("j", repeat=False),
+            TypedCharacter("f", repeat=True),
+        ]
+
+    def test_a_key_held_across_a_pause_still_repeats_on_resume(self) -> None:
+        harness = Harness()
+        harness.press(char="f")
+        harness.lose_focus()
+        harness.press(char="f")
+        harness.gain_focus()
+        harness.press(char="f")
+        assert harness.commands == [
+            TypedCharacter("f", repeat=False),
+            TypedCharacter("f", repeat=True),
+        ]
+
+    def test_a_key_pressed_while_paused_is_down_on_resume(self) -> None:
+        harness = Harness()
+        harness.lose_focus()
+        harness.press(char="f")
+        harness.gain_focus()
+        harness.press(char="f")
+        assert harness.commands == [TypedCharacter("f", repeat=True)]
+
+    def test_a_shift_released_before_the_letter_still_clears_the_key(self) -> None:
+        # pynput recomputes KeyCode.char from live modifier state, so the same
+        # physical key reports "A" down and "a" up. If that leaked, the next
+        # press of it would be labelled a repeat and silently ignored.
+        harness = Harness()
+        harness.press(char="A")
+        harness.release(char="a")
+        harness.press(char="A")
+        assert harness.commands == [
+            TypedCharacter("A", repeat=False),
+            TypedCharacter("A", repeat=False),
+        ]
+
+    def test_shifting_mid_hold_does_not_hide_a_repeat(self) -> None:
+        harness = Harness()
+        harness.press(char="a")
+        harness.press(char="A")
+        assert harness.commands == [
+            TypedCharacter("a", repeat=False),
+            TypedCharacter("A", repeat=True),
+        ]

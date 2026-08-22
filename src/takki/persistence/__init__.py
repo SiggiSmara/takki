@@ -17,6 +17,15 @@ class Profile:
 
 
 @dataclass(frozen=True)
+class KeyStat:
+    # Lifetime counters for one Active key. Never the source of truth for Known
+    # -- that is WindowStats over key_attempts (ADR-027).
+    attempt_count: int
+    correct_count: int
+    last_practised_at: str | None
+
+
+@dataclass(frozen=True)
 class WindowStats:
     attempt_count: int
     correct_count: int
@@ -68,6 +77,8 @@ class Store(Protocol):
         correct: bool,
         attempted_at: str | None = None,
     ) -> None: ...
+
+    def key_stats(self, profile_id: int) -> dict[str, KeyStat]: ...
 
     def window_stats(self, profile_id: int, key_char: str) -> WindowStats: ...
 

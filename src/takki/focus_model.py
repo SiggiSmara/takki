@@ -25,6 +25,11 @@ ALT_TAB_HINT = "Press Alt+Tab to come back to Takki."
 @dataclass(frozen=True)
 class TypedCharacter:
     char: str
+    # True when this press is an OS auto-repeat of a character key that never
+    # came up. The gate reports the physical fact and suppresses nothing; what
+    # a repeat means for counting is ADR-027 § First-Attempt Counting's call,
+    # and the answer there is that it is not an attempt.
+    repeat: bool = False
 
 
 @dataclass(frozen=True)
@@ -69,10 +74,10 @@ class FocusModel:
         # emits at construction, which arrives before any key event.
         self.state = FocusState.ACTIVE
         # Named keys currently held, so OS auto-repeat is not read as a new
-        # press (ADR-012 § Recovery). Character keys are deliberately absent:
-        # whether a held letter counts as repeated attempts is the engine's
-        # call (sessions 9-10), not the gate's.
+        # press (ADR-012 § Recovery). Character keys are held separately and
+        # are labelled rather than swallowed -- see _on_key.
         self._down: set[str] = set()
+        self._chars_down: set[str] = set()
         self._restart_deadline: float | None = None
         self._restart_fired = False
         self._resume_deadline: float | None = None
@@ -137,6 +142,16 @@ class FocusModel:
         classification = classify(event, self._bindings, paused=self.state is FocusState.PAUSED)
         if not event.pressed:
             return self._on_release(event, classification)
+        if isinstance(classification, Character):
+            # Down-state is recorded even while PAUSED, exactly as named keys
+            # are: a key held across the transition is still physically down,
+            # so its repeats must keep reading as repeats on the way back.
+            held = classification.char.lower()
+            repeat = held in self._chars_down
+            self._chars_down.add(held)
+            if self.state is FocusState.PAUSED:
+                return None
+            return TypedCharacter(classification.char, repeat=repeat)
         if event.name is not None:
             if event.name in self._down:
                 return None
@@ -150,8 +165,6 @@ class FocusModel:
                     self._bindings.resume_hold_ms
                 )
             return None
-        if isinstance(classification, Character):
-            return TypedCharacter(classification.char)
         if isinstance(classification, RecoveryKey):
             return self._on_recovery_press(classification)
         # TalkKey is classified and then dropped: the voice subsystem is Beta
@@ -172,6 +185,14 @@ class FocusModel:
     def _on_release(self, event: KeyEvent, classification: Classification) -> LessonCommand | None:
         if event.name is not None:
             self._down.discard(event.name)
+        if isinstance(classification, Character):
+            # Case-folded on both sides: pynput recomputes KeyCode.char from
+            # live modifier state, so a Shift released a moment before the
+            # letter reports "A" down and "a" up -- one physical key, and the
+            # entry has to clear. A release missed entirely (secure desktop)
+            # leaks one entry, which the next release of that key clears,
+            # costing one ignored press of it and never the key itself.
+            self._chars_down.discard(classification.char.lower())
         if self.state is FocusState.PAUSED:
             if isinstance(classification, ResumeKey):
                 self._resume_deadline = None

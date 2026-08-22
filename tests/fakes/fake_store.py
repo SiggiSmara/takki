@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from takki.persistence import Profile, WindowStats
+from takki import config
+from takki.persistence import KeyStat, Profile, WindowStats
 
 
 def _now() -> str:
@@ -8,7 +9,7 @@ def _now() -> str:
 
 
 class FakeStore:
-    def __init__(self, *, window_cap: int = 200) -> None:
+    def __init__(self, *, window_cap: int = config.ATTEMPT_WINDOW) -> None:
         self._profiles: dict[int, Profile] = {}
         self._next_profile_id = 1
         self._sessions: dict[int, tuple[int, str, str | None]] = {}
@@ -104,9 +105,19 @@ class FakeStore:
         key = (profile_id, key_char)
         if key not in self._key_attempts:
             self._key_attempts[key] = []
-        self._key_attempts[key].append((ts, int(correct)))
-        if len(self._key_attempts[key]) > self._cap:
-            self._key_attempts[key] = self._key_attempts[key][-self._cap :]
+        attempts = self._key_attempts[key]
+        attempts.append((ts, int(correct)))
+        if len(attempts) > self._cap:
+            # Oldest by timestamp, ties broken by insertion order: what
+            # SqliteStore's ORDER BY attempted_at ASC, rowid ASC evicts.
+            del attempts[min(range(len(attempts)), key=lambda i: (attempts[i][0], i))]
+
+    def key_stats(self, profile_id: int) -> dict[str, KeyStat]:
+        return {
+            key_char: KeyStat(attempt_count=ac, correct_count=cc, last_practised_at=ts)
+            for (pid, key_char), (ac, cc, ts) in self._key_stats.items()
+            if pid == profile_id
+        }
 
     def window_stats(self, profile_id: int, key_char: str) -> WindowStats:
         attempts = self._key_attempts.get((profile_id, key_char), [])

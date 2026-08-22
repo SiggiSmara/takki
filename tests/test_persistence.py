@@ -1,11 +1,21 @@
+from typing import cast
+
 import pytest
 
+from takki.persistence import KeyStat, Store, WindowStats
 from takki.persistence.sqlite_store import SqliteStore
+from tests.fakes.fake_store import FakeStore
 
 
 @pytest.fixture()
 def store() -> SqliteStore:
     return SqliteStore(":memory:")
+
+
+@pytest.fixture(params=["sqlite", "fake"])
+def any_store(request: pytest.FixtureRequest) -> Store:
+    """The real store and its fake, held to the same behaviour (ADR-019)."""
+    return SqliteStore(":memory:") if cast(str, request.param) == "sqlite" else FakeStore()
 
 
 class TestProfiles:
@@ -270,3 +280,65 @@ class TestMilestones:
         store.record_milestone(b.id, "silver", achieved_at="2026-01-01T10:00:00")
         assert store.achieved_milestones(a.id) == ["bronze"]
         assert store.achieved_milestones(b.id) == ["silver"]
+
+
+class TestKeyStatsRead:
+    def test_empty_on_a_fresh_profile(self, any_store: Store) -> None:
+        p = any_store.create_profile("Alice", "en")
+        assert any_store.key_stats(p.id) == {}
+
+    def test_one_row_per_practised_key(self, any_store: Store) -> None:
+        p = any_store.create_profile("Alice", "en")
+        any_store.upsert_key_stat(p.id, "f", True, practised_at="2026-01-01T10:00:00")
+        any_store.upsert_key_stat(p.id, "f", False, practised_at="2026-01-01T10:01:00")
+        any_store.upsert_key_stat(p.id, "j", True, practised_at="2026-01-01T10:02:00")
+        assert any_store.key_stats(p.id) == {
+            "f": KeyStat(2, 1, "2026-01-01T10:01:00"),
+            "j": KeyStat(1, 1, "2026-01-01T10:02:00"),
+        }
+
+    def test_a_recency_bump_shows_without_moving_the_counters(self, any_store: Store) -> None:
+        p = any_store.create_profile("Alice", "en")
+        any_store.upsert_key_stat(p.id, "f", True, practised_at="2026-01-01T10:00:00")
+        any_store.bump_key_recency(p.id, "f", practised_at="2026-01-01T10:05:00")
+        assert any_store.key_stats(p.id) == {"f": KeyStat(1, 1, "2026-01-01T10:05:00")}
+
+    def test_a_bump_on_an_unseen_key_creates_nothing(self, any_store: Store) -> None:
+        p = any_store.create_profile("Alice", "en")
+        any_store.bump_key_recency(p.id, "f", practised_at="2026-01-01T10:00:00")
+        assert any_store.key_stats(p.id) == {}
+
+    def test_window_rows_alone_do_not_make_a_key_active(self, any_store: Store) -> None:
+        p = any_store.create_profile("Alice", "en")
+        any_store.append_attempt(p.id, "f", True, attempted_at="2026-01-01T10:00:00")
+        assert any_store.key_stats(p.id) == {}
+
+    def test_isolated_per_profile(self, any_store: Store) -> None:
+        a = any_store.create_profile("Alice", "en")
+        b = any_store.create_profile("Bob", "en")
+        any_store.upsert_key_stat(a.id, "f", True, practised_at="2026-01-01T10:00:00")
+        any_store.upsert_key_stat(b.id, "j", True, practised_at="2026-01-01T10:00:00")
+        assert set(any_store.key_stats(a.id)) == {"f"}
+        assert set(any_store.key_stats(b.id)) == {"j"}
+
+
+class TestEvictionParity:
+    def test_the_oldest_attempt_goes_whatever_order_it_arrived_in(self, any_store: Store) -> None:
+        # Out-of-order arrival is not hypothetical: the window is timestamped
+        # in local time, which steps back an hour at the DST boundary.
+        store = any_store
+        p = store.create_profile("Alice", "en")
+        store.append_attempt(p.id, "f", False, attempted_at="2026-01-01T02:30:00")
+        store.append_attempt(p.id, "f", True, attempted_at="2026-01-01T01:30:00")
+        store.append_attempt(p.id, "f", True, attempted_at="2026-01-01T03:00:00")
+        assert store.window_stats(p.id, "f") == WindowStats(3, 2, 1)
+
+    def test_eviction_drops_the_oldest_by_timestamp(self) -> None:
+        stores: list[Store] = [SqliteStore(":memory:", window_cap=2), FakeStore(window_cap=2)]
+        for store in stores:
+            p = store.create_profile("Alice", "en")
+            store.append_attempt(p.id, "f", True, attempted_at="2026-01-01T02:00:00")
+            store.append_attempt(p.id, "f", True, attempted_at="2026-01-01T01:00:00")
+            store.append_attempt(p.id, "f", False, attempted_at="2026-01-01T03:00:00")
+            # The 01:00 row is the oldest, even though it arrived second.
+            assert store.window_stats(p.id, "f") == WindowStats(2, 1, 1)

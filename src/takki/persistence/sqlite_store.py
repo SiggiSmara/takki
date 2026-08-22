@@ -2,7 +2,8 @@ import sqlite3
 from datetime import datetime
 from typing import Any, cast
 
-from takki.persistence import Profile, WindowStats
+from takki import config
+from takki.persistence import KeyStat, Profile, WindowStats
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS profiles (
@@ -80,7 +81,7 @@ _PROFILE_SELECT = """
 
 
 class SqliteStore:
-    def __init__(self, path: str, *, window_cap: int = 200) -> None:
+    def __init__(self, path: str, *, window_cap: int = config.ATTEMPT_WINDOW) -> None:
         self.conn = sqlite3.connect(path)
         # The engine writes key_attempts per keystroke mid-drill; WAL +
         # synchronous=NORMAL avoids an fsync stall on every keypress.
@@ -220,6 +221,24 @@ class SqliteStore:
                 (profile_id, key_char, excess),
             )
         self.conn.commit()
+
+    def key_stats(self, profile_id: int) -> dict[str, KeyStat]:
+        rows = self.conn.execute(
+            """
+            SELECT key_char, attempt_count, correct_count, last_practised_at
+            FROM key_stats
+            WHERE profile_id = ?
+            """,
+            (profile_id,),
+        ).fetchall()
+        return {
+            cast(str, r[0]): KeyStat(
+                attempt_count=cast(int, r[1]),
+                correct_count=cast(int, r[2]),
+                last_practised_at=cast(str | None, r[3]),
+            )
+            for r in rows
+        }
 
     def window_stats(self, profile_id: int, key_char: str) -> WindowStats:
         row = self.conn.execute(

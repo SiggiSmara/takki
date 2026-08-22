@@ -64,3 +64,14 @@ MIXER_BUFFER = 512
 WINDOW_WIDTH = 640
 WINDOW_HEIGHT = 480
 WINDOW_TITLE = "Takki"
+
+# Key & accuracy state model (ADR-027). ATTEMPT_WINDOW is the per-(profile, key)
+# rolling window the Known criterion is evaluated over; the three KNOWN_* floors
+# are that criterion. These are research floors, not taste -- 200 is the window
+# that cannot be filled in one sitting, 90 the graphomotor retention floor, 2 the
+# minimum number of calendar days that guarantees a night of consolidation. See
+# research/motor-learning-repetitions.md before moving any of them.
+ATTEMPT_WINDOW = 200
+KNOWN_MIN_ATTEMPTS = 90
+KNOWN_MIN_ACCURACY = 0.90
+KNOWN_MIN_DISTINCT_DAYS = 2
