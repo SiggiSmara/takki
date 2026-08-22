@@ -1,4 +1,5 @@
 import queue
+import sys
 
 import pytest
 
@@ -91,9 +92,15 @@ def test_queue_conforms_to_event_sink_protocol() -> None:
     assert sink is not None
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="asserts the non-Windows guard; on Windows the constructor legitimately "
+    "succeeds and would build a real pynput Listener, which the default tier forbids",
+)
 def test_pynput_key_stream_raises_off_windows() -> None:
-    # This box is genuinely non-Windows -- no monkeypatching needed. The
-    # windows_only real-listener path is exercised in test_pynput_stream.py.
+    # No monkeypatching: the guard is a real sys.platform branch, so this asserts
+    # it on the platforms where it applies. The win32 path is covered by
+    # test_pynput_stream.py (windows_only).
     from takki.input.pynput_stream import PynputKeyStream
 
     outbound: queue.Queue[KeyEvent] = queue.Queue()
