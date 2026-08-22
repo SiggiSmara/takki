@@ -56,7 +56,9 @@ LAYER_PROPORTIONS = [        # (max_keys_known_exclusive, layer1_frac, layer2_fr
 # Key bindings (pynput key name strings)
 TALK_KEY    = "ctrl_r"
 REREAD_KEY  = "escape"
-RESTART_KEY = "escape"       # hold or double-tap — see ADR-012
+RESTART_KEY = "escape"       # held; tap on the same key re-reads — see ADR-012
+RESTART_HOLD_MS = 800        # hold duration that separates restart from re-read;
+                             # unused when reread_key and restart_key differ
 
 # Voice
 TTS_RATE          = 1.0
@@ -97,7 +99,8 @@ sounds:
 keys:
   talk:    "ctrl_r"       # pynput key name; also overridable per profile
   reread:  "escape"
-  restart: "escape"
+  restart: "escape"      # same key as reread → tap re-reads, hold restarts
+  restart_hold_ms: 800   # ignored when reread and restart are bound to different keys
 
 voice:
   tts_rate:          1.0             # speech rate multiplier; also overridable per profile
