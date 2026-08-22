@@ -29,6 +29,33 @@ A short pleasant chime for a correct keypress, a gentle low tone for incorrect. 
 
 The talk-key chirp tones (chirp-on / chirp-off, see ADR-020) use the same `pygame.mixer` pipeline. They are tonally distinct from the correct/error cues so the child never confuses "mic is open" with "you typed correctly."
 
+### Sound cue channel policy
+
+*(Decided 2026-08-22. Closes the "sound channels" carry-forward that gated alpha session 4.)*
+
+**One reserved `pygame.mixer` channel per cue class; monophonic within a class; newest wins.**
+
+| Channel | Cue class | Cues |
+|---|---|---|
+| reserved 0 | keypress feedback | `correct`, `error`, `boundary` |
+| reserved 1 | push-to-talk state | `chirp_on`, `chirp_off` |
+
+Channels are reserved via `pygame.mixer.set_reserved()` so the general pool can never steal them. A new cue within a class replaces whatever that class is currently playing; classes never contend with each other.
+
+Rationale:
+
+- **Channel starvation is not the real risk.** Cues are 100–200 ms against a default pool of 8 channels, so exhausting it needs roughly 40 cues per second — far beyond any child's typing rate. The risks that actually bite are overlap and cross-class theft.
+- **Overlapping identical tones muddy rather than double.** Two `correct` chimes (both 880 Hz sine) overlapping read as a single louder, phasing chime. For a child whose only channel is audio, an ambiguous cue is worse than a truncated one.
+- **A stolen chirp is a correctness bug, not a cosmetic one.** If `chirp_on` is dropped or cut short by a typing cue, the child does not know the microphone is open — which is exactly the signal ADR-020's push-to-talk model depends on. Separate reservation makes that impossible.
+- **Newest wins.** A cue arriving late and referring to a keypress two presses ago actively misinforms. Stale feedback is worse than no feedback.
+- **Determinism.** Exactly one cue per class is audible at any instant, so `FakeSoundCues` records a linear sequence and the engine tests (alpha sessions 7–10) assert on it without timing dependence.
+
+The policy is expressed per cue *class* rather than as two hardcoded channels: the acknowledgement click proposed under [§ Open questions and future work](#open-questions-and-future-work) would add a third class.
+
+**Mixer initialisation is pinned in `config.py`,** not left to the pygame default: 22050 Hz stereo (confirmed on Windows, above) plus an explicit buffer size, which sets the floor on cue latency — 512 samples is ≈ 23 ms at 22050 Hz. This ADR promises cues "within milliseconds"; the number must not drift silently with a pygame version bump.
+
+**Cues and TTS do not interact.** A keypress calls `tts.stop()` and then plays its cue; both are non-blocking calls from the main thread ([concurrency-model.md](../concurrency-model.md)). A cue never waits on speech, and speech never delays a cue.
+
 **TTS for spoken content:** Everything else — what to type next, encouragement, instructions, milestone announcements, menu navigation — uses Piper TTS (or SAPI fallback). This content is not latency-sensitive.
 
 **Encouragement variety:** The rule-based feedback generator cycles through a set of varied encouragement phrases per language. The generator sits behind a Protocol boundary (ADR-019), so a downstream fork could substitute a generative implementation — Takki itself ships rule-based only ([ADR-031](0031-no-llm-integration.md)).
@@ -80,3 +107,19 @@ A separate restart key (configurable, default Escape held or double-tap) abandon
 **WPM measurement:** Execution time is measured from the child's first keystroke to their last accepted keystroke on a given word. Prompt delivery time is excluded entirely. WPM is only computed and surfaced in progress reporting once the child is in dictation mode (Diamond milestone reached).
 
 **Clean word definition:** A word is "clean" if it was completed with no auto-rejections and no restarts — every character accepted on the first attempt. This is the metric used for progression thresholds and the child summary, not raw completion rate.
+
+### Open questions and future work
+
+**Adaptive feedback density — three interlocking pieces, none decided.** Proposed 2026-08-22; tracked as roadmap C15. This needs the rolling accuracy window ([ADR-027](0027-key-and-accuracy-state-model.md)) and the rolling pace measure ([ADR-024](0024-drill-content-and-lesson-granularity.md)), so it cannot land before those exist — Beta at the earliest. None of it changes the `SoundCuePlayer` surface: suppression is the engine choosing not to call `play()`.
+
+**1. Fade the `correct` cue as proficiency rises.** Feedback on every trial is known to help acquisition and *hurt retention* — the guidance hypothesis (Salmoni, Schmidt & Walter 1984; Winstein & Schmidt 1990 on faded feedback schedules): a learner given a signal after every repetition comes to lean on it instead of building an internal model. The information argument agrees — at 95% first-attempt accuracy the `correct` chime fires roughly 19 times for every `error` tone, carrying almost no information while occupying the child's only channel. Shape: a per-profile setting ([ADR-025](0025-configuration-system.md) tier 3) that the app *suggests* once thresholds trip, offered only at a natural endpoint (drill completion, session end, milestone) per [ADR-010](0010-lesson-structure-and-progression.md) — never mid-drill.
+
+> **Trigger on accuracy and pace, not on cue overlap.** The point at which chimes would begin to overlap is a function of cue *duration*, which is user-configurable and changes when Beta swaps generated tones for real `.wav` files — a 400 ms replacement chime would silently halve the threshold. Accuracy is the signal that actually makes the cue uninformative; pace is a secondary gate.
+
+The `correct` cue does real work for keys that are **not yet Known** (ADR-027) — that is where it is genuine scaffolding rather than noise. A per-key fade (silent on Known keys, chiming on keys still in training) is the sharper variant and reuses a state model that already exists; the counter-risk is that cue behaviour varying within a single drill may disorient a child who cannot see which key is which. Which shape wins is undecided.
+
+**2. Two-chime keypress feedback: an acknowledgement click, then the outcome cue.** A very short click (mechanical-keyswitch-like, order of 10–20 ms) fires the instant an accepted keypress lands, followed by the `correct`/`error` cue. This separates two facts the current single-cue design conflates: *the keystroke reached Takki* and *the keystroke was right*. It is what makes piece 1 safe — with `correct` suppressed, silence would otherwise be ambiguous between "you got it right" and "nothing reached the app" (focus theft per [ADR-028](0028-composite-input-and-keyboard-ownership.md), a dead key, a hung process). The tactile feel of the key does not close this gap: it confirms the key moved, not that the application received it.
+
+The acknowledgement is its own cue class and so takes a third reserved channel. A click and a tone occupy different spectral space, so the outcome cue overlapping the tail of a click reads as an attack transient rather than as mud.
+
+**3. Hard upper bound on cue duration once cues are user-configurable.** When `takki_config.yaml` can point a cue at an arbitrary `.wav` (ADR-025), a multi-second file breaks the assumptions above: it masks the TTS prompt for the next character, bleeds across drill-block boundaries, and makes the monophonic newest-wins policy truncate constantly. Validate `Sound.get_length()` at load — a system boundary, which is where validation belongs — and on violation fall back to the bundled or generated cue with a warning rather than truncating, since a hard cut produces its own click artifact. The cap belongs in the same change that introduces cue-file overrides, not in a later pass.

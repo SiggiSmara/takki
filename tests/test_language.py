@@ -221,9 +221,7 @@ class TestWordfreqSourceEnglish:
         weights["e"] = -1.0
         assert wordfreq_source.grapheme_weights(layout)["e"] > 0
 
-    def test_frequency_dict_loaded_once_per_language(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_frequency_dict_loaded_once_per_language(self, monkeypatch: pytest.MonkeyPatch) -> None:
         import takki.language.wordfreq_source as mod
 
         calls: list[str] = []
