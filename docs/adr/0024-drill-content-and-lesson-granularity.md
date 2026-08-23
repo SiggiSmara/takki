@@ -17,7 +17,7 @@
 - How the engine prevents rare keys (Z, Q, X in English; ð, þ in Icelandic; etc.) from being forgotten once frequency-weighted selection mostly stops surfacing them.
 - What a "drill block" actually is, in concrete terms — how long, how many keystrokes, where it ends.
 
-This ADR fills those gaps. The order in which new keys are introduced is the subject of [ADR-023](0023-key-introduction-protocol.md).
+This ADR fills those gaps. The order in which new keys are introduced is the subject of [ADR-023](0023-key-introduction-protocol.md) and [ADR-032](0032-grapheme-led-introduction-and-selectable-ordering.md) — the protocol machinery in the former, the ordering and the grapheme-led rule in the latter. *(Pointer split 2026-08-23.)* Note that what arrives here is a **grapheme**, which for a composite letter is two keystrokes: the phases below drill the letter, not the keys.
 
 ### New-key ramp-up — four phases
 

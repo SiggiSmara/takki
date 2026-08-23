@@ -85,7 +85,7 @@ Individual decisions are recorded in `docs/adr/`. Each ADR is self-contained and
 | [ADR-020](adr/0020-voice-input-trigger-push-to-talk.md) | Voice Input Trigger — Push-to-Talk | Right Ctrl default; chirp-on/chirp-off cues; no wake word |
 | [ADR-021](adr/0021-voice-activity-detection.md) | Voice Activity Detection | `webrtcvad` for end-of-utterance; start signalled by talk key |
 | [ADR-022](adr/0022-localisation-strategy.md) | Localisation Strategy | YAML per language for strings, encouragement, intents, voice catalog |
-| [ADR-023](adr/0023-key-introduction-protocol.md) | Key Introduction Protocol | Home-row symmetric pairs as location anchor; post-home freq-leader-per-hand; modifier keys (AltGr, dead-acute) ranked by aggregate composite frequency; AltGr preferred over dead-key for dual-mechanism layouts (Latvian); spoken intro script with finger + relative location |
+| [ADR-023](adr/0023-key-introduction-protocol.md) | Key Introduction Protocol | Stage 0 anchor establishment (`r f v` / `u j m`); spoken intro script with finger + relative location; step semantics; layout-invariant finger map; composite data model; AltGr preferred over dead-key for dual-mechanism layouts (Latvian). **Ordering and modifier placement superseded by ADR-032** |
 | [ADR-024](adr/0024-drill-content-and-lesson-granularity.md) | Drill Content and Lesson Granularity | Four-phase new-key ramp-up; freq-weighted bigrams; SFBs not avoided; spaced re-exposure for rare keys; child-pace-adaptive ~100s drill blocks |
 | [ADR-025](adr/0025-configuration-system.md) | Configuration System | Three-tier config: `config.py` defaults → `takki_config.yaml` (parent) → per-profile SQLite; sound cues overridable; Alpha tones generated in pure Python |
 | [ADR-026](adr/0026-platform-interface-abstraction.md) | Platform Interface Abstraction | `PlatformInterface` Protocol with three methods; `select_platform_interface()` factory; `DevStubInterface` fallback for non-Windows dev |
@@ -94,6 +94,7 @@ Individual decisions are recorded in `docs/adr/`. Each ADR is self-contained and
 | [ADR-029](adr/0029-word-selection-and-curation.md) | Word Selection and Vocabulary Curation | Positive curation (curated child lists preferred) + affix-aware dictionary fallback + default blocklist + family override; supersedes ADR-008's selection |
 | [ADR-030](adr/0030-personal-letter-recordings.md) | Personal Letter Recordings | Child records letters in their own voice as an opt-in reward (Personal layer of ADR-003); end-of-session + menu offer, gated on Known; active/muted, reversibility over a parent gate; audio BLOBs in the profile SQLite |
 | [ADR-031](adr/0031-no-llm-integration.md) | No LLM Integration | LLM removed entirely; intent pipeline is Layers 1–3 only; supersedes ADR-004/ADR-018; Protocol boundary (ADR-019) is the fork path |
+| [ADR-032](adr/0032-grapheme-led-introduction-and-selectable-ordering.md) | Grapheme-Led Introduction and Selectable Ordering | The character pushes for introduction, not the key: curriculum ordered over graphemes, a modifier has no step and rides in on the first composite needing it; the order below Stage 0 is a selectable strategy with three candidate orderings as siblings (A home-row fill = Alpha default/control arm, B F/J-seeded, C per-child calibrated); supersedes ADR-023 §§ Phase 1–2 and modifier placement; closes roadmap B8 |
 
 ---
 

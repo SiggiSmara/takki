@@ -108,7 +108,7 @@ ADR-010 says Silver and Gold count "distinct **alphabetic characters** on the la
 
 **Resolution:** All milestone denominators count distinct typeable **graphemes** (output characters) returned by `get_layout_positions()`, not physical key actuations. Modifier keys such as AltGr and dead keys are keystroke mechanics; they produce no character on their own and are excluded from the denominator. The characters they help produce — `á`, `é`, `ð`, `ž`, etc. — are in the denominator on the same footing as any other character.
 
-ADR-010's "alphabetic characters" wording is authoritative. ADR-023's "physical keys" wording is superseded by this ADR on this point. The handling of modifiers as drill targets (if any) is deferred to ADR-028.
+ADR-010's "alphabetic characters" wording is authoritative. ADR-023's "physical keys" wording is superseded by this ADR on this point. The handling of modifiers as drill targets (if any) is deferred to ADR-028. *(Answered 2026-08-23 by [ADR-032](0032-grapheme-led-introduction-and-selectable-ordering.md): a modifier is never a drill target and never a prompt target; the **composite** is, so it acquires a `key_stats` row and counts towards this denominator like any other letter.)*
 
 ### Milestone Ladder
 

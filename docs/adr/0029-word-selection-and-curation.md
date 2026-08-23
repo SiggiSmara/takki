@@ -49,7 +49,7 @@ This is sharper for visually-impaired children: the word is heard via TTS with n
 ### Consequences
 
 - Curated lists and blocklists become per-language data assets / contribution surfaces ([ADR-022](0022-localisation-strategy.md)); source selection is configurable ([ADR-025](0025-configuration-system.md)).
-- The curated acquisition order must be co-designed with the key-introduction order ([ADR-023](0023-key-introduction-protocol.md)) — a word is only usable once its keys are taught; the engine intersects the pool with currently-typeable keys.
+- The curated acquisition order must be co-designed with the introduction order ([ADR-023](0023-key-introduction-protocol.md), [ADR-032](0032-grapheme-led-introduction-and-selectable-ordering.md)) — which orders **graphemes**, not keys, so a word containing `á` needs `á` itself to have been introduced, not merely the two keys that produce it *(clarified 2026-08-23)* — a word is only usable once its keys are taught; the engine intersects the pool with currently-typeable keys.
 - [ADR-010](0010-lesson-structure-and-progression.md): Layer 2 should unlock on real-word *availability*, not key count alone (roadmap C13).
 - Beta (en + de) is covered by confirmed-usable sources.
 

@@ -56,19 +56,21 @@ This amendment overrides ADR-024's "new key alone" and "same-finger home-row nei
 
 ### Modifier introduction
 
-A modifier key (AltGr, dead-acute, dead-macron, etc.) enters Phase 2 at its aggregate-composite-frequency rank per ADR-023. When its step arrives:
+*(Rewritten 2026-08-23 by [ADR-032](0032-grapheme-led-introduction-and-selectable-ordering.md), which makes introduction grapheme-led. The superseded version gave the modifier a step of its own at its aggregate-composite-frequency rank; the text below is what replaces it.)*
 
-1. The engine plays a spoken introduction for the modifier: its name, key location, and mechanism. For example: *"New key: the accent key. It lives to the right of the letter P. It adds an accent to the next letter you press — it will not make a sound on its own."* The description comes from the per-language YAML ([ADR-022](0022-localisation-strategy.md)).
-2. The modifier does **not** enter Phase A or Phase B. No drill loop runs for the modifier in isolation.
-3. Every composite grapheme whose prerequisites are now fully Active (both modifier and base letter have `key_stats` rows) becomes typeable. The first time drill content surfaces such a composite, the engine plays the composite introduction script from ADR-023.
+A modifier key (AltGr, dead-acute, dead-macron, etc.) has **no step of its own and no place in the introduction order**. It is introduced inside the step that introduces the **first composite grapheme requiring it**, which arrives at that grapheme's own frequency rank. When such a step arrives:
 
-**Open — item 3's test cannot be met by a modifier** *(raised 2026-08-22 by alpha session 7; see [roadmap B8](../roadmap.md#b-places-where-two-accepted-adrs-disagree)).* [ADR-027](0027-key-and-accuracy-state-model.md) § First-Attempt Counting creates a `key_stats` row on the first counted keystroke against that character as a prompt target. A modifier is never a prompt target (item 2), never runs Phase A or B, and its raw events are discarded at the boundary (§ Composite event filtering) — so it can never acquire a row and never becomes Active, and no composite depending on it ever becomes typeable. English and German are direct-strike, so nothing in Alpha or the first Beta language is blocked; this must be settled before the first dead-key language. Do not work around it by adding a second definition of Active.
+1. The engine plays the composite's introduction script (ADR-023 § Composite letters), which carries the modifier inside it: the letter, then how it is typed, then the modifier's name, location and mechanism. For example: *"New letter: á. Press the accent key, then A. The accent key lives one position to the right of Æ, and makes no sound on its own."* All of it comes from the per-language YAML ([ADR-022](0022-localisation-strategy.md)).
+2. The modifier does **not** enter Phase A or Phase B, and is never a prompt target. The **composite** runs the four-phase ramp-up like any other new letter — it is a character the child produces, so it is drilled, counted and measured as one.
+3. Later composites on the same modifier introduce no key at all and skip the mechanism explanation; they are new letters made of keys the child already has.
 
-The modifier's "introduction step" is therefore a spoken announcement, immediately followed by the four-phase ramp-up for its typeable pair partner (see below).
+**Closed 2026-08-23 by [ADR-032](0032-grapheme-led-introduction-and-selectable-ordering.md)** *(raised 2026-08-22 by alpha session 7 as [roadmap B8](../roadmap.md#b-places-where-two-accepted-adrs-disagree); sharpened by session 8).* The superseded item 3 tested composite availability against "both modifier and base letter have `key_stats` rows", and a modifier can never acquire one: it is never a prompt target, and [ADR-027](0027-key-and-accuracy-state-model.md) § First-Attempt Counting creates the row on the first counted keystroke. So no composite could ever unlock, and — because the introducer's session-local record could not retire it either — the accent key was re-announced in every session, forever, once the rest of the sequence was exhausted. Grapheme-led introduction removes the state the test asked about rather than adding a second definition of Active: the composite's own introduction is the event, and the composite is a prompt target like any other letter.
+
+The modifier's introduction is therefore one clause inside a letter's introduction, immediately followed by that letter's own four-phase ramp-up (see below).
 
 ### Pair ramp-up (B7)
 
-Phase 2 introduces one left-hand key and one right-hand key per step (ADR-023). The adaptation to ADR-024's single-key phases depends on the pair contents.
+An introduction step carries one or two keys, left-hand member first (ADR-023 § What an introduction step is). The adaptation to ADR-024's single-key phases depends on the step's contents, **not on which stage or ordering produced it** *(generalised 2026-08-23 by [ADR-032](0032-grapheme-led-introduction-and-selectable-ordering.md): this section previously keyed off "Phase 2", which is now one candidate ordering's internal structure — the rules below apply equally to Stage 0's three pairs and to any future ordering's steps)*.
 
 **Both members are typeable characters (common case):**
 
@@ -76,10 +78,10 @@ Phase 2 introduces one left-hand key and one right-hand key per step (ADR-023). 
 - **Phase B:** four-way alternation — L-anchor, L-new, R-anchor, R-new. Each new key alternates with its own same-finger anchor. If one new key has no same-finger anchor yet (possible for very early steps), use the nearest known key on the same hand. Threshold: 20 attempts each, ≤ 1 rejection per key.
 - **Phases C and D:** both keys join the shared pool with no further pair treatment.
 
-**One member is a modifier:**
+**One member is a modifier** *(reshaped 2026-08-23 by [ADR-032](0032-grapheme-led-introduction-and-selectable-ordering.md) — a modifier is no longer a step member of its own, it rides in on a composite):*
 
-- The typeable member runs Phase A through D as a solo ramp-up (no L-R interleaving).
-- The modifier receives its spoken introduction and no drill.
+- The **composite** runs Phase A through D as a solo ramp-up (no L-R interleaving); it is a letter, and it is drilled as one.
+- The modifier receives its spoken clause inside that introduction and no drill of its own.
 - Composites enabled by the modifier appear in Phase C/D of the typeable member's ramp-up if prerequisites are met at that point, or in subsequent steady-state drilling.
 
 **Layer-2 unlock.** ADR-010's "≥ 8 active keys" check fires after each introduction step. Pair introduction advances the count by 2 per step in the typical case (or 1 if one member is a modifier). On English QWERTY the home-row typeable character count is 9 — A S D F G H J K L; the right-pinky home position `;` is not a letter — so the count goes 2, 4, 6, 7 (step 4 introduces A solo), 9 (G+H). Layer 2 unlocks at count 9, which satisfies the ≥ 8 threshold. Layouts whose home rows yield exactly 8 typeable characters trigger the unlock at the same count. No change to the threshold is needed.
