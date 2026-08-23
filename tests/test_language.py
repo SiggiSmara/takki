@@ -80,25 +80,24 @@ class TestFixedListSourceLetterRanking:
         assert ranking[1:] == sorted(set("abcdefghijklmnopqrstuvwxyz") - {"a"})
 
 
-class TestFixedListSourceKeyFrequencies:
-    def test_direct_only_layout_matches_grapheme_weights_for_seen_letters(self) -> None:
-        # key_frequencies covers every physical key (zero for unseen letters);
-        # grapheme_weights only carries entries that actually occurred.
-        source = FixedListSource({"aaa": 40.0, "bbb": 30.0})
-        layout = build_en()
-        key_freqs = source.key_frequencies(layout)
-        assert key_freqs["a"] == 40.0
-        assert key_freqs["b"] == 30.0
-        assert key_freqs["z"] == 0.0
+class TestCompositeRanking:
+    """ADR-032 § Decision 1 — a composite is ranked as the letter it is, and a
+    modifier has no score at all. The aggregate-composite-frequency rule this
+    class replaces existed only to place a modifier in a key-ordered sequence,
+    and the sequence is grapheme-ordered now."""
 
-    def test_modifier_scores_by_aggregate_composite_frequency(self) -> None:
+    def test_a_composite_ranks_by_its_own_weight(self) -> None:
         source = FixedListSource({"aaa": 5.0, "eee": 3.0, "ááá": 2.0, "ééé": 1.0})
         layout = _composite_layout()
-        assert source.key_frequencies(layout) == {
-            "a": 7.0,  # direct "a" (5) + composite "á" depends on it (2)
-            "e": 4.0,  # direct "e" (3) + composite "é" depends on it (1)
-            "dead-acute": 3.0,  # zero own frequency; sum of á (2) + é (1)
-        }
+        assert source.grapheme_weights(layout) == {"a": 5.0, "e": 3.0, "á": 2.0, "é": 1.0}
+        assert source.letter_ranking(layout) == ["a", "e", "á", "é"]
+
+    def test_the_modifier_appears_in_neither_table(self) -> None:
+        source = FixedListSource({"ááá": 2.0, "ééé": 1.0})
+        layout = _composite_layout()
+        assert "dead-acute" in layout.keys
+        assert "dead-acute" not in source.grapheme_weights(layout)
+        assert "dead-acute" not in source.letter_ranking(layout)
 
 
 class TestFixedListSourceBigrams:
@@ -158,18 +157,6 @@ class TestWordfreqSourceEnglish:
         weights = wordfreq_source.grapheme_weights(build_en())
         assert all(w > 0 for w in weights.values())
 
-    def test_key_frequencies_matches_grapheme_weights_for_direct_only_layout(
-        self, wordfreq_source: WordfreqSource
-    ) -> None:
-        # No modifiers on English — every letter key's aggregate score is
-        # exactly its own grapheme weight (nonzero for every letter here,
-        # since real English text uses all 26).
-        layout = build_en()
-        key_freqs = wordfreq_source.key_frequencies(layout)
-        grapheme_freqs = wordfreq_source.grapheme_weights(layout)
-        for char in layout.graphemes:
-            assert key_freqs[char] == grapheme_freqs[char]
-
     def test_bigrams_returns_requested_count_of_two_char_strings(
         self, wordfreq_source: WordfreqSource
     ) -> None:
@@ -209,7 +196,6 @@ class TestWordfreqSourceEnglish:
         for _ in range(3):
             source.letter_ranking(layout)
             source.grapheme_weights(layout)
-            source.key_frequencies(layout)
             source.bigrams(layout, count=5, rng=random.Random(0))
         assert calls == ["graphemes", "bigrams"]
 
@@ -234,7 +220,6 @@ class TestWordfreqSourceEnglish:
         source = WordfreqSource()
         source.letter_ranking(build_en())
         source.grapheme_weights(build_en())
-        source.key_frequencies(build_en())
         assert calls == ["en"]
 
 

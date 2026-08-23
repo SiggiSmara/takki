@@ -11,8 +11,6 @@ class WordSource(Protocol):
 
     def grapheme_weights(self, layout: Layout) -> dict[str, float]: ...
 
-    def key_frequencies(self, layout: Layout) -> dict[str, float]: ...
-
     def bigrams(self, layout: Layout, count: int, rng: random.Random) -> list[str]: ...
 
 
@@ -48,18 +46,6 @@ def compute_grapheme_weights(word_weights: dict[str, float], layout: Layout) -> 
         for char in frozenset(lower):
             weights[char] += freq
     return dict(weights)
-
-
-def compute_key_frequencies(layout: Layout, grapheme_weights: dict[str, float]) -> dict[str, float]:
-    # A modifier's own text frequency is zero -- its score is the summed
-    # weight of every grapheme that lists it as a prerequisite (ADR-023
-    # Composite letters).
-    scores: dict[str, float] = defaultdict(float)
-    for g in layout.graphemes.values():
-        weight = grapheme_weights.get(g.char, 0.0)
-        for key_name in g.prereq_keys:
-            scores[key_name] += weight
-    return {key_name: scores.get(key_name, 0.0) for key_name in layout.keys}
 
 
 def compute_bigram_weights(word_weights: dict[str, float], layout: Layout) -> dict[str, float]:

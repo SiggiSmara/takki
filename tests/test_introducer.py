@@ -1,6 +1,8 @@
 from collections.abc import Set as AbstractSet
 from typing import ClassVar
 
+import pytest
+
 from takki.language import WordSource
 from takki.language.wordfreq_source import WordfreqSource
 from takki.lesson.introducer import (
@@ -14,6 +16,8 @@ from takki.lesson.introducer import (
     describe,
     home_row_fill,
     introduction_sequence,
+    phase1_slots,
+    phase2_slots,
 )
 from takki.lesson.key_state import KeyStates
 from takki.persistence import Store
@@ -44,11 +48,11 @@ def source(words: dict[str, float]) -> WordSource:
 
 
 def names(steps: list[IntroductionStep]) -> list[list[str]]:
-    return [[k.key for k in step.keys] for step in steps]
+    return [[k.grapheme for k in step.keys] for step in steps]
 
 
-def phases(steps: list[IntroductionStep]) -> list[int]:
-    return [step.phase for step in steps]
+def stages(steps: list[IntroductionStep]) -> list[int]:
+    return [step.stage for step in steps]
 
 
 def flat(steps: list[IntroductionStep]) -> list[KeyIntroduction]:
@@ -59,8 +63,28 @@ def sequence(layout: Layout, words: dict[str, float] = EN_WORDS) -> list[Introdu
     return introduction_sequence(layout, source(words))
 
 
+def phase1(layout: Layout) -> list[list[str]]:
+    """Ordering A's first phase in isolation.
+
+    Phase 1 and Phase 2 are the *strategy's* internal structure and no longer
+    appear on `IntroductionStep` (ADR-032 § What this changes item 3), so a test
+    about the phases asks the strategy directly.
+    """
+    return [list(slot.keys) for slot in phase1_slots(layout, set(anchor_keys(layout)))]
+
+
+def phase2(layout: Layout, words: dict[str, float] = EN_WORDS) -> list[list[str]]:
+    had = set(anchor_keys(layout))
+    had |= {name for row in phase1(layout) for name in row}
+    return [list(slot.keys) for slot in phase2_slots(layout, source(words), had)]
+
+
+def phase2_steps(layout: Layout, words: dict[str, float] = EN_WORDS) -> list[IntroductionStep]:
+    return sequence(layout, words)[3 + len(phase1(layout)) :]
+
+
 def stocked(store: Store, profile_id: int, *chars: str) -> None:
-    """Make each character Active: one counted keystroke creates the row (ADR-027)."""
+    """Make each grapheme Active: one counted keystroke creates the row (ADR-027)."""
     for char in chars:
         store.upsert_key_stat(profile_id, char, True, "2026-01-01T10:00:00")
 
@@ -77,16 +101,13 @@ class TestPhase1Order:
     def test_english_full_phase_1(self) -> None:
         # F+J is the strategy's own first pair and Stage 0 has already spent
         # it, so Phase 1 opens at the middle fingers.
-        steps = [s for s in sequence(build_en()) if s.phase == 1]
-        assert names(steps) == [["d", "k"], ["s", "l"], ["a"], ["g", "h"]]
+        assert phase1(build_en()) == [["d", "k"], ["s", "l"], ["a"], ["g", "h"]]
 
     def test_english_step_4_is_solo_because_the_right_pinky_home_is_not_a_letter(self) -> None:
-        steps = [s for s in sequence(build_en()) if s.phase == 1]
-        assert names(steps)[2] == ["a"]
+        assert phase1(build_en())[2] == ["a"]
 
     def test_german_full_phase_1_pairs_a_with_o_umlaut_and_tails_a_umlaut(self) -> None:
-        steps = [s for s in sequence(build_de()) if s.phase == 1]
-        assert names(steps) == [
+        assert phase1(build_de()) == [
             ["d", "k"],
             ["s", "l"],
             ["a", "ö"],
@@ -95,17 +116,16 @@ class TestPhase1Order:
         ]
 
     def test_icelandic_full_phase_1_pairs_a_with_ae_and_has_no_tail(self) -> None:
-        steps = [s for s in sequence(build_is()) if s.phase == 1]
-        assert names(steps) == [["d", "k"], ["s", "l"], ["a", "æ"], ["g", "h"]]
+        assert phase1(build_is()) == [["d", "k"], ["s", "l"], ["a", "æ"], ["g", "h"]]
 
     def test_icelandic_dead_acute_is_on_the_home_row_but_not_in_phase_1(self) -> None:
         layout = build_is()
         assert layout.keys["dead-acute"].row == 3
-        assert "dead-acute" not in [k.key for s in sequence(layout) if s.phase == 1 for k in s.keys]
+        assert "dead-acute" not in [name for row in phase1(layout) for name in row]
 
     def test_phase_1_is_exactly_the_home_row_letters_stage_0_did_not_take(self) -> None:
         layout = build_de()
-        introduced = {k.key for s in sequence(layout) if s.phase == 1 for k in s.keys}
+        introduced = {name for row in phase1(layout) for name in row}
         assert introduced == {n for n, key in layout.keys.items() if key.row == 3} - {"f", "j"}
 
     def test_left_member_always_precedes_right(self) -> None:
@@ -114,10 +134,14 @@ class TestPhase1Order:
 
 
 class TestPhase1ToPhase2Boundary:
-    """Seam 2 — the boundary is exhaustion of the Phase 1 segment, not Bronze."""
+    """The boundary is exhaustion of the Phase 1 segment, not Bronze."""
 
     def test_boundary_is_positional_not_accuracy_based(self) -> None:
-        assert phases(sequence(build_en())) == [0] * 3 + [1] * 4 + [2] * 8
+        layout = build_en()
+        steps = sequence(layout)
+        assert stages(steps) == [0] * 3 + [1] * 12
+        assert names(steps)[3:7] == phase1(layout)
+        assert names(steps)[7:] == phase2(layout)
 
     def test_phase_2_opens_once_every_home_row_key_is_active(self) -> None:
         store = FakeStore()
@@ -125,8 +149,7 @@ class TestPhase1ToPhase2Boundary:
         stocked(store, profile.id, *"asdfghjkl", *"ruvm")
         step = introducer(build_en(), store, profile.id).introduce_next()
         assert step is not None
-        assert step.phase == 2
-        assert [k.key for k in step.keys] == ["e", "n"]
+        assert [k.grapheme for k in step.keys] == ["e", "n"]
 
     def test_one_missing_home_row_key_holds_phase_2_shut(self) -> None:
         store = FakeStore()
@@ -134,8 +157,7 @@ class TestPhase1ToPhase2Boundary:
         stocked(store, profile.id, *"asdfhjkl", *"ruvm")  # no g
         step = introducer(build_en(), store, profile.id).introduce_next()
         assert step is not None
-        assert step.phase == 1
-        assert [k.key for k in step.keys] == ["g"]
+        assert [k.grapheme for k in step.keys] == ["g"]
 
     def test_home_row_active_but_far_from_known_still_opens_phase_2(self) -> None:
         # One counted keystroke per key: Active, nowhere near ADR-027's Known
@@ -145,15 +167,15 @@ class TestPhase1ToPhase2Boundary:
         stocked(store, profile.id, *"asdfghjkl", *"ruvm")
         assert KeyStates(store, profile.id).known_keys() == set()
         step = introducer(build_en(), store, profile.id).introduce_next()
-        assert step is not None and step.phase == 2
+        assert step is not None
+        assert [k.grapheme for k in step.keys] == ["e", "n"]
 
 
 class TestPhase2Order:
-    """ADR-023 § Phase 2 — frequency leader per hand over key_frequencies."""
+    """ADR-032 § Ordering A — frequency leader per hand, over graphemes."""
 
     def test_english_full_phase_2_takes_one_key_per_hand(self) -> None:
-        steps = [s for s in sequence(build_en()) if s.phase == 2]
-        assert names(steps) == [
+        assert phase2(build_en()) == [
             ["e", "n"],
             ["t", "o"],
             ["w", "i"],
@@ -167,34 +189,35 @@ class TestPhase2Order:
     def test_solo_steps_drain_the_surviving_pool_to_the_end(self) -> None:
         # ADR-023 point 5 reads as though one solo step ends the phase; the
         # left pool outlives the right by three keys on QWERTY.
-        steps = [s for s in sequence(build_en()) if s.phase == 2]
+        steps = phase2_steps(build_en())
         assert names(steps[-3:]) == [["q"], ["x"], ["z"]]
         assert all(k.side == "L" for k in flat(steps[-3:]))
 
-    def test_every_key_on_the_layout_is_introduced_exactly_once(self) -> None:
+    def test_every_grapheme_on_the_layout_is_introduced_exactly_once(self) -> None:
         for build in (build_en, build_de, build_is):
             layout = build()
-            introduced = [k.key for k in flat(sequence(layout))]
-            assert sorted(introduced) == sorted(layout.keys)
+            introduced = [k.grapheme for k in flat(sequence(layout))]
+            assert sorted(introduced) == sorted(layout.graphemes)
 
     def test_zero_weight_keys_rank_last_and_break_ties_alphabetically(self) -> None:
         # c, q, v, x and z appear in no word above, so they tail the left pool
-        # in alphabetical order -- rank_graphemes' tie-break, applied to keys.
+        # in alphabetical order -- rank_graphemes' tie-break.
         left = [
-            k.key
+            k.grapheme
             for k in flat(sequence(build_en()))
-            if k.side == "L" and k.key not in "asdfg" + "rfv"
+            if k.side == "L" and k.grapheme not in "asdfg" + "rfv"
         ]
         assert left == ["e", "t", "w", "b", "c", "q", "x", "z"]
 
     def test_a_pool_that_empties_first_stops_appearing(self) -> None:
-        steps = [s for s in sequence(build_en()) if s.phase == 2]
+        steps = phase2_steps(build_en())
         sides = [[k.side for k in step.keys] for step in steps]
         assert sides == [["L", "R"]] * 5 + [["L"]] * 3
 
 
-class TestModifierIntroduction:
-    """ADR-023 + ADR-028 — a modifier is a Phase 2 step, ranked by composite frequency."""
+class TestCompositeIntroduction:
+    """ADR-032 § Decision 1 — a composite enters at its own frequency rank, and
+    the modifier rides in on the first one that needs it."""
 
     IS_WORDS: ClassVar[dict[str, float]] = {
         "ááá": 100.0,
@@ -204,56 +227,160 @@ class TestModifierIntroduction:
         "sss": 60.0,
     }
 
-    def test_icelandic_reaches_the_dead_key_in_phase_2(self) -> None:
-        steps = sequence(build_is(), self.IS_WORDS)
-        modifiers = [k for k in flat(steps) if k.is_modifier]
-        assert [k.key for k in modifiers] == ["dead-acute"]
+    # A composite that outranks its own base letter: "ééé" is the only heavy
+    # word and é's base, e, barely appears. Both are left-hand Phase 2 keys, so
+    # nothing else decides their order.
+    ELIGIBILITY_WORDS: ClassVar[dict[str, float]] = {"ééé": 100.0, "eee": 1.0}
 
-    def test_dead_acute_outranks_every_other_right_hand_key_when_acutes_dominate(self) -> None:
-        # á + é weight lands entirely on dead-acute, which shares the right
-        # pinky column with nothing else the corpus uses.
-        steps = [s for s in sequence(build_is(), self.IS_WORDS) if s.phase == 2]
-        assert names(steps)[0] == ["e", "dead-acute"]
+    def test_the_dead_key_is_never_an_ordered_item(self) -> None:
+        order = [k.grapheme for k in flat(sequence(build_is(), self.IS_WORDS))]
+        assert "dead-acute" not in order
+        assert sorted(order) == sorted(build_is().graphemes)
 
-    def test_dead_acute_is_the_twentieth_key_on_real_icelandic_frequencies(self) -> None:
-        # ADR-023 § Spike validation placed it at step 18, measured on a
-        # sequence with no Stage 0 in front of it. Stage 0 hoists r u v m to
-        # the head, which moves the accent key two places later in absolute
-        # terms and one pair earlier within Phase 2 -- u and m have left the
-        # right-hand pool. Still the one number in this file no fixture can
-        # manufacture: it is real wordfreq Icelandic.
-        order = [k.key for k in flat(introduction_sequence(build_is(), WordfreqSource()))]
-        assert order.index("dead-acute") == 19
+    def test_the_sequence_terminates_instead_of_repeating_the_modifier(self) -> None:
+        # Replaces the roadmap-B8 pin (deleted 2026-08-23, session 8c): the
+        # accent key used to be re-announced forever once every letter was
+        # Active, because nothing could ever retire it. It is not in the order
+        # at all now, so an all-Active child is simply finished.
+        store = FakeStore()
+        profile = store.create_profile("Ana")
+        stocked(store, profile.id, *build_is().graphemes)
+        intro = introducer(build_is(), store, profile.id, self.IS_WORDS)
+        assert intro.introduce_next() is None
+        assert intro.introduce_next() is None
 
-    def test_german_has_no_modifier_anywhere_in_the_sequence(self) -> None:
-        assert not any(k.is_modifier for k in flat(sequence(build_de())))
+    def test_composites_rank_by_their_own_frequency_and_pair_with_direct_keys(self) -> None:
+        # á outweighs every remaining letter in this corpus, so it opens Phase
+        # 2 as an ordinary left-hand leader, paired with the right pool's own.
+        assert phase2(build_is(), self.IS_WORDS)[0] == ["á", "n"]
+
+    def test_a_composite_is_pooled_by_the_hand_of_its_base_stroke(self) -> None:
+        # ADR-032 § Decision 1 rule 2 -- not by the modifier, which is R-pink
+        # for all six and balances nothing.
+        sides = {
+            k.grapheme: k.side for k in flat(introduction_sequence(build_is(), WordfreqSource()))
+        }
+        assert [sides[c] for c in "áéíóúý"] == ["L", "L", "R", "R", "R", "R"]
+
+    def test_a_step_may_carry_two_graphemes_and_three_physical_keys(self) -> None:
+        # The combination ADR-028 § Pair ramp-up did not obviously cover before
+        # 2026-08-23: a composite paired with an ordinary letter.
+        step = next(
+            s
+            for s in introduction_sequence(build_is(), WordfreqSource())
+            if any(k.is_composite for k in s.keys) and len(s.keys) == 2
+        )
+        assert [k.grapheme for k in step.keys] == ["á", "ð"]
+        assert [k.keys for k in step.keys] == [("dead-acute", "a"), ("ð",)]
+
+    def test_a_composite_waits_for_its_base_letter_and_is_not_dropped(self) -> None:
+        order = [k.grapheme for k in flat(sequence(build_is(), self.ELIGIBILITY_WORDS))]
+        assert order.count("é") == 1
+        assert order.index("e") < order.index("é")
+
+    def test_the_ineligible_leader_is_skipped_rather_than_stalled_on(self) -> None:
+        # é outranks e but cannot come first, so the left pool hands over its
+        # next eligible member and keeps é at its head for the very next step.
+        assert phase2(build_is(), self.ELIGIBILITY_WORDS)[:2] == [["e", "i"], ["é", "n"]]
+
+    def test_german_has_no_composite_anywhere_in_the_sequence(self) -> None:
+        assert not any(k.is_composite for k in flat(sequence(build_de())))
+        assert all(k.modifier is None for k in flat(sequence(build_de())))
 
     def test_a_modifier_is_never_the_reference_for_another_key(self) -> None:
         for k in flat(sequence(build_is(), self.IS_WORDS)):
-            if k.location is not None:
-                assert k.location.reference != "dead-acute"
+            references = [k.location] + ([k.modifier.location] if k.modifier else [])
+            for location in references:
+                if location is not None:
+                    assert location.reference != "dead-acute"
 
-    def test_a_modifier_repeats_every_session_until_roadmap_b8_is_resolved(self) -> None:
-        # Pinned, not endorsed. A modifier can never acquire a key_stats row
-        # (roadmap B8), so nothing outlives the session-local record and the
-        # accent key is re-announced forever once the sequence is exhausted.
-        # Delete this test when B8 is closed -- it is the marker for where.
+    def test_the_modifier_gets_a_finger_and_a_location_of_its_own(self) -> None:
+        first = next(k for k in flat(sequence(build_is(), self.IS_WORDS)) if k.modifier)
+        assert first.grapheme == "á"
+        assert first.modifier is not None
+        assert first.modifier.key == "dead-acute"
+        assert first.modifier.finger == "R-pink"
+        assert first.modifier.location == Location(reference="æ", row_delta=0, col_delta=1)
+        assert first.modifier.mechanism == "dead-key"
+
+    def test_only_the_first_composite_of_a_class_carries_the_modifier(self) -> None:
+        composites = [k for k in flat(sequence(build_is(), self.IS_WORDS)) if k.is_composite]
+        assert [k.grapheme for k in composites] == ["á", "é", "í", "ó", "ú", "ý"]
+        assert [k.modifier is not None for k in composites] == [True] + [False] * 5
+
+    def test_a_composite_carries_its_base_and_both_keystrokes(self) -> None:
+        composite = next(k for k in flat(sequence(build_is(), self.IS_WORDS)) if k.is_composite)
+        assert composite.base == "a"
+        assert composite.keys == ("dead-acute", "a")
+        assert composite.mechanism == "dead-key"
+        # No location clause: the script names the base letter outright, and
+        # locating á against the `a` it already requires is a self-reference.
+        assert composite.location is None
+
+    def test_a_direct_strike_grapheme_is_one_key_and_no_modifier(self) -> None:
+        for k in flat(sequence(build_de())):
+            assert k.keys == (k.grapheme,)
+            assert k.base == k.grapheme
+            assert k.mechanism == "direct"
+
+
+class TestModifierAnnouncementMemory:
+    """Seam 2 — whether the modifier has already been announced is *derived*
+    from the keys behind the graphemes the child has, not tracked separately.
+
+    The two candidates differ in exactly one case: a composite introduced and
+    never answered. Derivation re-announces it next session, which is what
+    ADR-023 § What the introducer remembers already decided for letters — the
+    script is that letter's only teaching moment, and the modifier clause is
+    part of it.
+    """
+
+    ACUTES: ClassVar[tuple[str, ...]] = ("á", "é", "í", "ó", "ú", "ý")
+
+    @classmethod
+    def only_acutes_left(cls, store: Store, profile_id: int) -> None:
+        stocked(
+            store,
+            profile_id,
+            *(name for name in build_is().graphemes if name not in cls.ACUTES),
+        )
+
+    def test_the_first_composite_of_a_step_carries_the_modifier_and_the_rest_do_not(self) -> None:
         store = FakeStore()
         profile = store.create_profile("Ana")
-        stocked(store, profile.id, *[n for n in build_is().keys if n != "dead-acute"])
-        for _ in range(3):
-            step = introducer(build_is(), store, profile.id, self.IS_WORDS).introduce_next()
-            assert step is not None
-            assert [k.key for k in step.keys] == ["dead-acute"]
+        self.only_acutes_left(store, profile.id)
+        intro = introducer(build_is(), store, profile.id)
+        first, second = intro.introduce_next(), intro.introduce_next()
+        assert first is not None and second is not None
+        assert [k.grapheme for k in first.keys] == ["á", "í"]
+        assert [k.modifier is not None for k in first.keys] == [True, False]
+        assert [k.grapheme for k in second.keys] == ["é", "ó"]
+        assert [k.modifier is not None for k in second.keys] == [False, False]
 
-    def test_the_modifier_still_gets_a_finger_and_a_location(self) -> None:
-        modifier = next(k for k in flat(sequence(build_is(), self.IS_WORDS)) if k.is_modifier)
-        assert modifier.finger == "R-pink"
-        assert modifier.location == Location(reference="æ", row_delta=0, col_delta=1)
-        assert modifier.mechanism == "dead-key"
+    def test_a_composite_never_answered_is_re_announced_with_its_modifier(self) -> None:
+        # The case that separates derivation from a session-local set. Nothing
+        # was answered, so no key_stats row exists for á and the derived answer
+        # is "not taught yet" -- which is the wanted one: the script is that
+        # letter's only teaching moment, modifier clause included.
+        store = FakeStore()
+        profile = store.create_profile("Ana")
+        self.only_acutes_left(store, profile.id)
+        introducer(build_is(), store, profile.id).introduce_next()
+        step = introducer(build_is(), store, profile.id).introduce_next()
+        assert step is not None
+        assert [k.grapheme for k in step.keys] == ["á", "í"]
+        assert step.keys[0].modifier is not None
+        assert step.keys[0].modifier.mechanism == "dead-key"
 
-    def test_a_direct_strike_key_has_no_mechanism(self) -> None:
-        assert all(k.mechanism is None for k in flat(sequence(build_de())))
+    def test_a_composite_that_was_answered_retires_the_modifier_for_good(self) -> None:
+        store = FakeStore()
+        profile = store.create_profile("Ana")
+        self.only_acutes_left(store, profile.id)
+        stocked(store, profile.id, "á")
+        step = introducer(build_is(), store, profile.id).introduce_next()
+        assert step is not None
+        assert [k.grapheme for k in step.keys] == ["é", "í"]
+        assert all(k.modifier is None for k in step.keys)
 
 
 class TestLocation:
@@ -261,7 +388,7 @@ class TestLocation:
 
     def test_the_very_first_key_has_no_reference(self) -> None:
         first = flat(sequence(build_en()))[0]
-        assert first.key == "f"
+        assert first.grapheme == "f"
         assert first.location is None
 
     def test_same_finger_reference_wins_over_a_physically_closer_key(self) -> None:
@@ -274,28 +401,28 @@ class TestLocation:
         steps = introduction_sequence(
             build_en(), source(EN_WORDS), KeyStates(store, profile.id).active_keys()
         )
-        e = next(k for k in flat(steps) if k.key == "e")
+        e = next(k for k in flat(steps) if k.grapheme == "e")
         assert e.location == Location(reference="d", row_delta=-1, col_delta=0)
 
     def test_different_finger_fallback_when_the_finger_has_nothing_yet(self) -> None:
         # K is the second key of step 2, so the right middle finger owns
         # nothing; the closest key the child has is J, one column left.
-        k = next(k for k in flat(sequence(build_en())) if k.key == "k")
+        k = next(k for k in flat(sequence(build_en())) if k.grapheme == "k")
         assert k.location == Location(reference="j", row_delta=0, col_delta=1)
 
     def test_the_right_hand_member_may_anchor_to_its_own_step_partner(self) -> None:
-        j = next(k for k in flat(sequence(build_en())) if k.key == "j")
+        j = next(k for k in flat(sequence(build_en())) if k.grapheme == "j")
         assert j.location == Location(reference="f", row_delta=0, col_delta=3)
 
     def test_vertical_reach_beats_a_horizontal_one_at_equal_distance(self) -> None:
         # T is at (2,5), left index. Same-finger candidates by then include
         # G (3,5) and R (2,4), both Manhattan distance 1 away; G is the
         # straight vertical reach and wins on the |dcol| tie-break.
-        t = next(k for k in flat(sequence(build_en())) if k.key == "t")
+        t = next(k for k in flat(sequence(build_en())) if k.grapheme == "t")
         assert t.location == Location(reference="g", row_delta=-1, col_delta=0)
 
     def test_a_number_row_letter_measures_two_rows_up(self) -> None:
-        sharp_s = next(k for k in flat(sequence(build_de())) if k.key == "ß")
+        sharp_s = next(k for k in flat(sequence(build_de())) if k.grapheme == "ß")
         assert sharp_s.location is not None
         assert sharp_s.location.row_delta == -2
 
@@ -304,40 +431,50 @@ class TestScript:
     """Placeholder English, in focus_model's style — ADR-022's YAML tier is unwritten."""
 
     def test_adr_023s_worked_example_verbatim(self) -> None:
-        e = next(k for k in flat(sequence(build_en())) if k.key == "e")
+        e = next(k for k in flat(sequence(build_en())) if k.grapheme == "e")
         assert describe(e) == "New letter: E. Use your left middle finger. Reach one row up from D."
 
     def test_the_first_key_drops_the_location_clause(self) -> None:
         f = flat(sequence(build_en()))[0]
         assert describe(f) == "New letter: F. Use your left index finger."
 
-    def test_a_modifier_is_announced_as_a_key_not_a_letter(self) -> None:
-        modifier = next(
+    def test_the_first_composite_of_a_class_explains_the_mechanism(self) -> None:
+        first = next(
             k
-            for k in flat(sequence(build_is(), TestModifierIntroduction.IS_WORDS))
-            if k.is_modifier
+            for k in flat(sequence(build_is(), TestCompositeIntroduction.IS_WORDS))
+            if k.is_composite
         )
-        assert describe(modifier) == (
-            "New key: the accent key. Use your right little finger. "
-            "Reach one position to the right from Æ. "
+        assert describe(first) == (
+            "New letter: Á. Press the accent key first, then A. "
+            "The accent key is one position to the right from Æ. "
             "It will not make a sound on its own — it changes the next letter you press."
         )
 
+    def test_a_later_composite_of_the_same_class_is_two_sentences(self) -> None:
+        later = [
+            k
+            for k in flat(sequence(build_is(), TestCompositeIntroduction.IS_WORDS))
+            if k.is_composite
+        ][1]
+        assert describe(later) == "New letter: É. Press the accent key first, then E."
+
     def test_plural_and_diagonal_reaches_read_correctly(self) -> None:
-        j = next(k for k in flat(sequence(build_en())) if k.key == "j")
+        j = next(k for k in flat(sequence(build_en())) if k.grapheme == "j")
         assert describe(j) == (
             "New letter: J. Use your right index finger. Reach three positions to the right from F."
         )
 
     def test_sharp_s_is_not_upper_cased_into_two_letters(self) -> None:
         # "ß".upper() is "SS", which would be spoken as two letters.
-        sharp_s = next(k for k in flat(sequence(build_de())) if k.key == "ß")
+        sharp_s = next(k for k in flat(sequence(build_de())) if k.grapheme == "ß")
         assert describe(sharp_s).startswith("New letter: ß.")
 
-    def test_every_generated_script_renders(self) -> None:
+    def test_every_generated_script_renders_as_a_letter(self) -> None:
+        # Nothing is announced as anything but a letter now: the modifier has
+        # no step of its own to be announced in (ADR-032 § Decision 1).
         for build in (build_en, build_de, build_is):
             for k in flat(sequence(build())):
-                assert describe(k).startswith(("New letter: ", "New key: "))
+                assert describe(k).startswith("New letter: ")
 
 
 class TestIntroducerMemory:
@@ -348,7 +485,7 @@ class TestIntroducerMemory:
         profile = store.create_profile("Ana")
         step = introducer(build_en(), store, profile.id).introduce_next()
         assert step is not None
-        assert [k.key for k in step.keys] == ["f", "j"]
+        assert [k.grapheme for k in step.keys] == ["f", "j"]
 
     def test_a_step_is_not_repeated_even_though_nothing_was_pressed(self) -> None:
         store = FakeStore()
@@ -367,7 +504,7 @@ class TestIntroducerMemory:
         introducer(build_en(), store, profile.id).introduce_next()
         step = introducer(build_en(), store, profile.id).introduce_next()
         assert step is not None
-        assert [k.key for k in step.keys] == ["f", "j"]
+        assert [k.grapheme for k in step.keys] == ["f", "j"]
 
     def test_a_fresh_introducer_skips_what_was_answered(self) -> None:
         store = FakeStore()
@@ -375,7 +512,7 @@ class TestIntroducerMemory:
         stocked(store, profile.id, "f", "j")
         step = introducer(build_en(), store, profile.id).introduce_next()
         assert step is not None
-        assert [k.key for k in step.keys] == ["r", "u"]
+        assert [k.grapheme for k in step.keys] == ["r", "u"]
 
     def test_an_active_key_is_never_re_introduced(self) -> None:
         store = FakeStore()
@@ -384,7 +521,7 @@ class TestIntroducerMemory:
         intro = introducer(build_en(), store, profile.id)
         emitted: list[str] = []
         while (step := intro.introduce_next()) is not None:
-            emitted.extend(k.key for k in step.keys)
+            emitted.extend(k.grapheme for k in step.keys)
         assert not set(emitted) & set("asdfghjklent")
         assert sorted(emitted) == sorted("bcimopquvwxyzr")
         # Stage 0 keys the child never answered are still owed, and Stage 0
@@ -397,7 +534,7 @@ class TestIntroducerMemory:
         stocked(store, profile.id, "f")
         step = introducer(build_en(), store, profile.id).introduce_next()
         assert step is not None
-        assert [k.key for k in step.keys] == ["j"]
+        assert [k.grapheme for k in step.keys] == ["j"]
 
     def test_the_sequence_runs_out(self) -> None:
         store = FakeStore()
@@ -423,7 +560,7 @@ class TestIntroducerMemory:
         stocked(store, profile.id, *"abcdefghijklmnopqrstuvwxy")
         intro = introducer(build_en(), store, profile.id)
         final = intro.introduce_next()
-        assert final is not None and [k.key for k in final.keys] == ["z"]
+        assert final is not None and [k.grapheme for k in final.keys] == ["z"]
         assert intro.introduce_next() is None
         assert intro.last_step is final
 
@@ -441,13 +578,39 @@ class TestPurity:
         layout, words = build_de(), EN_WORDS
         assert names(sequence(layout, words)) == names(sequence(layout, words))
 
-    def test_a_composite_grapheme_in_the_active_set_is_not_a_physical_key(self) -> None:
-        # key_stats is keyed by grapheme; 'á' has no layout position of its own
-        # and must not derail the sequence.
+    def test_a_composite_in_the_active_set_brings_its_modifier_with_it(self) -> None:
+        # The two running sets come apart here: 'á' belongs to what has been
+        # introduced and has no position of its own, while 'dead-acute' belongs
+        # to what the child can strike and must never be introduced again.
         layout = build_is()
-        with_composite = introduction_sequence(layout, source(EN_WORDS), {"á", "f"})
-        without = introduction_sequence(layout, source(EN_WORDS), {"f"})
-        assert names(with_composite) == names(without)
+        steps = introduction_sequence(layout, source(EN_WORDS), {"á", "a", "æ"})
+        assert "á" not in [k.grapheme for k in flat(steps)]
+        assert all(k.modifier is None for k in flat(steps))
+
+    def test_a_key_is_never_the_reference_for_itself(self) -> None:
+        # `struck` can hold a key before the curriculum introduces it, because
+        # a composite pulls its base stroke in. Without the self-exclusion the
+        # base's own step anchors it to itself at distance zero and the script
+        # says "reach nowhere from A".
+        layout = build_is()
+        steps = introduction_sequence(layout, source(EN_WORDS), {"á"})
+        for k in flat(steps):
+            assert k.location is None or k.location.reference != k.base
+
+    def test_a_composite_whose_base_is_not_a_grapheme_fails_loudly(self) -> None:
+        # ADR-032 § Decision 1 rule 1 assumes a composite's base is a letter
+        # the curriculum teaches. A layout that breaks that assumption would
+        # otherwise drop the composite silently.
+        layout = build_is()
+        del layout.graphemes["a"]
+        with pytest.raises(ValueError, match="not a grapheme of this layout"):
+            introduction_sequence(layout, source(EN_WORDS))
+
+    def test_a_name_the_layout_does_not_produce_is_ignored(self) -> None:
+        layout = build_en()
+        assert names(introduction_sequence(layout, source(EN_WORDS), {"ß"})) == names(
+            sequence(layout)
+        )
 
     def test_the_default_layout_from_the_fake_platform_sequences(self) -> None:
         platform = FakePlatformInterface()
@@ -467,13 +630,13 @@ def scrambled_index_columns() -> Layout:
 def alphabetical(
     layout: Layout, source: WordSource, had: AbstractSet[str]
 ) -> list[IntroductionSlot]:
-    """A trivial second ordering: every remaining key solo, alphabetically.
+    """A trivial second ordering: every remaining grapheme solo, alphabetically.
 
     Not a curriculum — it exists to show the order below Stage 0 is selectable,
-    and lives in the test file for exactly that reason (ADR-023 § The
-    introduction order is a swappable strategy ships one strategy).
+    and lives in the test file for exactly that reason (ADR-032 § Decision 2
+    ships one strategy).
     """
-    return [IntroductionSlot(1, (name,)) for name in sorted(set(layout.keys) - set(had))]
+    return [IntroductionSlot(1, (name,)) for name in sorted(set(layout.graphemes) - set(had))]
 
 
 class TestStage0:
@@ -494,9 +657,9 @@ class TestStage0:
 
     def test_stage_0_is_three_position_pairs_home_row_first_then_up_then_down(self) -> None:
         layout = build_en()
-        steps = [s for s in sequence(layout) if s.phase == 0]
+        steps = [s for s in sequence(layout) if s.stage == 0]
         assert names(steps) == [["f", "j"], ["r", "u"], ["v", "m"]]
-        assert [[layout.keys[k.key].row for k in step.keys] for step in steps] == [
+        assert [[layout.keys[k.grapheme].row for k in step.keys] for step in steps] == [
             [3, 3],
             [2, 2],
             [4, 4],
@@ -504,11 +667,19 @@ class TestStage0:
 
     def test_stage_0_comes_first_for_every_layout(self) -> None:
         for build in (build_en, build_de, build_is):
-            assert phases(sequence(build()))[:3] == [0, 0, 0]
+            assert stages(sequence(build()))[:3] == [0, 0, 0]
             assert names(sequence(build()))[:3] == [["f", "j"], ["r", "u"], ["v", "m"]]
 
+    def test_stage_is_zero_for_exactly_the_three_stage_0_steps(self) -> None:
+        # ADR-032 § What this changes item 3: the field carries 0 or 1 and
+        # nothing else -- Phase 2's old `2` is not a value any more.
+        for build in (build_en, build_de, build_is):
+            found = stages(sequence(build()))
+            assert found[:3] == [0, 0, 0]
+            assert set(found[3:]) == {1}
+
     def test_the_stage_teaches_the_reach_and_return_from_the_bump(self) -> None:
-        located = {k.key: k.location for k in flat(sequence(build_en()))[:6]}
+        located = {k.grapheme: k.location for k in flat(sequence(build_en()))[:6]}
         assert located == {
             "f": None,
             "j": Location(reference="f", row_delta=0, col_delta=3),
@@ -521,16 +692,16 @@ class TestStage0:
     def test_the_strategy_never_re_introduces_a_stage_0_key(self) -> None:
         for build in (build_en, build_de, build_is):
             layout = build()
-            below = [k.key for s in sequence(layout) if s.phase != 0 for k in s.keys]
+            below = [k.grapheme for s in sequence(layout) if s.stage != 0 for k in s.keys]
             assert not set(below) & set(anchor_keys(layout))
-            assert sorted(below) == sorted(set(layout.keys) - set(anchor_keys(layout)))
+            assert sorted(below) == sorted(set(layout.graphemes) - set(anchor_keys(layout)))
 
     def test_the_consumed_home_row_pair_leaves_no_degenerate_step(self) -> None:
         # F+J is _PHASE1_COLUMN_PAIRS' first slot as well; fully consumed, it
         # must vanish rather than emit an empty step.
         steps = sequence(build_en())
         assert all(step.keys for step in steps)
-        assert len([s for s in steps if s.phase == 1]) == 4
+        assert len(phase1(build_en())) == 4
 
     def test_a_half_finished_stage_0_resumes_key_by_key(self) -> None:
         store = FakeStore()
@@ -544,73 +715,136 @@ class TestStage0:
 
 
 class TestFullIntroductionOrder:
-    """The whole curriculum, Stage 0 in front, against the fixed corpus."""
+    """The whole curriculum, Stage 0 in front, against the fixed corpus.
+
+    English and German are direct-strike throughout, so ADR-032's model change
+    must leave their orders untouched: the two lists below are byte-identical
+    to the ones session 8b pinned, and only the `stage` column has moved (`2`
+    collapsed into `1`, because Phase 2 is not a protocol concept).
+    """
 
     def test_english(self) -> None:
         steps = sequence(build_en())
-        assert [(s.phase, [k.key for k in s.keys]) for s in steps] == [
-            (0, ["f", "j"]),
-            (0, ["r", "u"]),
-            (0, ["v", "m"]),
-            (1, ["d", "k"]),
-            (1, ["s", "l"]),
-            (1, ["a"]),
-            (1, ["g", "h"]),
-            (2, ["e", "n"]),
-            (2, ["t", "o"]),
-            (2, ["w", "i"]),
-            (2, ["b", "p"]),
-            (2, ["c", "y"]),
-            (2, ["q"]),
-            (2, ["x"]),
-            (2, ["z"]),
+        assert names(steps) == [
+            ["f", "j"],
+            ["r", "u"],
+            ["v", "m"],
+            ["d", "k"],
+            ["s", "l"],
+            ["a"],
+            ["g", "h"],
+            ["e", "n"],
+            ["t", "o"],
+            ["w", "i"],
+            ["b", "p"],
+            ["c", "y"],
+            ["q"],
+            ["x"],
+            ["z"],
         ]
+        assert stages(steps) == [0] * 3 + [1] * 12
 
     def test_german(self) -> None:
         steps = sequence(build_de())
-        assert [(s.phase, [k.key for k in s.keys]) for s in steps] == [
-            (0, ["f", "j"]),
-            (0, ["r", "u"]),
-            (0, ["v", "m"]),
-            (1, ["d", "k"]),
-            (1, ["s", "l"]),
-            (1, ["a", "ö"]),
-            (1, ["g", "h"]),
-            (1, ["ä"]),
-            (2, ["e", "n"]),
-            (2, ["t", "o"]),
-            (2, ["w", "i"]),
-            (2, ["b", "p"]),
-            (2, ["c", "z"]),
-            (2, ["q", "ß"]),
-            (2, ["x", "ü"]),
-            (2, ["y"]),
+        assert names(steps) == [
+            ["f", "j"],
+            ["r", "u"],
+            ["v", "m"],
+            ["d", "k"],
+            ["s", "l"],
+            ["a", "ö"],
+            ["g", "h"],
+            ["ä"],
+            ["e", "n"],
+            ["t", "o"],
+            ["w", "i"],
+            ["b", "p"],
+            ["c", "z"],
+            ["q", "ß"],
+            ["x", "ü"],
+            ["y"],
         ]
+        assert stages(steps) == [0] * 3 + [1] * 13
 
     def test_icelandic(self) -> None:
+        # The dead key has left the order and the six acutes have entered it,
+        # each at its own rank in this fixed corpus (all six weigh zero here,
+        # so they tie alphabetically behind the letters that do not).
         steps = sequence(build_is())
-        assert [(s.phase, [k.key for k in s.keys]) for s in steps] == [
-            (0, ["f", "j"]),
-            (0, ["r", "u"]),
-            (0, ["v", "m"]),
-            (1, ["d", "k"]),
-            (1, ["s", "l"]),
-            (1, ["a", "æ"]),
-            (1, ["g", "h"]),
-            (2, ["e", "n"]),
-            (2, ["t", "o"]),
-            (2, ["w", "i"]),
-            (2, ["b", "p"]),
-            (2, ["c", "dead-acute"]),
-            (2, ["q", "y"]),
-            (2, ["x", "ð"]),
-            (2, ["z", "ö"]),
-            (2, ["þ"]),
+        assert names(steps) == [
+            ["f", "j"],
+            ["r", "u"],
+            ["v", "m"],
+            ["d", "k"],
+            ["s", "l"],
+            ["a", "æ"],
+            ["g", "h"],
+            ["e", "n"],
+            ["t", "o"],
+            ["w", "i"],
+            ["b", "p"],
+            ["c", "y"],
+            ["q", "í"],
+            ["x", "ð"],
+            ["z", "ó"],
+            ["á", "ö"],
+            ["é", "ú"],
+            ["ý"],
+            ["þ"],
+        ]
+        assert stages(steps) == [0] * 3 + [1] * 16
+
+
+class TestRealIcelandic:
+    """The numbers no fixture can manufacture — real wordfreq Icelandic."""
+
+    def test_a_acute_is_the_highest_ranked_composite_at_about_one_and_a_third_percent(
+        self,
+    ) -> None:
+        layout = build_is()
+        weights = WordfreqSource().grapheme_weights(layout)
+        share = {c: weights[c] / sum(weights.values()) for c in "áéíóúý"}
+        assert max(share, key=lambda c: share[c]) == "á"
+        assert 0.013 < share["á"] < 0.014
+
+    def test_the_accent_key_arrives_with_a_acute_and_not_twenty_keys_earlier(self) -> None:
+        steps = introduction_sequence(build_is(), WordfreqSource())
+        announced = [k for k in flat(steps) if k.modifier is not None]
+        assert [k.grapheme for k in announced] == ["á"]
+        order = [k.grapheme for k in flat(steps)]
+        assert order.index("á") == 18
+        # ADR-023 § Spike validation put the dead key at step 18 of a sequence
+        # with no Stage 0, and session 8b's build shipped it as the 20th key.
+        # It is now not a step at all.
+        assert "dead-acute" not in order
+
+    def test_the_full_real_icelandic_order(self) -> None:
+        steps = introduction_sequence(build_is(), WordfreqSource())
+        assert names(steps) == [
+            ["f", "j"],
+            ["r", "u"],
+            ["v", "m"],
+            ["d", "k"],
+            ["s", "l"],
+            ["a", "æ"],
+            ["g", "h"],
+            ["e", "i"],
+            ["t", "n"],
+            ["á", "ð"],
+            ["b", "o"],
+            ["é", "þ"],
+            ["c", "y"],
+            ["w", "í"],
+            ["x", "ó"],
+            ["z", "ö"],
+            ["q", "p"],
+            ["ú"],
+            ["ý"],
         ]
 
 
 class TestStrategySeam:
-    """ADR-023 § The introduction order is a swappable strategy."""
+    """ADR-032 § Decision 2 — the ordering below Stage 0 is selectable."""
 
     def test_the_default_is_the_two_phase_home_row_fill_order(self) -> None:
         assert DEFAULT_STRATEGY is home_row_fill
@@ -620,7 +854,7 @@ class TestStrategySeam:
     def test_swapping_the_strategy_leaves_stage_0_identical(self) -> None:
         swapped = introduction_sequence(build_en(), source(EN_WORDS), strategy=alphabetical)
         assert names(swapped)[:3] == [["f", "j"], ["r", "u"], ["v", "m"]]
-        assert phases(swapped)[:3] == [0, 0, 0]
+        assert stages(swapped)[:3] == [0, 0, 0]
 
     def test_swapping_the_strategy_changes_the_order_below_stage_0(self) -> None:
         swapped = introduction_sequence(build_en(), source(EN_WORDS), strategy=alphabetical)
@@ -648,7 +882,7 @@ class TestStrategySeam:
         )
         emitted: list[list[str]] = []
         while (step := intro.introduce_next()) is not None:
-            emitted.append([k.key for k in step.keys])
+            emitted.append([k.grapheme for k in step.keys])
         assert emitted == [["f", "j"], ["r", "u"], ["v", "m"]] + [
             [c] for c in "abcdeghiklnopqstwxyz"
         ]

@@ -5,7 +5,6 @@ from wordfreq import get_frequency_dict
 from takki.language import (
     compute_bigram_weights,
     compute_grapheme_weights,
-    compute_key_frequencies,
     rank_graphemes,
     sample_bigrams,
 )
@@ -44,11 +43,6 @@ class WordfreqSource:
         if key not in self._graphemes:
             self._graphemes[key] = compute_grapheme_weights(self._word_weights(layout.lang), layout)
         return dict(self._graphemes[key])
-
-    def key_frequencies(self, layout: Layout) -> dict[str, float]:
-        # Cheap once the grapheme weights are cached: one pass over the
-        # layout's graphemes, not over the corpus.
-        return compute_key_frequencies(layout, self.grapheme_weights(layout))
 
     def bigrams(self, layout: Layout, count: int, rng: random.Random) -> list[str]:
         key = _layout_key(layout)
