@@ -75,3 +75,12 @@ ATTEMPT_WINDOW = 200
 KNOWN_MIN_ATTEMPTS = 90
 KNOWN_MIN_ACCURACY = 0.90
 KNOWN_MIN_DISTINCT_DAYS = 2
+
+# ADR-027 § The Anchor Gate. The first milestone rung's bar for the six index
+# home-column keys: shorter than the general Known floor and stricter on
+# accuracy, because a child who is only 90% sure where home is has no anchor.
+# The distinct-day floor is shared with Known -- consolidation is the same
+# mechanism either way. Anchor accuracy is also maintained for the life of the
+# profile: falling below ANCHOR_MIN_ACCURACY on f or j re-injects return-drills.
+ANCHOR_MIN_ATTEMPTS = 25
+ANCHOR_MIN_ACCURACY = 0.95
