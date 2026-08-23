@@ -44,18 +44,28 @@ Proportions are configurable in the global lesson progression rules config (not 
 
 Named milestones wrap the adaptive engine to give parents, teachers, and children concrete progress markers:
 
-| Level | Criterion |
-|---|---|
-| **Bronze** | Home row keys known (≥ 90% accuracy sustained) — drills only |
-| **Silver** | ≥ 1/3 of the language's full key set mastered |
-| **Gold** | ≥ 2/3 of the language's full key set mastered |
-| **Platinum** | Full alphabet known (≥ 90% accuracy sustained) — any word attemptable |
-| **Diamond** | Fluent dictation — ≥ 95% accuracy on real words without spelling prompt |
-| **Speed** | Dictation at ≥ 30 WPM with ≥ 95% accuracy (optional; for motivated older learners) |
+*(Rewritten 2026-08-23 — six evenly spaced key-count rungs replacing the previous four. Criteria and rationale live in [ADR-027 § Milestone Ladder](0027-key-and-accuracy-state-model.md#milestone-ladder), which is authoritative; this table mirrors it.)*
 
-**Milestone gates are key-count based, not coverage based.** Silver triggers when the child has mastered ≥ 1/3 of the language's full key set; Gold at ≥ 2/3. "Full key set" is the count of distinct alphabetic characters on the language's physical keyboard layout, enumerated via the platform scan code interface. This is the authoritative source — it includes diacritics and native special characters (e.g. Icelandic has 34 keys including ð, þ, á, é, í; Czech 40 keys) and excludes loanword-only characters that happen to appear in wordfreq data. Using the language's own alphabet size as the denominator means Silver and Gold are always "a third of your alphabet" and "two thirds of your alphabet" regardless of language complexity.
+| # | Slug | Criterion |
+|---|---|---|
+| 1 | `anchor` | The six index home-column keys (`r f v` / `u j m`) Known at the anchor bar — 25 attempts, ≥ 95%, ≥ 2 days |
+| 2 | `third` | ≥ 1/3 of the language's grapheme set Known — Layer 2 has unlocked, so real words are typeable |
+| 3 | `half` | ≥ 1/2 of the grapheme set Known |
+| 4 | `two_thirds` | ≥ 2/3 of the grapheme set Known |
+| 5 | `five_sixths` | ≥ 5/6 of the grapheme set Known |
+| 6 | `alphabet` | The full grapheme set Known — any word attemptable |
+| — | **Diamond** | Fluent dictation — ≥ 95% accuracy on real words without spelling prompt |
+| — | **Speed** | Dictation at ≥ 30 WPM with ≥ 95% accuracy (optional; for motivated older learners) |
 
-Measured across 20 Latin-script languages: Silver gate (⌊alpha/3⌋) ranges from 8 keys (Finnish, Indonesian) to 13 keys (Czech, Slovak), average 10 keys. Gold gate (⌊alpha×2/3⌋) ranges from 16 keys (Indonesian) to 27 keys (Czech, Slovak), average 21 keys. Coverage at the Silver gate varies from 5% (Slovenian) to 35% (French); at Gold from 61% (Turkish) to 96% (Italian). This wide variation confirms that coverage percentage is unsuitable as a milestone criterion: the same key-count fraction produces very different coverage depending on language frequency distribution.
+Rungs 2, 4 and 6 are the former Silver, Gold and Platinum gates at unchanged thresholds. Bronze's "home row known" is gone — it certified anchor security on data that contained no evidence of anchoring; see ADR-027 § Bronze Criterion. Diamond and Speed are fluency gates, not key-count gates, and are unchanged.
+
+**Slugs, not names.** The table lists the stored identifier. Spoken names come from the per-language YAML tier ([ADR-022](0022-localisation-strategy.md)) and are deliberately not fixed here — see the narrative note below.
+
+**Narrative framing — for the Beta voiceover pass.** *(Recorded 2026-08-23 so it reaches the session that writes the spoken introduction.)* The ladder tells a story the child should be told once, at setup: **first you learn to find the anchors — the two bumps your index fingers rest on, which is the base everything else is measured from — and once you have that, you learn to navigate the rest of the keyboard**, with a milestone every time you have learned another sixth of your alphabet. A maritime framing fits and is already half-adopted in the design's own vocabulary (*anchor*, *anchoring*), and navigation is the rare domain where finding your position without seeing it is the normal case rather than a workaround — but the metaphor belongs to the language pack, not to the engine, so another language may choose its own rather than translate this one. Naming and narrative are a Beta task, to be tuned with real children; the slugs above are what Alpha ships.
+
+**Milestone gates are key-count based, not coverage based.** Rung 2 triggers when the child has mastered ≥ 1/3 of the language's full key set; rung 4 at ≥ 2/3. "Full key set" is the count of distinct alphabetic characters on the language's physical keyboard layout, enumerated via the platform scan code interface. This is the authoritative source — it includes diacritics and native special characters (e.g. Icelandic has 34 keys including ð, þ, á, é, í; Czech 40 keys) and excludes loanword-only characters that happen to appear in wordfreq data. Using the language's own alphabet size as the denominator means Silver and Gold are always "a third of your alphabet" and "two thirds of your alphabet" regardless of language complexity.
+
+Measured across 20 Latin-script languages: Rung 2's gate (⌊alpha/3⌋) ranges from 8 keys (Finnish, Indonesian) to 13 keys (Czech, Slovak), average 10 keys. Rung 4's gate (⌊alpha×2/3⌋) ranges from 16 keys (Indonesian) to 27 keys (Czech, Slovak), average 21 keys. Coverage at rung 2 varies from 5% (Slovenian) to 35% (French); at rung 4 from 61% (Turkish) to 96% (Italian). This wide variation confirms that coverage percentage is unsuitable as a milestone criterion: the same key-count fraction produces very different coverage depending on language frequency distribution.
 
 **Vocabulary coverage is displayed as motivating information, not as a milestone gate.** Coverage = frequency-weighted fraction of 3-or-more-letter words typeable with the child's current key set. It is reported live ("you can now type 1 in 3 everyday words") and announced at each key milestone, but it does not trigger level-ups.
 

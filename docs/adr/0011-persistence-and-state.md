@@ -57,7 +57,9 @@ CREATE TABLE key_stats (
 
 CREATE TABLE milestones (
     profile_id  INTEGER NOT NULL REFERENCES profiles(id),
-    level       TEXT    NOT NULL,   -- "bronze", "silver", "gold", "platinum", "diamond"
+    level       TEXT    NOT NULL,   -- slug: "anchor", "third", "half", "two_thirds",
+                                    -- "five_sixths", "alphabet", "diamond", "speed".
+                                    -- Never spoken; the name resolves via ADR-022 YAML.
     achieved_at TEXT    NOT NULL,
     PRIMARY KEY (profile_id, level)
 );
@@ -84,4 +86,4 @@ The `key_attempts` table is a rolling window: at most 200 rows per (profile_id, 
 - All timestamps are local time, no timezone offset (`datetime.now().isoformat(timespec='seconds')`). This is a fully offline, single-device app with no cross-device sync; timezone-aware timestamps would add complexity with no benefit. Session ordering, duration calculation, and parent report display all work correctly with local time.
 - A NULL value in any nullable `profiles` column means "fall through to the app-level config" (ADR-025). The persistence layer never writes a default value into the database — it writes NULL and lets the config resolution layer supply the effective value at runtime.
 - `key_stats` retains lifetime aggregate counts for gamification displays (total attempts ever, milestone history). It is not the source of truth for Known. `key_attempts` is authoritative for Known — see ADR-027.
-- Bronze milestone detection (all home-row graphemes Known) requires ≥ 90 attempts at ≥ 90% accuracy across ≥ 2 distinct practice days, per `key_attempts`. The old "≥ 50 presses from `key_stats`" criterion is superseded by ADR-027.
+- Milestone detection reads `key_attempts`: the key-count rungs need ≥ 90 attempts at ≥ 90% accuracy across ≥ 2 distinct practice days per grapheme, and the Stage 0 anchor rung needs ≥ 25 attempts at ≥ 95% across ≥ 2 days on each of its six keys. The old "≥ 50 presses from `key_stats`" criterion is superseded by ADR-027. *(Updated 2026-08-23: this line previously read "Bronze milestone detection (all home-row graphemes Known)". Bronze was retired with the positional criterion — see [ADR-027 § Milestone Ladder](0027-key-and-accuracy-state-model.md#milestone-ladder). **No schema change:** the anchor rung fires once on stage completion and stores a row in `milestones` like any other.)*

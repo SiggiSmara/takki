@@ -98,7 +98,9 @@ ADR-010 defines a key as Known when "first-attempt accuracy has been sustained a
 
 `session_key_stats` (previously deferred to Beta in ADR-011) is not needed for this criterion and has been dropped from the Beta plan. ADR-011 is updated accordingly.
 
-Bronze milestone check: all home-row characters for the child's keyboard layout are Known.
+**Superseded 2026-08-23 — Bronze is no longer positional.** The criterion above ("all home-row characters are Known") certified a skill it could not observe. `key_attempts` records one row per prompt with `correct` = first keystroke right, and nothing about what preceded the prompt — so it cannot distinguish a child who reached away and *found* F again from a child whose finger never left F. Under home-row-first drilling the second case is the common one, so a child could bank 90 correct F presses without their hand ever having moved. Bronze certified anchor security on evidence containing no anchoring.
+
+Bronze is replaced by the six-rung ladder in [§ Milestone Ladder](#milestone-ladder) below, whose first rung is an explicit anchor gate that measures the reach. See [§ The Anchor Gate](#the-anchor-gate).
 
 ### Milestone Denominator
 
@@ -108,13 +110,43 @@ ADR-010 says Silver and Gold count "distinct **alphabetic characters** on the la
 
 ADR-010's "alphabetic characters" wording is authoritative. ADR-023's "physical keys" wording is superseded by this ADR on this point. The handling of modifiers as drill targets (if any) is deferred to ADR-028.
 
-Milestone thresholds restated precisely:
+### Milestone Ladder
 
-| Milestone | Criterion |
-|---|---|
-| **Bronze** | All home-row graphemes for the child's layout are Known |
-| **Silver** | ≥ ⌊N / 3⌋ graphemes Known, where N = `len(get_layout_positions())` |
-| **Gold** | ≥ ⌊N × 2 / 3⌋ graphemes Known |
-| **Platinum** | All N graphemes Known |
+*(Rewritten 2026-08-23. Supersedes the four-gate table this section previously carried, and ADR-010's Bronze row.)*
 
-Diamond and Speed are accuracy/fluency gates, not key-count gates, and are unaffected.
+Six key-count rungs, evenly spaced at sixths of the grapheme set, where N = the milestone denominator defined above. The first rung is the anchor gate and is not a fraction — it is six specific keys at a higher accuracy bar.
+
+| # | Slug | Criterion |
+|---|---|---|
+| 1 | `anchor` | The six index-column keys Known at the anchor bar — see [§ The Anchor Gate](#the-anchor-gate) |
+| 2 | `third` | ≥ ⌊N / 3⌋ graphemes Known |
+| 3 | `half` | ≥ ⌊N / 2⌋ graphemes Known |
+| 4 | `two_thirds` | ≥ ⌊N × 2 / 3⌋ graphemes Known |
+| 5 | `five_sixths` | ≥ ⌊N × 5 / 6⌋ graphemes Known |
+| 6 | `alphabet` | All N graphemes Known |
+
+Diamond and Speed remain accuracy/fluency gates, not key-count gates, and are unaffected by this rewrite.
+
+**The fractions are hard-coded, not configurable.** They are the shape of the ladder, in the same sense that ADR-024's four-phase ramp-up structure is not configurable even though its thresholds are. Exposing them would let a parent produce a profile whose "half the alphabet" milestone fires at a fifth.
+
+**Rungs 2, 4 and 6 are the old Silver, Gold and Platinum gates unchanged** — 2/6 *is* 1/3 and 4/6 *is* 2/3 — so the rewrite inserts three rungs and replaces one; it does not move any existing threshold.
+
+**Why no rung at 1/6.** For English ⌊26/6⌋ = 4, which would fire before the anchor gate's six keys are Known. The anchor gate occupies the first slot instead, which is also the honest description: it certifies orientation, not coverage.
+
+**Rung 2 is a real capability boundary, not just a fraction.** ADR-010 unlocks Layer 2 (real words) at ≥ 8 Active keys, and ⌊N/3⌋ is ≥ 8 for every layout in the v1 target set (en 8, de 10, is 12). So by rung 2 the child can type real words in any language — a claim the spoken framing can make without checking the layout. The middle rungs have no comparable intrinsic meaning and must not invent one: ADR-010 measured coverage at a fixed key-fraction varying from 5% to 35% across languages, which is why coverage was rejected as a gate in the first place. Their meaning comes from the spoken narrative, not from the arithmetic.
+
+**Slugs are identifiers, never spoken.** The slug is what `milestones.level` stores and is stable for the life of a profile. The spoken name resolves through the per-language YAML tier ([ADR-022](0022-localisation-strategy.md)), with a per-profile override available from Beta onboarding. Three tiers — slug → language default → profile override — matching the shape of [ADR-025](0025-configuration-system.md)'s config tiers. Naming therefore stays reversible and can be tuned against real children during the pilot; a language pack may also choose its own metaphor rather than translating another language's.
+
+### The Anchor Gate
+
+The first rung certifies that the child can **find home by touch** — the F and J tactile bumps, the one orientation landmark present on essentially every physical keyboard, and the foundation every later key position is described against ([ADR-023](0023-key-introduction-protocol.md) § Location).
+
+**Criterion.** The six index home-column keys — positions (2,4) (3,4) (4,4) and (2,7) (3,7) (4,7), which are `r f v` / `u j m` on every QWERTY-derived layout in the target set — are each Known at the **anchor bar**: `attempt_count ≥ ANCHOR_MIN_ATTEMPTS AND accuracy ≥ ANCHOR_MIN_ACCURACY AND distinct_practice_days ≥ KNOWN_MIN_DISTINCT_DAYS`. Defaults: 25 attempts, 0.95 accuracy, 2 days. Fewer repetitions than the general Known floor of 90, at a higher accuracy bar — this is a shorter, stricter gate, because a child who is only 90% sure where home is has not got an anchor.
+
+**Why plain accuracy is valid here, when it was not for Bronze.** The gate is evaluated over the Stage 0 drill, whose content is confined to one finger's home column and alternates the anchor with its own reaches (`f ↔ r`, `f ↔ v`). Every anchor prompt is therefore preceded by a keystroke that took the finger off home, so first-press accuracy on F *is* return-to-anchor accuracy. The measurement problem that sank the old Bronze was a property of home-row-only drill content, not of the metric — fix the content and the metric becomes sound. This is why the gate needs no new column in `key_attempts`, and it fires once on stage completion rather than as a rolling query, so ordinary drilling afterwards cannot dilute it.
+
+**The stretch columns are excluded on purpose.** `t g b` / `y h n` (columns 5 and 6) train lateral displacement, a different skill from leaving home vertically and returning to the bump. Mixing them into the anchor stage blurs the one thing it exists to establish. They belong to the curriculum proper.
+
+**Anchor accuracy is maintained, not just earned.** Losing the anchor degrades every key position that is described relative to it, so `f` and `j` are held to `ANCHOR_MIN_ACCURACY` for the life of the profile: when either falls below it in the rolling window, the drill generator re-injects anchor return-drills into the next block. This reuses [ADR-024](0024-drill-content-and-lesson-granularity.md)'s spaced re-exposure slot with an accuracy trigger in place of the staleness trigger, and needs no extra data — once drills mix keys, virtually every `f` press already follows a different key, so ordinary rolling accuracy is return accuracy from that point on.
+
+**The milestone itself is never revoked.** Milestones are one-time events (§ Key States); a dropped anchor triggers remediation, not the withdrawal of something the child earned. The two mechanisms are deliberately separate.
