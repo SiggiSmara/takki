@@ -110,3 +110,35 @@ def build_de() -> Layout:
         "ß": (1, 11),
     }
     return _direct_layout("de", direct)
+
+
+# Icelandic: æ takes the right-pinky home position, the acute dead key sits
+# outboard of it, and ö is pushed onto the number row.
+_ICELANDIC_ACUTES: dict[str, str] = {
+    "á": "a",
+    "é": "e",
+    "í": "i",
+    "ó": "o",
+    "ú": "u",
+    "ý": "y",
+}
+
+
+def build_is() -> Layout:
+    """Icelandic layout — direct letters plus the six dead-acute composites."""
+    direct: dict[str, tuple[int, int]] = {
+        **_QWERTY_COMMON,
+        "y": (2, 6),
+        "z": (4, 1),
+        "ð": (2, 11),
+        "æ": (3, 10),
+        "þ": (4, 10),
+        "ö": (1, 11),
+    }
+    layout = _direct_layout("is", direct)
+    layout.keys["dead-acute"] = PhysicalKey("dead-acute", 3, 11)
+    for composed, base in _ICELANDIC_ACUTES.items():
+        layout.graphemes[composed] = Grapheme(
+            composed, "dead-key", ("dead-acute", base), 2, base=base, dead_key="dead-acute"
+        )
+    return layout
