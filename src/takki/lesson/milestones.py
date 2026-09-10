@@ -1,17 +1,19 @@
-"""ADR-027 § Milestone Ladder — the rung definitions and the anchor gate's bar.
+"""ADR-027 § Milestone Ladder — the rung definitions, the anchor gate's bar,
+and the detector that fires each rung once.
 
-Definition only. Detecting that a rung has been reached, writing the
-`milestones` row and firing once are session 10's; nothing here touches a
-store, and the ladder is a function of a layout and a set of Known graphemes.
+The definitions below are pure: the ladder is a function of a layout and a set
+of Known graphemes, and `satisfied_rungs` is a rolling query that can go down
+again. `MilestoneDetector` is the edge between that query and the one-time
+event ADR-027 § Key States calls a milestone.
 """
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from collections.abc import Set as AbstractSet
 
 from takki import config
 from takki.lesson.introducer import anchor_keys
-from takki.lesson.key_state import KnownCriterion, is_known
-from takki.persistence import WindowStats
+from takki.lesson.key_state import KeyStates, KnownCriterion, is_known
+from takki.persistence import Store, WindowStats
 from takki.platform.layout import Layout
 
 ANCHOR = "anchor"
@@ -82,9 +84,116 @@ def anchor_reached(
 ) -> bool:
     """ADR-027 § The Anchor Gate — all six Stage 0 keys at the anchor bar.
 
-    Evaluated once, on Stage 0 completion, over the stage's own rolling-window
-    stats. Plain first-press accuracy is a valid anchor measure because Stage 0
+    Plain first-press accuracy is a valid anchor measure because Stage 0
     alternates each anchor with its own column reaches, so every anchor prompt
     follows a keystroke that took the finger off home.
+
+    Pure, and says nothing about *when* it is asked -- `MilestoneDetector`
+    owns that, and its `_anchor_reached` is where the ADR's "once on stage
+    completion" is reconciled with a bar that needs two calendar days.
     """
     return all(is_known(stats.get(name, _NO_ATTEMPTS), criterion) for name in anchor_keys(layout))
+
+
+class MilestoneDetector:
+    """ADR-027 § Milestone Ladder — fires each rung once, for one profile.
+
+    `satisfied_rungs` is a rolling query over Known, and Known is derived and
+    can go down (§ Key States). A milestone is a one-time event that is never
+    revoked. This class is the edge between the two, and `Store` is what makes
+    it idempotent: the `milestones` rows already written are the authority on
+    what has fired, never an in-memory set.
+
+    That choice is not about the store deduplicating writes -- `record_milestone`
+    does that anyway. It is about `check`'s *return value*, which is the event
+    a caller celebrates (ADR-010 § Milestone Levels). A detector that remembered
+    in memory would start every session with an empty memory and hand back every
+    rung the child has ever earned, so the child would be congratulated on a
+    third of the alphabet every time the app opened. The rows outlive the
+    session; the detector does not. The residual cost is the opposite ordering:
+    the row is written before the caller speaks anything, so a crash in between
+    loses the celebration and keeps the milestone. That is the right way round
+    -- ADR-027 makes the stored row the milestone.
+    """
+
+    def __init__(
+        self,
+        store: Store,
+        profile_id: int,
+        layout: Layout,
+        key_states: KeyStates,
+        now: Callable[[], str] | None = None,
+    ) -> None:
+        self._store = store
+        self._profile_id = profile_id
+        self._layout = layout
+        self._states = key_states
+        # As in AttemptCounter: wall-clock ISO-8601 local time (ADR-011), a
+        # separate concern from Clock, which is monotonic. None leaves it to
+        # the store.
+        self._now = now
+
+    def check(self) -> tuple[str, ...]:
+        """Rungs earned since the last check, in ladder order, newly written.
+
+        Costs one rolling-window query per Active grapheme, so it belongs at a
+        block or step boundary, not inside the prompt loop.
+
+        A child can cross more than one rung between two checks -- a long gap,
+        or a session that takes them from below `third` to past `half`. Every
+        rung they crossed is written and returned, in ladder order; none is
+        skipped for having been overtaken, because each is a thing that was
+        earned. How a caller spaces two celebrations is its own problem.
+        """
+        achieved = set(self._store.achieved_milestones(self._profile_id))
+        if not set(LADDER) - achieved:
+            return ()
+        earned = satisfied_rungs(
+            self._layout,
+            self._states.known_keys(),
+            # Never re-measured once it has fired. The anchor rung is the one
+            # rung whose criterion is not a Known count, and the only one whose
+            # window keeps moving under it after the stage that earned it.
+            anchor=ANCHOR in achieved or self._anchor_reached(),
+        )
+        newly = tuple(rung for rung in earned if rung not in achieved)
+        timestamp = self._now() if self._now is not None else None
+        for rung in newly:
+            self._store.record_milestone(self._profile_id, rung, timestamp)
+        return newly
+
+    def _anchor_reached(self) -> bool:
+        """ADR-027 § The Anchor Gate, on the only cadence its own bar allows.
+
+        The ADR says the rung fires "once on stage completion rather than as a
+        rolling query", but the bar includes KNOWN_MIN_DISTINCT_DAYS -- so the
+        instant Stage 0's last ramp-up ends is not a moment the gate can be
+        evaluated at: a child who did the whole stage in one sitting fails it
+        there, and under a literal reading would never be measured again. The
+        gate is therefore evaluated on every check until it passes, and frozen
+        after (the short-circuit in `check`).
+
+        **This is open until roadmap § D closes, and it is a rolling query
+        until then.** Two things follow that the ADR does not choose between.
+        A child who ends Stage 0 just under the bar on one key fires the rung
+        late, off a window that mixed drilling has since refilled -- which §
+        Anchor accuracy is maintained says is still return-to-anchor accuracy
+        ("once drills mix keys, virtually every f press already follows a
+        different key"), and which § The Anchor Gate says must not happen
+        ("ordinary drilling afterwards cannot dilute it"). Those two sentences
+        disagree, and this method sides with the first because the second has
+        no cadence that can satisfy the two-day floor. The visible cost is
+        ladder order: a late anchor can fire after `third`. See the amendment
+        in ADR-027 § The Anchor Gate.
+
+        What this does *not* do is answer whether the curriculum may run ahead
+        of the open gate (roadmap § D, "Does the curriculum wait for the anchor
+        gate?"). That question has no owner yet and this detector reads the
+        same either way -- which is why the rolling reading is the one that
+        ships: closing the window at the end of Stage 0 would decide it here,
+        by making the rung unreachable for any child the curriculum lets past.
+        """
+        return anchor_reached(
+            self._layout,
+            {name: self._states.window_stats(name) for name in anchor_keys(self._layout)},
+        )

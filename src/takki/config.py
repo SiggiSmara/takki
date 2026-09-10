@@ -85,6 +85,20 @@ KNOWN_MIN_DISTINCT_DAYS = 2
 ANCHOR_MIN_ATTEMPTS = 25
 ANCHOR_MIN_ACCURACY = 0.95
 
+# ADR-010 § Progression Rules. The gate on *when* a new key is introduced, as
+# opposed to which one (ADR-023 § Where the phase boundary is, which leans on
+# this gate as the thing that paces progression). The 50 is a count over the
+# *current set* -- "first-attempt accuracy on the current keys over at least 50
+# presses" -- not a per-key floor, which is KNOWN_MIN_ATTEMPTS' job.
+INTRODUCE_MIN_PRESSES = 50
+INTRODUCE_MIN_ACCURACY = 0.90
+
+# ADR-010 § The Two Practice Layers. Counted over *Active* graphemes, not Known
+# -- ADR-027 § Milestone Ladder and ADR-028 § Layer-2 unlock both read it that
+# way, and ADR-028's walk of the English count fires it one step after an
+# introduction, which Known cannot do (it needs 90 attempts over two days).
+LAYER_2_MIN_KEYS = 8
+
 # ADR-024 § New-key ramp-up. Starting points, not measured optima -- Alpha and
 # Beta are expected to tune them. The four-phase *structure* is not
 # configurable; only the bars between the phases are.
@@ -124,3 +138,8 @@ PACE_IDLE_GAP_SECONDS = 30.0
 # Distributed-practice lower bound for 7-8 year olds (research/motor-learning-
 # repetitions.md), per active key per session.
 SESSION_KEY_FLOOR = 45
+# ADR-010 § Session Pacing -- the other end of the same research band, where
+# single-session accuracy penalties begin. A soft engine cap on how much one
+# key may be drilled in one sitting, never a hard interrupt: no consumer yet,
+# and ADR-024's block generator is where it lands.
+SESSION_KEY_CEILING = 90

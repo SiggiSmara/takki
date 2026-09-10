@@ -29,6 +29,22 @@ Progression is adaptive and continuous, not fixed-step:
 - Clean word rate (no auto-rejections, no restarts — see ADR-012) is the sole progression gate until the child reaches sustained real-word fluency (see milestones below)
 - All thresholds are configurable in a single global config file (not per-language)
 
+**Where these thresholds live, and how each is read** *(added 2026-09-10, alpha session 10, which implemented the two gates above as predicates in `takki.lesson.progression`.)*
+
+| Rule | Config | Reading taken |
+|---|---|---|
+| New key at > 90% over ≥ 50 presses | `INTRODUCE_MIN_PRESSES`, `INTRODUCE_MIN_ACCURACY` | `ready_for_new_key()` — **aggregate over the current set**, not per key |
+| Layer 2 at ≥ 8 keys | `LAYER_2_MIN_KEYS` | `layer_two_unlocked()` — counted **Active** ([ADR-028](0028-composite-input-and-keyboard-ownership.md) § Layer-2 unlock) |
+| Per-key-per-session ceiling ~90 (§ Session Pacing) | `SESSION_KEY_CEILING` | **no consumer yet** — the floor is `SESSION_KEY_FLOOR`, read by session 9's block generator; the ceiling lands there too ([ADR-024](0024-drill-content-and-lesson-granularity.md)) |
+
+Three readings this section did not pin, taken here rather than left for the session loop to invent:
+
+- **"Exceeds 90%" is implemented as `≥`.** Every other bar in the engine is a floor the child may land exactly on — Known, the anchor gate, Phase C — and the two readings differ only at exactly 90.000%.
+- **The 50 presses are the *set's*, summed, not each key's.** [ADR-023](0023-key-introduction-protocol.md) § Where the phase boundary is restates the rule as "on the current set" and rejects the per-key reading by name: at 89% on one home-row key a per-key gate would lock the curriculum with nothing able to release it. The cost of the aggregate reading is that it goes slack as the set matures — see [roadmap § D](../roadmap.md#d-smaller-gaps-worth-a-line-in-the-relevant-adr).
+- **An empty Active set is ready.** There is nothing to be accurate on before the first key, and a gate needing 50 presses to open would never pass the first one.
+
+Milestone *detection* is not here — it is one-time and persisted, and lives in `takki.lesson.milestones` ([ADR-027](0027-key-and-accuracy-state-model.md) § Milestone Ladder). Layer 2's own thresholds (the 3→4→5→6 word-length ladder, the 85%-over-20-words gate, the session-composition mix table below) are deliberately **not** in `config.py` yet: they belong to the session that builds Layer 2, which is Beta.
+
 **Session composition:** Each session is a weighted mix across unlocked layers. Proportions shift automatically as key knowledge grows:
 
 | Keys known | Layer 1 (drills) | Layer 2 (real words) |
@@ -93,7 +109,7 @@ Session length is therefore adaptive and inversely related to the number of acti
 
 The individual **drill block** (~90–120 seconds, per ADR-024) is the natural stopping unit within a session. "Individual lesson units must be short enough that a stopping point is always close" means the block, not the session: a child can stop after any block without losing progress, and blocks complete in under two minutes. A full session spanning enough blocks to hit the 45-per-key floor is the expected engagement; shorter practice still contributes to the rolling window but does not achieve the per-day dose the research supports.
 
-The per-key ceiling (~90) is a soft engine cap, not a hard interrupt. Explicit session time enforcement remains rejected: it is patronising for motivated children and adds complexity with no evidence of benefit over well-granulated lesson design combined with the per-key ceiling.
+The per-key ceiling (~90) is `config.SESSION_KEY_CEILING` as of alpha session 10, and has no consumer yet — [ADR-024](0024-drill-content-and-lesson-granularity.md)'s block generator, which already reads the 45 floor, is where it lands. It is a soft engine cap, not a hard interrupt. Explicit session time enforcement remains rejected: it is patronising for motivated children and adds complexity with no evidence of benefit over well-granulated lesson design combined with the per-key ceiling.
 
 ### Why Lessons Are Not Authored Per Language
 
