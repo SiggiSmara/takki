@@ -19,5 +19,8 @@ class FixedListSource:
     def grapheme_weights(self, layout: Layout) -> dict[str, float]:
         return compute_grapheme_weights(self._word_weights, layout)
 
+    def bigram_weights(self, layout: Layout) -> dict[str, float]:
+        return compute_bigram_weights(self._word_weights, layout)
+
     def bigrams(self, layout: Layout, count: int, rng: random.Random) -> list[str]:
-        return sample_bigrams(compute_bigram_weights(self._word_weights, layout), count, rng)
+        return sample_bigrams(self.bigram_weights(layout), count, rng)

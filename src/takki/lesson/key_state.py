@@ -60,6 +60,13 @@ class KeyStates:
         # presence. Only state() draws the ACTIVE/KNOWN line.
         return set(self._store.key_stats(self._profile_id))
 
+    def window_stats(self, key_char: str) -> WindowStats:
+        # The rolling window itself, for callers that need the numbers rather
+        # than the Known/Active verdict -- ADR-024's drill generator measures
+        # anchor accuracy against ANCHOR_MIN_ACCURACY, which is a different bar
+        # from any KnownCriterion this class holds.
+        return self._store.window_stats(self._profile_id, key_char)
+
     def known_keys(self) -> set[str]:
         return {c for c in self.active_keys() if self._known(c)}
 

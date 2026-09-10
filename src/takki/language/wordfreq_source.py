@@ -44,6 +44,12 @@ class WordfreqSource:
             self._graphemes[key] = compute_grapheme_weights(self._word_weights(layout.lang), layout)
         return dict(self._graphemes[key])
 
+    def bigram_weights(self, layout: Layout) -> dict[str, float]:
+        key = _layout_key(layout)
+        if key not in self._bigrams:
+            self._bigrams[key] = compute_bigram_weights(self._word_weights(layout.lang), layout)
+        return dict(self._bigrams[key])
+
     def bigrams(self, layout: Layout, count: int, rng: random.Random) -> list[str]:
         key = _layout_key(layout)
         if key not in self._bigrams:

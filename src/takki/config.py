@@ -84,3 +84,43 @@ KNOWN_MIN_DISTINCT_DAYS = 2
 # profile: falling below ANCHOR_MIN_ACCURACY on f or j re-injects return-drills.
 ANCHOR_MIN_ATTEMPTS = 25
 ANCHOR_MIN_ACCURACY = 0.95
+
+# ADR-024 § New-key ramp-up. Starting points, not measured optima -- Alpha and
+# Beta are expected to tune them. The four-phase *structure* is not
+# configurable; only the bars between the phases are.
+# Phase A counts a streak (any wrong first press resets it) while Phase B
+# counts a run with an error budget. The two counting models differ on
+# purpose, per roadmap D "Phase A vs Phase B counting".
+PHASE_A_STREAK = 10
+PHASE_B_ATTEMPTS = 20
+PHASE_B_MAX_REJECTIONS = 1
+PHASE_C_ATTEMPTS = 30
+PHASE_C_MIN_ACCURACY = 0.85
+# How many previously-active graphemes Phase C mixes the new one with, and how
+# often a sampled bigram is grown into ADR-024's "3-letter sequence".
+PHASE_C_PARTNERS = 3
+PHASE_C_TRIGRAM_CHANCE = 0.5
+
+# ADR-024 § Spaced re-exposure. Session time, not wall clock -- the cross-session
+# anchor (`key_stats.last_practised_at`) is the Beta fix noted in that section
+# and in roadmap D.
+REEXPOSURE_STALE_SECONDS = 300.0
+
+# ADR-024 § Lesson granularity. The block's wall-clock duration stays roughly
+# constant and the volume of practice scales with the child's pace, so a slow
+# typist is not punished with a disproportionately long block.
+BLOCK_TARGET_SECONDS = 100.0
+FIRST_BLOCK_PROMPTS = 30
+# How many finished blocks the pace average rolls over.
+PACE_BLOCKS = 3
+# The longest gap between two answers that still counts as typing time. Beyond
+# it the child is not typing slowly, they have stopped -- a PAUSED interval
+# (ADR-028 § C8), a walk-away, a conversation. Monotonic time keeps running
+# through all three, and without this rule a five-minute pause would read as a
+# collapse in pace and shrink every block after it. A longer gap is discarded
+# rather than clamped: clamping would charge the child an arbitrary 30 s they
+# did not spend typing.
+PACE_IDLE_GAP_SECONDS = 30.0
+# Distributed-practice lower bound for 7-8 year olds (research/motor-learning-
+# repetitions.md), per active key per session.
+SESSION_KEY_FLOOR = 45

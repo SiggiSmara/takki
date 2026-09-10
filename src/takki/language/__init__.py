@@ -11,6 +11,12 @@ class WordSource(Protocol):
 
     def grapheme_weights(self, layout: Layout) -> dict[str, float]: ...
 
+    # The weights themselves, not a sample of them: the drill generator
+    # restricts the pool to the child's Active graphemes before sampling
+    # (ADR-024 § Steady-state), and rejection-sampling `bigrams()` down to two
+    # active keys out of twenty-six would be a lottery, not a drill.
+    def bigram_weights(self, layout: Layout) -> dict[str, float]: ...
+
     def bigrams(self, layout: Layout, count: int, rng: random.Random) -> list[str]: ...
 
 

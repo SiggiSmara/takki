@@ -56,6 +56,17 @@ def anchor_keys(layout: Layout) -> tuple[str, ...]:
     return tuple(by_pos[(row, col)] for row in ANCHOR_ROWS for col in ANCHOR_COLUMNS)
 
 
+def home_anchor_keys(layout: Layout) -> tuple[str, ...]:
+    """The two tactile-bump home keys — `f` and `j` on QWERTY.
+
+    ADR-027 § The Anchor Gate holds these two, and only these two, to
+    ANCHOR_MIN_ACCURACY for the life of the profile. The other four Stage 0
+    keys are reaches away from them, not landmarks in their own right.
+    """
+    by_pos = {(key.row, key.col): name for name, key in layout.keys.items()}
+    return tuple(by_pos[(HOME_ROW, col)] for col in ANCHOR_COLUMNS)
+
+
 @dataclass(frozen=True)
 class Location:
     """Where a new key sits relative to one the child already has."""
@@ -443,11 +454,13 @@ def _locate(layout: Layout, key: PhysicalKey, struck: AbstractSet[str]) -> Locat
     if not candidates:
         return None
     same_finger = [other for other in candidates if other.finger == key.finger]
-    reference = min(same_finger or candidates, key=lambda other: _distance(key, other))
+    reference = min(same_finger or candidates, key=lambda other: key_distance(key, other))
     return Location(reference.name, key.row - reference.row, key.col - reference.col)
 
 
-def _distance(key: PhysicalKey, other: PhysicalKey) -> tuple[int, int, str]:
+def key_distance(key: PhysicalKey, other: PhysicalKey) -> tuple[int, int, str]:
+    """Sort key for "closest key to `key`". Public because ADR-024's Phase B
+    anchor is the same reach measured the same way (alpha session 9)."""
     row_gap, col_gap = abs(key.row - other.row), abs(key.col - other.col)
     # Manhattan, then prefer the straight vertical reach: it is the motion the
     # finger already makes from its home position and the one that describes
