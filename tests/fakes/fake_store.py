@@ -67,6 +67,11 @@ class FakeStore:
         pid, started_at, _ = self._sessions[session_id]
         self._sessions[session_id] = (pid, started_at, ts)
 
+    def sessions(self) -> list[tuple[int, str, str | None]]:
+        """Every session row, in id order. Not on the Store Protocol -- session
+        logging has no reader yet, so this exists for tests only."""
+        return [self._sessions[key] for key in sorted(self._sessions)]
+
     def upsert_key_stat(
         self,
         profile_id: int,

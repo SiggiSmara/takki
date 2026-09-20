@@ -20,6 +20,20 @@ class WordSource(Protocol):
     def bigrams(self, layout: Layout, count: int, rng: random.Random) -> list[str]: ...
 
 
+def warm(source: WordSource, layout: Layout) -> None:
+    """Force the derived tables before the loop is entered (concurrency-model.md § Startup).
+
+    Both are a full pass over the corpus -- ~767 ms for English and ~1,977 ms
+    for German on the dev box, against a 16 ms frame budget -- and both are
+    read from inside the loop: `bigram_weights` builds every drill block and
+    `letter_ranking` (which is `grapheme_weights` plus a sort) is re-derived on
+    every introduction step. A lazy first call would stall a tick for most of a
+    second.
+    """
+    source.grapheme_weights(layout)
+    source.bigram_weights(layout)
+
+
 def rank_graphemes(layout: Layout, weights: dict[str, float]) -> list[str]:
     # Every native grapheme is ranked, including ones the corpus never used
     # (weight 0) -- the ranking must cover the whole alphabet, not just the

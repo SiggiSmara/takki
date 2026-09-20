@@ -3,6 +3,7 @@ import queue
 import pytest
 
 from takki.display.focus import FocusEvent, PygameFocusSource
+from takki.events import Quit
 
 # Real WINDOWFOCUSGAINED/LOST transitions and a genuine request_foreground()
 # raise need a real SDL video driver -- unreachable under SDL_VIDEODRIVER=dummy
@@ -16,7 +17,7 @@ pytestmark = pytest.mark.windows_only
 
 
 def test_construct_poll_and_close_on_a_real_driver() -> None:
-    outbound: queue.Queue[FocusEvent] = queue.Queue()
+    outbound: queue.Queue[FocusEvent | Quit] = queue.Queue()
     source = PygameFocusSource(outbound)
     source.poll()
     source.close()
@@ -25,7 +26,7 @@ def test_construct_poll_and_close_on_a_real_driver() -> None:
 def test_request_foreground_does_not_raise_on_a_real_driver() -> None:
     # Returns nothing -- SDL_RaiseWindow is async, so whether the raise
     # took effect is only observable as a later FocusGained event.
-    outbound: queue.Queue[FocusEvent] = queue.Queue()
+    outbound: queue.Queue[FocusEvent | Quit] = queue.Queue()
     source = PygameFocusSource(outbound)
     source.request_foreground()
     source.close()

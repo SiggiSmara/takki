@@ -42,18 +42,18 @@ class TestTTSWorkerWithRealEngine:
     def test_speak_completes_and_reaches_outbound_queue(self) -> None:
         outbound: queue.Queue[SpeechFinished] = queue.Queue()
         worker = TTSWorker(FallbackTTS(), outbound)
-        worker.enqueue_speak("a", utterance_id=1)
+        utterance_id = worker.enqueue_speak("a")
         worker.run_one()
         finished = outbound.get_nowait()
-        assert finished.utterance_id == 1
+        assert finished.utterance_id == utterance_id
         assert finished.status == "completed"
 
     def test_real_thread_start_and_join(self) -> None:
         outbound: queue.Queue[SpeechFinished] = queue.Queue()
         worker = TTSWorker(FallbackTTS(), outbound)
         worker.start()
-        worker.enqueue_speak("a", utterance_id=1)
+        utterance_id = worker.enqueue_speak("a")
         finished = outbound.get(timeout=5)
-        assert finished == SpeechFinished(utterance_id=1, status="completed")
+        assert finished == SpeechFinished(utterance_id=utterance_id, status="completed")
         worker.enqueue_shutdown()
         worker.join(timeout=5)

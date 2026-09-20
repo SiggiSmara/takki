@@ -1,4 +1,5 @@
 from takki.display.focus import EventSink, FocusGained, FocusLost
+from takki.events import Quit
 
 
 class FakeFocusSource:
@@ -12,6 +13,10 @@ class FakeFocusSource:
 
     def lose_focus(self) -> None:
         self._outbound.put(FocusLost())
+
+    def quit(self) -> None:
+        """Stand-in for the SDL pump seeing pygame.QUIT -- the window closed."""
+        self._outbound.put(Quit())
 
     def poll(self) -> None:
         pass

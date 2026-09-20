@@ -9,6 +9,7 @@ import pygame
 import pygame._sdl2.video as sdl2_video
 
 from takki import config
+from takki.events import Quit
 
 
 @dataclass(frozen=True)
@@ -29,7 +30,7 @@ class EventSink(Protocol):
     # takki.input.EventSink and takki.audio.tts_worker.EventSink: session 11
     # passes the core's single inbound queue, which carries every event type,
     # and Queue's parameter is invariant.
-    def put(self, item: FocusEvent, /) -> None: ...
+    def put(self, item: FocusEvent | Quit, /) -> None: ...
 
 
 class FocusSource(Protocol):
@@ -60,7 +61,20 @@ class PygameFocusSource:
         # Type-filtered: an unfiltered get() drains the whole SDL queue, which
         # would swallow QUIT before the core loop (session 11) ever sees it.
         delivered = False
-        for ev in pygame.event.get([pygame.WINDOWFOCUSGAINED, pygame.WINDOWFOCUSLOST]):
+        for ev in pygame.event.get([pygame.WINDOWFOCUSGAINED, pygame.WINDOWFOCUSLOST, pygame.QUIT]):
+            if ev.type == pygame.QUIT:
+                # This pump is the only thing that sees QUIT, so it is the only
+                # thing that can normalise it onto the core's one inbound
+                # stream (concurrency-model.md § The loop). Session 6a filtered
+                # it out of this get() precisely so it would still be there for
+                # session 11 to claim.
+                self._outbound.put(Quit())
+                # Counts as an event arriving, so the backup poll below is
+                # skipped this tick: a closing window can already read as
+                # unfocused, and the FocusLost that would synthesise reaches
+                # the core behind the Quit and announces a pause on the way out.
+                delivered = True
+                continue
             delivered = True
             self._set_focused(ev.type == pygame.WINDOWFOCUSGAINED)
 

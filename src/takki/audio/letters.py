@@ -11,6 +11,11 @@ class LetterAudioSource(Protocol):
     #   -> Synthetic (runtime TTS floor; SAPI or espeak-ng, never empty).
     # Resolution walks down until it finds audio; the floor guarantees a result.
     # See ADR-003 (Letter audio) and docs/research/tts-letter-pronunciation.md.
-    def play(self, char: str) -> None: ...
+    # Returns the utterance id when this source speaks through the shared TTS
+    # worker, and None when it plays its own audio (a clip player, Beta). The
+    # core needs the id to know whether a letter is still outstanding: without
+    # it a second letter stacks behind the first and plays over the cue and the
+    # next prompt, and a stop() cannot be aimed (alpha session 11).
+    def play(self, char: str) -> int | None: ...
 
     def stop(self) -> None: ...

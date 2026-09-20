@@ -1,3 +1,4 @@
+import itertools
 import queue
 import threading
 from dataclasses import dataclass
@@ -44,9 +45,18 @@ class TTSWorker:
         self._commands: queue.Queue[Command] = queue.Queue()
         self._cancel_requested = threading.Event()
         self._thread: threading.Thread | None = None
+        # The single allocator (concurrency-model.md § TTS). Every speaking
+        # component used to mint its own ids from 0, so on one worker they
+        # collided and the superseded-utterance filter matched the wrong
+        # utterance. Minting here leaves no caller able to choose an id.
+        # From 1, so 0 is never a live id and "no utterance in flight" can be
+        # written as a falsy check without ambiguity.
+        self._utterance_ids = itertools.count(1)
 
-    def enqueue_speak(self, text: str, utterance_id: int) -> None:
+    def enqueue_speak(self, text: str) -> int:
+        utterance_id = next(self._utterance_ids)
         self._commands.put(Speak(text, utterance_id))
+        return utterance_id
 
     def enqueue_shutdown(self) -> None:
         self._commands.put(Shutdown())
@@ -55,6 +65,11 @@ class TTSWorker:
         # The one sanctioned cross-thread call (concurrency-model.md rule 4).
         self._cancel_requested.set()
         self._engine.stop()
+
+    @property
+    def idle(self) -> bool:
+        """True when no command is waiting -- for tests that drive run_one() without a thread."""
+        return self._commands.empty()
 
     def run_one(self) -> bool:
         """Process one queued command; False on Shutdown. Drivable without a thread, for tests."""

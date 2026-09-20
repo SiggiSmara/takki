@@ -3,6 +3,7 @@ import queue
 from takki import config
 from takki.audio.tts_worker import SpeechFinished, TTSWorker
 from takki.display.focus import FocusEvent, FocusGained, FocusLost
+from takki.events import Quit
 from takki.focus_model import (
     ALT_TAB_HINT,
     PAUSED_ANNOUNCEMENT,
@@ -16,8 +17,10 @@ from takki.focus_model import (
 )
 from takki.input import KeyEvent
 from takki.input.taxonomy import KeyBindings
+from takki.speech import Speaker
 from tests.fakes.fake_clock import FakeClock
 from tests.fakes.fake_focus_source import FakeFocusSource
+from tests.fakes.fake_letters import FakeLetterAudioSource
 from tests.fakes.fake_tts import FakeTTSEngine
 from tests.fakes.scripted_key_stream import ScriptedKeyStream
 
@@ -30,12 +33,19 @@ class Harness:
     """The core loop of concurrency-model.md, driven synchronously: one queue, dispatch, deadline check."""
 
     def __init__(self, bindings: KeyBindings | None = None) -> None:
-        self.inbound: queue.Queue[KeyEvent | FocusEvent] = queue.Queue()
+        self.inbound: queue.Queue[KeyEvent | FocusEvent | Quit] = queue.Queue()
         self.focus = FakeFocusSource(self.inbound)
         self.engine = FakeTTSEngine()
         self.speech = TTSWorker(self.engine, queue.Queue[SpeechFinished]())
+        self.letters = FakeLetterAudioSource()
+        # The gate speaks through the core's Speaker, not straight at the
+        # worker: one object has to know what is audible, or a gate-issued
+        # stop() cancels a core sequence's utterance and the core, seeing a
+        # SpeechFinished for the id it holds, advances the sequence it meant to
+        # clear (alpha session 11).
+        self.speaker = Speaker(self.speech, self.letters)
         self.clock = FakeClock()
-        self.model = FocusModel(self.focus, self.speech, self.clock, bindings)
+        self.model = FocusModel(self.focus, self.speaker, self.clock, bindings)
         self.commands: list[LessonCommand] = []
 
     def keys(self, *events: KeyEvent) -> None:
@@ -73,6 +83,9 @@ class Harness:
                 event = self.inbound.get_nowait()
             except queue.Empty:
                 return
+            # The gate handles key and focus events; Quit is the loop's
+            # (session 11) and never reaches it.
+            assert not isinstance(event, Quit)
             self._record(self.model.handle(event))
 
     def _record(self, command: LessonCommand | None) -> None:
@@ -205,8 +218,9 @@ class TestFocusGating:
 
     def test_focus_loss_interrupts_the_prompt_in_flight(self) -> None:
         harness = Harness()
+        harness.speaker.letter("f")
         harness.lose_focus()
-        assert harness.engine.stopped == 1
+        assert harness.letters.stopped == 1
 
     def test_key_events_after_focus_loss_are_dropped(self) -> None:
         harness = Harness()
@@ -264,9 +278,10 @@ class TestFocusGating:
     def test_resume_interrupts_the_stale_announcement(self) -> None:
         harness = Harness()
         harness.lose_focus()
-        assert harness.engine.stopped == 1
+        # Nothing was audible before the pause, so nothing was stopped for it.
+        assert harness.engine.stopped == 0
         harness.gain_focus()
-        assert harness.engine.stopped == 2
+        assert harness.engine.stopped == 1
 
     def test_repeated_focus_loss_announces_once(self) -> None:
         harness = Harness()

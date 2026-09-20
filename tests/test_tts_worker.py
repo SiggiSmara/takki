@@ -1,7 +1,14 @@
 import queue
 
+from takki.audio.synthetic_letters import SyntheticLetterAudioSource
 from takki.audio.tts import TTSEngine
 from takki.audio.tts_worker import Shutdown, Speak, SpeechFinished, TTSWorker
+from takki.display.focus import FocusEvent, FocusLost
+from takki.events import Quit
+from takki.focus_model import FocusModel
+from takki.speech import Speaker
+from tests.fakes.fake_clock import FakeClock
+from tests.fakes.fake_focus_source import FakeFocusSource
 from tests.fakes.fake_tts import FakeTTSEngine
 
 
@@ -29,7 +36,7 @@ class TestTTSWorkerRunOne:
         engine = FakeTTSEngine()
         outbound: queue.Queue[SpeechFinished] = queue.Queue()
         worker = TTSWorker(engine, outbound)
-        worker.enqueue_speak("hello", utterance_id=1)
+        worker.enqueue_speak("hello")
         worker.run_one()
         assert engine.spoken == ["hello"]
 
@@ -37,31 +44,48 @@ class TestTTSWorkerRunOne:
         engine = FakeTTSEngine()
         outbound: queue.Queue[SpeechFinished] = queue.Queue()
         worker = TTSWorker(engine, outbound)
-        worker.enqueue_speak("hello", utterance_id=7)
+        utterance_id = worker.enqueue_speak("hello")
         worker.run_one()
         finished = outbound.get_nowait()
-        assert finished == SpeechFinished(utterance_id=7, status="completed")
+        assert finished == SpeechFinished(utterance_id=utterance_id, status="completed")
 
     def test_cancel_mid_speak_posts_cancelled(self) -> None:
         outbound: queue.Queue[SpeechFinished] = queue.Queue()
         stopper = _StopMidSpeakEngine()
         worker = TTSWorker(stopper, outbound)
         stopper.worker = worker
-        worker.enqueue_speak("interrupt me", utterance_id=3)
+        utterance_id = worker.enqueue_speak("interrupt me")
         worker.run_one()
         finished = outbound.get_nowait()
-        assert finished == SpeechFinished(utterance_id=3, status="cancelled")
+        assert finished == SpeechFinished(utterance_id=utterance_id, status="cancelled")
 
     def test_utterance_ids_are_echoed_in_order(self) -> None:
         engine = FakeTTSEngine()
         outbound: queue.Queue[SpeechFinished] = queue.Queue()
         worker = TTSWorker(engine, outbound)
-        worker.enqueue_speak("a", utterance_id=1)
-        worker.enqueue_speak("b", utterance_id=2)
+        first = worker.enqueue_speak("a")
+        second = worker.enqueue_speak("b")
         worker.run_one()
         worker.run_one()
-        assert outbound.get_nowait().utterance_id == 1
-        assert outbound.get_nowait().utterance_id == 2
+        assert [first, second] == [1, 2]
+        assert outbound.get_nowait().utterance_id == first
+        assert outbound.get_nowait().utterance_id == second
+
+    def test_the_worker_is_the_only_allocator(self) -> None:
+        # concurrency-model.md § TTS: every speaking component used to mint its
+        # own ids from 0. Two components on one worker must not collide.
+        outbound: queue.Queue[SpeechFinished] = queue.Queue()
+        worker = TTSWorker(FakeTTSEngine(), outbound)
+        letters = SyntheticLetterAudioSource(worker)
+        focus_events: queue.Queue[FocusEvent | Quit] = queue.Queue()
+        focus = FocusModel(FakeFocusSource(focus_events), Speaker(worker, letters), FakeClock())
+        letters.play("a")
+        focus.handle(FocusLost())
+        letters.play("b")
+        for _ in range(3):
+            worker.run_one()
+        ids = [outbound.get_nowait().utterance_id for _ in range(3)]
+        assert ids == [1, 2, 3]
 
     def test_stale_cancel_flag_does_not_leak_into_next_utterance(self) -> None:
         # stop() called while idle (nothing playing) must not mark the next
@@ -70,7 +94,7 @@ class TestTTSWorkerRunOne:
         outbound: queue.Queue[SpeechFinished] = queue.Queue()
         worker = TTSWorker(engine, outbound)
         worker.stop()
-        worker.enqueue_speak("hello", utterance_id=1)
+        worker.enqueue_speak("hello")
         worker.run_one()
         assert outbound.get_nowait().status == "completed"
 
@@ -86,7 +110,7 @@ class TestTTSWorkerRunOne:
         engine = FakeTTSEngine()
         outbound: queue.Queue[SpeechFinished] = queue.Queue()
         worker = TTSWorker(engine, outbound)
-        worker.enqueue_speak("hi", utterance_id=1)
+        worker.enqueue_speak("hi")
         assert worker.run_one() is True
 
 

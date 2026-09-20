@@ -1,8 +1,6 @@
-import itertools
 from dataclasses import dataclass
 from enum import Enum, auto
 
-from takki.audio.tts_worker import TTSWorker
 from takki.clock import Clock
 from takki.display.focus import FocusEvent, FocusGained, FocusLost, FocusSource
 from takki.input import KeyEvent
@@ -14,6 +12,7 @@ from takki.input.taxonomy import (
     ResumeKey,
     classify,
 )
+from takki.speech import Speaker
 
 # Placeholder English. ADR-022 moves every user-facing string to per-language
 # YAML; no string table exists yet, so these live here until it does.
@@ -60,7 +59,7 @@ class FocusModel:
     def __init__(
         self,
         focus: FocusSource,
-        speech: TTSWorker,
+        speech: Speaker,
         clock: Clock,
         bindings: KeyBindings | None = None,
     ) -> None:
@@ -68,7 +67,6 @@ class FocusModel:
         self._speech = speech
         self._clock = clock
         self._bindings = bindings if bindings is not None else KeyBindings()
-        self._utterance_ids = itertools.count()
         # ACTIVE is the normal startup state -- the window comes up focused.
         # A window that does not is corrected by the seed event FocusSource
         # emits at construction, which arrives before any key event.
@@ -120,9 +118,8 @@ class FocusModel:
             return
         self.state = FocusState.PAUSED
         self._clear_gestures()
-        # The prompt in flight is stale the moment the child leaves, and would
-        # otherwise hold the worker long enough to delay the pause announcement.
-        self._speech.stop()
+        # The prompt in flight is stale the moment the child leaves; announce()
+        # replaces it rather than queueing behind it.
         self._announce(PAUSED_ANNOUNCEMENT)
 
     def _on_focus_gained(self) -> None:
@@ -133,9 +130,8 @@ class FocusModel:
         # signal, whether it came from the held key's request or a manual
         # Alt+Tab -- both resume routes converge here.
         self._clear_gestures()
-        # An Alt+Tab hint still being spoken is now false, and would delay the
-        # resume announcement behind it.
-        self._speech.stop()
+        # An Alt+Tab hint still being spoken is now false, and announce()
+        # cuts it rather than letting it delay the resume line.
         self._announce(RESUMED_ANNOUNCEMENT)
 
     def _on_key(self, event: KeyEvent) -> LessonCommand | None:
@@ -222,4 +218,4 @@ class FocusModel:
         self._request_deadline = None
 
     def _announce(self, text: str) -> None:
-        self._speech.enqueue_speak(text, next(self._utterance_ids))
+        self._speech.announce(text)

@@ -11,6 +11,7 @@ from takki.display.focus import (
     FocusSource,
     PygameFocusSource,
 )
+from takki.events import Quit
 from tests.fakes.fake_focus_source import FakeFocusSource
 
 
@@ -28,13 +29,13 @@ def test_focus_lost_is_frozen() -> None:
 
 class TestFakeFocusSource:
     def test_gain_focus_enqueues_focus_gained(self) -> None:
-        outbound: queue.Queue[FocusEvent] = queue.Queue()
+        outbound: queue.Queue[FocusEvent | Quit] = queue.Queue()
         source = FakeFocusSource(outbound)
         source.gain_focus()
         assert outbound.get_nowait() == FocusGained()
 
     def test_lose_focus_enqueues_focus_lost(self) -> None:
-        outbound: queue.Queue[FocusEvent] = queue.Queue()
+        outbound: queue.Queue[FocusEvent | Quit] = queue.Queue()
         source = FakeFocusSource(outbound)
         source.lose_focus()
         assert outbound.get_nowait() == FocusLost()
@@ -43,13 +44,13 @@ class TestFakeFocusSource:
         # A raise request is not a focus change: the FocusGained (if any)
         # arrives later as a real event. 6b's refused-raise path is a test
         # that requests and then never calls gain_focus().
-        outbound: queue.Queue[FocusEvent] = queue.Queue()
+        outbound: queue.Queue[FocusEvent | Quit] = queue.Queue()
         source = FakeFocusSource(outbound)
         source.request_foreground()
         assert outbound.qsize() == 0
 
     def test_request_foreground_records_call_count(self) -> None:
-        outbound: queue.Queue[FocusEvent] = queue.Queue()
+        outbound: queue.Queue[FocusEvent | Quit] = queue.Queue()
         source = FakeFocusSource(outbound)
         assert source.foreground_requests == 0
         source.request_foreground()
@@ -57,19 +58,19 @@ class TestFakeFocusSource:
         assert source.foreground_requests == 2
 
     def test_close_is_recorded(self) -> None:
-        outbound: queue.Queue[FocusEvent] = queue.Queue()
+        outbound: queue.Queue[FocusEvent | Quit] = queue.Queue()
         source = FakeFocusSource(outbound)
         assert source.closed is False
         source.close()
         assert source.closed is True
 
     def test_conforms_to_focus_source_protocol(self) -> None:
-        source: FocusSource = FakeFocusSource(queue.Queue[FocusEvent]())
+        source: FocusSource = FakeFocusSource(queue.Queue[FocusEvent | Quit]())
         assert source is not None
 
 
 def test_queue_conforms_to_event_sink_protocol() -> None:
-    sink: EventSink = queue.Queue[FocusEvent]()
+    sink: EventSink = queue.Queue[FocusEvent | Quit]()
     assert sink is not None
 
 
@@ -81,14 +82,14 @@ class TestPygameFocusSourceUnderDummyDriver:
     # need a real driver; see test_pygame_focus_source.py (windows_only).
 
     def test_constructs_a_window_under_dummy_driver(self) -> None:
-        outbound: queue.Queue[FocusEvent] = queue.Queue()
+        outbound: queue.Queue[FocusEvent | Quit] = queue.Queue()
         source = PygameFocusSource(outbound)
         source.close()
 
     def test_construction_seeds_the_initial_focus_state(self) -> None:
         # The FSM cannot query focus, so the starting state has to arrive as an
         # event. The dummy driver's window is never focused, hence FocusLost.
-        outbound: queue.Queue[FocusEvent] = queue.Queue()
+        outbound: queue.Queue[FocusEvent | Quit] = queue.Queue()
         source = PygameFocusSource(outbound)
         assert outbound.get_nowait() == FocusLost()
         assert outbound.qsize() == 0
@@ -98,27 +99,44 @@ class TestPygameFocusSourceUnderDummyDriver:
         # The dummy driver reports a constant, unfocused state -- poll()'s
         # backup check should see no change from the state read at
         # construction and therefore synthesise nothing beyond the seed.
-        outbound: queue.Queue[FocusEvent] = queue.Queue()
+        outbound: queue.Queue[FocusEvent | Quit] = queue.Queue()
         source = PygameFocusSource(outbound)
         outbound.get_nowait()
         source.poll()
         assert outbound.qsize() == 0
         source.close()
 
-    def test_poll_leaves_events_it_does_not_own_on_the_sdl_queue(self) -> None:
-        # poll() must type-filter its get(): an unfiltered drain would swallow
-        # QUIT, which the core loop (session 11) owns and needs to see.
-        outbound: queue.Queue[FocusEvent] = queue.Queue()
+    def test_poll_forwards_quit_onto_the_inbound_queue(self) -> None:
+        # Session 6a left QUIT on the SDL queue for "the core loop (session 11),
+        # which owns it". Session 11 owns it and cannot reach pygame -- the core
+        # loop talks to Protocols only (ADR-019) -- so this pump, the only thing
+        # that sees QUIT, normalises it onto the one inbound stream instead.
+        outbound: queue.Queue[FocusEvent | Quit] = queue.Queue()
         source = PygameFocusSource(outbound)
+        outbound.get_nowait()
         pygame.event.post(pygame.event.Event(pygame.QUIT))
         source.poll()
-        assert pygame.event.get(pygame.QUIT), "poll() consumed QUIT"
+        assert outbound.get_nowait() == Quit()
+        # And nothing behind it: a closing window can already read as
+        # unfocused, and a synthesised FocusLost would announce a pause on the
+        # way out.
+        assert outbound.empty()
+        source.close()
+
+    def test_poll_leaves_events_it_does_not_own_on_the_sdl_queue(self) -> None:
+        # poll() must still type-filter its get(): an unfiltered drain would
+        # swallow every other SDL event too.
+        outbound: queue.Queue[FocusEvent | Quit] = queue.Queue()
+        source = PygameFocusSource(outbound)
+        pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_a))
+        source.poll()
+        assert pygame.event.get(pygame.KEYDOWN), "poll() consumed KEYDOWN"
         source.close()
 
     def test_repeated_focus_events_emit_only_on_change(self) -> None:
         # Edge-triggered: Windows re-delivers WINDOWFOCUSGAINED, and the backup
         # poll re-reads the same state every tick. 6b's FSM wants transitions.
-        outbound: queue.Queue[FocusEvent] = queue.Queue()
+        outbound: queue.Queue[FocusEvent | Quit] = queue.Queue()
         source = PygameFocusSource(outbound)
         outbound.get_nowait()
         pygame.event.post(pygame.event.Event(pygame.WINDOWFOCUSGAINED))
@@ -131,7 +149,7 @@ class TestPygameFocusSourceUnderDummyDriver:
         source.close()
 
     def test_conforms_to_focus_source_protocol(self) -> None:
-        outbound: queue.Queue[FocusEvent] = queue.Queue()
+        outbound: queue.Queue[FocusEvent | Quit] = queue.Queue()
         source: FocusSource = PygameFocusSource(outbound)
         assert source is not None
         source.close()

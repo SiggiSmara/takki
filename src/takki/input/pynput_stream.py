@@ -19,6 +19,8 @@ class _Listener(Protocol):
 
     def stop(self) -> None: ...
 
+    def join(self, timeout: float | None = None) -> None: ...
+
 
 class PynputKeyStream:
     # Declared at class level, outside the platform guard below: pyright's
@@ -49,3 +51,12 @@ class PynputKeyStream:
 
     def stop(self) -> None:
         self._listener.stop()
+
+    def join(self, timeout: float | None = None) -> None:
+        # Deliberately not on the KeyEventStream Protocol -- that surface is
+        # start/stop only (session 5), and the wiring holds the concrete stream
+        # to reach this. It is the only place a dead listener becomes visible:
+        # pynput stops the listener and re-raises a callback exception here, so
+        # an unjoined listener that died mid-run is indistinguishable from an
+        # idle one (concurrency-model.md § Shutdown).
+        self._listener.join(timeout)

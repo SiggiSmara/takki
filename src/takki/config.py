@@ -143,3 +143,22 @@ SESSION_KEY_FLOOR = 45
 # key may be drilled in one sitting, never a hard interrupt: no consumer yet,
 # and ADR-024's block generator is where it lands.
 SESSION_KEY_CEILING = 90
+
+# concurrency-model.md § The loop. 60 Hz caps the latency the loop itself adds
+# between a keypress and its cue at ~16 ms, well inside ADR-012's "immediate".
+# A compiled default, not parent-facing.
+TICK_HZ = 60
+
+# ADR-012 § Word presentation protocol: "the next character follows after a
+# correct keypress or a configurable timeout". The timeout *re-prompts* rather
+# than advancing (alpha session 11) -- the open prompt keeps its identity, so
+# the child's next keystroke is still its first attempt, and nothing scrolls
+# past a thinking child. Bounded, because an unbounded re-prompt would repeat
+# the same letter at a child who has walked away until someone closes the app:
+# after PROMPT_MAX_REPROMPTS the prompt stays open and Takki goes quiet.
+PROMPT_TIMEOUT_SECONDS = 10.0
+PROMPT_MAX_REPROMPTS = 3
+
+# concurrency-model.md § Shutdown: "a worker that won't die inside the timeout
+# is abandoned, not waited on forever -- the process is exiting anyway."
+WORKER_JOIN_SECONDS = 2.0
