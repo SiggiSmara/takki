@@ -25,11 +25,28 @@ repos:
 
   # pyright runs through uv so it sees the project venv (pytest, etc.) and uv's
   # bundled node — the isolated pre-commit hook env resolves neither.
+  #
+  # Both target platforms are checked explicitly, and neither is left to the
+  # host. pyright eliminates `if sys.platform == "win32":` branches as
+  # unreachable *before* type-checking them, so a run that infers its platform
+  # checks whichever half of the codebase the developer happens not to be
+  # writing: on the Linux dev box every line of Windows code was invisible, and
+  # CI ran pyright on ubuntu only, so `platform/windows.py` and the win32 branch
+  # of `pynput_stream.py` had never been checked by anything. Pinning
+  # `pythonPlatform` in pyproject.toml would only move the blind spot to the
+  # other platform — two explicit runs is what removes it. Added 2026-09-20,
+  # before alpha session 12a writes the real ctypes platform layer.
   - repo: local
     hooks:
-      - id: pyright
-        name: pyright
-        entry: uv run pyright
+      - id: pyright-linux
+        name: pyright (Linux)
+        entry: uv run pyright --pythonplatform Linux
+        language: system
+        types: [python]
+        pass_filenames: false
+      - id: pyright-windows
+        name: pyright (Windows)
+        entry: uv run pyright --pythonplatform Windows
         language: system
         types: [python]
         pass_filenames: false

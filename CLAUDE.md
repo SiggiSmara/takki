@@ -14,8 +14,10 @@ Typing tutor for visually impaired children. Audio is the primary interface. See
 - **Package manager:** `uv`. Use `uv add` / `uv run` / `uv sync`. Never use bare `pip install`.
 - **Tests:** `uv run pytest`
 - **Layout:** `src/` layout. All application source lives under `src/takki/`.
-- **Primary dev machine:** Linux (headless box, SSH from Windows laptop).
-- **Windows testing:** Spike scripts and platform-specific code are run manually on the Windows laptop. Write scripts here, run there, paste results back. Do not set up a separate Claude Code session on Windows — keep context here.
+- **Primary dev machine:** Linux (headless box, SSH from Windows laptop) — for everything that is not OS-specific.
+- **Where a chunk is developed follows what it touches.** The OS-specific code is deliberately confined behind Protocols so the other ~90% of the codebase is portable and stays here (see *Platform interfaces* below, ADR-019, ADR-026). But **implementing those platform stubs, and anything whose behaviour only exists on the target OS, is developed on that OS** — you cannot write `ctypes.windll` scan-code mapping, SAPI/COM threading, real focus transitions, or pynput's live event stream against a machine that can run none of them. Writing blind and pasting results back is for *spikes* — a script, one question, one answer. It is not a way to build a module.
+- **Moving the session is fine; splitting it is not.** Move the whole working session to the machine that can run the code, and move back when the chunk is done. What must not happen is two Claude Code sessions on two machines for one chunk — that fragments context, which is the thing this rule has always been protecting. Alpha #12a/#12b are developed on the Windows laptop for this reason; Beta's engine work returns here.
+- **Spike scripts** still follow the old loop where they genuinely are spikes: write here, run on the laptop, paste results back into a `docs/research/` note.
 
 ## Hard architectural constraints
 
@@ -98,6 +100,7 @@ pyproject.toml
 - Default `uv run pytest` runs only fast deterministic tests against fakes. Slow tests opt in via markers.
 - GitHub Actions runs the tiered pyramid: unit + integration + Windows platform smoke on every PR; slow integration nightly; PyInstaller on release tags.
 - Headless audio/video on CI via `SDL_AUDIODRIVER=dummy` / `SDL_VIDEODRIVER=dummy`.
+- **pyright runs once per target platform, never on the inferred host** (`--pythonplatform Linux` and `--pythonplatform Windows`, both in pre-commit). pyright drops `if sys.platform == "win32":` branches as unreachable before checking them, so a host-inferred run silently skips half the codebase — the half you are usually not sitting on. Do not replace the two runs with a `pythonPlatform` pin in `pyproject.toml`; that just moves the blind spot.
 - Whisper and Piper models are cached in CI via `actions/cache`; integration tests against real models cost seconds after warm-up.
 - **Assert exact event sequences and counts, not that something was emitted.** Session 6a shipped a bug — a backup focus poll cancelling real focus events — through a clean review and a full green suite, because the tests asserted an event was present rather than which events, in what order, and how many.
 - See ADR-019 for the full pyramid, protocol catalog, and CI strategy.

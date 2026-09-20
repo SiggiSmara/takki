@@ -50,7 +50,12 @@ def test_composing_keycode_with_no_char_translates_to_none_none() -> None:
 
         from takki.input.pynput_stream import translate
 
-        composing = keyboard.KeyCode(vk=0, char=None)
+        # `vk` is an int virtual-key code at runtime, and the stub agrees on the
+        # attribute (`vk: int | None`) while declaring the __init__ parameter as
+        # `str | None` -- a typeshed bug, not ours. Suppressed rather than
+        # "fixed" by dropping the argument: a real composing event carries a vk,
+        # and matching a wrong stub would make the test less faithful.
+        composing = keyboard.KeyCode(vk=0, char=None)  # pyright: ignore[reportArgumentType]
         event = translate(composing, pressed=True)
         assert event.char is None
         assert event.name is None
