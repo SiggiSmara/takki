@@ -14,9 +14,13 @@ it: nothing here registers for events, so no thread has to pump a message queue
 and `stop()` costs the caller nothing (it sets a flag and makes no COM call).
 """
 
+import logging
 import sys
 import threading
+import time
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 if sys.platform == "win32":
     # Module level, and that placement is the fix for a real failure: comtypes
@@ -50,6 +54,19 @@ _POLL_MS = 10
 # the default length_scale of 1.0. Pinned rather than inherited, because the
 # inherited value is whatever the machine's SAPI default happens to be.
 _RATE = 0
+
+# The longest an utterance may take before we stop waiting for SAPI to say it
+# finished. Not error handling for something that cannot happen: a GitHub
+# windows-latest runner demonstrated it (alpha session 12a-2) -- with no usable
+# audio endpoint, SAPI accepts the text and never signals completion, and the
+# wait below spins forever. On a child's machine the same thing arrives as a
+# USB headset unplugged mid-utterance. A hung TTS worker is the worst failure
+# Takki has: no SpeechFinished is ever posted, the core's Speaker stays busy,
+# the loop stops issuing prompts, and the app is silently inert (see
+# TTSWorker.run). Generous on purpose -- the longest thing the curriculum says
+# is ADR-023's introduction script at ~7.4 s, so this is 8x the real maximum
+# and cannot fire on a healthy machine.
+_MAX_UTTERANCE_SECONDS = 60.0
 
 
 class SapiTTS:
@@ -89,8 +106,20 @@ class SapiTTS:
         if self._cancel.is_set():
             return
         self._voice.Speak(text, _SPF_ASYNC)
+        deadline = time.monotonic() + _MAX_UTTERANCE_SECONDS
         while not self._voice.WaitUntilDone(_POLL_MS):
             if self._cancel.is_set():
+                self._voice.Speak("", _SPF_PURGE_BEFORE_SPEAK)
+                return
+            if time.monotonic() > deadline:
+                # Give up rather than hang the worker. Purge so the engine is
+                # usable for the next utterance, and say so loudly: the child
+                # heard nothing and nothing else will report it.
+                logger.error(
+                    "SAPI did not finish an utterance within %.0fs; abandoning it. "
+                    "Is an audio output device available?",
+                    _MAX_UTTERANCE_SECONDS,
+                )
                 self._voice.Speak("", _SPF_PURGE_BEFORE_SPEAK)
                 return
 

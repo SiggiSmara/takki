@@ -1,10 +1,24 @@
 import queue
+import sys
 
 import pytest
 
 from takki.audio.fallback_tts import FallbackTTS
 from takki.audio.tts import TTSEngine
 from takki.audio.tts_worker import SpeechFinished, TTSWorker
+
+# FallbackTTS is the Linux dev path and nothing else (ADR-003): Windows drives
+# SAPI through SapiTTS, covered by tests/test_sapi_tts.py. Running these on
+# Windows exercises a path Takki does not ship -- and it hangs rather than
+# failing, which is worse than useless in CI. Demonstrated on a
+# `windows-latest` runner (alpha session 12a-2): pyttsx3's engine constructed
+# fine and then `runAndWait()` never returned, because with no usable audio
+# endpoint SAPI accepts the text and never fires the completion event its loop
+# is polling for. The run had to be cancelled by hand at 8.5 minutes.
+pytestmark = pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="FallbackTTS is the Linux dev path; Windows uses SapiTTS (ADR-003)",
+)
 
 
 @pytest.mark.audio

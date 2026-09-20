@@ -45,9 +45,23 @@ jobs:
   # continue-on-error and fold `-m audio` into the windows job, or delete this
   # job and record in ADR-019 that the tier is laptop-only. Do not leave it
   # here indefinitely in this state.
+  #
+  # First run, 2026-09-20 -- partial answer, and it was worth asking. The
+  # `pygame.mixer` cue tests PASS on a runner under SDL_AUDIODRIVER=dummy. The
+  # TTS half never got an answer, because the pyttsx3 test hung the job; that
+  # test no longer runs on Windows and SapiTTS is now bounded, so the next run
+  # is the one that answers whether a runner can drive a real SAPI voice.
   windows-audio-probe:
     runs-on: windows-latest
     continue-on-error: true
+    # Bounded because the first run (2026-09-20) did not fail, it HUNG: pyttsx3's
+    # runAndWait() polls for a completion event SAPI never fires when there is no
+    # usable audio endpoint, so the job sat at 8.5 minutes on one `speak("a")`
+    # and had to be cancelled by hand. Both halves of that are now fixed --
+    # FallbackTTS is skipped on Windows (it is the Linux dev path) and SapiTTS
+    # abandons an utterance after 60 s -- but a probe asking "what can a runner
+    # do" must not be able to burn the job limit finding out.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
