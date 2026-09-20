@@ -7,7 +7,12 @@ from takki.audio.fallback_tts import FallbackTTS
 from takki.platform import select_platform_interface
 from takki.platform.dev_stub import DevStubInterface
 from takki.platform.layout import COL_TO_FINGER, Layout, PhysicalKey, build_en
-from takki.platform.windows import nvda_in_tasklist_output, primary_subtag
+from takki.platform.windows import (
+    SCAN_CODE_GRID,
+    dead_key_name,
+    nvda_in_tasklist_output,
+    primary_subtag,
+)
 from tests.fakes.fake_platform import FakePlatformInterface
 from tests.fakes.fake_tts import FakeTTSEngine
 
@@ -236,6 +241,69 @@ class TestNvdaInTasklistOutput:
 
     def test_case_insensitive(self) -> None:
         assert nvda_in_tasklist_output("NVDA.EXE") is True
+
+
+class TestDeadKeyName:
+    """Pure enough to run everywhere, which is the point of deriving the name.
+
+    A table of diacritics would only ever cover the ones somebody measured.
+    """
+
+    def test_acute_is_what_build_is_calls_it(self) -> None:
+
+        # prose, but these ARE the characters Windows hands back for the dead
+        # key, and spelling them as escapes would hide what is being tested.
+        assert dead_key_name("´") == "dead-acute"  # noqa: RUF001
+
+    def test_other_common_diacritics(self) -> None:
+        assert dead_key_name("¨") == "dead-diaeresis"
+        assert dead_key_name("^") == "dead-circumflex"
+        assert dead_key_name("~") == "dead-tilde"
+        assert dead_key_name("`") == "dead-grave"
+
+    def test_an_unnamed_character_still_gets_a_stable_name(self) -> None:
+        # A private-use codepoint has no Unicode name. Better a stable,
+        # obviously-odd name than a crash inside startup.
+        assert dead_key_name("") == "dead-ue000"
+
+    def test_no_character_at_all(self) -> None:
+        assert dead_key_name("") == "dead-unknown"
+
+
+class TestScanCodeGrid:
+    """The grid is the half Windows does not report, so it is pinned here.
+
+    These positions are what COL_TO_FINGER turns into fingers; an off-by-one
+    reassigns a finger rather than merely moving a letter. The Windows-side
+    check that the grid reproduces build_en/de/is is in test_windows_layout.py.
+    """
+
+    def test_the_six_anchor_scan_codes(self) -> None:
+        # ADR-027 § The Anchor Gate, by position: the two index home columns.
+        assert SCAN_CODE_GRID[0x13] == (2, 4)
+        assert SCAN_CODE_GRID[0x21] == (3, 4)
+        assert SCAN_CODE_GRID[0x2F] == (4, 4)
+        assert SCAN_CODE_GRID[0x16] == (2, 7)
+        assert SCAN_CODE_GRID[0x24] == (3, 7)
+        assert SCAN_CODE_GRID[0x32] == (4, 7)
+
+    def test_row_extents(self) -> None:
+        assert SCAN_CODE_GRID[0x02] == (1, 1) and SCAN_CODE_GRID[0x0D] == (1, 12)
+        assert SCAN_CODE_GRID[0x10] == (2, 1) and SCAN_CODE_GRID[0x1B] == (2, 12)
+        assert SCAN_CODE_GRID[0x1E] == (3, 1) and SCAN_CODE_GRID[0x28] == (3, 11)
+        assert SCAN_CODE_GRID[0x2B] == (3, 12)
+        assert SCAN_CODE_GRID[0x2C] == (4, 1) and SCAN_CODE_GRID[0x35] == (4, 10)
+
+    def test_every_column_has_a_finger(self) -> None:
+        assert all(col in COL_TO_FINGER for _, col in SCAN_CODE_GRID.values())
+
+    def test_the_iso_extra_key_has_no_position(self) -> None:
+        # 0x56 is the key left of Z on ISO boards. No target layout puts a
+        # letter there, and giving it a column would collide with row 4 col 1.
+        assert 0x56 not in SCAN_CODE_GRID
+
+    def test_positions_are_unique(self) -> None:
+        assert len(set(SCAN_CODE_GRID.values())) == len(SCAN_CODE_GRID)
 
 
 class TestSelectPlatformInterface:
