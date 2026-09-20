@@ -23,16 +23,43 @@ A value is read from the highest tier that defines it. Missing keys at any tier 
 
 ### App Data Directory
 
-Located via the `platformdirs` library (`user_data_dir("Takki", "Takki")`):
+Located via the `platformdirs` library (`user_data_dir("Takki", appauthor=False)`):
 
 | Platform | Path |
 |---|---|
-| Windows | `%APPDATA%\Takki\` |
-| Linux (dev) | `~/.local/share/Takki\` |
+| Windows | `%LOCALAPPDATA%\Takki\` |
+| Linux (dev) | `~/.local/share/Takki/` |
+| macOS | `~/Library/Application Support/Takki/` |
 
 All persistent files live here: `takki.sqlite`, `takki_config.yaml`, `language_override.yaml`, `custom_words.txt`, `voices/`, `sounds/`.
 
 `platformdirs` is a small, widely-used library with no transitive dependencies; it is the standard solution for this problem and does not warrant a custom platform interface wrapper.
+
+**Corrected 2026-09-20 (alpha session 12a-0 follow-up), on two counts — the call and the table had never agreed with each other.** The original call was `user_data_dir("Takki", "Takki")` and the original Windows row read `%APPDATA%\Takki\`; the call actually returns `%LOCALAPPDATA%\Takki\Takki` — Local rather than Roaming, and the app nested inside an identically-named *author* directory. Neither half was what the table promised, and nothing had implemented either, because `platformdirs` was not a project dependency until now (the code wrote `~/Documents/Takki/`, which is [ADR-015](0015-piper-voice-model-distribution.md)'s parent-facing *voices* folder, not a data directory).
+
+`appauthor=False` removes the doubled directory: Takki has no separate vendor to name.
+
+**Local, not Roaming, is a decision and not just the library default.** The database runs in WAL mode ([ADR-011](0011-persistence-and-state.md)), so it is three files — `takki.sqlite`, `-wal`, `-shm` — that are only meaningful together. A roaming profile syncs at logon and logoff and gives no guarantee of copying them consistently or in order, so on a managed school network — a deployment target [architecture.md](../architecture.md) names explicitly — roaming would risk corruption at every logoff and add the database's full size to every logon. Roaming also silently defeats the offline-and-local promise in [PRIVACY.md](../PRIVACY.md): a roamed profile copies the child's progress to a domain server. A database belongs in local app data.
+
+The resolved paths are documented for parents in [README § Where your data lives](../../README.md#where-your-data-lives), which is the answer to this ADR's own "location is documented in the application" promise until an in-app help surface exists.
+
+### Language and layout must agree
+
+*(Added 2026-09-20, replacing the withdrawn `TAKKI_LANG` / `TAKKI_LAYOUT` env vars.)*
+
+Two different things decide what a lesson looks like, and they come from two different places:
+
+- **The language** is configuration. `config.LANGUAGE` (tier 1) names the curriculum — the wordfreq corpus, the letter audio, the milestone denominator. `None`, the default, means "ask the platform", which is [ADR-013](0013-onboarding-and-profile-selection.md)'s locale detection and the right answer on a machine with one language. The `takki_config.yaml` and per-profile tiers override it as they do any other key, once they exist.
+- **The layout is not configuration.** [ADR-006](0006-language-and-keyboard-layout-scope.md) settles this: *"the app teaches on whatever layout Windows reports as active."* Takki never selects, substitutes or overrides a keyboard layout. Doing so would teach a child key positions their own keyboard does not have.
+
+The two can therefore disagree, and on a machine with more than one layout installed they routinely will — the test laptop carries German, US and Icelandic, and a child's school computer is no different. **Takki verifies the pair at startup and refuses to run when they do not match** (`main.verify_layout`, before any component is constructed). With an `en` curriculum on an active German layout it would otherwise drill `y` and `z` at each other's positions and admit `ä ö ü ß` to a 30-grapheme milestone denominator, silently, with the child's accuracy record scored against a keyboard they are not typing on.
+
+**The comparison is key positions, not layout identity.** Takki teaches letters only — no space, no Shift, no punctuation ([roadmap § What is deliberately never taught](../roadmap.md#what-done-looks-like-per-phase)) — and US and UK QWERTY differ only outside that set. Comparing KLIDs would reject a UK keyboard that types the English curriculum perfectly, so `layout.describe_mismatch()` compares each key's `(row, col)` and reports which letters are missing, unexpected or moved.
+
+**Alpha reports and stops.** The message goes to stderr with the remedy (Win+Space switches layouts) and the process exits non-zero. Two known limits, both deliberate and both Beta's:
+
+1. **Startup only.** A layout switched mid-session — one accidental Win+Space — is not detected, and the rest of that session is scored against the wrong keyboard. Filed in [roadmap § D](../roadmap.md#d-smaller-gaps-worth-a-line-in-the-relevant-adr).
+2. **stderr is not an audio channel.** A blind parent never sees it. Alpha is developer-only so nothing is lost there, but this is the same gap as roadmap § D's "Error surfacing for blind parents", and the pilot is where it bites: the graceful resolution — say what is wrong, offer to switch layout or switch curriculum — belongs with onboarding ([ADR-013](0013-onboarding-and-profile-selection.md)).
 
 ### `config.py` — Compiled Defaults
 
@@ -161,6 +188,6 @@ Key bindings, `tts_rate`, `tts_voice`, and `push_to_talk_mode` may be overridden
 
 - **Single `.ini` file.** Awkward for nested structures (layer proportions, sound cue map). YAML is already used elsewhere — consistency outweighs `.ini` familiarity.
 - **All config in SQLite.** Eliminates a separate file but makes the config uninspectable and uneditable without tooling. A text file is the right surface for parent customisation.
-- **Env-var overrides.** `TAKKI_DATA_DIR` overrides the `platformdirs` path for testing; no other env-var overrides are supported.
+- **Env-var overrides.** Rejected. Nothing Takki does is configured by the environment: the data directory comes from `platformdirs`, the layout from Windows, and the language from the tiers above.
 
-**Amended 2026-09-20 (alpha session 12a-0).** The line above is no longer accurate. `TAKKI_LANG` and `TAKKI_LAYOUT` (`src/takki/main.py`) now override `PlatformInterface.get_system_language()` / `.get_layout_positions()` for the same reason `TAKKI_DATA_DIR` was proposed: the Windows test laptop reports `en-150` on a German QWERTZ layout (alpha-plan carry-forward "Test-laptop locale and layout"), so an un-overridden run is `en` wordfreq against a German grapheme set, not the English Stage 0 the Alpha done-criterion names. `TAKKI_LAYOUT` selects one of the existing `build_en`/`build_de`/`build_is` layout builders directly — it does not exercise `get_layout_positions()`, which remains `#12a`'s real (`WindowsPlatformInterface`) implementation. `TAKKI_DATA_DIR` itself is still unimplemented; see the alpha-plan carry-forward "Data directory" row.
+**Amended 2026-09-20, then re-amended the same day.** A first pass added `TAKKI_LANG` / `TAKKI_LAYOUT` alongside a proposed `TAKKI_DATA_DIR`, on the grounds that the Windows test laptop reports `en-150` on a German QWERTZ layout. That was the wrong instrument and all three were withdrawn: an env var is a *developer's* escape hatch, and the situation it was escaping — a machine with several keyboard layouts installed — is an ordinary one that a child's computer will meet too. A parent has no environment variables. `TAKKI_DATA_DIR` went with them: the resolved path is now correct on every platform, so there is nothing left for it to work around in Alpha. What replaces them is the section below.

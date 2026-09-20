@@ -8,10 +8,12 @@ class FakePlatformInterface:
         system_language: str = "en",
         layout: Layout | None = None,
         screen_reader: str | None = None,
+        voices: dict[str, str] | None = None,
     ) -> None:
         self._language = system_language
         self._layout = layout if layout is not None else build_en()
         self._screen_reader = screen_reader
+        self._voices = voices if voices is not None else {"en": "fake-en", "de": "fake-de"}
         self._tts = FakeTTSEngine()
 
     def get_system_language(self) -> str:
@@ -19,6 +21,9 @@ class FakePlatformInterface:
 
     def get_layout_positions(self) -> Layout:
         return self._layout
+
+    def find_voice(self, language: str) -> str | None:
+        return self._voices.get(language)
 
     def get_fallback_tts(self) -> FakeTTSEngine:
         return self._tts

@@ -410,6 +410,101 @@ class TestTypeAhead:
             assert harness.store.window_stats(harness.profile.id, name).attempt_count == 1
 
 
+class TestInterruptedIntroductionScript:
+    """ADR-012 Recovery: a script cut by a focus loss is held, not dropped."""
+
+    SCRIPT = "New letter:"
+
+    def _drain(self, harness: Harness, ticks: int = 12) -> None:
+        for _ in range(ticks):
+            harness.pump()
+            harness.loop.tick()
+
+    def _script_lines(self, harness: Harness) -> list[str]:
+        return [line for line in harness.engine.spoken if line.startswith(self.SCRIPT)]
+
+    def test_a_cut_script_is_respoken_whole_on_resume(self) -> None:
+        harness = Harness()
+        harness.loop.start()
+        harness.loop.tick()  # queue the script; do not let it finish
+        assert harness.loop.prompt is None
+
+        harness.focus.lose_focus()
+        self._drain(harness, 2)
+        cut = self._script_lines(harness)
+        # The focus loss really did truncate it: the line already handed to the
+        # worker still spoke, the rest of the script was dropped from _pending.
+        assert len(cut) < 2, cut
+
+        harness.focus.gain_focus()
+        self._drain(harness)
+        after = self._script_lines(harness)
+        # Re-spoken from the start, so every line of the script is heard --
+        # the count grows past what the interrupted run managed.
+        assert len(after) > len(cut), (cut, after)
+        assert len(after) >= 2, after
+
+    def test_the_prompt_waits_behind_the_respoken_script(self) -> None:
+        harness = Harness()
+        harness.loop.start()
+        harness.loop.tick()
+        harness.focus.lose_focus()
+        self._drain(harness, 2)
+        harness.focus.gain_focus()
+        harness.loop.tick()
+        # Queued, not spoken over: `_advance` holds the prompt while it speaks.
+        assert harness.loop.prompt is None
+        harness.settle()
+        assert harness.loop.prompt is not None
+
+    def test_a_completed_script_is_not_respoken_on_a_later_resume(self) -> None:
+        # The case the decision exists to protect. Once the prompt has opened
+        # the script has served its purpose, so an ordinary mid-drill pause
+        # re-issues the prompt and nothing else -- with no prompt open, "a
+        # script was cut" and "something else was speaking" are otherwise
+        # indistinguishable.
+        harness = Harness()
+        harness.loop.start()
+        harness.settle()
+        harness.engine.spoken.clear()
+
+        harness.focus.lose_focus()
+        self._drain(harness, 2)
+        harness.focus.gain_focus()
+        self._drain(harness)
+
+        assert self._script_lines(harness) == []
+
+
+class TestCapsLock:
+    def test_an_upper_case_answer_counts_as_correct(self) -> None:
+        # ADR-027 § Case is folded at the boundary. A blind child has no Caps
+        # Lock LED, so a stuck Caps Lock must not turn every prompt into a
+        # silent miss -- which is exactly what it did before 2026-09-20.
+        harness = Harness()
+        harness.loop.start()
+        harness.settle()
+        asked = harness.loop.prompt
+        assert asked is not None
+        harness.press(asked.upper())
+        harness.loop.tick()
+        assert harness.cues.played == ["correct"]
+        stats = harness.store.window_stats(harness.profile.id, asked)
+        assert (stats.attempt_count, stats.correct_count) == (1, 1)
+
+    def test_the_attempt_is_recorded_against_the_lower_case_key(self) -> None:
+        # The stored key is the prompt target, so an upper-case answer must not
+        # open a second key_stats row that no milestone or threshold reads.
+        harness = Harness()
+        harness.loop.start()
+        harness.settle()
+        asked = harness.loop.prompt
+        assert asked is not None
+        harness.press(asked.upper())
+        harness.loop.tick()
+        assert harness.store.window_stats(harness.profile.id, asked.upper()).attempt_count == 0
+
+
 class TestTimeout:
     def test_the_timeout_re_prompts_without_re_latching_the_prompt(self) -> None:
         harness = Harness()

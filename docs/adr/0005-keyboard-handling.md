@@ -23,6 +23,12 @@ This means:
 
 The push-to-talk key (ADR-020) is captured via the same `pynput` pipeline as any other key; the lesson engine consumes character events and ignores the talk key, while the voice subsystem subscribes to talk-key events and ignores character keys.
 
+### Case is discarded (added 2026-09-20)
+
+This ADR puts Shift and capitalisation out of scope but never said what happens to the character that arrives when Shift or Caps Lock *is* held — and Windows translates it before `pynput` sees it, so `F` genuinely arrives. **It is folded to lower case at the taxonomy boundary and the lesson engine never sees the difference.** Takki teaches which key a letter lives on; which case that key produced is a fact about a modifier the curriculum does not teach. The reasoning, the `str.lower()`-not-`str.casefold()` constraint, and the counting consequences are in [ADR-027 § Case is folded at the boundary](0027-key-and-accuracy-state-model.md).
+
+Shift and Caps Lock themselves remain `System` in the ADR-028 taxonomy — they produce no character event and are ignored, not swallowed.
+
 ### Focus-gated dispatch (added 2026-06-21, per ADR-028)
 
 `pynput` remains the key source, but it no longer runs with `suppress=True`. Key events are processed as drill input only while Takki's window holds OS foreground; while it does not, the OS routes keys to whatever is focused and Takki is paused. The character-translation behaviour above is unchanged — only *when* an event counts as lesson input is now gated on focus. See [ADR-028 §C8](0028-composite-input-and-keyboard-ownership.md) for the full ownership model and the `FocusSource` Protocol.

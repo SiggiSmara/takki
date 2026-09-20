@@ -31,6 +31,13 @@ class DevStubInterface:
     def get_layout_positions(self) -> Layout:
         return build_en()
 
+    def find_voice(self, language: str) -> str | None:
+        # espeak-ng, the Linux pyttsx3 driver, ships every language Takki
+        # teaches, so the dev box never hits the graceful stop. Returning the
+        # code itself rather than a real voice id is honest: nothing on this
+        # path consumes it, and inventing a Windows-shaped id would be a lie.
+        return language
+
     def get_fallback_tts(self) -> TTSEngine:
         return FallbackTTS()
 

@@ -5,7 +5,6 @@ is assembled here, once, and handed to it. Ownership of the startup *sequence*
 belongs here rather than to each component (concurrency-model.md § Startup).
 """
 
-import os
 import queue
 import random
 import signal
@@ -25,33 +24,48 @@ from takki.language.wordfreq_source import WordfreqSource
 from takki.persistence import Profile, Store
 from takki.persistence.sqlite_store import SqliteStore
 from takki.platform import PlatformInterface, select_platform_interface
-from takki.platform.layout import Layout, build_de, build_en, build_is
+from takki.platform.layout import Layout, build_de, build_en, build_is, describe_mismatch
 from takki.session import InboundEvent, SessionLoop
 
-# ADR-025's TAKKI_DATA_DIR (not yet implemented) is the stated precedent for
-# an env override on top of a platform-detected default. This laptop is
-# en-150 on a German QWERTZ layout, so an un-overridden run is `en` wordfreq
-# against a German grapheme set rather than the English Stage 0 the Alpha
-# done-criterion names -- see alpha-plan carry-forward "Test-laptop locale
-# and layout".
-_LAYOUT_BUILDERS: dict[str, Callable[[], Layout]] = {"en": build_en, "de": build_de, "is": build_is}
+# The curriculum languages Alpha can teach, and the keyboard each one expects.
+# Not a config surface: adding a language means adding a layout table, so the
+# dictionary and the ADR-009 language set grow together.
+_EXPECTED_LAYOUTS: dict[str, Callable[[], Layout]] = {
+    "en": build_en,
+    "de": build_de,
+    "is": build_is,
+}
+
+EXIT_LAYOUT_MISMATCH = 2
+EXIT_NO_VOICE = 3
 
 
 def resolve_language(platform: PlatformInterface) -> str:
-    # TAKKI_LANG is a bare primary-subtag code ("en", "de", ...), taken as
-    # given -- unlike the platform-detected path, it is not run through
-    # primary_subtag(), since it is typed by a developer, not a locale API.
-    # An empty value is "no override", matching resolve_layout below.
-    return os.environ.get("TAKKI_LANG") or platform.get_system_language()
+    """The configured language (ADR-025 tier 1), falling back to the system locale."""
+    # config.LANGUAGE is the parent-facing knob until the takki_config.yaml
+    # tier exists; None means "whatever Windows says", which is ADR-013's
+    # locale detection and the right default for a single-language machine.
+    return config.LANGUAGE or platform.get_system_language()
 
 
-def resolve_layout(platform: PlatformInterface) -> Layout:
-    override = os.environ.get("TAKKI_LAYOUT")
-    if not override:
-        return platform.get_layout_positions()
-    if override not in _LAYOUT_BUILDERS:
-        raise ValueError(f"TAKKI_LAYOUT={override!r} is not one of {sorted(_LAYOUT_BUILDERS)}")
-    return _LAYOUT_BUILDERS[override]()
+def verify_layout(language: str, layout: Layout) -> str | None:
+    """None when the machine's keyboard can teach `language`; else why it cannot.
+
+    ADR-006 makes Windows authoritative for the layout, so this does not
+    substitute a layout of its own -- it refuses to teach the wrong
+    curriculum on the keyboard the child actually has. The case it exists for
+    is the ordinary one of a machine with more than one layout installed
+    (ADR-025 § Language and layout must agree): this laptop carries German,
+    US and Icelandic, and with German active an `en` curriculum would drill
+    `y` and `z` at each other's positions and put `ä ö ü ß` in a 30-grapheme
+    milestone denominator, silently.
+    """
+    expected = _EXPECTED_LAYOUTS.get(language)
+    if expected is None:
+        return (
+            f"no layout table for language {language!r}; Alpha teaches {sorted(_EXPECTED_LAYOUTS)}"
+        )
+    return describe_mismatch(expected(), layout)
 
 
 def _profile(store: Store, language: str) -> Profile:
@@ -61,9 +75,46 @@ def _profile(store: Store, language: str) -> Profile:
     return profiles[0] if profiles else store.create_profile("dev", language)
 
 
-def main() -> None:
+def main() -> int:
     platform = select_platform_interface()
-    layout = resolve_layout(platform)
+    language = resolve_language(platform)
+    layout = platform.get_layout_positions()
+
+    # Before anything is constructed: a mismatch here means every keystroke
+    # for the rest of the run would be scored against the wrong keyboard, and
+    # nothing later in startup can detect it. Alpha reports and stops rather
+    # than degrading (roadmap § D "Language and layout can disagree"); the
+    # graceful in-app resolution -- offer the right layout, or switch
+    # curriculum -- is Beta's, with onboarding (ADR-013).
+    mismatch = verify_layout(language, layout)
+    if mismatch is not None:
+        print(f"Takki cannot start: {mismatch}.", file=sys.stderr)
+        print(
+            "Set the active Windows keyboard layout to match the lesson language "
+            "(Win+Space switches between installed layouts), then start Takki again.",
+            file=sys.stderr,
+        )
+        return EXIT_LAYOUT_MISMATCH
+
+    # The second startup precondition, and the same shape as the first: a
+    # curriculum Takki cannot pronounce is as unusable as one it cannot type.
+    # Alpha's whole loop is "hear a letter, type it" (ADR-012), so a wrong
+    # voice is not degraded audio -- it is a prompt the child cannot resolve
+    # to a letter, which is the A1 failure by another route. Stop rather than
+    # fall back to whatever the system default happens to be (ADR-003
+    # § SAPI fallback voice selection).
+    voice = platform.find_voice(language)
+    if voice is None:
+        print(
+            f"Takki cannot start: no text-to-speech voice is installed for {language!r}.",
+            file=sys.stderr,
+        )
+        print(
+            "Add one in Windows Settings > Time & language > Speech > Manage voices, "
+            "then start Takki again.",
+            file=sys.stderr,
+        )
+        return EXIT_NO_VOICE
 
     inbound: queue.Queue[InboundEvent] = queue.Queue()
     # Display first, then the mixer: the window is the keyboard-focus anchor
@@ -74,12 +125,21 @@ def main() -> None:
     focus = PygameFocusSource(inbound)
     cues = PygameMixerCues()
 
+    # TODO(#12a-2): `voice` is verified above but not yet applied -- the engine
+    # would speak the system default. Harmless only because
+    # `get_fallback_tts()` still raises NotImplementedError on Windows, so
+    # there is no path that could silently use the wrong voice. Whoever
+    # implements it must take the resolved id: verifying a voice exists and
+    # then not selecting it is worse than not checking at all, because the
+    # check reads as a guarantee. The same session reshapes this call for
+    # thread affinity (the engine must be constructed on the worker thread),
+    # so both land together.
     speech = TTSWorker(platform.get_fallback_tts(), inbound)
     speech.start()
     letters = SyntheticLetterAudioSource(speech)
 
     store = SqliteStore(str(ensure_parent(database_path())))
-    profile = _profile(store, resolve_language(platform))
+    profile = _profile(store, language)
 
     keys = PynputKeyStream(inbound)
     loop = SessionLoop(
@@ -114,6 +174,7 @@ def main() -> None:
     # (concurrency-model.md § Shutdown). `stop()` already happened in
     # SessionLoop.shutdown().
     keys.join(config.WORKER_JOIN_SECONDS)
+    return 0
 
 
 if __name__ == "__main__":

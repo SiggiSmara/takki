@@ -19,7 +19,7 @@ Child profiles and progress data need to persist across sessions. SQLite is the 
 
 Each child has a named profile selected at startup (spoken menu). Multiple children can share one installation.
 
-**Profile portability:** the SQLite file *is* the profile data. It lives at `%APPDATA%\Takki\takki.sqlite` on Windows (located via `platformdirs` — see ADR-025). To move a child's progress to another computer, copy that file to the same location on the destination machine. No export/import flow is provided in v1 — the file is the export format. Parents are reminded of this in the parent/teacher summary (ADR-014).
+**Profile portability:** the SQLite file *is* the profile data. It lives at `%LOCALAPPDATA%\Takki\takki.sqlite` on Windows (located via `platformdirs` — see ADR-025). *(Path corrected 2026-09-20: this said `%APPDATA%`, which is the roaming profile. A WAL-mode database must not roam — ADR-025 § App Data Directory carries the reasoning.)* To move a child's progress to another computer, copy that file to the same location on the destination machine. No export/import flow is provided in v1 — the file is the export format. Parents are reminded of this in the parent/teacher summary (ADR-014).
 
 ### Schema
 

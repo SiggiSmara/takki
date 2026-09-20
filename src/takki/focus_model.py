@@ -142,7 +142,10 @@ class FocusModel:
             # Down-state is recorded even while PAUSED, exactly as named keys
             # are: a key held across the transition is still physically down,
             # so its repeats must keep reading as repeats on the way back.
-            held = classification.char.lower()
+            # Already lower case -- `classify()` folds it (ADR-027 § Case is
+            # folded at the boundary), so down-state is keyed on the physical
+            # key rather than on whichever case Shift happened to produce.
+            held = classification.char
             repeat = held in self._chars_down
             self._chars_down.add(held)
             if self.state is FocusState.PAUSED:
@@ -182,13 +185,15 @@ class FocusModel:
         if event.name is not None:
             self._down.discard(event.name)
         if isinstance(classification, Character):
-            # Case-folded on both sides: pynput recomputes KeyCode.char from
-            # live modifier state, so a Shift released a moment before the
-            # letter reports "A" down and "a" up -- one physical key, and the
-            # entry has to clear. A release missed entirely (secure desktop)
-            # leaks one entry, which the next release of that key clears,
-            # costing one ignored press of it and never the key itself.
-            self._chars_down.discard(classification.char.lower())
+            # Folded by `classify()` on both sides, which is what makes this
+            # discard find its entry: pynput recomputes KeyCode.char from live
+            # modifier state, so a Shift released a moment before the letter
+            # reports "A" down and "a" up -- one physical key, and the entry
+            # has to clear. That was the original reason for folding here and
+            # it survives the move to the boundary. A release missed entirely
+            # (secure desktop) leaks one entry, which the next release of that
+            # key clears, costing one ignored press of it and never the key.
+            self._chars_down.discard(classification.char)
         if self.state is FocusState.PAUSED:
             if isinstance(classification, ResumeKey):
                 self._resume_deadline = None

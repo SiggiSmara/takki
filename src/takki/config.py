@@ -2,6 +2,16 @@
 and per-profile SQLite settings once those tiers land -- Alpha reads these
 values directly."""
 
+# Lesson language (ADR-025 tier 1, ADR-009). None means "ask the platform" --
+# ADR-013's locale detection, and the right default on a machine with one
+# language. Set it to a primary subtag ("en", "de", "is") to pin the
+# curriculum on a machine that has several keyboard layouts installed, which
+# is the case this exists for: Takki then verifies at startup that the
+# *active* Windows layout is the one that language expects and refuses to
+# start if it is not (main.verify_layout). ADR-006 keeps Windows authoritative
+# for the layout itself -- this names the curriculum, never the keyboard.
+LANGUAGE: str | None = None
+
 # Key bindings (ADR-025). Values are pynput key *name* strings -- what
 # Key.<member>.name returns, which is what session 5's translate() puts in
 # KeyEvent.name. ADR-025's listing writes REREAD/RESTART as "escape"; pynput

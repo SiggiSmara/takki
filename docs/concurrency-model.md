@@ -40,9 +40,9 @@ while running:
 ## TTS: the one blocking subsystem
 
 - The worker **owns the engine**; all `say`/`runAndWait` calls happen there. The core requests speech by enqueueing `Speak(text, utterance_id)` and learns the outcome from the `SpeechFinished` event — it never waits.
-- **"Owns" starts at construction, not at first use** *(added 2026-09-20, pre-alpha-session-12a review, measured on the Windows laptop)*. SAPI5 is COM and the apartment binds when the object is created, so an engine built on one thread and spoken from another is not slow, it is **dead**: built and used on the worker thread, `FallbackTTS().speak("a")` returns in 2.25 s; built on the main thread and used on the worker, the worker is still inside `runAndWait()` after 10 s and never leaves. This note previously said only that the worker owns the engine, and `DevStubInterface.get_fallback_tts()` duly constructs one on the caller's thread — which `main.py` calls on the main thread before `TTSWorker.start()`. On Linux that is harmless (pyttsx3's espeak driver has no apartment), which is why it survived eleven sessions and a green default tier. The rule is therefore explicit: **the platform's `get_fallback_tts()` must hand the worker a way to build an engine, not a built one**, and any future blocking engine on this worker inherits the same rule. Alpha session 12a owns the fix.
-- **Interrupt on keypress** (ADR-012): the core calls `tts.stop()` directly from the main thread. This is the single cross-thread engine call, and it is exactly what the C12 spike validated on SAPI (a ~12 s utterance cut at ~2.2 s, `stop()` issued from a second thread). The worker's blocked `runAndWait()` returns early and posts `SpeechFinished(cancelled)`. **The call is not free, and rule 4 below assumed it was** *(measured 2026-09-20, same review, single measurement — repeat it)*: with the engine on the worker thread, `stop()` from the main thread **blocked the main thread for ~1.17 s** before returning. C12 measured how fast the *audio* stops, which is the question ADR-012 asks; nobody had measured how long the *caller* is held, which is the question this note asks. `Speaker.interrupt()` is on the keypress hot path, so at `TICK_HZ` 60 that is roughly 70 lost ticks and a cue that lands nowhere near ADR-012's "immediate". Whether the fix is to move the cancel off the main thread, to accept it on the fallback path only, or to let Piper's buffer-stop make it moot in Beta is 12a's decision.
-- **A short utterance costs ~0.86 s of worker time on SAPI** *(measured 2026-09-20, same review)*: `speak()` of a single letter returned in 0.86–0.94 s for `f j r u v`, the first call after construction costing 2.25 s for driver init. Near-independent of content, so it reads as fixed `runAndWait()` overhead rather than synthesis. The worker absorbs it and the core never waits, so it is not a budget problem — but it is the floor on how fast Stage 0 can present prompts, and it is 4.5× Piper's measured 0.19 s synthesis ([ADR-003](adr/0003-text-to-speech.md)). Worth having in hand when reading 12b's B2 and B7.
+- **"Owns" starts at construction, not at first use.** An engine built on one thread and spoken from another does not work at all. The mechanism is below, because the one-line version of it is not believable and a reader who does not believe it will undo the fix.
+- **Interrupt on keypress** (ADR-012): the core calls `tts.stop()` directly from the main thread. This is the single cross-thread engine call, and it is exactly what the C12 spike validated on SAPI (a ~12 s utterance cut at ~2.2 s, `stop()` issued from a second thread). The worker's blocked `runAndWait()` returns early and posts `SpeechFinished(cancelled)`. **The call is not free, and rule 4 below assumed it was** *(measured 2026-09-20, same review, single measurement — repeat it)*: with the engine on the worker thread, `stop()` from the main thread **blocked the main thread for ~1.17 s** before returning. C12 measured how fast the *audio* stops, which is the question ADR-012 asks; nobody had measured how long the *caller* is held, which is the question this note asks. `Speaker.interrupt()` is on the keypress hot path, so at `TICK_HZ` 60 that is roughly 70 lost ticks and a cue that lands nowhere near ADR-012's "immediate". **Why it costs that much, and why the obvious fix is wrong, are in § The engine belongs to the thread that creates it below** — the cost is a cross-thread round trip serviced by the worker's own message pump, so moving engine ownership back to the main thread to avoid it would trade a slow `stop()` for an utterance that never finishes. Whether the fix is to move the cancel off the main thread, to accept it on the fallback path only, or to let Piper's buffer-stop make it moot in Beta is 12a-2's decision.
+- **A single letter costs ~0.94 s of worker time on SAPI** *(measured 2026-09-20)*: `speak("f")` returns in 0.86–0.94 s, and the synthesized letter is 0.90–0.95 s of audio, so for letters the call time *is* the speech. The first call after construction costs an extra ~1.3–1.9 s of driver init. The worker absorbs both and the core never waits, so it is not a budget problem — but it is the floor on how fast Stage 0 can present prompts, and it is ~5× Piper's measured 0.19 s synthesis ([ADR-003](adr/0003-text-to-speech.md)). *(Corrected the same day: this bullet first read "near-independent of content, so it reads as fixed `runAndWait()` overhead rather than synthesis". The independence from content was real and the explanation was wrong — it is truncation, see § SAPI speaks only the first utterance in full below.)*
 - Utterance ids keep the core honest: a `SpeechFinished` for a superseded utterance is ignored, so a cancel racing a natural completion cannot double-advance a prompt.
 - ~~**Ids must come from one allocator, and today they do not**~~ — **resolved (2026-09-10, alpha session 11).** Every component that spoke used to mint its own (`SyntheticLetterAudioSource` and `FocusModel` each held a private `itertools.count()` from 0), so on one `TTSWorker` they collided and the filter above discarded live completions or matched stale ones. `TTSWorker.enqueue_speak(text) -> int` now mints the id and returns it, and no caller can choose one. Ids start at 1, so 0 is never live.
 
@@ -52,6 +52,62 @@ while running:
 - **Multi-utterance prompts** are sequenced by the core one at a time, so the command queue never holds a backlog; interrupting therefore clears the core's pending sequence as well as calling `stop()`. Rules and the interruptible/non-interruptible split are in [ADR-012 § TTS utterance sequencing and cancellation](adr/0012-audio-feedback-design.md#tts-utterance-sequencing-and-cancellation).
 - **`cancelled` is unreliable on the Linux dev path** (measured 2026-08-22, alpha session 4 review). pyttsx3's Linux driver initialises espeak with `AUDIO_OUTPUT_RETRIEVAL`, buffers the whole utterance, then plays it inside the synth callback via a blocking `os.system("aplay …")`; `stop()` only sets a flag that `iterate()` consumes, and `iterate()` cannot run while that callback blocks. So a `stop()` on Linux does not cut the audio and `SpeechFinished(status="cancelled")` cannot be trusted there. **This is a pyttsx3 driver limitation, not an espeak-ng one** — the C12 spike drove espeak-ng directly through ctypes and that path cancels correctly. Windows/SAPI, the only distribution target, cancels as specified (C12: a ~12 s utterance cut at ~2.2 s). Do not chase this as a bug on the dev box, and do not write a default-tier test that depends on it.
 - **Piper (Beta)** slots into the same worker with a different cancel mechanism (stop feeding the audio buffer). The Protocol surface (`speak`, `stop`) doesn't change.
+
+### SAPI speaks only the first utterance in full
+
+*(Found 2026-09-20 while measuring the cost of `stop()`. Not previously recorded anywhere, and the most damaging of the TTS findings, because it fails silently and Alpha's commonest utterance is the one shape that hides it.)*
+
+**Reusing one pyttsx3 engine across utterances truncates every utterance after the first to roughly 0.9 seconds of audio.** Measured, all on one worker thread that also built the engine:
+
+| | synthesized length | `speak()` returned |
+|---|---|---|
+| Long line, **first** utterance on a fresh engine | 4.42 s | 6.34 s (audio + driver init) ✓ |
+| Long line, **second** utterance on the same engine | 4.42 s | **0.92 s** ✗ |
+| Three long lines in a row on one engine | 13.3 s total | **2.66 s total** ✗ |
+| Long line, **fresh engine each time** | 4.42 s | 6.61 s, then 5.36 s ✓ |
+
+The audio is genuinely **cut off**, not merely mis-reported: three lines that are 13.3 s of speech complete in 2.66 s, so the child never hears the remainder.
+
+**Why nothing caught it.** A single letter is 0.90–0.95 s of audio — just under the cutoff. Alpha's overwhelmingly commonest utterance therefore survives intact, and every earlier measurement was taken on letters. An earlier version of the bullet above even recorded the symptom ("near-independent of content") and explained it away as fixed `runAndWait()` overhead.
+
+**What it breaks.** Everything longer than a letter, which in Alpha means the spoken material that matters most: ADR-023's introduction script is ~4.2 s ("New letter F. Use your left index finger…"), so a child would hear *"New letter F. Use your…"* and then silence — for the one utterance in the whole curriculum that teaches rather than tests. Milestone celebrations, the pause/resume announcements and every multi-utterance sequence are affected the same way.
+
+**Cause and the shape of a fix.** This is the same underlying pyttsx3 defect already noted in `FallbackTTS.__init__`: a second `runAndWait()` on one engine misbehaves. Using a fresh `Engine()` instead of `pyttsx3.init()` avoided the *deadlock* that note describes, but not this — the failure merely changed from hanging to truncating. A fresh engine per utterance does speak in full, and costs ~1.3–1.9 s of driver init each time, which is too slow for a prompt loop but may be acceptable for the handful of long utterances. Alternatives worth measuring before choosing: driving SAPI's `ISpeechVoice` directly through comtypes and skipping pyttsx3's loop entirely (the C12 spike already drove espeak-ng directly by ctypes for the same class of reason), or `startLoop(False)` + `iterate()`. **Alpha session 12a-2 owns this, and it should be measured before the `stop()` question is reopened — every `stop()` figure recorded here was taken against a truncated utterance.**
+
+### The engine belongs to the thread that creates it
+
+*(Written up 2026-09-20 after the first hand-run of the `audio` tier on Windows failed. An earlier version of this section asserted "SAPI5 is COM and the apartment binds at construction", which is the conclusion rather than the mechanism, and was not followable. This is the mechanism, and it is worth the space: it is the single reason Takki would have shipped mute.)*
+
+**`runAndWait()` does not block on speech.** That is the fact everything else follows from, and the name actively hides it. Reading pyttsx3's SAPI driver, `say()` hands the text to SAPI and returns immediately; SAPI speaks in the background and, when it finishes, **fires an event**. `runAndWait()` is a polling loop waiting for that event:
+
+```python
+def startLoop(self):
+    self._looping = True
+    while self._looping:
+        pythoncom.PumpWaitingMessages()   # drains THIS thread's message queue
+        time.sleep(0.05)
+```
+
+So "did the utterance finish?" really means "was the finished-event delivered and dispatched?"
+
+**Delivery is fixed at construction.** The driver's `__init__` creates the COM object and registers an event sink on it. COM delivers those events as window messages **to the message queue of the thread that created the object**, and that binding never moves. `PumpWaitingMessages()` drains only the *calling* thread's queue. Put the two together:
+
+| | creates the object | pumps messages | outcome |
+|---|---|---|---|
+| **What `main.py` does today** | main thread | TTS worker | event lands in main's queue; the worker pumps its own empty queue **forever** |
+| **What it must do** | TTS worker | TTS worker | event lands in the queue being pumped |
+
+The worker is not deadlocked on a lock. It is waiting at a mailbox the letter was never delivered to.
+
+**Demonstrated, 2026-09-20.** An engine built on the main thread and spoken from a worker was still unfinished after 4 s. The main thread then began calling `PumpWaitingMessages()` in a loop, and the worker's utterance completed **0.06 s later** — because main finally drained the queue the event had been sitting in the whole time. Nothing about the worker changed. That is the proof the problem is delivery, not blocking, and it is the experiment to re-run if anyone doubts this section.
+
+**In Takki it hangs forever, not merely slowly.** Nothing rescues it: the main thread runs the 60 Hz loop above — pygame pump, inbound queue, deadlines — and never calls `PumpWaitingMessages()`. The first utterance never completes, no `SpeechFinished` is ever posted, and the child hears silence with no error anywhere.
+
+**Why eleven green sessions went past it.** `FakeTTSEngine` appends to a list, and pyttsx3's Linux espeak driver is a plain shared-library call: neither has an event sink or a message queue, so on the dev box and in every default-tier test any thread may call any engine. The only test that builds a real engine and drives it from a real thread is `tests/test_fallback_tts.py::TestTTSWorkerWithRealEngine::test_real_thread_start_and_join`, it carries the `audio` marker, and no CI job has ever run that marker ([ADR-019 § Headless audio/video](adr/0019-testing-strategy-and-io-isolation.md)). No fake could have modelled this, which is the general lesson: a fake cannot stand in for thread affinity.
+
+**This also explains why `stop()` works and is slow.** With the engine on the worker, a `stop()` from the main thread is the same kind of cross-thread call — but the worker is *inside* `startLoop()`, actively pumping, so the call is serviced rather than lost. The ~1.17 s measured above is the round trip plus that `time.sleep(0.05)` granularity plus SAPI's purge. One direction works slowly because the receiving thread pumps; the other hangs forever because it does not. Same mechanism, opposite outcomes — and a reason not to "fix" the slow `stop()` by moving engine ownership back to main.
+
+**The rule.** The thread that pumps an engine's messages must be the thread that created it. Concretely: **`get_fallback_tts()` must hand the worker a way to *build* an engine, not a built one** — the worker constructs it as its first act. Any future blocking engine on this worker inherits the rule; Piper (Beta) does not use COM events, but the rule costs nothing there and keeps one shape. Alpha session 12a-2 owns the change, and it is the same change that applies the verified voice id ([ADR-003](adr/0003-text-to-speech.md)), so the two land together.
 
 ## Timers
 

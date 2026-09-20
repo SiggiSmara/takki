@@ -17,13 +17,15 @@ None of this is worth running until all seven are true. All but P1 are [alpha-pl
 
 | # | Precondition | Why it blocks |
 |---|---|---|
-| P1 | **12a is merged and green**, including the `audio` and `windows_only` tiers | Nothing below runs otherwise — `WindowsPlatformInterface` raises `NotImplementedError` |
-| P2 | **Letter-case decision implemented** | With Caps Lock on, today every prompt errors in silence. Any typing test is polluted until this is settled |
-| P3 | **Data directory decision implemented** | D-tier runs against the final path or gets re-run — and D3 costs two calendar days |
-| P4 | **Locale/layout override implemented** — no longer conditional | **Done, 2026-09-20 (#12a-0).** Measured: the laptop reports `en-150` on a **German QWERTZ** layout (`00000407`). Without the override the run is `en` wordfreq against a German grapheme set — `ä ö ü ß` in the curriculum and a 30-grapheme milestone denominator — which is not the English Stage 0 the done-criterion names. Stage 0's six anchors themselves are safe: `R F V` / `U J M` sit at the same scan codes on QWERTZ |
+| P1 | **12a-1 and 12a-2 are both merged and green**, including the `audio` and `windows_only` tiers | Nothing below runs otherwise: without 12a-1 `get_layout_positions()` raises `NotImplementedError` and Takki cannot launch; without 12a-2 it launches mute and truncates anything longer than a letter |
+| P2 | **Letter-case decision implemented** | **Done, 2026-09-20: case is ignored.** An upper-case answer counts as correct; folding happens at the taxonomy boundary (ADR-027 § Case is folded at the boundary). Caps Lock is therefore invisible to the run rather than poisoning it |
+| P3 | **Data directory decision implemented** | **Done, 2026-09-20.** Resolved via `platformdirs` to the OS convention — on this laptop `%LOCALAPPDATA%\Takki\takki.sqlite`, Local rather than Roaming because the database is WAL-mode. D-tier runs against the final path, so it will not need re-running. `TAKKI_DATA_DIR` is deliberately **not** built; see the note under this table |
+| P4 | **Switch the laptop's active keyboard layout to US English before you start** | Measured: the laptop reports `en-150` on a **German QWERTZ** layout (`00000407`), with US (`0x409`) already installed. There is no longer an override to paper over that — Takki now *verifies* language against active layout at startup and **refuses to run** on a mismatch (ADR-025 § Language and layout must agree), so an un-switched laptop will exit non-zero before the window opens. One Win+Space. Doing it this way means the run tests the real path. Stage 0's six anchors were safe either way: `R F V` / `U J M` sit at the same scan codes on QWERTZ |
 | P5 | **Progress dump script exists** (`key_stats`, `key_attempts` per calendar day, `milestones`, `sessions`) | **Done, 2026-09-20 (#12a-0):** `src/takki/progress_dump.py`. Alpha passes no `celebrant`, so every milestone is silent. Without the dump, D3's anchor rung is unobservable |
 | P6 | **TTS engine is constructed on the worker thread** | Measured 2026-09-20: an engine built on the main thread and spoken from the worker never returns from `runAndWait()`. This is what `main.py` does today, so without the fix Takki is **mute** and B1 onward is untestable. This is why `-m audio` currently fails on this laptop, and it is P1's real content |
-| P7 | **Fallback voice is selected by language** | The laptop's SAPI default is English David, so the run would pass by luck. On a machine defaulting to the installed German Hedda every English letter is read with German phonology — B4 would be testing the wrong thing and would not know it |
+| P7 | **Fallback voice is selected by language** | **Half done, 2026-09-20.** Availability is verified at startup and a missing voice is now a graceful stop (`find_voice()`, ADR-003); on this laptop `en` → David, `de` → Hedda, `is` → none. **Still outstanding:** the verified id is not yet *applied* to the engine, so it would speak the system default — which here is English David, so B4 would pass by luck. Must land with P6 |
+
+**No environment overrides exist at all** — `TAKKI_DATA_DIR`, `TAKKI_LANG` and `TAKKI_LAYOUT` were all withdrawn on 2026-09-20 (ADR-025 § Alternatives now rejects env-var overrides outright), by decision (alpha-plan carry-forward "`TAKKI_DATA_DIR` override"). Tiers D and G therefore run against the real data directory. Before starting D, **copy `takki.sqlite` aside** so a botched run can be rewound, and note that G5 (read-only data directory) makes the developer's own directory read-only for the duration — undo it immediately afterwards. If that reads as too sharp an edge on the day, run tiers D and G under a throwaway Windows user account — not by re-adding an env var.
 
 Also have ready: the **pynput event trace** (`spikes/pynput_trace_spike.py`, built 2026-09-20 in #12a-0) logging `pressed`, `char`, `name` and a timestamp per event to a file. Tier C is unreadable without it.
 
@@ -36,9 +38,11 @@ Do this first and write the answers down. Several later checks are only interpre
 | ID | Check | Pass condition | Result |
 |---|---|---|---|
 | A1 + | Windows version, Python version, `pygame`/SDL version, whether OneDrive redirects Documents | Recorded | — |
-| A2 + | `get_system_language()` return value | **`en`** — the raw locale is `en-150`, so this checks that the BCP-47 hyphen and the numeric region subtag are both handled. P4's override is in use for everything below regardless | — |
-| A3 + | `get_layout_positions()` — grapheme count, and a letter at all six anchor positions (2,4) (3,4) (4,4) / (2,7) (3,7) (4,7) | Six letters present. A raise here is `anchor_keys()` working as designed (#8b), not a bug to catch | — |
-| A4 + | Where the database file actually landed | Matches the P3 decision exactly | — |
+| A2 + | `get_system_language()` return value | **`en`** — the raw locale is `en-150`, so this checks that the BCP-47 hyphen and the numeric region subtag are both handled | — |
+| A3 + | `get_layout_positions()` — grapheme count, and a letter at all six anchor positions (2,4) (3,4) (4,4) / (2,7) (3,7) (4,7) | Six letters present, and `Layout.lang` reports the **keyboard's** language (`en` on the US layout), not the system locale. A raise here is `anchor_keys()` working as designed (#8b), not a bug to catch | — |
+| A3b − | With the German layout active (Win+Space), launch Takki | Refuses to start, exits non-zero, and names `y`/`z` and the `ä ö ü ß` as the reason. Switch back to US before continuing. This is the only hand-check of the startup layout guard | — |
+| A4 + | Where the database file actually landed | Exactly `%LOCALAPPDATA%\Takki\takki.sqlite`, and **no** stray `Documents\Takki\` created (the pre-2026-09-20 path). Check for `takki.sqlite-wal` / `-shm` beside it — their presence is WAL working as intended | — |
+| A4b + | `find_voice()` for `en`, `de` and `is` | `en` and `de` return a `HKEY_LOCAL_MACHINE\...` token id, `is` returns `None`. Then set `config.LANGUAGE = "is"` and launch: Takki must refuse with `EXIT_NO_VOICE` and name the remedy. This is the only hand-check of the graceful-stop path | — |
 | A5 + | `detect_screen_reader()` with and without NVDA running | Matches whatever [roadmap § D](../roadmap.md#d-smaller-gaps-worth-a-line-in-the-relevant-adr) decided; `None` is fine if it stayed out of Alpha | — |
 
 ---
@@ -51,7 +55,7 @@ The `audio` marker has never run in CI on any platform, and `windows-latest` set
 |---|---|---|---|
 | T0.1 + | `uv run pytest` | Green | — |
 | T0.2 + | `uv run pytest -m windows_only` | Green — real pynput translation, real SDL window construction | — |
-| T0.3 + | `uv run pytest -m audio` | Green. `test_real_thread_start_and_join` is the one that exercises SAPI from the TTS worker thread — **the COM-apartment question, and it was answered on 2026-09-20: this test fails today.** Green here means P6's fix landed and holds, so treat a pass as a positive result rather than a formality | — |
+| T0.3 + | `uv run pytest -m audio` | Green. `test_real_thread_start_and_join` is the one that exercises SAPI from the TTS worker thread — **the thread-affinity question, and it was answered on 2026-09-20: this test fails today** — the engine is built on the main thread and spoken from the worker, so SAPI's completion event is delivered to a queue nobody pumps. Green here means P6's fix landed and holds, so treat a pass as a positive result rather than a formality | — |
 
 ---
 
@@ -63,11 +67,11 @@ All of B is run with the screen ignored. If you find yourself looking at it, tha
 |---|---|---|---|
 | B1 + | Launch. Window appears and takes foreground | Foreground without a click. If not, the seed `FocusLost` fires and B2 is testing the resume path instead — note it | — |
 | B2 + | Time from launch to first spoken word | Recorded. Language-table warm is ~1.4 s (en) on the dev box; anything past ~5 s is worth a note | — |
-| B3 + | The Stage 0 introduction script for `f` and `j` | Both lines audible and complete, in order, before the first prompt letter | — |
+| B3 + | The Stage 0 introduction script for `f` and `j` | Both lines audible and **complete to the last word**, in order, before the first prompt letter. **Listen hard here.** Before 12a, SAPI cut every utterance after the first to ~0.9 s, so the script ended mid-sentence while single letters sounded fine — this row is the check on that fix and the failure is silence, not a wrong noise | — |
 | B4 + | All six anchor letters spoken as prompts (`r f v u j m`) | Each intelligible as a *letter name*, not a word or article. This is A1's finding holding on real hardware | — |
 | B5 + | Correct keypress | Chime, then the next letter. Chime feels immediate | — |
 | B6 − | Wrong keypress | Error tone, **same letter** re-prompted, prompt stays open | — |
-| B7 + | Keypress while the letter is still sounding | Speech cuts within ~300 ms (ADR-012 interrupt; C12 measured ~2.2 s worst case on a 12 s utterance — a letter is far shorter) | — |
+| B7 + | Keypress while the letter is still sounding | Whatever the carry-forward "Main-thread `stop()` cost" row decided. A letter is ~0.94 s audible, so pressing inside that window takes deliberate anticipation — press early on purpose. If the decision was "do not interrupt letters", the pass condition is that the letter finishes and the chime is still immediate; if it was "interrupt", speech cuts and **the chime must not be delayed** | — |
 | B8 + | Two fast keypresses (type-ahead), answering two prompts | Both land, both counted. Pinned on Linux by `TestTypeAhead`; this is the real-timing version | — |
 | B9 − | Wait 10 s in silence, three times over | Three re-prompts, then **quiet with the prompt still open**. A fourth re-prompt is a failure | — |
 | B10 + | Type the letter after that silence | Counted as a *first* attempt — the prompt never re-latched | — |
@@ -86,7 +90,7 @@ All of B is run with the screen ignored. If you find yourself looking at it, tha
 |---|---|---|---|
 | C1 + | Hold `f` until the OS auto-repeats several times | **No release event between repeats.** If Windows or pynput synthesises one, every repeat reads as a fresh actuation and the rule silently does nothing — amend ADR-027 and re-run all of D | — |
 | C2 + | Press Shift, release it, then press and release a letter quickly | Press and release report the **same** character. The focus model case-folds both sides; `None` or an unrelated char on release leaks a down-entry | — |
-| C3 − | Caps Lock on, then type a prompted letter | Matches the P2 decision. Record separately what `char` the trace shows and what the child *hears* | — |
+| C3 − | Caps Lock on, then type a prompted letter | **Counted correct**, normal chime, prompt advances — indistinguishable from Caps Lock off. The trace will show `char='F'`; the engine sees `f`. Type a few with Caps Lock on and off and confirm the dump's counts do not separate them | — |
 | C4 + | Type `ll` **releasing** between the two presses | Two actuations, two counted attempts — a doubled letter is two keystrokes | — |
 | C5 − | Type `ll` **holding** through both | One actuation, one counted attempt. C4 and C5 differing is the entire point of the rule | — |
 | C6 − | Dead-key composition at the capture boundary (trace tool only, no lesson engine). **The Icelandic layout `0x40f` is already installed on this laptop** — no setup, just switch to it and switch back | One composed `KeyCode(char='á')` arrives. Capture-only by roadmap scope — does not need B8 resolved and does not gate Alpha's English run | — |

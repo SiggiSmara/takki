@@ -53,6 +53,48 @@ class Layout:
     graphemes: dict[str, Grapheme]  # char → Grapheme
 
 
+def key_positions(layout: Layout) -> dict[str, tuple[int, int]]:
+    """Every physical key as name → (row, col). The comparable shape of a layout."""
+    return {name: (key.row, key.col) for name, key in layout.keys.items()}
+
+
+def describe_mismatch(expected: Layout, actual: Layout) -> str | None:
+    """None when `actual` can teach `expected`'s curriculum; else why it cannot.
+
+    ADR-006 makes Windows authoritative for the layout ("the app teaches on
+    whatever layout Windows reports as active"), so this never overrides what
+    the machine reports -- it decides whether the *language* the config asks
+    for can be taught on it, and Alpha stops rather than teach a curriculum
+    against a keyboard it does not match (ADR-025 § Language and layout must
+    agree).
+
+    Position equality, not layout identity: Takki teaches letters and nothing
+    else -- no space, no Shift, no punctuation (roadmap § What is deliberately
+    never taught). US and UK QWERTY differ only outside that set, so comparing
+    KLIDs would reject a UK keyboard that types the English curriculum
+    perfectly. What matters is whether the same characters sit in the same
+    places.
+    """
+    if expected.lang != actual.lang:
+        return (
+            f"language {expected.lang!r} is configured but the active keyboard is {actual.lang!r}"
+        )
+    want, have = key_positions(expected), key_positions(actual)
+    if want == have:
+        return None
+    missing = sorted(set(want) - set(have))
+    extra = sorted(set(have) - set(want))
+    moved = sorted(k for k in set(want) & set(have) if want[k] != have[k])
+    parts: list[str] = []
+    if missing:
+        parts.append(f"missing {' '.join(missing)}")
+    if extra:
+        parts.append(f"unexpected {' '.join(extra)}")
+    if moved:
+        parts.append(f"moved {' '.join(f'{k}{have[k]}!={want[k]}' for k in moved)}")
+    return "; ".join(parts)
+
+
 def _direct_layout(lang: str, direct: dict[str, tuple[int, int]]) -> Layout:
     keys: dict[str, PhysicalKey] = {}
     graphemes: dict[str, Grapheme] = {}

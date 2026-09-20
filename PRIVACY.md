@@ -19,7 +19,7 @@ Takki is designed for children, and specifically for visually impaired children.
 | Microphone audio (for voice commands) | Held in memory only during recognition, then discarded | Nobody — not stored, not transmitted |
 | Spoken voice command transcriptions | Held in memory only during intent resolution, then discarded | Nobody — not stored, not transmitted |
 
-The SQLite database file is yours. You can copy it, back it up, move it to another computer, or delete it. Its location is documented in the application; on Windows it sits in `%APPDATA%\Takki\`.
+The SQLite database file is yours. You can copy it, back it up, move it to another computer, or delete it. On Windows it sits in `%LOCALAPPDATA%\Takki\` — usually `C:\Users\<you>\AppData\Local\Takki\`. The folder for every platform, and how to print the exact path on your own machine, is in [README § Where your data lives](README.md#where-your-data-lives).
 
 ## What Takki never does
 

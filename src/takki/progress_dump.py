@@ -7,8 +7,8 @@ level: this tool cannot corrupt what it reads.
 
     uv run python -m takki.progress_dump [--db PATH] [--profile ID]
 
---db defaults to the same path main.py writes to, so this moves with the
-data-directory decision (still open as of 2026-09-20) instead of pinning it.
+--db defaults to the same path main.py writes to -- the OS's per-user data
+directory via platformdirs, `%LOCALAPPDATA%\\Takki\\` on Windows (ADR-025).
 --profile defaults to the first profile by id, matching main.py's own
 single-profile Alpha behaviour -- but never creates one.
 """
@@ -58,9 +58,7 @@ def _print_key_stats(conn: sqlite3.Connection, profile_id: int) -> None:
     print(f"  {'key':<4} {'attempts':>8} {'correct':>8} {'accuracy':>9}  last_practised_at")
     for key_char, attempts, correct, last_practised_at in rows:
         accuracy = correct / attempts if attempts else 0.0
-        print(
-            f"  {key_char:<4} {attempts:>8} {correct:>8} {accuracy:>8.1%}  {last_practised_at}"
-        )
+        print(f"  {key_char:<4} {attempts:>8} {correct:>8} {accuracy:>8.1%}  {last_practised_at}")
 
 
 def _print_attempts_by_day(conn: sqlite3.Connection, profile_id: int) -> None:

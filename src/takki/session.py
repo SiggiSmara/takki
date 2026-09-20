@@ -42,6 +42,7 @@ from takki.lesson.attempts import AttemptCounter, PressOutcome
 from takki.lesson.drills import DrillBlock, DrillGenerator
 from takki.lesson.introducer import (
     DEFAULT_STRATEGY,
+    IntroductionStep,
     IntroductionStrategy,
     KeyIntroducer,
     describe,
@@ -145,6 +146,12 @@ class SessionLoop:
         self._reprompt_due = False
         self._prompt_deadline: float | None = None
         self._reprompts = 0
+        # True from the moment an introduction script starts speaking until the
+        # prompt it precedes opens. The one thing a resume needs to know that
+        # the prompt state cannot tell it: with no prompt open, "a script was
+        # cut" and "a celebration was playing" look identical, and only the
+        # first should be re-spoken (ADR-012 § Recovery).
+        self._script_in_flight = False
 
     @property
     def prompt(self) -> str | None:
@@ -261,12 +268,21 @@ class SessionLoop:
     # ---- prompts -------------------------------------------------------
 
     def _start_prompt(self) -> None:
+        # The script has served its purpose the moment its prompt is audible.
+        # `_advance` holds the prompt until the speaker is idle, so this clears
+        # exactly when the script finished rather than when it was queued.
+        self._script_in_flight = False
         target = self._block.prompts[self._index]
         self._prompt = target
         self._first_press = True
         self._reprompts = 0
         self._attempts.start_prompt(target)
         self._speak_prompt()
+
+    def _speak_introduction(self, step: IntroductionStep) -> None:
+        """Speak a step's script and mark it in flight until its prompt opens."""
+        self._script_in_flight = True
+        self._speaker.say(*(describe(intro) for intro in step.keys))
 
     def _speak_prompt(self) -> None:
         """Re-speak the open prompt, without touching its identity.
@@ -319,6 +335,17 @@ class SessionLoop:
             # spent before leaving is not held against them.
             self._reprompts = 0
             self._reprompt_due = True
+        elif self._script_in_flight and self._introducer is not None:
+            # An introduction script was cut by the focus loss. Re-speak it
+            # **whole**, not from where it stopped: the child task-switched
+            # away and lost the context, and a script resuming mid-sentence
+            # teaches less than one heard again. Held, not dropped -- the same
+            # rule `_advance` applies to prompts. Without this the remainder is
+            # unrecoverable: `_on_reread` only reaches the script while no
+            # prompt is open, and the prompt opens moments later.
+            step = self._introducer.last_step
+            if step is not None:
+                self._speak_introduction(step)
 
     # ---- commands ------------------------------------------------------
 
@@ -383,7 +410,7 @@ class SessionLoop:
         assert self._introducer is not None
         step = self._introducer.last_step
         if step is not None:
-            self._speaker.say(*(describe(intro) for intro in step.keys))
+            self._speak_introduction(step)
 
     def _on_restart(self) -> None:
         """ADR-012 § Recovery, in Layer 1: re-present the current unit.
@@ -475,4 +502,4 @@ class SessionLoop:
         if step is None:
             return
         self._drills.begin_step(step)
-        self._speaker.say(*(describe(intro) for intro in step.keys))
+        self._speak_introduction(step)

@@ -18,13 +18,35 @@ Takki teaches touch typing through audio. All instruction, feedback, and navigat
 
 ## Status
 
-**Pre-implementation.** The architecture is agreed and documented. No code has been written yet.
+**Alpha in progress.** The architecture is agreed and documented, and the core lesson engine — persistence, the language layer, audio, keyboard capture, the focus model, key introduction, drills, progression and the session loop — is built and under test. What remains for Alpha is the Windows platform layer and a hands-on validation run.
 
-See [docs/architecture.md](docs/architecture.md) for the full design decisions and rationale.
+See [docs/architecture.md](docs/architecture.md) for the design decisions and rationale, and [docs/roadmap.md](docs/roadmap.md) for the phase plan.
 
 ## Platform
 
 Windows desktop (v1). Physical keyboard required. The architecture is intentionally portable — see the architecture document for cross-platform readiness notes.
+
+## Where your data lives
+
+Takki keeps everything in one per-user folder, chosen by the operating system's own convention. Nothing is stored anywhere else, and nothing leaves the machine ([PRIVACY.md](PRIVACY.md)).
+
+| Platform | Folder |
+|---|---|
+| Windows | `%LOCALAPPDATA%\Takki\` — usually `C:\Users\<you>\AppData\Local\Takki\` |
+| Linux | `~/.local/share/Takki/` |
+| macOS | `~/Library/Application Support/Takki/` |
+
+The folder holds `takki.sqlite` — every profile, all typing progress and accuracy history — and, as later versions add them, `takki_config.yaml`, `custom_words.txt`, and downloaded `voices/`. To back a child's progress up, copy `takki.sqlite`. To start over, delete it.
+
+Windows note: this is **Local** app data, not Roaming. The database runs in WAL mode, whose sidecar files do not survive a roaming-profile sync intact — on a managed school network, roaming it would risk corrupting it at every logoff.
+
+One folder that is deliberately *not* this one: extra speech voices download through your browser to `Documents\Takki\voices\`, where you can find them without digging through hidden system folders. That is the only thing that lives there — progress never does.
+
+Paths come from [`platformdirs`](https://pypi.org/project/platformdirs/), so they follow each platform's convention rather than Takki's preference. To see the exact path on your machine:
+
+```
+uv run python -c "from takki.data_dir import data_dir; print(data_dir())"
+```
 
 ## License
 

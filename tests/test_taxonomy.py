@@ -104,3 +104,24 @@ class TestTaxonomy:
             assert classify(release, DEFAULTS, paused=False) == classify(
                 event, DEFAULTS, paused=False
             )
+
+
+class TestCaseFolding:
+    """ADR-027 § Case is folded at the boundary."""
+
+    @pytest.mark.parametrize(
+        ("typed_char", "expected"),
+        [("F", "f"), ("A", "a"), ("Ä", "ä"), ("Ö", "ö"), ("Þ", "þ"), ("Á", "á")],
+    )
+    def test_upper_case_folds_to_lower(self, typed_char: str, expected: str) -> None:
+        assert classify(typed(typed_char), DEFAULTS, paused=False) == Character(expected)
+
+    def test_lower_case_is_unchanged(self) -> None:
+        assert classify(typed("f"), DEFAULTS, paused=False) == Character("f")
+
+    def test_eszett_survives_folding_as_one_character(self) -> None:
+        # str.casefold() maps ß to "ss" -- two characters, which would make the
+        # German curriculum untypeable because no prompt target is ever two
+        # characters. str.lower() is what the boundary uses, and this pins it.
+        assert classify(typed("ß"), DEFAULTS, paused=False) == Character("ß")
+        assert classify(typed("ẞ"), DEFAULTS, paused=False) == Character("ß")

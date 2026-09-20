@@ -7,7 +7,7 @@
 
 ---
 
-**Decision:** Four functions isolate all platform-specific behaviour behind a single `PlatformInterface` Protocol (three from the original cut; `detect_screen_reader()` added 2026-06-21 per ADR-028). A `select_platform_interface()` factory maps `sys.platform` to the right concrete implementation; new platforms slot in here without touching any other code. A `DevStubInterface` acts as the fallback for platforms that do not yet have a real implementation, so the full codebase runs on any platform during development. The `Layout` / `PhysicalKey` / `Grapheme` data model from the key-introduction spike becomes the canonical return type for `get_layout_positions()` and lives in `src/takki/platform/layout.py`.
+**Decision:** Five functions isolate all platform-specific behaviour behind a single `PlatformInterface` Protocol (three from the original cut; `detect_screen_reader()` added 2026-06-21 per ADR-028; `find_voice()` added 2026-09-20, see below). A `select_platform_interface()` factory maps `sys.platform` to the right concrete implementation; new platforms slot in here without touching any other code. A `DevStubInterface` acts as the fallback for platforms that do not yet have a real implementation, so the full codebase runs on any platform during development. The `Layout` / `PhysicalKey` / `Grapheme` data model from the key-introduction spike becomes the canonical return type for `get_layout_positions()` and lives in `src/takki/platform/layout.py`.
 
 ### Why These Functions
 
@@ -19,6 +19,7 @@ The boundary is: *the underlying system API is unavoidably platform-specific and
 | `get_layout_positions()` | `MapVirtualKeyW` / `VkKeyScanExW` | Carbon / IOKit | xkb |
 | `get_fallback_tts()` | pyttsx3 → SAPI | pyttsx3 → nsss | pyttsx3 → espeak |
 | `detect_screen_reader()` | `SPI_GETSCREENREADER` + process scan | `NSWorkspace` / AX API | AT-SPI / process scan |
+| `find_voice(language)` | SAPI voice tokens in the registry | `NSSpeechSynthesizer` voices | espeak-ng voice list |
 
 `detect_screen_reader()` was added by ADR-028's 2026-06-21 revision and passes the same test that `get_app_data_dir()` failed: there is no maintained pure-Python cross-platform library that reports whether an assistive screen reader is active, whereas `platformdirs` covers app-data paths across Windows, macOS, and Linux with no platform-specific code (see ADR-025). The boundary admits exactly what the test admits.
 
@@ -30,9 +31,14 @@ class PlatformInterface(Protocol):
     def get_layout_positions(self) -> Layout: ...
     def get_fallback_tts(self) -> TTSEngine: ...
     def detect_screen_reader(self) -> str | None: ...
+    def find_voice(self, language: str) -> str | None: ...
 ```
 
-`TTSEngine` is the TTS Protocol defined in ADR-003. All four methods on concrete implementations are called once at startup and their results cached by the caller.
+`TTSEngine` is the TTS Protocol defined in ADR-003. All five methods on concrete implementations are called once at startup and their results cached by the caller.
+
+**`find_voice()` and why the boundary grew to five** *(added 2026-09-20).* It answers "what can this machine speak", which is a question *about the platform* rather than a request for an object, and it has to answer during startup **before any audio object exists** — because a missing voice for the lesson language is a graceful stop ([ADR-003](0003-text-to-speech.md)), not something to discover mid-lesson. It could not be folded into `get_fallback_tts()`: that function returns an engine, and on Windows the pyttsx3 engine can only be constructed on the TTS worker thread ([concurrency-model.md § TTS](../concurrency-model.md)), which is created later and cannot be asked a question synchronously. The Windows implementation reads the SAPI voice tokens out of the registry and touches no COM at all, which is what lets it run on the main thread at startup.
+
+This is the second instance of a pattern worth naming, the first being [ADR-025 § Language and layout must agree](0025-configuration-system.md): **a startup precondition that cannot be degraded.** Both ask the platform a question, compare the answer against the configured curriculum, and stop the app when they disagree, because continuing would mean teaching against a keyboard the child does not have or a voice they cannot understand. A third would be worth looking for before it becomes a third ad-hoc check in `main()`.
 
 ### Platform Selection
 
@@ -101,6 +107,7 @@ Fallback for platforms without a real implementation. Logs a startup warning so 
 - `get_layout_positions()` → returns the hardcoded US QWERTY `Layout` (the `build_en()` logic from the spike, moved here)
 - `get_fallback_tts()` → pyttsx3 with whatever backend pyttsx3 finds on the current platform
 - `detect_screen_reader()` → returns `None` (no cross-platform detection in the stub)
+- `find_voice()` → returns the language code itself; espeak-ng, the Linux pyttsx3 backend, ships every language Takki teaches, so the dev box never hits the graceful stop
 
 The stub produces real output — pyttsx3 speaks, the layout is valid — but cannot reflect the user's actual keyboard layout or system language beyond what `$LANG` reports. Acceptable for development; not acceptable for a shipped product targeting a specific platform.
 

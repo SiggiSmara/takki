@@ -3785,6 +3785,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "faster-whisper" },
+    { name = "platformdirs" },
     { name = "pygame" },
     { name = "pynput", marker = "sys_platform == 'win32'" },
     { name = "pyttsx3" },
@@ -3802,6 +3803,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "faster-whisper", specifier = ">=1.2.1" },
+    { name = "platformdirs", specifier = ">=4.9.6" },
     { name = "pygame", specifier = ">=2.6.1" },
     { name = "pynput", marker = "sys_platform == 'win32'", specifier = ">=1.8.2" },
     { name = "pyttsx3", specifier = ">=2.99" },

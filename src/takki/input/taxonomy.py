@@ -42,6 +42,9 @@ class Character:
     # ADR-028's Expected and Wrong rows merged. Splitting them needs the current
     # prompt, which lives in the lesson engine (sessions 7-10) -- so this class
     # carries the character and nothing else, and the engine compares it.
+    #
+    # Always lower case: `classify()` folds it, so case never reaches the
+    # lesson engine at all (ADR-027 § Case is folded at the boundary).
     char: str
 
 
@@ -75,7 +78,18 @@ def classify(event: KeyEvent, bindings: KeyBindings, *, paused: bool) -> Classif
     if event.name is None:
         if event.char is None or not event.char.isprintable():
             return Composing()
-        return Character(event.char)
+        # Case is folded here, once, and never reaches the lesson engine
+        # (ADR-027 § Case is folded at the boundary). Takki teaches letters,
+        # not the keyboard: Shift and Caps Lock are out of scope by ADR-005,
+        # so an upper-case answer is the right letter typed on a keyboard in
+        # a state the child cannot see. A blind child has no Caps Lock LED,
+        # and rejecting `F` for `f` in silence would be unexplainable.
+        #
+        # `.lower()`, never `.casefold()`: casefold maps `ß` to `ss`, two
+        # characters, which would make the German curriculum untypeable.
+        # `.lower()` is single-character for every letter in every alphabet
+        # Takki teaches, `ẞ` included.
+        return Character(event.char.lower())
     if paused and event.name == bindings.resume:
         return ResumeKey()
     if event.name == bindings.talk:

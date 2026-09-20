@@ -499,8 +499,8 @@ class TestCharacterRepeats:
         harness.release(char="a")
         harness.press(char="A")
         assert harness.commands == [
-            TypedCharacter("A", repeat=False),
-            TypedCharacter("A", repeat=False),
+            TypedCharacter("a", repeat=False),
+            TypedCharacter("a", repeat=False),
         ]
 
     def test_shifting_mid_hold_does_not_hide_a_repeat(self) -> None:
@@ -509,5 +509,17 @@ class TestCharacterRepeats:
         harness.press(char="A")
         assert harness.commands == [
             TypedCharacter("a", repeat=False),
-            TypedCharacter("A", repeat=True),
+            TypedCharacter("a", repeat=True),
+        ]
+
+    def test_the_engine_never_sees_an_upper_case_character(self) -> None:
+        # ADR-027 § Case is folded at the boundary. Every command below is
+        # lower case whatever Shift or Caps Lock was doing.
+        harness = Harness()
+        harness.press(char="F")
+        harness.release(char="F")
+        harness.press(char="Ä")
+        assert harness.commands == [
+            TypedCharacter("f", repeat=False),
+            TypedCharacter("ä", repeat=False),
         ]

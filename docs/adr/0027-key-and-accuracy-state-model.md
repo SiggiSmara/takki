@@ -90,6 +90,20 @@ The rule above absorbs the harmless case: repeats of a *wrong* press are already
 
 **Consequence:** `correct_count / attempt_count` is true first-attempt accuracy. It cannot be inflated by retry presses.
 
+### Case is folded at the boundary
+
+**Decided 2026-09-20 (pre-alpha-session-12a).** An upper-case answer is correct. `classify()` lower-cases every `Character` it produces (`takki.input.taxonomy`), so case never reaches the lesson engine: prompt targets are lower case, comparisons are lower case, and `key_attempts` rows are written against the lower-case target. Nothing downstream has to know this happened.
+
+The question was raised by a review finding that `AttemptCounter.press` compared `char == target` exactly, so with Caps Lock on, every prompt produced an error cue and a first-attempt miss, forever, in silence. Three things settled it:
+
+1. **Takki teaches typing, not the keyboard.** Shift and capitalisation are out of scope in every phase ([ADR-005](0005-keyboard-handling.md), [roadmap § What is deliberately never taught](../roadmap.md#what-done-looks-like-per-phase)). A child who types `F` when asked for `f` has found the right key. Marking that wrong scores them on a skill the curriculum does not teach and never intends to.
+2. **A blind child has no Caps Lock LED.** The rejected alternative — refuse the keystroke but say why — needs a spoken boundary message that does not exist, and would need to be repeated on every keypress until an adult noticed. Rejecting in silence, which is what the code did, is the worst of the three.
+3. **The counting semantics above are unaffected.** Folding happens before `AttemptCounter` sees anything, so "first keystroke correct" means what it always meant. The row written is the prompt target's, so an upper-case answer cannot open a second `key_stats` row that no threshold or milestone reads — pinned by `tests/test_session.py::TestCapsLock`.
+
+**`str.lower()`, never `str.casefold()`.** Casefold maps `ß` to `ss` — two characters — and no prompt target is ever two characters, so casefolding would make the German curriculum untypeable. `str.lower()` is single-character for every letter in every alphabet Takki teaches, `ẞ` → `ß` included. Pinned by `tests/test_taxonomy.py::TestCaseFolding`. (Turkish `İ` lower-cases to two codepoints, but Turkish is outside the ADR-006 layout set; it would read as a wrong answer, not a crash.)
+
+This also removes an assumption from the held-key rule above. The focus model folded case in its own down-state tracking to absorb pynput recomputing `KeyCode.char` from live modifier state — `A` down, `a` up for one physical key. That fold now happens once, upstream, so the down-state set is keyed on the physical key rather than on whichever case Shift happened to produce. Point (2) of the two Windows assumptions still needs hand-confirmation, but the failure it guards against is now a missing character rather than a case mismatch.
+
 ### Bronze Criterion
 
 ADR-010 defines a key as Known when "first-attempt accuracy has been sustained above 90% **across multiple sessions**." The rolling window (§ above) and the ≥ 2 distinct practice days condition are the concrete implementation of that phrase.
