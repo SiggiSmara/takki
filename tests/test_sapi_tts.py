@@ -10,6 +10,8 @@ import queue
 import sys
 import threading
 import time
+from collections.abc import Callable
+from typing import Any
 
 import pytest
 
@@ -17,12 +19,25 @@ from takki.audio.tts_worker import SpeechFinished, TTSWorker
 
 pytestmark = [pytest.mark.audio, pytest.mark.windows_only]
 
-# ADR-023's introduction script is ~4.2 s. Anything past ~0.9 s would have been
-# truncated by the pyttsx3 path, so the assertions below are about length.
 LONG = "one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen"
+# LONG measures ~5.9 s spoken at ADR-003's Rate 0. The bracket matters as much as
+# the floor: SapiTTS abandons an utterance after MAX_UTTERANCE_SECONDS (60 s)
+# when SAPI never signals completion, and 60 is greater than any floor below --
+# so a lower bound alone would report working speech on a machine that said
+# nothing at all, which is the failure this whole file exists to catch.
+FULL_MIN, FULL_MAX = 3.5, 15.0
 
 
 def _voice() -> str:
+    """The English voice id, or skip. **Call this on the main thread.**
+
+    `pytest.skip()` raises, and raised on a worker thread it kills that thread
+    instead of skipping the test -- the test then blocks until its own queue
+    timeout and fails with a bare `queue.Empty` naming none of it. That is how a
+    `windows-latest` runner reported itself (alpha session 12a-2): failures that
+    were correct but arrived minutes late and said nothing. Every case below
+    resolves the voice before it spawns anything.
+    """
     from takki.platform.windows import WindowsPlatformInterface
 
     voice = WindowsPlatformInterface().find_voice("en")
@@ -31,35 +46,65 @@ def _voice() -> str:
     return voice
 
 
+def _spawn(body: Callable[[], Any]) -> "queue.Queue[Any]":
+    """Run `body` on its own thread; its return value *or its exception* lands in the queue.
+
+    SapiTTS must be constructed on the thread that drives it, so every case here
+    needs a worker. Carrying the exception back is what makes a failure legible:
+    without it, anything raised inside the worker -- a COM error, a refused
+    voice token -- kills that thread silently and the test reports a timeout
+    instead of the cause.
+    """
+    box: queue.Queue[Any] = queue.Queue()
+
+    def run() -> None:
+        try:
+            box.put(body())
+        except BaseException as error:
+            box.put(error)
+
+    threading.Thread(target=run, daemon=True).start()
+    return box
+
+
+def _result(box: "queue.Queue[Any]", timeout: float = 180.0) -> Any:
+    outcome = box.get(timeout=timeout)
+    if isinstance(outcome, BaseException):
+        raise outcome
+    return outcome
+
+
 class TestSapiTTSOnItsOwnThread:
     def test_a_long_utterance_is_not_truncated(self) -> None:
         if sys.platform != "win32":
             return
         from takki.audio.sapi_tts import SapiTTS
 
-        result: queue.Queue[float] = queue.Queue()
+        voice = _voice()
 
-        def worker() -> None:
-            engine = SapiTTS(_voice())
+        def body() -> float:
+            engine = SapiTTS(voice)
             engine.speak("warm up")  # so the timed line is not the first
             start = time.monotonic()
             engine.speak(LONG)
-            result.put(time.monotonic() - start)
+            return time.monotonic() - start
 
-        threading.Thread(target=worker, daemon=True).start()
-        elapsed = result.get(timeout=120)
+        elapsed = _result(_spawn(body))
         # The pyttsx3 path returned in ~0.9-2.1 s here and cut the audio.
-        assert elapsed > 3.5, f"second utterance returned in {elapsed:.3f}s -- truncated"
+        assert FULL_MIN < elapsed < FULL_MAX, (
+            f"second utterance returned in {elapsed:.3f}s -- "
+            f"{'truncated' if elapsed <= FULL_MIN else 'abandoned; did SAPI ever finish?'}"
+        )
 
     def test_every_utterance_after_the_first_is_full_length(self) -> None:
         if sys.platform != "win32":
             return
         from takki.audio.sapi_tts import SapiTTS
 
-        result: queue.Queue[list[float]] = queue.Queue()
+        voice = _voice()
 
-        def worker() -> None:
-            engine = SapiTTS(_voice())
+        def body() -> list[float]:
+            engine = SapiTTS(voice)
             engine.speak("warm up")
             times: list[float] = []
             for _ in range(3):
@@ -67,14 +112,13 @@ class TestSapiTTSOnItsOwnThread:
                 start = time.monotonic()
                 engine.speak(LONG)
                 times.append(time.monotonic() - start)
-            result.put(times)
+            return times
 
-        threading.Thread(target=worker, daemon=True).start()
-        times = result.get(timeout=180)
+        times = _result(_spawn(body))
         # Three in a row, not just the second: truncation was self-perpetuating,
         # so a fix that only repaired the second utterance would pass a
         # single-utterance check and still fail the child on the third.
-        assert all(t > 3.5 for t in times), times
+        assert all(FULL_MIN < t < FULL_MAX for t in times), times
 
 
 class TestSapiTTSCancellation:
@@ -83,50 +127,50 @@ class TestSapiTTSCancellation:
             return
         from takki.audio.sapi_tts import SapiTTS
 
-        handle: queue.Queue[SapiTTS] = queue.Queue()
-        result: queue.Queue[float] = queue.Queue()
+        voice = _voice()
+        handle: queue.Queue[Any] = queue.Queue()
 
-        def worker() -> None:
-            engine = SapiTTS(_voice())
+        def body() -> float:
+            engine = SapiTTS(voice)
             engine.speak("warm up")
             handle.put(engine)
             start = time.monotonic()
             engine.speak(LONG)
-            result.put(time.monotonic() - start)
+            return time.monotonic() - start
 
-        threading.Thread(target=worker, daemon=True).start()
+        box = _spawn(body)
         engine = handle.get(timeout=120)
         time.sleep(1.0)
         engine.stop()
-        elapsed = result.get(timeout=60)
+        elapsed = _result(box)
         assert elapsed < 2.5, f"a {LONG.count(' ') + 1}-word line ran {elapsed:.3f}s after stop()"
 
     def test_stop_does_not_block_the_calling_thread(self) -> None:
         # concurrency-model.md rule 4: a cross-thread call must have its cost on
-        # the *calling* thread measured. Under pyttsx3 this held the main thread
-        # ~1.17 s -- roughly 70 ticks at TICK_HZ 60, on the keypress hot path.
+        # the *calling* thread measured. Through pyttsx3 the same call held the
+        # main thread ~100 ms even after repair, on the keypress hot path.
         # SapiTTS.stop() makes no COM call at all, so the bar is microseconds.
         if sys.platform != "win32":
             return
         from takki.audio.sapi_tts import SapiTTS
 
-        handle: queue.Queue[SapiTTS] = queue.Queue()
-        done: queue.Queue[bool] = queue.Queue()
+        voice = _voice()
+        handle: queue.Queue[Any] = queue.Queue()
 
-        def worker() -> None:
-            engine = SapiTTS(_voice())
+        def body() -> bool:
+            engine = SapiTTS(voice)
             engine.speak("warm up")
             handle.put(engine)
             engine.speak(LONG)
-            done.put(True)
+            return True
 
-        threading.Thread(target=worker, daemon=True).start()
+        box = _spawn(body)
         engine = handle.get(timeout=120)
         time.sleep(1.0)
         start = time.monotonic()
         engine.stop()
         blocked = time.monotonic() - start
-        done.get(timeout=60)
+        _result(box)
         assert blocked < 0.05, f"stop() held the caller {blocked * 1000:.1f} ms"
 
     def test_the_utterance_after_a_cancelled_one_speaks_in_full(self) -> None:
@@ -134,18 +178,17 @@ class TestSapiTTSCancellation:
             return
         from takki.audio.sapi_tts import SapiTTS
 
-        handle: queue.Queue[SapiTTS] = queue.Queue()
-        result: queue.Queue[list[float]] = queue.Queue()
+        voice = _voice()
+        handle: queue.Queue[Any] = queue.Queue()
         go = threading.Event()
 
-        def worker() -> None:
-            engine = SapiTTS(_voice())
+        def body() -> tuple[float, float]:
+            engine = SapiTTS(voice)
             engine.speak("warm up")
             handle.put(engine)
-            times: list[float] = []
             start = time.monotonic()
             engine.speak(LONG)
-            times.append(time.monotonic() - start)
+            cancelled = time.monotonic() - start
             go.wait(30)
             # What TTSWorker.run_one() does before each dequeue. The engine
             # deliberately does not clear its own flag -- see
@@ -154,19 +197,58 @@ class TestSapiTTSCancellation:
             engine.clear_cancel()
             start = time.monotonic()
             engine.speak(LONG)
-            times.append(time.monotonic() - start)
-            result.put(times)
+            return cancelled, time.monotonic() - start
 
-        threading.Thread(target=worker, daemon=True).start()
+        box = _spawn(body)
         engine = handle.get(timeout=120)
         time.sleep(1.0)
         engine.stop()
         go.set()
-        cancelled, after = result.get(timeout=180)
+        cancelled, after = _result(box)
         assert cancelled < 2.5, cancelled
         # A cancel must not leave the engine unable to speak the next thing --
         # the failure mode a purge-based cancel invites.
-        assert after > 3.5, after
+        assert FULL_MIN < after < FULL_MAX, after
+
+
+class TestSapiTTSDoesNotHang:
+    def test_an_utterance_that_never_finishes_is_abandoned(self) -> None:
+        # The failure a windows-latest runner found (alpha session 12a-2): with
+        # no usable audio endpoint SAPI accepts the text and never signals
+        # completion, and an unbounded wait hangs the TTS worker forever -- no
+        # SpeechFinished, Speaker stays busy, the loop stops issuing prompts,
+        # and the app is silently inert. Simulated here by shortening the cap
+        # rather than by removing the sound card.
+        if sys.platform != "win32":
+            return
+        import takki.audio.sapi_tts as sapi_tts
+        from takki.audio.sapi_tts import SapiTTS
+
+        voice = _voice()
+        original = sapi_tts.MAX_UTTERANCE_SECONDS
+
+        def body() -> tuple[float, float]:
+            engine = SapiTTS(voice)
+            engine.speak("warm up")
+            sapi_tts.MAX_UTTERANCE_SECONDS = 0.5
+            start = time.monotonic()
+            engine.speak(LONG)  # ~5.9 s of speech, abandoned at ~0.5 s
+            abandoned = time.monotonic() - start
+            sapi_tts.MAX_UTTERANCE_SECONDS = original
+            # The engine has to survive it: the purge on the way out is what
+            # leaves it usable, and a cap that bricked the voice would trade a
+            # hang for permanent silence.
+            engine.clear_cancel()
+            start = time.monotonic()
+            engine.speak(LONG)
+            return abandoned, time.monotonic() - start
+
+        try:
+            abandoned, after = _result(_spawn(body))
+        finally:
+            sapi_tts.MAX_UTTERANCE_SECONDS = original
+        assert abandoned < 2.0, f"waited {abandoned:.3f}s past a 0.5s cap"
+        assert FULL_MIN < after < FULL_MAX, f"engine unusable after an abandon: {after:.3f}s"
 
 
 class TestTTSWorkerWithSapi:

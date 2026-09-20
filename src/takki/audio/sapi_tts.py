@@ -66,7 +66,7 @@ _RATE = 0
 # TTSWorker.run). Generous on purpose -- the longest thing the curriculum says
 # is ADR-023's introduction script at ~7.4 s, so this is 8x the real maximum
 # and cannot fire on a healthy machine.
-_MAX_UTTERANCE_SECONDS = 60.0
+MAX_UTTERANCE_SECONDS = 60.0
 
 
 class SapiTTS:
@@ -106,7 +106,7 @@ class SapiTTS:
         if self._cancel.is_set():
             return
         self._voice.Speak(text, _SPF_ASYNC)
-        deadline = time.monotonic() + _MAX_UTTERANCE_SECONDS
+        deadline = time.monotonic() + MAX_UTTERANCE_SECONDS
         while not self._voice.WaitUntilDone(_POLL_MS):
             if self._cancel.is_set():
                 self._voice.Speak("", _SPF_PURGE_BEFORE_SPEAK)
@@ -118,7 +118,7 @@ class SapiTTS:
                 logger.error(
                     "SAPI did not finish an utterance within %.0fs; abandoning it. "
                     "Is an audio output device available?",
-                    _MAX_UTTERANCE_SECONDS,
+                    MAX_UTTERANCE_SECONDS,
                 )
                 self._voice.Speak("", _SPF_PURGE_BEFORE_SPEAK)
                 return
