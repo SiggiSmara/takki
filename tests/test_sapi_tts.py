@@ -46,7 +46,7 @@ def _voice() -> str:
     return voice
 
 
-def _spawn(body: Callable[[], Any]) -> "queue.Queue[Any]":
+def _spawn(body: Callable[[], Any], *also: "queue.Queue[Any]") -> "queue.Queue[Any]":
     """Run `body` on its own thread; its return value *or its exception* lands in the queue.
 
     SapiTTS must be constructed on the thread that drives it, so every case here
@@ -54,6 +54,13 @@ def _spawn(body: Callable[[], Any]) -> "queue.Queue[Any]":
     without it, anything raised inside the worker -- a COM error, a refused
     voice token -- kills that thread silently and the test reports a timeout
     instead of the cause.
+
+    `also` names the other queues a test is waiting on, typically the one the
+    worker hands its engine back through. A failure is delivered to every one of
+    them, because a worker that dies before it reaches `handle.put(engine)`
+    would otherwise leave the main thread blocked on a queue nothing can ever
+    arrive in -- trading a silent thread for a two-minute stall, which is how
+    this file behaved on a `windows-latest` runner (alpha session 12a-2).
     """
     box: queue.Queue[Any] = queue.Queue()
 
@@ -61,13 +68,15 @@ def _spawn(body: Callable[[], Any]) -> "queue.Queue[Any]":
         try:
             box.put(body())
         except BaseException as error:
-            box.put(error)
+            for destination in (box, *also):
+                destination.put(error)
 
     threading.Thread(target=run, daemon=True).start()
     return box
 
 
 def _result(box: "queue.Queue[Any]", timeout: float = 180.0) -> Any:
+    """Pop a worker's result, re-raising whatever it failed with."""
     outcome = box.get(timeout=timeout)
     if isinstance(outcome, BaseException):
         raise outcome
@@ -138,8 +147,8 @@ class TestSapiTTSCancellation:
             engine.speak(LONG)
             return time.monotonic() - start
 
-        box = _spawn(body)
-        engine = handle.get(timeout=120)
+        box = _spawn(body, handle)
+        engine = _result(handle, timeout=120)
         time.sleep(1.0)
         engine.stop()
         elapsed = _result(box)
@@ -164,8 +173,8 @@ class TestSapiTTSCancellation:
             engine.speak(LONG)
             return True
 
-        box = _spawn(body)
-        engine = handle.get(timeout=120)
+        box = _spawn(body, handle)
+        engine = _result(handle, timeout=120)
         time.sleep(1.0)
         start = time.monotonic()
         engine.stop()
@@ -199,8 +208,8 @@ class TestSapiTTSCancellation:
             engine.speak(LONG)
             return cancelled, time.monotonic() - start
 
-        box = _spawn(body)
-        engine = handle.get(timeout=120)
+        box = _spawn(body, handle)
+        engine = _result(handle, timeout=120)
         time.sleep(1.0)
         engine.stop()
         go.set()

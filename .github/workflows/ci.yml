@@ -68,6 +68,10 @@ jobs:
       - run: uv sync
       - name: Which SAPI voices does a runner have?
         run: uv run python -c "from takki.platform.windows import installed_voices; print(installed_voices())"
-      - run: uv run pytest -m "audio" -v
+      # -x and a traceback on purpose: pytest prints its FAILURES section at the
+      # end of a run, and the first two attempts never reached the end -- so the
+      # progress line said FAILED and the reason was never shown. Stopping at the
+      # first failure is what makes a probe answer its question.
+      - run: uv run pytest -m "audio" -v -x --tb=long -rA
         env:
           SDL_AUDIODRIVER: dummy
