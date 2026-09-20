@@ -57,7 +57,7 @@ while running:
 
 *(Found 2026-09-20 while measuring the cost of `stop()`. Not previously recorded anywhere, and the most damaging of the TTS findings, because it fails silently and Alpha's commonest utterance is the one shape that hides it.)*
 
-**Reusing one pyttsx3 engine across utterances truncates every utterance after the first to roughly 0.9 seconds of audio.** Measured, all on one worker thread that also built the engine:
+**Reusing one pyttsx3 engine across utterances truncates every utterance after the first to roughly 0.9 seconds of audio.** Measured, all on one worker thread that also built the engine (`spikes/tts_thread_truncation_spike.py truncation`, `audible`, `freshengine`):
 
 | | synthesized length | `speak()` returned |
 |---|---|---|
@@ -99,7 +99,7 @@ So "did the utterance finish?" really means "was the finished-event delivered an
 
 The worker is not deadlocked on a lock. It is waiting at a mailbox the letter was never delivered to.
 
-**Demonstrated, 2026-09-20.** An engine built on the main thread and spoken from a worker was still unfinished after 4 s. The main thread then began calling `PumpWaitingMessages()` in a loop, and the worker's utterance completed **0.06 s later** — because main finally drained the queue the event had been sitting in the whole time. Nothing about the worker changed. That is the proof the problem is delivery, not blocking, and it is the experiment to re-run if anyone doubts this section.
+**Demonstrated, 2026-09-20.** An engine built on the main thread and spoken from a worker was still unfinished after 4 s. The main thread then began calling `PumpWaitingMessages()` in a loop, and the worker's utterance completed **0.06 s later** — because main finally drained the queue the event had been sitting in the whole time. Nothing about the worker changed. That is the proof the problem is delivery, not blocking, and it is the experiment to re-run if anyone doubts this section: `uv run python spikes/tts_thread_truncation_spike.py pump`.
 
 **In Takki it hangs forever, not merely slowly.** Nothing rescues it: the main thread runs the 60 Hz loop above — pygame pump, inbound queue, deadlines — and never calls `PumpWaitingMessages()`. The first utterance never completes, no `SpeechFinished` is ever posted, and the child hears silence with no error anywhere.
 

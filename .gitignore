@@ -239,6 +239,10 @@ spikes/tts_letters_*.wav
 spikes/tts_confusables_*.wav
 # Generated TTS audio (per-letter clips + stitched comparison WAVs)
 spikes/*.wav
+# Audio a spike synthesises into its results dir. Not `spikes/results/`
+# wholesale -- that directory holds committed spike output (key_intro_*.yaml,
+# intro_order_comparison_results.txt) that must stay tracked.
+spikes/results/*.wav
 spikes/tts_letters/
 spikes/tts_fix/
 # Fetched reference dictionaries for spikes (third-party, licensed — re-fetched on demand).
