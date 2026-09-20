@@ -26,8 +26,16 @@ if sys.platform == "win32":
     # RPC_E_CHANGED_MODE. This module is imported from get_fallback_tts(), on
     # the main thread, which is where an STA is what everything else already
     # assumes anyway.
-    import comtypes
-    import comtypes.client
+    # The ignores are for pyright's *Windows* pass run on a *Linux* machine --
+    # CI and the dev box. comtypes is `sys_platform == 'win32'` in pyproject, so
+    # it is not installed there and the import cannot resolve, while the
+    # --pythonplatform Windows pass still type-checks this branch. pynput has
+    # the same shape and only warns, because pyright bundles stubs for it and
+    # ships none for comtypes. On Windows the import resolves and these are
+    # inert. See ADR-019 § Headless audio/video on what that pass does and does
+    # not prove when the two do not match.
+    import comtypes  # pyright: ignore[reportMissingImports]
+    import comtypes.client  # pyright: ignore[reportMissingImports]
 
 # SpeechVoiceSpeakFlags. Async because a synchronous Speak() holds SAPI inside
 # one call for the length of the utterance, where a purge cannot reach it.
