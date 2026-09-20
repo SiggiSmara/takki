@@ -36,7 +36,8 @@ class Harness:
         self.inbound: queue.Queue[KeyEvent | FocusEvent | Quit] = queue.Queue()
         self.focus = FakeFocusSource(self.inbound)
         self.engine = FakeTTSEngine()
-        self.speech = TTSWorker(self.engine, queue.Queue[SpeechFinished]())
+        self.speech = TTSWorker(lambda: self.engine, queue.Queue[SpeechFinished]())
+        self.speech.build_engine()
         self.letters = FakeLetterAudioSource()
         # The gate speaks through the core's Speaker, not straight at the
         # worker: one object has to know what is audible, or a gate-issued
@@ -69,19 +70,26 @@ class Harness:
     def tick(self, advance: float = 0.0) -> None:
         self.clock.advance(advance)
         self._record(self.model.check_deadlines())
+        self.run_worker()
 
     def spoken(self) -> list[str]:
-        # Drain the worker to the point of shutdown; nothing is spoken until
-        # something pops the command queue, which is the point of the worker.
-        self.speech.enqueue_shutdown()
-        self.speech.run()
+        self.run_worker()
         return self.engine.spoken
+
+    def run_worker(self) -> None:
+        # The real worker is a thread that pops commands as they arrive, so it
+        # has to run between steps here too. Leaving every utterance queued
+        # until the end of the test made a later interrupt() cancel utterances
+        # the child had already heard (alpha session 12a-2).
+        while not self.speech.idle:
+            self.speech.run_one()
 
     def drain(self) -> None:
         while True:
             try:
                 event = self.inbound.get_nowait()
             except queue.Empty:
+                self.run_worker()
                 return
             # The gate handles key and focus events; Quit is the loop's
             # (session 11) and never reaches it.
@@ -427,7 +435,12 @@ class TestEventOrdering:
         harness.inbound.put(KeyEvent(pressed=True, char="c", name=None))
         harness.drain()
         assert harness.commands == [TypedCharacter("a"), TypedCharacter("c")]
-        assert harness.spoken() == [PAUSED_ANNOUNCEMENT, RESUMED_ANNOUNCEMENT]
+        # Only the resume is heard. The whole burst is dispatched before the
+        # worker runs, so the pause announcement is still queued when the
+        # resume supersedes it -- and announce() means "in place of what is
+        # audible", so a pause the child never heard and is no longer in must
+        # not be spoken after they are already back (alpha session 12a-2).
+        assert harness.spoken() == [RESUMED_ANNOUNCEMENT]
 
 
 class TestCharacterRepeats:

@@ -31,3 +31,29 @@ jobs:
         env:
           SDL_AUDIODRIVER: dummy
           SDL_VIDEODRIVER: dummy
+
+  # A probe, not a gate (alpha session 12a-2). No runner has ever executed the
+  # `audio` marker: both jobs above exclude it, so eleven sessions of TTS and
+  # mixer code have only ever run on one laptop. Whether a GitHub runner has
+  # enough of a sound device to build a SAPI voice and hear it back is an
+  # empirical question, and this job is how it gets asked. #12a-1 proved the
+  # other half of the strategy -- LoadKeyboardLayout let a runner exercise
+  # hardware-shaped code it did not have.
+  #
+  # continue-on-error because the answer is unknown: a red probe must not block
+  # a branch while it is still a question. Read the first run, then either drop
+  # continue-on-error and fold `-m audio` into the windows job, or delete this
+  # job and record in ADR-019 that the tier is laptop-only. Do not leave it
+  # here indefinitely in this state.
+  windows-audio-probe:
+    runs-on: windows-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync
+      - name: Which SAPI voices does a runner have?
+        run: uv run python -c "from takki.platform.windows import installed_voices; print(installed_voices())"
+      - run: uv run pytest -m "audio" -v
+        env:
+          SDL_AUDIODRIVER: dummy

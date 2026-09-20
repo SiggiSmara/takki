@@ -115,11 +115,11 @@ class TestDevStubInterface:
     def test_detect_screen_reader_is_none(self) -> None:
         assert DevStubInterface().detect_screen_reader() is None
 
-    @pytest.mark.audio
-    def test_get_fallback_tts_returns_fallback_tts(self) -> None:
-        # audio-marked: constructs a real pyttsx3 engine (espeak-ng/SAPI),
-        # not guaranteed present on every CI runner.
-        assert isinstance(DevStubInterface().get_fallback_tts(), FallbackTTS)
+    def test_get_fallback_tts_returns_a_factory_not_an_engine(self) -> None:
+        # Not audio-marked any more, and that is the point: nothing is
+        # constructed here. The engine is built by whoever calls the factory,
+        # which is the TTS worker on its own thread.
+        assert DevStubInterface().get_fallback_tts("en") is FallbackTTS
 
     def test_get_system_language_from_lang_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("LANG", "de_DE.UTF-8")
@@ -172,13 +172,18 @@ class TestFakePlatformInterface:
     def test_override_screen_reader(self) -> None:
         assert FakePlatformInterface(screen_reader="nvda").detect_screen_reader() == "nvda"
 
-    def test_get_fallback_tts_returns_fake_tts(self) -> None:
-        tts = FakePlatformInterface().get_fallback_tts()
+    def test_get_fallback_tts_factory_builds_fake_tts(self) -> None:
+        tts = FakePlatformInterface().get_fallback_tts("fake-en")()
         assert isinstance(tts, FakeTTSEngine)
 
     def test_get_fallback_tts_returns_same_instance(self) -> None:
         fake = FakePlatformInterface()
-        assert fake.get_fallback_tts() is fake.get_fallback_tts()
+        assert fake.get_fallback_tts("fake-en")() is fake.get_fallback_tts("fake-en")()
+
+    def test_get_fallback_tts_records_the_voice_id(self) -> None:
+        fake = FakePlatformInterface()
+        fake.get_fallback_tts("fake-en")
+        assert fake.fallback_voice_ids == ["fake-en"]
 
 
 class TestFakeTTSEngine:

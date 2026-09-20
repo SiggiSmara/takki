@@ -41,7 +41,7 @@ class TestFallbackTTS:
 class TestTTSWorkerWithRealEngine:
     def test_speak_completes_and_reaches_outbound_queue(self) -> None:
         outbound: queue.Queue[SpeechFinished] = queue.Queue()
-        worker = TTSWorker(FallbackTTS(), outbound)
+        worker = TTSWorker(FallbackTTS, outbound)
         utterance_id = worker.enqueue_speak("a")
         worker.run_one()
         finished = outbound.get_nowait()
@@ -50,7 +50,7 @@ class TestTTSWorkerWithRealEngine:
 
     def test_real_thread_start_and_join(self) -> None:
         outbound: queue.Queue[SpeechFinished] = queue.Queue()
-        worker = TTSWorker(FallbackTTS(), outbound)
+        worker = TTSWorker(FallbackTTS, outbound)
         worker.start()
         utterance_id = worker.enqueue_speak("a")
         finished = outbound.get(timeout=5)

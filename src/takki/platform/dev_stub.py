@@ -1,6 +1,7 @@
 import locale
 import logging
 import os
+from collections.abc import Callable
 
 from takki.audio.fallback_tts import FallbackTTS
 from takki.audio.tts import TTSEngine
@@ -38,8 +39,12 @@ class DevStubInterface:
         # path consumes it, and inventing a Windows-shaped id would be a lie.
         return language
 
-    def get_fallback_tts(self) -> TTSEngine:
-        return FallbackTTS()
+    def get_fallback_tts(self, voice_id: str) -> Callable[[], TTSEngine]:
+        # voice_id is ignored: find_voice() returns the language code itself on
+        # this path, and pyttsx3's espeak driver picks its voice from the text's
+        # language rather than from a token id. The parameter stays because the
+        # Protocol is one shape, not one per platform.
+        return FallbackTTS
 
     def detect_screen_reader(self) -> str | None:
         return None

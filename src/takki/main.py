@@ -125,16 +125,11 @@ def main() -> int:
     focus = PygameFocusSource(inbound)
     cues = PygameMixerCues()
 
-    # TODO(#12a-2): `voice` is verified above but not yet applied -- the engine
-    # would speak the system default. Harmless only because
-    # `get_fallback_tts()` still raises NotImplementedError on Windows, so
-    # there is no path that could silently use the wrong voice. Whoever
-    # implements it must take the resolved id: verifying a voice exists and
-    # then not selecting it is worse than not checking at all, because the
-    # check reads as a guarantee. The same session reshapes this call for
-    # thread affinity (the engine must be constructed on the worker thread),
-    # so both land together.
-    speech = TTSWorker(platform.get_fallback_tts(), inbound)
+    # The voice verified above is applied here, and `get_fallback_tts` hands
+    # back a factory rather than an engine -- the worker builds it on its own
+    # thread, which is the only thread that can then drive it
+    # (concurrency-model.md § The engine belongs to the thread that creates it).
+    speech = TTSWorker(platform.get_fallback_tts(voice), inbound)
     speech.start()
     letters = SyntheticLetterAudioSource(speech)
 

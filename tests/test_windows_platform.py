@@ -83,10 +83,70 @@ class TestFindVoice:
             # state, and the runner's installed voices are not ours to fix.
             for language in ("en", "de", "is"):
                 found = WindowsPlatformInterface().find_voice(language)
-                assert found is None or found.startswith("HKEY_LOCAL_MACHINE")
+                assert found is None or found.startswith(
+                    ("HKEY_LOCAL_MACHINE", "HKEY_CURRENT_USER")
+                )
 
     def test_an_unteachable_language_has_no_voice(self) -> None:
         if sys.platform == "win32":
             from takki.platform.windows import WindowsPlatformInterface
 
             assert WindowsPlatformInterface().find_voice("zz") is None
+
+
+class TestVoiceTokenCategories:
+    """The OneCore gap: Windows 11's "Manage voices" -- the remedy main.py
+    prints on EXIT_NO_VOICE -- installs into Speech_OneCore, so reading only
+    the SAPI5 key made the printed remedy useless (alpha session 12a-2)."""
+
+    def test_every_category_windows_uses_is_read(self) -> None:
+        from takki.platform.windows import VOICE_TOKEN_KEYS
+
+        assert VOICE_TOKEN_KEYS == (
+            ("HKEY_LOCAL_MACHINE", r"SOFTWARE\Microsoft\Speech\Voices\Tokens"),
+            ("HKEY_CURRENT_USER", r"SOFTWARE\Microsoft\Speech\Voices\Tokens"),
+            ("HKEY_LOCAL_MACHINE", r"SOFTWARE\Microsoft\Speech_OneCore\Voices\Tokens"),
+            ("HKEY_CURRENT_USER", r"SOFTWARE\Microsoft\Speech_OneCore\Voices\Tokens"),
+        )
+
+    def test_an_id_names_the_hive_it_came_from(self) -> None:
+        # SpObjectToken.SetId takes the full path, so the prefix has to match
+        # the hive the token was enumerated under, not a hard-coded HKLM.
+        if sys.platform == "win32":
+            from takki.platform.windows import VOICE_TOKEN_KEYS, installed_voices
+
+            for voice_id in installed_voices().values():
+                hive, _, rest = voice_id.partition("\\")
+                assert any(
+                    hive == known_hive and rest.startswith(subkey)
+                    for known_hive, subkey in VOICE_TOKEN_KEYS
+                ), voice_id
+
+    def test_onecore_voices_are_discovered_when_present(self) -> None:
+        # Not asserting a count: a runner's installed voices are machine state.
+        # What is asserted is that if Windows has a OneCore category at all, its
+        # languages are candidates -- reading only SAPI5 could never satisfy it.
+        if sys.platform == "win32":
+            import winreg
+
+            from takki.platform.windows import installed_voices, language_for_lcid
+
+            try:
+                tokens = winreg.OpenKey(
+                    winreg.HKEY_LOCAL_MACHINE,
+                    r"SOFTWARE\Microsoft\Speech_OneCore\Voices\Tokens",
+                )
+            except OSError:
+                pytest.skip("this machine has no OneCore voice category")
+            onecore_languages: set[str] = set()
+            for index in range(winreg.QueryInfoKey(tokens)[0]):
+                name = winreg.EnumKey(tokens, index)
+                try:
+                    attributes = winreg.OpenKey(tokens, name + r"\Attributes")
+                    language, _ = winreg.QueryValueEx(attributes, "Language")
+                except OSError:
+                    continue
+                code = language_for_lcid(str(language))
+                if code is not None:
+                    onecore_languages.add(code)
+            assert onecore_languages <= set(installed_voices())

@@ -63,7 +63,7 @@ class Harness:
         self.inbound: queue.Queue[InboundEvent] = queue.Queue()
         self.clock = FakeClock()
         self.engine = FakeTTSEngine()
-        self.worker = TTSWorker(self.engine, self.inbound)
+        self.worker = TTSWorker(lambda: self.engine, self.inbound)
         self.letters = FakeLetterAudioSource()
         self.cues = FakeSoundCues()
         self.focus = FakeFocusSource(self.inbound)
@@ -596,6 +596,10 @@ class TestPausedRoundTrip:
 
         harness.focus.lose_focus()
         harness.loop.tick()
+        # The worker speaks the pause before focus returns, as the real one
+        # would: without this the announcement is still queued when the resume
+        # supersedes it, and announce() correctly drops it unheard.
+        harness.pump()
         harness.focus.gain_focus()
         harness.loop.tick()
         # The prompt is queued behind the resume announcement, not spoken over it.

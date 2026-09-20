@@ -4,6 +4,7 @@ import logging
 import subprocess
 import sys
 import unicodedata
+from collections.abc import Callable
 
 from takki.audio.tts import TTSEngine
 from takki.platform.layout import Grapheme, Layout, PhysicalKey
@@ -33,8 +34,20 @@ def primary_subtag(locale_name: str) -> str:
 # Takki teaches are listed -- an unlisted voice is simply not a candidate.
 _PRIMARY_LANGID: dict[int, str] = {0x09: "en", 0x07: "de", 0x0F: "is"}
 
-_VOICE_TOKENS = "SOFTWARE\\Microsoft\\Speech\\Voices\\Tokens"
-_VOICE_ID_PREFIX = "HKEY_LOCAL_MACHINE\\" + _VOICE_TOKENS
+# Every place Windows keeps voice tokens, in the order a candidate is preferred.
+# SAPI5 before OneCore only because it is the older and more widely exercised
+# category; both are usable, and reading only the first of them is what made
+# EXIT_NO_VOICE's own remedy useless -- Windows 11's Settings > Time & language
+# > Speech > Manage voices installs into Speech_OneCore, so a parent who
+# followed the instruction exactly still got the same refusal (measured on the
+# test laptop: 3 SAPI5 tokens against 6 OneCore). Per-user voices live under
+# HKCU with the same two subtrees. Filled in as (hive, hive name, subkey).
+VOICE_TOKEN_KEYS: tuple[tuple[str, str], ...] = (
+    ("HKEY_LOCAL_MACHINE", "SOFTWARE\\Microsoft\\Speech\\Voices\\Tokens"),
+    ("HKEY_CURRENT_USER", "SOFTWARE\\Microsoft\\Speech\\Voices\\Tokens"),
+    ("HKEY_LOCAL_MACHINE", "SOFTWARE\\Microsoft\\Speech_OneCore\\Voices\\Tokens"),
+    ("HKEY_CURRENT_USER", "SOFTWARE\\Microsoft\\Speech_OneCore\\Voices\\Tokens"),
+)
 
 
 def language_for_lcid(value: str) -> str | None:
@@ -77,13 +90,13 @@ def _nvda_running() -> bool:
     return nvda_in_tasklist_output(result.stdout)
 
 
-def _installed_voices() -> dict[str, str]:
+def installed_voices() -> dict[str, str]:
     """Language code → SAPI voice id, read straight from the registry.
 
-    No COM and no pyttsx3 engine, which is the point: the engine can only be
-    built on the TTS worker thread (concurrency-model.md § TTS), and this has
-    to answer before any thread or audio object exists. The ids it returns are
-    exactly the strings `pyttsx3`'s `setProperty("voice", ...)` expects.
+    No COM and no TTS engine, which is the point: the engine can only be built
+    on the TTS worker thread (concurrency-model.md § TTS), and this has to
+    answer before any thread or audio object exists. The ids it returns are
+    exactly the strings `SpObjectToken.SetId` expects.
     """
     # Early raise rather than the `if sys.platform == "win32":` wrapper the
     # methods below use: it narrows the same way for pyright's Linux pass --
@@ -94,25 +107,33 @@ def _installed_voices() -> dict[str, str]:
 
     import winreg
 
+    hives = {
+        "HKEY_LOCAL_MACHINE": winreg.HKEY_LOCAL_MACHINE,
+        "HKEY_CURRENT_USER": winreg.HKEY_CURRENT_USER,
+    }
     voices: dict[str, str] = {}
-    try:
-        tokens = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, _VOICE_TOKENS)
-    except OSError:
-        logger.warning("no SAPI voice tokens in the registry")
-        return voices
-    for index in range(winreg.QueryInfoKey(tokens)[0]):
-        name = winreg.EnumKey(tokens, index)
+    for hive_name, subkey in VOICE_TOKEN_KEYS:
         try:
-            attributes = winreg.OpenKey(tokens, name + "\\Attributes")
-            language, _ = winreg.QueryValueEx(attributes, "Language")
+            tokens = winreg.OpenKey(hives[hive_name], subkey)
         except OSError:
+            # An absent category is ordinary, not a fault: HKCU has neither
+            # subtree until a per-user voice is installed.
             continue
-        code = language_for_lcid(str(language))
-        # First token wins: David before Zira on a default en-US install.
-        # Which of two same-language voices is chosen is a Beta preference
-        # (ADR-003 `tts_voice`), not something to decide by registry order.
-        if code is not None and code not in voices:
-            voices[code] = _VOICE_ID_PREFIX + "\\" + name
+        for index in range(winreg.QueryInfoKey(tokens)[0]):
+            name = winreg.EnumKey(tokens, index)
+            try:
+                attributes = winreg.OpenKey(tokens, name + "\\Attributes")
+                language, _ = winreg.QueryValueEx(attributes, "Language")
+            except OSError:
+                continue
+            code = language_for_lcid(str(language))
+            # First token wins: David before Zira on a default en-US install.
+            # Which of two same-language voices is chosen is a Beta preference
+            # (ADR-003 `tts_voice`), not something to decide by registry order.
+            if code is not None and code not in voices:
+                voices[code] = hive_name + "\\" + subkey + "\\" + name
+    if not voices:
+        logger.warning("no SAPI voice tokens in the registry")
     return voices
 
 
@@ -153,7 +174,7 @@ _user32_cache: "ctypes.CDLL | None" = None
 def user32() -> "ctypes.CDLL":
     # Lazy and cached rather than module level: tests/test_platform.py imports
     # this module on Linux, where ctypes.WinDLL does not exist. Same early-raise
-    # narrowing as _installed_voices() uses, for the same pyright reason.
+    # narrowing as installed_voices() uses, for the same pyright reason.
     if sys.platform != "win32":
         raise NotImplementedError("WindowsPlatformInterface requires Windows")
     global _user32_cache
@@ -315,7 +336,7 @@ def read_layout(hkl: int) -> Layout:
 class WindowsPlatformInterface:
     def find_voice(self, language: str) -> str | None:
         if sys.platform == "win32":
-            return _installed_voices().get(language)
+            return installed_voices().get(language)
         raise NotImplementedError("WindowsPlatformInterface requires Windows")
 
     def get_system_language(self) -> str:
@@ -339,8 +360,16 @@ class WindowsPlatformInterface:
         # thread the lesson runs on.
         return read_layout(user32().GetKeyboardLayout(0))
 
-    def get_fallback_tts(self) -> TTSEngine:
-        raise NotImplementedError("session 12")
+    def get_fallback_tts(self, voice_id: str) -> Callable[[], TTSEngine]:
+        # A factory, and the engine is never built here: main() runs on the
+        # main thread, and a SAPI object built there and driven from the TTS
+        # worker never finishes an utterance (concurrency-model.md § The engine
+        # belongs to the thread that creates it).
+        if sys.platform == "win32":
+            from takki.audio.sapi_tts import SapiTTS
+
+            return lambda: SapiTTS(voice_id)
+        raise NotImplementedError("WindowsPlatformInterface requires Windows")
 
     def detect_screen_reader(self) -> str | None:
         if sys.platform == "win32":

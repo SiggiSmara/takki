@@ -14,7 +14,7 @@ Built = tuple[
 def build() -> Built:
     engine = FakeTTSEngine()
     outbound: queue.Queue[SpeechFinished] = queue.Queue()
-    worker = TTSWorker(engine, outbound)
+    worker = TTSWorker(lambda: engine, outbound)
     letters = FakeLetterAudioSource()
     return Speaker(worker, letters), worker, engine, letters, outbound
 
@@ -118,6 +118,33 @@ class TestInterrupt:
         drain(worker)
         assert engine.spoken == ["prompt", "rung"]
 
+    def test_a_non_interruptible_utterance_survives_an_outstanding_letter(self) -> None:
+        # interrupt() used to call _letters.stop() before the non-interruptible
+        # guard, and for Alpha's SyntheticLetterAudioSource that call *is*
+        # TTSWorker.stop() -- so a milestone announcement was cut whenever a
+        # letter was still outstanding (alpha session 12a-2).
+        engine = FakeTTSEngine()
+        outbound: queue.Queue[SpeechFinished] = queue.Queue()
+        worker = TTSWorker(lambda: engine, outbound)
+        letters = SyntheticLetterAudioSource(worker)
+        speaker = Speaker(worker, letters)
+        speaker.say("rung one", "rung two", interruptible=False)
+        speaker.letter("f")
+        drain(worker)
+        speaker.interrupt()
+        assert engine.stopped == 0
+        for _ in range(2):
+            drain(worker)
+            speaker.on_finished(outbound.get_nowait())
+        assert engine.spoken == ["rung one", "f", "rung two"]
+
+    def test_a_non_interruptible_utterance_leaves_the_letter_alone(self) -> None:
+        speaker, _, engine, letters, _ = build()
+        speaker.say("rung", interruptible=False)
+        speaker.letter("f")
+        speaker.interrupt()
+        assert (letters.played, letters.stopped, engine.stopped) == (["f"], 0, 0)
+
     def test_a_playing_letter_is_stopped_once(self) -> None:
         speaker, _, _, letters, _ = build()
         speaker.letter("f")
@@ -130,7 +157,7 @@ class TestInterrupt:
         # back as a SpeechFinished carrying the id play() handed out.
         engine = FakeTTSEngine()
         outbound: queue.Queue[SpeechFinished] = queue.Queue()
-        worker = TTSWorker(engine, outbound)
+        worker = TTSWorker(lambda: engine, outbound)
         speaker = Speaker(worker, SyntheticLetterAudioSource(worker))
         speaker.letter("f")
         drain(worker)

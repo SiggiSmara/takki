@@ -62,6 +62,13 @@ class Speaker:
         # while the letter is still sounding, and holding the next prompt until
         # it finished would reopen the window where a typed-ahead keystroke
         # lands on no prompt at all.
+        # Unguarded by `_in_flight_interruptible`, unlike interrupt(): for
+        # Alpha's SyntheticLetterAudioSource this stop() is TTSWorker.stop(),
+        # so it would cut a non-interruptible utterance the same way
+        # interrupt() used to (alpha session 12a-2). Safe only because
+        # `_advance` issues no letter while the speaker is busy, which is what
+        # keeps a letter and a celebration from ever being outstanding
+        # together. Add the guard here too if that gate moves.
         if self._letter_id is not None:
             self._letters.stop()
         self._letter_id = self._letters.play(char)
@@ -91,6 +98,12 @@ class Speaker:
         of the same unit. Dropping stops at the first one for that reason, so
         the rule reads the same whatever order the caller queued things in.
         """
+        # The guard comes first, before anything is stopped. `_letters.stop()`
+        # is `TTSWorker.stop()` for Alpha's SyntheticLetterAudioSource, so
+        # stopping a letter here also cut the non-interruptible utterance this
+        # is about to decline to cut (alpha session 12a-2).
+        if self._in_flight is not None and not self._in_flight_interruptible:
+            return
         if self._letter_id is not None:
             self._letters.stop()
             # Cleared without waiting for the cancellation to come back: the
@@ -98,8 +111,6 @@ class Speaker:
             # follows is dropped by id like any other superseded utterance.
             self._letter_id = None
         if self._in_flight is not None:
-            if not self._in_flight_interruptible:
-                return
             self._worker.stop()
             self._in_flight = None
         while self._pending and self._pending[0].interruptible:

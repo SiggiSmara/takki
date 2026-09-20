@@ -34,14 +34,20 @@ These are decided. Do not introduce code that violates them without opening a di
 
 ## Platform interfaces
 
-Four functions isolate all Windows-specific code. Implement these first; call them everywhere else.
+Five functions isolate all Windows-specific code. Implement these first; call them everywhere else.
 
 ```
 get_system_language()   # Windows locale API → language code
 get_layout_positions()  # Windows keyboard scan codes → Layout (keys + graphemes)
-get_fallback_tts()      # pyttsx3 → SAPI
+find_voice(language)    # SAPI5 + OneCore voice tokens → voice id | None  (registry only, no COM)
+get_fallback_tts(voice) # voice id → a factory the TTS worker calls on its own thread
 detect_screen_reader()  # SPI_GETSCREENREADER + process scan → reader id | None
 ```
+
+`get_fallback_tts` returns a *factory*, not an engine, and that is not a style choice: a COM
+engine belongs to the thread that created it, so anything built on the main thread and driven
+from the TTS worker never finishes an utterance and Takki ships mute (ADR-026,
+[concurrency-model.md](docs/concurrency-model.md)).
 
 Never call platform APIs directly from application logic. Always go through these interfaces.
 
@@ -52,7 +58,7 @@ Never call platform APIs directly from application logic. Always go through thes
 | Speech recognition | `faster-whisper` | Local only. `tiny` and `base` both bundled in installer; auto-selected at startup by CPU microbenchmark (matmul < ~2ms → `base`, otherwise → `tiny`). Measured: `tiny` 230–800ms, `base` 400ms–1.5s depending on hardware and power state. `small` not bundled — 1.4s+ even on modern hardware, impractical without CUDA GPU. Triggered by push-to-talk (ADR-020). |
 | Voice activity detection | `webrtcvad` | End-of-utterance only (push-to-talk supplies start). Tiny C extension, no ML runtime. See ADR-021. |
 | TTS (primary) | Piper TTS | Confirmed on Windows (Python 3.11 MSVC). Load ~2.3s once, synthesis ~0.19s. |
-| TTS (fallback) | pyttsx3 / SAPI | Always available on Windows, no install needed. |
+| TTS (fallback) | Windows SAPI, driven directly (`SAPI.SpVoice` via comtypes) | Always available on Windows, no install needed. **Not pyttsx3** — it truncates every utterance after the first and rejects OneCore voice ids (ADR-003, alpha session 12a-2). pyttsx3 remains the Linux dev path only. |
 | Keyboard capture | `pynput` | No elevated privileges needed on Windows. Push-to-talk key handled via same pipeline. |
 | Localisation | YAML per language | UI strings, encouragement, intents, voice catalog — all YAML. No gettext. See ADR-022. |
 | Language data | `wordfreq` | ~40 languages, bundled, no network. |

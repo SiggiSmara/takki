@@ -1,4 +1,5 @@
 import sys
+from collections.abc import Callable
 from typing import Protocol
 
 from takki.audio.tts import TTSEngine
@@ -22,7 +23,17 @@ class PlatformInterface(Protocol):
 
     def get_layout_positions(self) -> Layout: ...
 
-    def get_fallback_tts(self) -> TTSEngine: ...
+    def get_fallback_tts(self, voice_id: str) -> Callable[[], TTSEngine]:
+        """A way to *build* the engine, plus the voice it must speak in.
+
+        Returns a factory rather than an engine because the TTS worker has to
+        construct it on its own thread (concurrency-model.md § The engine
+        belongs to the thread that creates it), and takes the voice id rather
+        than choosing one because `find_voice()` has already resolved and
+        verified it -- a signature that let the caller skip it would let the
+        check read as a guarantee it does not give (ADR-003).
+        """
+        ...
 
     def detect_screen_reader(self) -> str | None: ...
 
