@@ -5,11 +5,12 @@ is assembled here, once, and handed to it. Ownership of the startup *sequence*
 belongs here rather than to each component (concurrency-model.md § Startup).
 """
 
+import os
 import queue
 import random
 import signal
 import sys
-from pathlib import Path
+from collections.abc import Callable
 from types import FrameType
 
 from takki import config
@@ -17,21 +18,40 @@ from takki.audio.pygame_cues import PygameMixerCues
 from takki.audio.synthetic_letters import SyntheticLetterAudioSource
 from takki.audio.tts_worker import TTSWorker
 from takki.clock import SleepFrameLimiter, SystemClock
+from takki.data_dir import database_path, ensure_parent
 from takki.display.focus import PygameFocusSource
 from takki.input.pynput_stream import PynputKeyStream
 from takki.language.wordfreq_source import WordfreqSource
 from takki.persistence import Profile, Store
 from takki.persistence.sqlite_store import SqliteStore
-from takki.platform import select_platform_interface
+from takki.platform import PlatformInterface, select_platform_interface
+from takki.platform.layout import Layout, build_de, build_en, build_is
 from takki.session import InboundEvent, SessionLoop
 
-DB_NAME = "takki.sqlite"
+# ADR-025's TAKKI_DATA_DIR (not yet implemented) is the stated precedent for
+# an env override on top of a platform-detected default. This laptop is
+# en-150 on a German QWERTZ layout, so an un-overridden run is `en` wordfreq
+# against a German grapheme set rather than the English Stage 0 the Alpha
+# done-criterion names -- see alpha-plan carry-forward "Test-laptop locale
+# and layout".
+_LAYOUT_BUILDERS: dict[str, Callable[[], Layout]] = {"en": build_en, "de": build_de, "is": build_is}
 
 
-def _database_path() -> Path:
-    directory = Path.home() / "Documents" / "Takki"
-    directory.mkdir(parents=True, exist_ok=True)
-    return directory / DB_NAME
+def resolve_language(platform: PlatformInterface) -> str:
+    # TAKKI_LANG is a bare primary-subtag code ("en", "de", ...), taken as
+    # given -- unlike the platform-detected path, it is not run through
+    # primary_subtag(), since it is typed by a developer, not a locale API.
+    # An empty value is "no override", matching resolve_layout below.
+    return os.environ.get("TAKKI_LANG") or platform.get_system_language()
+
+
+def resolve_layout(platform: PlatformInterface) -> Layout:
+    override = os.environ.get("TAKKI_LAYOUT")
+    if not override:
+        return platform.get_layout_positions()
+    if override not in _LAYOUT_BUILDERS:
+        raise ValueError(f"TAKKI_LAYOUT={override!r} is not one of {sorted(_LAYOUT_BUILDERS)}")
+    return _LAYOUT_BUILDERS[override]()
 
 
 def _profile(store: Store, language: str) -> Profile:
@@ -43,7 +63,7 @@ def _profile(store: Store, language: str) -> Profile:
 
 def main() -> None:
     platform = select_platform_interface()
-    layout = platform.get_layout_positions()
+    layout = resolve_layout(platform)
 
     inbound: queue.Queue[InboundEvent] = queue.Queue()
     # Display first, then the mixer: the window is the keyboard-focus anchor
@@ -58,8 +78,8 @@ def main() -> None:
     speech.start()
     letters = SyntheticLetterAudioSource(speech)
 
-    store = SqliteStore(str(_database_path()))
-    profile = _profile(store, platform.get_system_language())
+    store = SqliteStore(str(ensure_parent(database_path())))
+    profile = _profile(store, resolve_language(platform))
 
     keys = PynputKeyStream(inbound)
     loop = SessionLoop(

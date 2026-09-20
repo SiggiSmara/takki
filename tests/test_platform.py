@@ -7,6 +7,7 @@ from takki.audio.fallback_tts import FallbackTTS
 from takki.platform import select_platform_interface
 from takki.platform.dev_stub import DevStubInterface
 from takki.platform.layout import COL_TO_FINGER, Layout, PhysicalKey, build_en
+from takki.platform.windows import nvda_in_tasklist_output, primary_subtag
 from tests.fakes.fake_platform import FakePlatformInterface
 from tests.fakes.fake_tts import FakeTTSEngine
 
@@ -192,6 +193,49 @@ class TestFakeTTSEngine:
         tts = FakeTTSEngine()
         assert tts.spoken == []
         assert tts.stopped == 0
+
+
+class TestPrimarySubtag:
+    def test_hyphenated_with_numeric_region_subtag(self) -> None:
+        # Measured on the test laptop 2026-09-20: GetUserDefaultLocaleName
+        # returns "en-150" (English, Europe) -- "150" is a numeric UN region
+        # subtag, not a country code, so there is nothing further to strip.
+        assert primary_subtag("en-150") == "en"
+
+    def test_simple_language_region_tag(self) -> None:
+        assert primary_subtag("de-DE") == "de"
+
+    def test_lowercases(self) -> None:
+        assert primary_subtag("EN-US") == "en"
+
+    def test_no_region_subtag(self) -> None:
+        assert primary_subtag("fi") == "fi"
+
+    def test_empty_falls_back_to_en(self) -> None:
+        assert primary_subtag("") == "en"
+
+    def test_underscore_is_not_a_separator(self) -> None:
+        # BCP-47 uses "-", not "_" (DevStubInterface's $LANG parsing does) --
+        # an underscore-separated string has no "-" to split on, so the whole
+        # thing (lowercased) is the primary subtag, which is the honest
+        # result for input this function was never meant to receive.
+        assert primary_subtag("en_US") == "en_us"
+
+
+class TestNvdaInTasklistOutput:
+    def test_present(self) -> None:
+        output = (
+            "Image Name                    PID Session Name        Session#    Mem Usage\n"
+            "nvda.exe                    12345 Console                    1     45,000 K\n"
+        )
+        assert nvda_in_tasklist_output(output) is True
+
+    def test_absent(self) -> None:
+        output = "INFO: No tasks are running which match the specified criteria.\n"
+        assert nvda_in_tasklist_output(output) is False
+
+    def test_case_insensitive(self) -> None:
+        assert nvda_in_tasklist_output("NVDA.EXE") is True
 
 
 class TestSelectPlatformInterface:

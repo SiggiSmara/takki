@@ -20,12 +20,12 @@ None of this is worth running until all seven are true. All but P1 are [alpha-pl
 | P1 | **12a is merged and green**, including the `audio` and `windows_only` tiers | Nothing below runs otherwise — `WindowsPlatformInterface` raises `NotImplementedError` |
 | P2 | **Letter-case decision implemented** | With Caps Lock on, today every prompt errors in silence. Any typing test is polluted until this is settled |
 | P3 | **Data directory decision implemented** | D-tier runs against the final path or gets re-run — and D3 costs two calendar days |
-| P4 | **Locale/layout override implemented** — no longer conditional | Measured 2026-09-20: the laptop reports `en-150` on a **German QWERTZ** layout (`00000407`). Without the override the run is `en` wordfreq against a German grapheme set — `ä ö ü ß` in the curriculum and a 30-grapheme milestone denominator — which is not the English Stage 0 the done-criterion names. Stage 0's six anchors themselves are safe: `R F V` / `U J M` sit at the same scan codes on QWERTZ |
-| P5 | **Progress dump script exists** (`key_stats`, `key_attempts` per calendar day, `milestones`, `sessions`) | Alpha passes no `celebrant`, so every milestone is silent. Without the dump, D3's anchor rung is unobservable |
+| P4 | **Locale/layout override implemented** — no longer conditional | **Done, 2026-09-20 (#12a-0).** Measured: the laptop reports `en-150` on a **German QWERTZ** layout (`00000407`). Without the override the run is `en` wordfreq against a German grapheme set — `ä ö ü ß` in the curriculum and a 30-grapheme milestone denominator — which is not the English Stage 0 the done-criterion names. Stage 0's six anchors themselves are safe: `R F V` / `U J M` sit at the same scan codes on QWERTZ |
+| P5 | **Progress dump script exists** (`key_stats`, `key_attempts` per calendar day, `milestones`, `sessions`) | **Done, 2026-09-20 (#12a-0):** `src/takki/progress_dump.py`. Alpha passes no `celebrant`, so every milestone is silent. Without the dump, D3's anchor rung is unobservable |
 | P6 | **TTS engine is constructed on the worker thread** | Measured 2026-09-20: an engine built on the main thread and spoken from the worker never returns from `runAndWait()`. This is what `main.py` does today, so without the fix Takki is **mute** and B1 onward is untestable. This is why `-m audio` currently fails on this laptop, and it is P1's real content |
 | P7 | **Fallback voice is selected by language** | The laptop's SAPI default is English David, so the run would pass by luck. On a machine defaulting to the installed German Hedda every English letter is read with German phonology — B4 would be testing the wrong thing and would not know it |
 
-Also have ready: the **pynput event trace** (`spikes/pynput_trace_spike.py`, 12a) logging `pressed`, `char`, `name` and a timestamp per event to a file. Tier C is unreadable without it.
+Also have ready: the **pynput event trace** (`spikes/pynput_trace_spike.py`, built 2026-09-20 in #12a-0) logging `pressed`, `char`, `name` and a timestamp per event to a file. Tier C is unreadable without it.
 
 ---
 
