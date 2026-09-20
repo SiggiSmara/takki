@@ -13,15 +13,17 @@ Written for whoever sits at the laptop. Record results **in the Result column as
 
 ## Before you start
 
-None of this is worth running until all five are true. The first four are [alpha-plan](../alpha-plan.md) carry-forward rows; a run that precedes them tests known-wrong behaviour and has to be repeated.
+None of this is worth running until all seven are true. All but P1 are [alpha-plan](../alpha-plan.md) carry-forward rows; a run that precedes them tests known-wrong behaviour and has to be repeated.
 
 | # | Precondition | Why it blocks |
 |---|---|---|
 | P1 | **12a is merged and green**, including the `audio` and `windows_only` tiers | Nothing below runs otherwise — `WindowsPlatformInterface` raises `NotImplementedError` |
 | P2 | **Letter-case decision implemented** | With Caps Lock on, today every prompt errors in silence. Any typing test is polluted until this is settled |
 | P3 | **Data directory decision implemented** | D-tier runs against the final path or gets re-run — and D3 costs two calendar days |
-| P4 | **Locale/layout override available if the laptop is not en/QWERTY** | The done-criterion names an English Stage 0 |
+| P4 | **Locale/layout override implemented** — no longer conditional | Measured 2026-09-20: the laptop reports `en-150` on a **German QWERTZ** layout (`00000407`). Without the override the run is `en` wordfreq against a German grapheme set — `ä ö ü ß` in the curriculum and a 30-grapheme milestone denominator — which is not the English Stage 0 the done-criterion names. Stage 0's six anchors themselves are safe: `R F V` / `U J M` sit at the same scan codes on QWERTZ |
 | P5 | **Progress dump script exists** (`key_stats`, `key_attempts` per calendar day, `milestones`, `sessions`) | Alpha passes no `celebrant`, so every milestone is silent. Without the dump, D3's anchor rung is unobservable |
+| P6 | **TTS engine is constructed on the worker thread** | Measured 2026-09-20: an engine built on the main thread and spoken from the worker never returns from `runAndWait()`. This is what `main.py` does today, so without the fix Takki is **mute** and B1 onward is untestable. This is why `-m audio` currently fails on this laptop, and it is P1's real content |
+| P7 | **Fallback voice is selected by language** | The laptop's SAPI default is English David, so the run would pass by luck. On a machine defaulting to the installed German Hedda every English letter is read with German phonology — B4 would be testing the wrong thing and would not know it |
 
 Also have ready: the **pynput event trace** (`spikes/pynput_trace_spike.py`, 12a) logging `pressed`, `char`, `name` and a timestamp per event to a file. Tier C is unreadable without it.
 
@@ -34,7 +36,7 @@ Do this first and write the answers down. Several later checks are only interpre
 | ID | Check | Pass condition | Result |
 |---|---|---|---|
 | A1 + | Windows version, Python version, `pygame`/SDL version, whether OneDrive redirects Documents | Recorded | — |
-| A2 + | `get_system_language()` return value | Recorded. If not `en`, P4's override is in use for everything below | — |
+| A2 + | `get_system_language()` return value | **`en`** — the raw locale is `en-150`, so this checks that the BCP-47 hyphen and the numeric region subtag are both handled. P4's override is in use for everything below regardless | — |
 | A3 + | `get_layout_positions()` — grapheme count, and a letter at all six anchor positions (2,4) (3,4) (4,4) / (2,7) (3,7) (4,7) | Six letters present. A raise here is `anchor_keys()` working as designed (#8b), not a bug to catch | — |
 | A4 + | Where the database file actually landed | Matches the P3 decision exactly | — |
 | A5 + | `detect_screen_reader()` with and without NVDA running | Matches whatever [roadmap § D](../roadmap.md#d-smaller-gaps-worth-a-line-in-the-relevant-adr) decided; `None` is fine if it stayed out of Alpha | — |
@@ -49,7 +51,7 @@ The `audio` marker has never run in CI on any platform, and `windows-latest` set
 |---|---|---|---|
 | T0.1 + | `uv run pytest` | Green | — |
 | T0.2 + | `uv run pytest -m windows_only` | Green — real pynput translation, real SDL window construction | — |
-| T0.3 + | `uv run pytest -m audio` | Green. `test_real_thread_start_and_join` is the one that exercises SAPI from the TTS worker thread — the COM-apartment question | — |
+| T0.3 + | `uv run pytest -m audio` | Green. `test_real_thread_start_and_join` is the one that exercises SAPI from the TTS worker thread — **the COM-apartment question, and it was answered on 2026-09-20: this test fails today.** Green here means P6's fix landed and holds, so treat a pass as a positive result rather than a formality | — |
 
 ---
 
@@ -87,7 +89,7 @@ All of B is run with the screen ignored. If you find yourself looking at it, tha
 | C3 − | Caps Lock on, then type a prompted letter | Matches the P2 decision. Record separately what `char` the trace shows and what the child *hears* | — |
 | C4 + | Type `ll` **releasing** between the two presses | Two actuations, two counted attempts — a doubled letter is two keystrokes | — |
 | C5 − | Type `ll` **holding** through both | One actuation, one counted attempt. C4 and C5 differing is the entire point of the rule | — |
-| C6 − | Dead-key composition at the capture boundary (switch to a dead-key layout temporarily; trace tool only, no lesson engine) | One composed `KeyCode(char='á')` arrives. Capture-only by roadmap scope — does not need B8 resolved and does not gate Alpha's English run | — |
+| C6 − | Dead-key composition at the capture boundary (trace tool only, no lesson engine). **The Icelandic layout `0x40f` is already installed on this laptop** — no setup, just switch to it and switch back | One composed `KeyCode(char='á')` arrives. Capture-only by roadmap scope — does not need B8 resolved and does not gate Alpha's English run | — |
 | C7 + | A mixed session of ~40 prompts with deliberate errors and retries, trace running | Trace-derived attempt/correct counts **exactly** match the dump's `key_attempts` rows. Any drift means first-attempt accuracy is not what the engine thinks | — |
 
 ---
