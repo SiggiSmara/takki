@@ -27,7 +27,7 @@ Each protocol is introduced when its consuming component is first built. Real im
 
 | Protocol | Real implementation(s) | Fake |
 |---|---|---|
-| `TTSEngine` | `PiperTTS`, `FallbackTTS` (pyttsx3/SAPI) | `FakeTTSEngine` |
+| `TTSEngine` | `PiperTTS`; `SapiTTS` (Windows fallback, SAPI driven directly); `FallbackTTS` (pyttsx3/espeak, the Linux dev path only — ADR-003) | `FakeTTSEngine` |
 | `SoundCuePlayer` | `PygameMixerCues` | `FakeSoundCues` |
 | `KeyEventStream` | `PynputKeyStream` | `ScriptedKeyStream` |
 | `VoiceTranscriber` | `WhisperTranscriber` | `ScriptedTranscriber` |
@@ -38,7 +38,7 @@ Each protocol is introduced when its consuming component is first built. Real im
 
 `HardwareProbe` runs the CPU microbenchmark that auto-selects the Whisper model (ADR-002). An `LLMRunner` Protocol was originally catalogued here; it was removed with LLM integration ([ADR-031](0031-no-llm-integration.md)).
 
-The platform functions bundled in `PlatformInterface` (`get_system_language`, `get_layout_positions`, `get_fallback_tts`, and `detect_screen_reader` — ADR-026) are the Windows-specific instances of this same pattern.
+The platform functions bundled in `PlatformInterface` (`get_system_language`, `get_layout_positions`, `find_voice`, `get_fallback_tts`, and `detect_screen_reader` — ADR-026) are the Windows-specific instances of this same pattern.
 
 **The Protocol boundary is also the plugin boundary.** Any third-party or community-contributed alternative — a different TTS engine, an alternative wake-word handler, a cloud-LLM adapter forked downstream — is a new Protocol implementation drop-in. There is no separate plugin framework; the Protocol set above is the public extension surface.
 
@@ -49,8 +49,8 @@ Default `uv run pytest` runs only Tiers 1 and 2 — fast, deterministic, no mode
 | Tier | Scope | Where | Trigger | Cost |
 |---|---|---|---|---|
 | 1. Unit | Logic against fakes — lesson engine, progression rules, intent layers 1–3, milestone gates, encouragement selection | Linux | every PR | seconds; ~80% of suite |
-| 2. Integration (stubbed I/O) | SQLite in-memory, `wordfreq` for 2 languages, pyttsx3+espeak, pygame headless, Whisper on WAV fixtures | Linux | every PR | ~1 minute |
-| 3. Platform smoke | Windows platform interfaces, `pynput`, Piper, SAPI | `windows-latest` | every PR | a few minutes |
+| 2. Integration (stubbed I/O) | SQLite in-memory, `wordfreq` for 2 languages, pygame headless, Whisper on WAV fixtures. *(pyttsx3+espeak is `audio`-marked and runs on the dev box only.)* | Linux | every PR | ~1 minute |
+| 3. Platform smoke | Windows platform interfaces (every shipped keyboard layout, via `LoadKeyboardLayout`), `pynput`, pyright's Windows pass with Windows dependencies installed, `pygame.mixer` cues, the no-audio-output startup refusal, Piper. **Not SAPI speech** — a runner has no audio output; see § Headless audio/video | `windows-latest` | every PR | a few minutes |
 | 4. Slow integration | Full Whisper corpus, all `wordfreq` languages | matrix | nightly | longer; off critical path |
 | 5. Release | PyInstaller bundle + `.exe` smoke test | `windows-latest` | on tag (from Beta pre-releases onward — the unsigned bundle ships in Beta per [roadmap.md](../roadmap.md)) | rare |
 
@@ -87,6 +87,13 @@ CI covers the bits Linux dev cannot:
   **What this tier can and cannot prove in CI, then.** The `pygame.mixer` cue tests pass on a runner and should become a blocking check. The SAPI tests cannot run there at all, and no marker split rescues them — it is not that timing is unreliable, it is that `Speak` raises. They stay laptop-only, and the honest record is that **`tests/test_sapi_tts.py` is verified by hand on Windows hardware and by nothing else**.
 
   **And the probe found a bug in shipped code, which is the strongest argument for having run it.** `SapiTTS.speak()` raising propagates through `TTSWorker.run_one()` and out of `run()`, **killing the TTS worker thread** — no `SpeechFinished` is ever posted, the core's `Speaker` stays busy, the loop stops issuing prompts, and Takki is silently inert. That is the *third* route to that same failure this session has found (construction, the unbounded wait, and now an exception mid-run), and the first two are fixed while this one is not. It is reachable off a runner: any Windows machine with a voice in the registry and no usable output — a disabled device, a disconnected Bluetooth headset, an RDP session — passes `find_voice()` at startup and then raises on every utterance. **The fix is that no engine exception may kill the worker**: catch around `engine.speak()`, log, and post the `SpeechFinished` the core is waiting for, so the child loses that utterance rather than the whole session. Startup should arguably also prove the voice can *speak* rather than merely exist, since `find_voice()` is a registry read and cannot see this.
+
+  **Closed (2026-09-24, alpha session 12a-2).** What was left open above is now decided and built, and the probe job is gone — a question answered is not a reason to keep asking it.
+  - **The worker survives any engine exception.** `TTSWorker.run_one()` catches around `engine.speak()`, logs, and posts `SpeechFinished(id, "failed")` — a third status, so the event says what happened rather than calling an unheard utterance `completed`; a cancel outranks it. `SapiTTS`'s 60 s abandon now *raises* `SpeechOutputError` for the same reason, instead of returning into a `completed`. Pinned by `tests/test_tts_worker.py::TestTTSWorkerSurvivesEngineFailure` and `tests/test_session.py::TestSpeechEvents::test_a_failed_utterance_does_not_stall_the_session`, all four of which fail against the old worker.
+  - **Startup proves the voice can sound, and stops if it cannot.** "Arguably" was settled as *critical*: an audio-first app with no audio has nothing to offer. `SapiTTS` construction speaks one letter at volume 0 and maximum rate through a second `SpVoice` (so the voice Takki speaks through is never left silent), turns a `COMError` or a 10 s non-completion into `SpeechOutputError`, and `TTSWorker.start()` already carries build failures back to `main()`, which exits `EXIT_NO_AUDIO` (4) with the remedy on stderr. Nothing short of speaking can tell — the runner showed the failure arrives only at `Speak`. Cost measured on the laptop: 0.58 s, once, before the loop.
+  - **The runner's missing device is now a test, not an obstacle.** `tests/test_no_audio_output.py`, marker `no_audio_output`, drives the production path (`get_fallback_tts` → `TTSWorker.start()`) and asserts `SpeechOutputError`. It runs only on `windows-latest`, the one machine that reproduces "a voice and no output"; on the laptop it fails by design (`DID NOT RAISE`), which is also the proof the check passes a healthy machine. **If it ever fails on the runner, GitHub gave the runner a sound device** — the test has lost its machine, not found a bug.
+  - **CI's Windows job now proves what a runner can:** the `pygame.mixer` cue tests (blocking), pyright's Windows pass with comtypes installed (closing the "third instance" above), and the startup refusal. **`tests/test_sapi_tts.py` is verified by hand on Windows hardware and by nothing else**, and that is the permanent answer, not a gap awaiting a runner.
+  - **A fourth instance of the pattern, found while closing this.** `tests/conftest.py` forced the dummy SDL drivers on every test not marked `audio`, so `test_pygame_focus_source.py`'s two `…_on_a_real_driver` tests had **never opened a real window anywhere, the laptop included**; part (2) of the first amendment was unreachable even by hand. `windows_only` now opts out as `audio` does. CI still sets dummy at job level, so a real window remains laptop-verified — [windows-validation.md](../research/windows-validation.md) T0.2 and tier E.
 - **Synthetic audio fixtures.** A small WAV corpus committed to the repo covers common intents in each Beta-supported language. Whisper transcription is deterministic given a fixed model and fixed input — accuracy regressions on Whisper version bumps are visible.
 
   *Source of the corpus:* the fixtures are generated by TTS (Piper at varied rates and voices) and supplemented with adult-recorded clips read by maintainers and contributors. We do **not** collect or commit recordings of children's speech — both for ethical reasons and because we have no consent framework that could make it appropriate. The synthetic corpus catches regressions in transcription and intent resolution, but it does not represent the variability of real child speech. Evaluating recognition quality on actual children is therefore deferred to the Beta friends/family pilot, where informed parental consent and an appropriate testing protocol can be arranged per family.
@@ -97,6 +104,8 @@ CI covers the bits Linux dev cannot:
 - Keyboard latency feel
 - Whether intent recognition resolves well on real child speech (high variability, disfluencies)
 - Visual display readability across vision conditions
+- SAPI speech of any kind — hosted runners have a voice and no audio output (§ Headless audio/video). Verified on Windows hardware by `-m audio`
+- A real SDL window and real focus transitions — CI runs the dummy video driver. Verified on Windows hardware by `-m windows_only` and the hand-run protocol
 
 These require human testing. The Beta friends/family pilot in [roadmap.md](roadmap.md) is the venue.
 

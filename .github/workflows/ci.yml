@@ -27,51 +27,25 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
       - run: uv sync
-      - run: uv run pytest -m "not (audio or model or slow or release)"
+      # The Windows pass again, here, because only here is comtypes installed.
+      # The linux job's Windows pass cannot resolve Windows-only dependencies,
+      # so pyright types everything reached through them as Unknown and checks
+      # none of it (ADR-019 § Headless audio/video).
+      - run: uv run pyright --pythonplatform Windows
+      - run: uv run pytest -m "not (audio or no_audio_output or model or slow or release)"
         env:
           SDL_AUDIODRIVER: dummy
           SDL_VIDEODRIVER: dummy
-
-  # A probe, not a gate (alpha session 12a-2). No runner has ever executed the
-  # `audio` marker: both jobs above exclude it, so eleven sessions of TTS and
-  # mixer code have only ever run on one laptop. Whether a GitHub runner has
-  # enough of a sound device to build a SAPI voice and hear it back is an
-  # empirical question, and this job is how it gets asked. #12a-1 proved the
-  # other half of the strategy -- LoadKeyboardLayout let a runner exercise
-  # hardware-shaped code it did not have.
-  #
-  # continue-on-error because the answer is unknown: a red probe must not block
-  # a branch while it is still a question. Read the first run, then either drop
-  # continue-on-error and fold `-m audio` into the windows job, or delete this
-  # job and record in ADR-019 that the tier is laptop-only. Do not leave it
-  # here indefinitely in this state.
-  #
-  # First run, 2026-09-20 -- partial answer, and it was worth asking. The
-  # `pygame.mixer` cue tests PASS on a runner under SDL_AUDIODRIVER=dummy. The
-  # TTS half never got an answer, because the pyttsx3 test hung the job; that
-  # test no longer runs on Windows and SapiTTS is now bounded, so the next run
-  # is the one that answers whether a runner can drive a real SAPI voice.
-  windows-audio-probe:
-    runs-on: windows-latest
-    continue-on-error: true
-    # Bounded because the first run (2026-09-20) did not fail, it HUNG: pyttsx3's
-    # runAndWait() polls for a completion event SAPI never fires when there is no
-    # usable audio endpoint, so the job sat at 8.5 minutes on one `speak("a")`
-    # and had to be cancelled by hand. Both halves of that are now fixed --
-    # FallbackTTS is skipped on Windows (it is the Linux dev path) and SapiTTS
-    # abandons an utterance after 60 s -- but a probe asking "what can a runner
-    # do" must not be able to burn the job limit finding out.
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v3
-      - run: uv sync
-      - name: Which SAPI voices does a runner have?
-        run: uv run python -c "from takki.platform.windows import installed_voices; print(installed_voices())"
-      # -x and a traceback on purpose: pytest prints its FAILURES section at the
-      # end of a run, and the first two attempts never reached the end -- so the
-      # progress line said FAILED and the reason was never shown. Stopping at the
-      # first failure is what makes a probe answer its question.
-      - run: uv run pytest -m "audio" -v -x --tb=long -rA
+      # What a runner can prove of the `audio` tier: the pygame.mixer cues pass
+      # under the dummy driver. The SAPI half cannot run here -- SpVoice.Speak
+      # raises COMError 0x8004503A, a runner has no audio output -- so
+      # tests/test_sapi_tts.py is verified by hand on Windows hardware and by
+      # nothing else (ADR-019). Found by the windows-audio-probe job this
+      # replaces (alpha session 12a-2).
+      - run: uv run pytest tests/test_cues.py -m audio
         env:
           SDL_AUDIODRIVER: dummy
+      # The same missing device, turned into a test: the runner is the one
+      # machine that reproduces "a voice in the registry and no way to play
+      # it", which is what the startup output check exists to refuse.
+      - run: uv run pytest -m no_audio_output

@@ -784,6 +784,19 @@ class TestShutdown:
 
 
 class TestSpeechEvents:
+    def test_a_failed_utterance_does_not_stall_the_session(self) -> None:
+        # The whole introduction script fails -- a headset lost mid-session --
+        # and the prompt still opens. Before the worker survived engine
+        # failures this was a running app that never asked for anything.
+        harness = Harness()
+        script = intro_lines(("f", "j"))
+        harness.engine.fail_on = set(script)
+        harness.loop.start()
+        harness.settle()
+        assert harness.engine.failed == script
+        assert harness.engine.spoken == []
+        assert harness.loop.prompt == "f"
+
     def test_a_speech_finished_for_a_letter_is_dropped(self) -> None:
         harness = Harness()
         harness.loop.start()

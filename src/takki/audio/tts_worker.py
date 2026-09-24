@@ -1,4 +1,5 @@
 import itertools
+import logging
 import queue
 import threading
 from collections.abc import Callable
@@ -21,7 +22,9 @@ class Shutdown:
 
 Command = Speak | Shutdown
 
-SpeechStatus = Literal["completed", "cancelled"]
+logger = logging.getLogger(__name__)
+
+SpeechStatus = Literal["completed", "cancelled", "failed"]
 
 
 @dataclass(frozen=True)
@@ -122,9 +125,25 @@ class TTSWorker:
             # Cancelled while it sat in the queue: never speak it at all.
             self._outbound.put(SpeechFinished(command.utterance_id, "cancelled"))
             return True
-        engine.speak(command.text)
+        failed = False
+        try:
+            engine.speak(command.text)
+        except Exception:
+            # No engine exception may end this thread. A dead worker posts no
+            # SpeechFinished, the core's Speaker stays busy forever and the loop
+            # stops issuing prompts: a running app that says nothing. A
+            # windows-latest runner reached it (alpha session 12a-2) -- a voice
+            # in the registry and no audio output, so Speak raised COMError --
+            # and a child reaches it by losing a headset mid-session. The child
+            # loses this utterance, not the session.
+            logger.exception("TTS engine failed on utterance %d", command.utterance_id)
+            failed = True
         status: SpeechStatus = (
-            "cancelled" if command.utterance_id <= self._cancel_through else "completed"
+            "cancelled"
+            if command.utterance_id <= self._cancel_through
+            else "failed"
+            if failed
+            else "completed"
         )
         self._outbound.put(SpeechFinished(command.utterance_id, status))
         return True

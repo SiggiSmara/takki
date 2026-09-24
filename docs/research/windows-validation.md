@@ -43,19 +43,20 @@ Do this first and write the answers down. Several later checks are only interpre
 | A3b − | With the German layout active (Win+Space), launch Takki | Refuses to start, exits non-zero, and names `y`/`z` and the `ä ö ü ß` as the reason. Switch back to US before continuing. This is the only hand-check of the startup layout guard | — |
 | A4 + | Where the database file actually landed | Exactly `%LOCALAPPDATA%\Takki\takki.sqlite`, and **no** stray `Documents\Takki\` created (the pre-2026-09-20 path). Check for `takki.sqlite-wal` / `-shm` beside it — their presence is WAL working as intended | — |
 | A4b + | `find_voice()` for `en`, `de` and `is` | `en` and `de` return a `HKEY_LOCAL_MACHINE\...` token id, `is` returns `None`. Then set `config.LANGUAGE = "is"` and launch: Takki must refuse with `EXIT_NO_VOICE` and name the remedy. This is the only hand-check of the graceful-stop path | — |
+| A4c − | Disable the audio output (Settings → System → Sound → the output device → *Don't allow*, or unplug the only one), then launch | Takki exits **4** (`EXIT_NO_AUDIO`) within ~10 s: `Takki cannot start: the voice cannot play any sound …` on stderr. Not a hang, and not a running app that says nothing. Re-enable the device before continuing | — |
 | A5 + | `detect_screen_reader()` with and without NVDA running | Matches whatever [roadmap § D](../roadmap.md#d-smaller-gaps-worth-a-line-in-the-relevant-adr) decided; `None` is fine if it stayed out of Alpha | — |
 
 ---
 
 ## T0 — The automated tiers, on this machine
 
-The `audio` marker has never run in CI on any platform, and `windows-latest` sets `SDL_VIDEODRIVER=dummy`. So this is the first time several of these execute for real.
+CI cannot run SAPI speech (a runner has no audio output) or a real window (`SDL_VIDEODRIVER=dummy`), so T0.2 and T0.3 are the **only** verification those two get — [ADR-019 § Headless audio/video](../adr/0019-testing-strategy-and-io-isolation.md), closed 2026-09-24.
 
 | ID | Check | Pass condition | Result |
 |---|---|---|---|
 | T0.1 + | `uv run pytest` | Green | — |
-| T0.2 + | `uv run pytest -m windows_only` | Green — real pynput translation, real SDL window construction | — |
-| T0.3 + | `uv run pytest -m audio` | Green (17 tests, ~50 s, as of 2026-09-20). The tier to read is `tests/test_sapi_tts.py`: it drives the real engine from a real worker thread and **asserts utterance durations**, because the defect that hid for eleven sessions was speech being cut short, which every earlier test — `speak("a")` does not raise — would have passed through. Treat a pass as a positive result rather than a formality. Note no GitHub runner has confirmed this tier yet; `windows-audio-probe` in CI is asking that question and is non-blocking until someone reads its first run | — |
+| T0.2 + | `uv run pytest -m windows_only` | Green — real pynput translation, real SDL window construction. *(Until 2026-09-24 `conftest.py` forced the dummy video driver here, so the "real driver" window tests had never opened a real window; a pass before that date proved nothing about the window.)* | — |
+| T0.3 + | `uv run pytest -m audio` | Green (17 tests, ~50 s, as of 2026-09-20). The tier to read is `tests/test_sapi_tts.py`: it drives the real engine from a real worker thread and **asserts utterance durations**, because the defect that hid for eleven sessions was speech being cut short, which every earlier test — `speak("a")` does not raise — would have passed through. Treat a pass as a positive result rather than a formality — **this run is the only thing that verifies `tests/test_sapi_tts.py`**; CI runs the mixer half of the tier and cannot run the SAPI half | — |
 
 ---
 
@@ -139,7 +140,7 @@ Mostly negative tests: Alpha's focus model exists because the OS interrupts.
 |---|---|---|---|
 | F1 + | 60–90 minutes of continuous practice | No latency drift, no memory growth, no audio degradation. Cue still feels immediate at the end | — |
 | F2 − | Sleep/hibernate the laptop mid-session, then wake | Listener still alive and the loop still responsive. A dead pynput hook surfaces only at `join()`, so the symptom would be a silent keyboard | — |
-| F3 − | Unplug headphones / power off a Bluetooth headset mid-lesson | **Expected to fail** — this is roadmap **C14**, scheduled for Beta. Record exactly what happens so C14 is written against observed behaviour rather than a guess | — |
+| F3 − | Unplug headphones / power off a Bluetooth headset mid-lesson | **The app must survive; the child's experience is still C14's (Beta).** Since 2026-09-24 an engine exception costs one utterance, not the TTS worker: look for `TTS engine failed on utterance N` on stderr, and prompts still being issued (cues still sound if the mixer reroutes). A frozen loop — no more prompts, no more cues after replugging — is a **fail**. Also record whether SAPI reroutes to the speakers on its own, so C14 and roadmap § D's repeated-`failed` line are written against observed behaviour | — |
 
 ---
 

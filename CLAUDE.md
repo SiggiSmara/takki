@@ -7,7 +7,7 @@ Typing tutor for visually impaired children. Audio is the primary interface. See
 - **Never run `python` directly.** Always `uv run python` or `uv run pytest`. No exceptions.
 - **Never `cd` before a command.** All commands run from the repo root. Use absolute or repo-relative paths.
 - **All external I/O behind a `typing.Protocol`.** Lesson engine, intent pipeline, and progression logic depend on the Protocol, not the implementation. No direct calls to Piper, pynput, Whisper, `pygame`, etc. from logic code. The Windows-specific platform interfaces below are the most prominent case; the rule applies to every external interface. See ADR-019.
-- **Tests use fakes by default.** Each Protocol ships with a fake implementation in `tests/fakes/`. Hardware- and model-dependent tests are gated by pytest markers (`audio`, `model`, `windows_only`, `slow`) and excluded from the default `uv run pytest`. See ADR-019.
+- **Tests use fakes by default.** Each Protocol ships with a fake implementation in `tests/fakes/`. Hardware- and model-dependent tests are gated by pytest markers (`audio`, `model`, `windows_only`, `slow`, `no_audio_output`) and excluded from the default `uv run pytest`. `no_audio_output` runs only on the `windows-latest` runner, which has a voice and no audio device, and fails on a machine that can play sound. See ADR-019.
 
 ## Development environment
 

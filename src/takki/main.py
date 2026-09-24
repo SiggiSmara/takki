@@ -15,6 +15,7 @@ from types import FrameType
 from takki import config
 from takki.audio.pygame_cues import PygameMixerCues
 from takki.audio.synthetic_letters import SyntheticLetterAudioSource
+from takki.audio.tts import SpeechOutputError
 from takki.audio.tts_worker import TTSWorker
 from takki.clock import SleepFrameLimiter, SystemClock
 from takki.data_dir import database_path, ensure_parent
@@ -38,6 +39,7 @@ _EXPECTED_LAYOUTS: dict[str, Callable[[], Layout]] = {
 
 EXIT_LAYOUT_MISMATCH = 2
 EXIT_NO_VOICE = 3
+EXIT_NO_AUDIO = 4
 
 
 def resolve_language(platform: PlatformInterface) -> str:
@@ -129,8 +131,22 @@ def main() -> int:
     # back a factory rather than an engine -- the worker builds it on its own
     # thread, which is the only thread that can then drive it
     # (concurrency-model.md § The engine belongs to the thread that creates it).
+    # The third precondition: a voice that exists but cannot sound. find_voice()
+    # reads the registry and cannot see the output device, so the engine proves
+    # it by speaking as it is built (ADR-019 § Headless audio/video). Stop, as
+    # for the other two -- an audio-first app with no audio has nothing to offer,
+    # and nothing to say it with, so the reason goes to stderr.
     speech = TTSWorker(platform.get_fallback_tts(voice), inbound)
-    speech.start()
+    try:
+        speech.start()
+    except SpeechOutputError as error:
+        print(f"Takki cannot start: {error}.", file=sys.stderr)
+        print(
+            "Check that speakers or headphones are connected and selected as the "
+            "Windows sound output, then start Takki again.",
+            file=sys.stderr,
+        )
+        return EXIT_NO_AUDIO
     letters = SyntheticLetterAudioSource(speech)
 
     store = SqliteStore(str(ensure_parent(database_path())))

@@ -15,6 +15,7 @@ from typing import Any
 
 import pytest
 
+from takki.audio.tts import SpeechOutputError
 from takki.audio.tts_worker import SpeechFinished, TTSWorker
 
 pytestmark = [pytest.mark.audio, pytest.mark.windows_only]
@@ -241,7 +242,10 @@ class TestSapiTTSDoesNotHang:
             engine.speak("warm up")
             sapi_tts.MAX_UTTERANCE_SECONDS = 0.5
             start = time.monotonic()
-            engine.speak(LONG)  # ~5.9 s of speech, abandoned at ~0.5 s
+            # ~5.9 s of speech, abandoned at ~0.5 s. It raises, so TTSWorker
+            # reports "failed" -- returning reported it "completed".
+            with pytest.raises(SpeechOutputError):
+                engine.speak(LONG)
             abandoned = time.monotonic() - start
             sapi_tts.MAX_UTTERANCE_SECONDS = original
             # The engine has to survive it: the purge on the way out is what

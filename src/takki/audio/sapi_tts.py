@@ -14,13 +14,12 @@ it: nothing here registers for events, so no thread has to pump a message queue
 and `stop()` costs the caller nothing (it sets a flag and makes no COM call).
 """
 
-import logging
 import sys
 import threading
 import time
 from typing import Any
 
-logger = logging.getLogger(__name__)
+from takki.audio.tts import SpeechOutputError
 
 if sys.platform == "win32":
     # Module level, and that placement is the fix for a real failure: comtypes
@@ -68,6 +67,55 @@ _RATE = 0
 # and cannot fire on a healthy machine.
 MAX_UTTERANCE_SECONDS = 60.0
 
+# How long construction waits for the silent proof-of-output utterance. It is
+# one letter at maximum rate, ~0.3 s on a healthy machine; a machine that has
+# not finished it in this long will not speak a prompt either.
+PROBE_SECONDS = 10.0
+
+
+if sys.platform == "win32":
+    # Under the guard for the reason the import is: pyright's Linux pass cannot
+    # see comtypes, and SapiTTS reaches these only past its own platform check.
+
+    def _spvoice(voice_id: str | None) -> Any:
+        voice = comtypes.client.CreateObject("SAPI.SpVoice")
+        if voice_id is not None:
+            # Not SpVoice.GetVoices(): that enumerates the SAPI5 category only,
+            # and Windows 11's "Manage voices" -- the remedy main.py prints --
+            # installs into Speech_OneCore. SetId takes either category's path.
+            token = comtypes.client.CreateObject("SAPI.SpObjectToken")
+            token.SetId(voice_id)
+            voice.Voice = token
+        return voice
+
+    def _prove_output(voice_id: str | None) -> None:
+        """Speak one silent letter, or raise SpeechOutputError.
+
+        find_voice() is a registry read, so it passes on a machine that has a voice
+        and nowhere to play it -- a windows-latest runner, a disabled device, an RDP
+        session. There SpVoice.Speak raises COMError 0x8004503A (alpha session
+        12a-2), and it raises only once something is actually spoken, so nothing
+        short of speaking can tell. A second SpVoice so the one Takki speaks through
+        is never left at volume 0.
+        """
+        probe = _spvoice(voice_id)
+        probe.Volume = 0
+        probe.Rate = 10
+        # The whole exchange, not just Speak: the runner raised there, but a
+        # device can equally fail mid-render, and main() catches only
+        # SpeechOutputError -- a raw COMError would be a traceback, not a reason.
+        try:
+            probe.Speak("a", _SPF_ASYNC)
+            finished = probe.WaitUntilDone(int(PROBE_SECONDS * 1000))
+            if not finished:
+                probe.Speak("", _SPF_PURGE_BEFORE_SPEAK)
+        except comtypes.COMError as error:
+            raise SpeechOutputError(f"the voice cannot play any sound ({error})") from error
+        if not finished:
+            raise SpeechOutputError(
+                f"the voice did not finish a test letter in {PROBE_SECONDS:.0f}s"
+            )
+
 
 class SapiTTS:
     """Blocking TTSEngine over SAPI. Construct it on the TTS worker thread."""
@@ -88,16 +136,10 @@ class SapiTTS:
         # if the thread was already claimed -- a loud failure at startup, not a
         # worker that mysteriously stops speaking later.
         comtypes.CoInitializeEx(comtypes.COINIT_MULTITHREADED)
+        _prove_output(voice_id)
         self._cancel = threading.Event()
-        self._voice = comtypes.client.CreateObject("SAPI.SpVoice")
+        self._voice = _spvoice(voice_id)
         self._voice.Rate = _RATE
-        if voice_id is not None:
-            # Not SpVoice.GetVoices(): that enumerates the SAPI5 category only,
-            # and Windows 11's "Manage voices" -- the remedy main.py prints --
-            # installs into Speech_OneCore. SetId takes either category's path.
-            token = comtypes.client.CreateObject("SAPI.SpObjectToken")
-            token.SetId(voice_id)
-            self._voice.Voice = token
 
     def speak(self, text: str) -> None:
         # Deliberately does not clear the flag: the worker does that before it
@@ -113,15 +155,13 @@ class SapiTTS:
                 return
             if time.monotonic() > deadline:
                 # Give up rather than hang the worker. Purge so the engine is
-                # usable for the next utterance, and say so loudly: the child
-                # heard nothing and nothing else will report it.
-                logger.error(
-                    "SAPI did not finish an utterance within %.0fs; abandoning it. "
-                    "Is an audio output device available?",
-                    MAX_UTTERANCE_SECONDS,
-                )
+                # usable for the next utterance, and raise rather than return:
+                # returning reported an utterance nobody heard as "completed".
+                # TTSWorker logs it and posts "failed".
                 self._voice.Speak("", _SPF_PURGE_BEFORE_SPEAK)
-                return
+                raise SpeechOutputError(
+                    f"SAPI did not finish an utterance within {MAX_UTTERANCE_SECONDS:.0f}s"
+                )
 
     def stop(self) -> None:
         # Callable from any thread and free on the caller: no COM call crosses

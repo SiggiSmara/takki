@@ -72,7 +72,7 @@ reportUnknownVariableType = "warning"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = [
-    "-m", "not (audio or model or windows_only or slow or release)",
+    "-m", "not (audio or no_audio_output or model or windows_only or slow or release)",
 ]
 markers = [
     "audio: tests that require a working audio output device or SDL audio init",
@@ -80,4 +80,5 @@ markers = [
     "windows_only: tests that only run on Windows (platform interfaces, SAPI, pynput on Windows)",
     "slow: integration tests that take more than a few seconds to run",
     "release: tests that run only on release tags (PyInstaller bundle smoke tests)",
+    "no_audio_output: tests that need a SAPI voice and NO audio output device (the windows-latest runner)",
 ]

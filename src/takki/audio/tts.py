@@ -1,8 +1,14 @@
 from typing import Protocol
 
 
+class SpeechOutputError(Exception):
+    """The engine has a voice but cannot make sound -- no usable audio output."""
+
+
 class TTSEngine(Protocol):
-    def speak(self, text: str) -> None: ...
+    def speak(self, text: str) -> None:
+        """Block until spoken or cancelled. May raise; the worker survives it."""
+        ...
 
     def stop(self) -> None: ...
 
