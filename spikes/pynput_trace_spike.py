@@ -28,6 +28,7 @@ windows-validation.md's tier C instructions.
 import queue
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 
 from takki.input import KeyEvent
@@ -35,8 +36,23 @@ from takki.input import KeyEvent
 DEFAULT_LOG_PATH = Path(__file__).parent / "results" / "pynput_trace.log"
 
 
-def _format_event(t0: float, event: KeyEvent) -> str:
-    elapsed = time.perf_counter() - t0
+class _Stamped:
+    """An EventSink that timestamps on the listener thread, as the key arrives.
+
+    Stamping when the main loop dequeues would push every later event late
+    whenever printing stalls -- a click in a console with QuickEdit on freezes
+    it -- and c7_trace_vs_dump.py reads Escape hold times from these stamps.
+    """
+
+    def __init__(self) -> None:
+        self.events: queue.Queue[tuple[float, KeyEvent]] = queue.Queue()
+
+    def put(self, item: KeyEvent, /) -> None:
+        self.events.put((time.perf_counter(), item))
+
+
+def _format_event(t0: float, at: float, event: KeyEvent) -> str:
+    elapsed = at - t0
     state = "PRESS  " if event.pressed else "RELEASE"
     return f"[{elapsed:9.3f}s] {state}  char={event.char!r:8s} name={event.name!r}"
 
@@ -52,22 +68,26 @@ def main() -> None:
     log_path = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_LOG_PATH
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
-    inbound: queue.Queue[KeyEvent] = queue.Queue()
+    inbound = _Stamped()
     stream = PynputKeyStream(inbound)
     stream.start()
 
+    # Wall clock to the millisecond, taken with t0: spikes/c7_trace_vs_dump.py
+    # places each event in time from this line plus its offset, to cross-check
+    # against key_attempts.attempted_at.
     t0 = time.perf_counter()
+    started = datetime.now().isoformat(sep=" ", timespec="milliseconds")
     print(f"Logging to {log_path}. Type freely; Ctrl+C here to stop.\n")
     try:
         with log_path.open("a", encoding="utf-8") as f:
-            f.write(f"\n=== trace started {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n")
+            f.write(f"\n=== trace started {started} ===\n")
             f.flush()
             while True:
                 try:
-                    event = inbound.get(timeout=0.5)
+                    at, event = inbound.events.get(timeout=0.5)
                 except queue.Empty:
                     continue
-                line = _format_event(t0, event)
+                line = _format_event(t0, at, event)
                 print(line)
                 f.write(line + "\n")
                 f.flush()
