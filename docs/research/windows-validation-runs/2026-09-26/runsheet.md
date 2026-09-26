@@ -496,6 +496,13 @@ End time: 18:12:06 **with a lot of interruptions due to investigations**
 
 ---
 
+### Sitting 1 notes (recorded at the end of 2026-09-26)
+
+- **About an hour went on key-capture investigation** after RS-06 (C2 and C6; see [RS-06.log](RS-06.log), [RS-06is.log](RS-06is.log), roadmap A5, alpha-plan #13 and #14).
+- **The database was recreated this evening, before Sitting 2.** Quitting and restarting Takki introduced a new key at every start (alpha-plan #12d), so the first database had fingers well beyond Stage 0. D4 needs two dates in one database, so a fresh one was made today. Stage 0 was then practised in **one continuous session** through `v` and `m`, ending at the next introduction. Its dump: **nine keys** in `key_stats`, the six anchors all present, lowest accuracy **98.5%**, `milestones (none)`. D1 above refers to this database, and D4 runs on it.
+- **Letters sometimes went unspoken** (B5, F1): silence until the B9 re-prompt or an Escape tap, even with deliberately slow typing, and apparently more often with more keys. Cause not settled; see alpha-plan #12c and `spikes/silent_prompt_spike.py` (not yet run).
+- **Findings filed during the sitting** (not results of this run, but raised by it): alpha-plan #12c (silent letter, A4c traceback), #12d (a new key at every start), #12e (practice weighted by English frequency); roadmap § D entries on `n` versus `m`, the ramp-up autopilot, the J introduction and the script-to-prompt hand-over, chime overlap, lessons and breaks, untaught recovery keys, the Takki key, and the Layer-1 restart.
+
 ## Sitting 2: day 2 (a **later calendar date** than Sitting 1, ~2–2.5 h)
 
 Start after local midnight following Sitting 1. Do not start before midnight and practise across it (that is D6).
