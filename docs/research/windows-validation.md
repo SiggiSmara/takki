@@ -1,13 +1,17 @@
 # Windows validation protocol (alpha sessions 12b-1 and 12b-2)
 
-> **Status:** Protocol and playbook. The protocol was written before the run; results are recorded in its tables as the run happens. **T0, the automated A rows and G1's token half are recorded (2026-09-24, #12b-1). The hands-on tiers have not been run yet (#12b-2).**
+> **Status:** Protocol and playbook. The protocol was written before the run. Each run is recorded in its own dated run sheet (§ Runs), never in this note. **T0, the automated A rows and G1's token half were recorded here before run sheets existed (2026-09-24, #12b-1). The hands-on tiers have not been run yet (#12b-2).**
 > **Date written:** 2026-09-20. **Updated:** 2026-09-24 (#12b-1): brought up to date with 12a-1 and 12a-2; *Running order* added; scripts built. **Date run:** T0, A (automated) and G1's token half: 2026-09-24. Hands-on: _not yet run._
 > **Machine:** the Windows test laptop. The primary dev box is headless Linux with no audio device and a `win32`-pinned `pynput`, so nothing below can run there. That is the whole reason this tier exists.
 > **Scope:** the Alpha done-criterion and everything that would invalidate it. *Not* a Beta feature test: no voice, no Piper, no Layer 2, no multi-profile.
 
-Written for whoever sits at the laptop. Record results **in the Result column as you go**, not from memory afterwards. Several checks are about what you *heard*, and that does not survive an hour.
+Written for whoever sits at the laptop. Record results **as you go**, in the run's run sheet (below), not from memory afterwards. Several checks are about what you *heard*, and that does not survive an hour.
 
-**How this note is laid out.** *Running order* says what to do, sitting by sitting. The tier tables below it (A–G) define each check and hold its result. Check IDs link the two. When a step says "B7", the pass condition is in B7's row.
+**How this note is laid out.** *Running order* says what to do, sitting by sitting. The tier tables below it (A–G) define each check. Check IDs link the two. When a step says "B7", the pass condition is in B7's row. The tier tables' Result columns hold only #12b-1's automated results, from before run sheets existed; later results are in the run sheets.
+
+**At the laptop, use a run sheet.** A run sheet is *Running order* rendered as test cases: each step with its exact command, its pass condition copied from the tier row, and a place to write the result. **Generate a new one for every run**, named `windows-validation-runsheet-YYYY-MM-DD.md` after the date it was generated, and add it to § Runs. **The run sheet is the single source of truth for its run.** Results are recorded there and stay there: nothing is copied back into this note. This note is the source of truth for the *protocol*, and a sheet adds no steps or pass conditions of its own. A sheet generated before this note last changed is stale; generate a new one rather than editing an old one.
+
+**The instruction for an agent generating a run sheet:** render *Running order* as one test case per step or step group, in the same order and with the same step numbers (S1–S61). Repeat the full command in every test case, even when it is the launch line. Copy the pass condition from the check's tier row. Give each record field a line to fill in, and add a block to paste raw output into (trace sections, C7 output, dumps). Carry the stop rules and restores inline. Record the generation date and the commit of this note in the sheet's header. End with a summary table of every check ID, hard no-go checks marked, and a line for the run's one-line finding.
 
 **Legend.** **+** positive test (the thing should work). **−** negative test (the thing should fail safely, or is expected to expose a known gap).
 
@@ -25,7 +29,7 @@ Four sittings across at least two calendar days, plus one optional late-night ch
    uv run takki; "exit $LASTEXITCODE"
    ```
 
-   Takki's stderr prints in this same window: the refusal messages, and `TTS engine failed on utterance N` (F3). The line after Takki ends is its exit code. Copy both into the Result column. *(Decided 2026-09-24: console plus exit code, no log file.)*
+   Takki's stderr prints in this same window: the refusal messages, and `TTS engine failed on utterance N` (F3). The line after Takki ends is its exit code. Copy both into the run sheet. *(Decided 2026-09-24: console plus exit code, no log file.)*
 2. **The second console** runs everything else: traces, dumps and scripts, from the same folder. Typing in it takes the focus away from Takki. You will hear *"Paused. Takki is not the active window."* That is expected. Alt+Tab back to Takki and it says *"Back in Takki"* and asks the letter again.
 3. **Do not answer wrong on purpose until the anchor rung is in the dump (D4, sitting 2)**, except where a step says to. The anchor bar is 95% accuracy over each key's last 200 attempts, and every wrong *first* press counts against the letter that was asked. Stage 0 only ever asks anchor letters, so ten deliberate errors on `f` can hold the rung off for days. This is why C3 and C7 are in sitting 2.
 4. **Listen for letters before you answer them.** A key pressed while an introduction script is still speaking is dropped by design (no prompt is open). That is harmless, except during C7, where it breaks the comparison.
@@ -60,7 +64,7 @@ Every hard no-go (§ Go / no-go) falls into one of two groups. Decide which one 
 ### Sitting 0 — prepare (any day before sitting 1, about 15 minutes)
 
 1. Check no stray Python programs are running: `Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Select-Object ProcessId, CommandLine`. Only VS Code's language servers should be listed. *(On 2026-09-24 a spike left over from a 12a-2 session had been hung for four days.)*
-2. Check whether the code has changed since T0 was recorded: `git diff --stat 6d4a147 -- src tests`. Empty output means T0's results below still stand. Anything else means re-run T0.1–T0.3 and record the results again.
+2. Check whether the code or its dependencies have changed since T0 was recorded: `git diff --stat 6d4a147 -- src tests pyproject.toml uv.lock`. `6d4a147` is the commit T0 ran against, not the latest one, so later commits are expected. Empty output means T0's results below still stand. Anything else means re-run T0.1–T0.3 and record the results again.
 3. Move the old database aside so D1 starts from a cold profile: `Rename-Item "$env:LOCALAPPDATA\Takki" "Takki.pre-12b"`. The folder holds an empty `dev` profile and four sessions that 12a-2 never ended.
 4. Delete the empty leftover from before 2026-09-20: `Remove-Item "$env:USERPROFILE\Documents\Takki"`. A4 then checks that nothing new appears there.
 5. Make a backup folder: `New-Item -ItemType Directory "$env:LOCALAPPDATA\Takki-backup"`.
@@ -93,7 +97,7 @@ Every hard no-go (§ Go / no-go) falls into one of two groups. Decide which one 
 15. **C4.** Type `l`, release, `l`, release.
 16. **C5.** Press `l` and hold it for about 1 second, then let go.
 17. **C6.** Press Win+Space and pick **Icelandic**. Press the key right of `æ` (the dead acute, where US has the apostrophe). Then press `a`. **Press Win+Space and pick English (US).**
-18. Press Ctrl+C in the trace console. Read the new section with `Get-Content spikes\results\trace_12b2.log -Tail 60`. Record C1, C2, C4, C5 and C6, and paste the excerpts into § Results.
+18. Press Ctrl+C in the trace console. Read the new section with `$t = Get-Content spikes\results\trace_12b2.log; $i = ($t | Select-String '=== trace started' | Select-Object -Last 1).LineNumber; $t[($i-1)..($t.Count-1)]`. The C1 hold alone can produce more than 60 repeat lines, so `-Tail 60` would cut it off. Record C1, C2, C4, C5 and C6, and paste the section into the run sheet.
 19. **Stop rule:** if C1, C2, C4 or C5 failed, stop here (§ Stop rules).
 
 **Part C — first launch, eyes closed (G6, B1–B12).**
@@ -125,7 +129,7 @@ Every hard no-go (§ Go / no-go) falls into one of two groups. Decide which one 
 32. Alt+Tab to Takki and keep answering prompts steadily until Takki goes silent.
 33. **Before relaunching**, run the post-kill check and record the `D3:` line. Relaunching replays the WAL and destroys the evidence.
 34. Relaunch. The progress must still be there: answer 3 prompts, then close with the mouse.
-35. Run the environment capture again and record the **A4** line (this confirms the fresh database). Also copy the dump into § Results as *day 1*.
+35. Run the environment capture again and record the **A4** line (this confirms the fresh database). Also paste the dump into the run sheet as *day 1*.
 
 ### Sitting 2 — day 2 (a later calendar date than sitting 1; about 2–2.5 hours)
 
@@ -146,12 +150,12 @@ Every hard no-go (§ Go / no-go) falls into one of two groups. Decide which one 
 43. Answer only after hearing the letter. At an introduction, wait for it to finish.
 44. **C3 by ear:** Caps Lock answers get the normal chime.
 45. Close Takki with the mouse. Press Ctrl+C in the trace console.
-46. Run the trace-vs-dump comparison. Record its `C7:` line. **C3** passes if C7 passes and the trace line reports upper-case actuations above zero: the engine counted them as the plain letter. Paste the full output into § Results.
+46. Run the trace-vs-dump comparison. Record its `C7:` line. **C3** passes if C7 passes and the trace line reports upper-case actuations above zero: the engine counted them as the plain letter. Paste the full output into the run sheet.
 47. **F1 + E10 (60–90 minutes).** Launch. In the second console, start the mouse helper for E10, then Alt+Tab to Takki. The cursor circles inside Takki's window for 25 minutes of motion. It pauses while another window is in front, and stops if you move the mouse yourself.
-48. Note Takki's memory at the start and the end: `Get-Process | Where-Object MainWindowTitle -eq 'Takki' | Select-Object WorkingSet64`.
+48. Note Takki's memory at the start and the end: `Get-Process | Where-Object MainWindowTitle -eq 'Takki' | Select-Object WorkingSet64`. Take the start reading *before* starting the mouse helper in step 47, because the helper occupies the second console for 25 minutes.
 49. Practise the whole time. After 60–90 minutes, record F1.
 50. **E10:** close Takki with the mouse. It must close within a couple of seconds. If it does not, press Ctrl+C in the Takki console and record the fail.
-51. Back up again, to `Takki-backup\day2\`.
+51. Back up again, to `Takki-backup\day2\`: `New-Item -ItemType Directory "$env:LOCALAPPDATA\Takki-backup\day2"`, then `Copy-Item "$env:LOCALAPPDATA\Takki\takki.sqlite*" "$env:LOCALAPPDATA\Takki-backup\day2\"`.
 
 ### Sitting 3 — changes to the machine (any day after sitting 2, about 1 hour)
 
@@ -195,7 +199,7 @@ None of this is worth running until all seven are true. **All seven are true as 
 
 **No environment overrides exist at all.** `TAKKI_DATA_DIR`, `TAKKI_LANG` and `TAKKI_LAYOUT` were all withdrawn on 2026-09-20; [ADR-025 § Alternatives](../adr/0025-configuration-system.md) now rejects env-var overrides outright (alpha-plan carry-forward "`TAKKI_DATA_DIR` override"). Tiers D and G therefore run against the real data directory, and *Running order* handles the backup (Sitting 0 step 3, Sitting 1 step 30) and G5's restore (step 58) as explicit steps. If that feels too sharp on the day, run tiers D and G under a throwaway Windows user account. Do not re-add an env var. *(`spikes/listener_coexistence_spike.py` patches `database_path` in its own process to rehearse against a throwaway file. That is a spike harness; it is not a way to run this protocol.)*
 
-**Scripts** (all in `spikes/`, built 2026-09-24 in #12b-1 unless noted; each prints one line ready to paste into the Result column):
+**Scripts** (all in `spikes/`, built 2026-09-24 in #12b-1 unless noted; each prints one line ready to paste into the run sheet):
 
 | Script | For | Notes |
 |---|---|---|
@@ -349,9 +353,17 @@ F3 (C14, already scheduled) · E12 (mid-lesson layout switch, roadmap § D) · G
 
 ---
 
-## Results
+## Runs
 
-_Paste the filled tables, the trace excerpts for tier C, the C7 script output, and the progress dump for D here. Then write the one-line finding at the top of this note, the way [tts-letter-pronunciation](tts-letter-pronunciation.md) does, and carry anything that outlives the session into an ADR amendment or [roadmap](../roadmap.md) § D, per [alpha-plan](../alpha-plan.md) step 5._
+One line per run sheet, newest last. Results, raw output and the run's one-line finding live in the sheet, not here. Anything that outlives the run goes into an ADR amendment or [roadmap](../roadmap.md) § D, per [alpha-plan](../alpha-plan.md) step 5.
+
+| Run sheet | Generated | Run (#) | Outcome |
+|---|---|---|---|
+| [windows-validation-runsheet-2026-09-26.md](windows-validation-runsheet-2026-09-26.md) | 2026-09-26 | #12b-2 | _not yet run_ |
+
+## Results (before run sheets)
+
+_Kept as recorded in #12b-1. New runs record in their run sheet (§ Runs)._
 
 ### #12b-1 automated runs (2026-09-24)
 
