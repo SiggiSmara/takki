@@ -219,6 +219,10 @@ Do these in order, in Notepad. Pause a second between them so the sections are e
 
 You cannot read this during the run. **Memorise this order**, then record everything in RS-08 straight afterwards.
 
+0. **Start.** Stopwatch in one hand. In [T], press Enter on the launch line and start the stopwatch at the same moment. **Close your eyes.**
+   ```powershell
+   uv run takki; "exit $LASTEXITCODE"
+   ```
 1. **B1.** The first thing you should hear is the introduction. *"Paused. Takki is not the active window."* first = B1 fail. Alt+Tab to Takki and carry on.
 2. **B2.** Stop the stopwatch at the first spoken word.
 3. **B3.** The `f` and `j` introduction lines are complete to the last word.
@@ -233,30 +237,25 @@ You cannot read this during the run. **Memorise this order**, then record everyt
 12. **B14.** Hold Escape 5 s or more: exactly one restart.
 13. **G6** ends when you hear the **second** introduction script. Stop there and do not answer the new letter yet. RS-09 starts at that point.
 
-**Go:** stopwatch ready. [T] launch line, and start the stopwatch as you press Enter. **Close your eyes.**
-```powershell
-uv run takki; "exit $LASTEXITCODE"
-```
-
 ### RS-08 · Record Part C (S21)
 
 | Check | Pass condition | Observed | Result |
 |---|---|---|---|
 | G6 | Never needed the screen, the console or the mouse, launch → second introduction | | |
-| B1 | Window took the foreground without a click. No "Paused" first | | |
-| B2 | Launch → first word, in seconds (expect ~2 s; note anything past ~5 s) | | |
-| B3 | `f` and `j` introduction lines complete, in order, before the first prompt | | |
+| B1 | Window took the foreground without a click. No "Paused" first | | pass |
+| B2 | Launch → first word, in seconds (expect ~2 s; note anything past ~5 s) | 3,4 s | pass |
+| B3 | `f` and `j` introduction lines complete, in order, before the first prompt | | pass |
 | B4 | Letter names, not words: `f` `j` now; `r` `v` `u` `m` fill in by RS-12 | f: j: r: v: u: m: | |
-| B5 | Chime, then the next letter; the chime feels immediate | | |
-| B6 | Error tone, **same** letter asked again, prompt stays open | | |
-| B7 | Letter cut, chime not delayed | | |
-| B8 | Both keypresses landed and were counted | | |
-| B9 | Three re-prompts, then quiet with the prompt open. A 4th re-prompt = fail | | |
-| B10 | The answer after the silence was taken as a first attempt | | |
-| B11 | Quick Escape tap → prompt read again, no restart | | |
-| B12 | Escape held past 800 ms → one restart, at the threshold, key still down | | |
-| B13 | 700 → re-read, 900 → restart. How hard was the boundary to hit? | | |
-| B14 | 5 s+ hold → exactly one restart | | |
+| B5 | Chime, then the next letter; the chime feels immediate | | pass |
+| B6 | Error tone, **same** letter asked again, prompt stays open | | pass |
+| B7 | Letter cut, chime not delayed | difficult to hit before end of letter | pass |
+| B8 | Both keypresses landed and were counted | | pass |
+| B9 | Three re-prompts, then quiet with the prompt open. A 4th re-prompt = fail | | pass |
+| B10 | The answer after the silence was taken as a first attempt | | pass |
+| B11 | Quick Escape tap → prompt read a gain, no restart | | pass |
+| B12 | Escape held past 800 ms → one restart, at the threshold, key still down. *Not testable by ear here: In Stage 0's first step a unit is one letter, so a restart replays the letter just asked and sounds exactly like a re-read. Re-tested in RS-11* | heard prompt again | not distinguishable here → RS-11 |
+| B13 | 700 → re-read, 900 → restart. How hard was the boundary to hit? *Not testable by ear here, for the same reason as B12. Re-tested in RS-11* | prompt always start if escape is held long but is only repeated once per keypress, holding the escape beyond the repeat does not trigger a second repeat | not distinguishable here → RS-11 |
+| B14 | 5 s+ hold → exactly one restart | | pass |
 
 ### Part D: quit, reopen, kill (E9, D2, D5, D3, E11)
 
@@ -271,9 +270,9 @@ uv run takki; "exit $LASTEXITCODE"
    **Expect:** the last session has an `ended_at`.
 
 - Letter you quit on: 
-- Exit code: 
-- Last session `ended_at`: 
-- **Result (E9):** 
+- Exit code: 0
+- Last session `ended_at`: 2026-09-26T16:25:38
+- **Result (E9):** pass
 
 ### RS-10 · D2 + D5: reopen (S24)
 
@@ -283,17 +282,26 @@ uv run takki; "exit $LASTEXITCODE"
 ```
 **Expect:** `f` and `j` are **not** introduced again (D2). The letter you quit on **is** introduced again (D5).
 
-- Re-introduced: 
-- **Result (D2):** 
-- **Result (D5):** 
+- Re-introduced: No
+- **Result (D2):** pass
+- **Result (D5):** pass? what I heard was simply the next letter
 
 ### RS-11 · Finish Stage 0 (S25)
 
 Keep practising until all of `r f v u j m` have been introduced and the next introduction names a letter **outside** those six (~360 prompts). Answer correctly. About half way, press **one** wrong key once (deliberate error 2 of 2) and re-check B6. Fill in B4 in RS-08 as the letters arrive.
 
-- Start / end time: 
-- B6 re-check: 
-- Next letter after the six: 
+- Start / end time:
+- B6 re-check: pass
+- Next letter after the six: d and k
+
+**B12 + B13 re-test, once `r` and `u` have been introduced.** From Stage 0's second step each new letter is drilled right after its anchor, in two-letter units: `f r`, `j u`, then `f v`, `j m`. A restart goes back to the start of the unit, so it can now be heard. Do these while being asked the **second** letter of a unit (`r`, `u`, `v` or `m`, just after `f` or `j`). None of them counts as an attempt.
+
+| Check | Do | Pass condition | Observed | Result |
+|---|---|---|---|---|
+| B12 | Hold Escape past 800 ms | The **anchor** (`f` or `j`) is asked, while the key is still down. Hearing the same letter again means no restart | | pass |
+| B13a | Release Escape at ~700 ms | The **same** letter again (re-read) | | pass |
+| B13b | Hold Escape to ~900 ms | The **anchor** (restart), while the key is still down | | pass |
+| B13 | How hard was the 800 ms boundary to hit? (tries per side) | Recorded | you quikly get a hang for not pressing to long to get the repeat and simple keep pressing until the reset happens and then release it| pass |
 
 ### RS-12 · D1: dump after Stage 0 (S26)
 
@@ -304,9 +312,34 @@ uv run python -m takki.progress_dump
 **Expect:** six anchor keys (`r f v u j m`) in `key_stats`, and `milestones (none)`.
 
 ```text
-(paste dump here)
+Profile: dev (id=1, language=en, created 2026-09-26T17:52:40)
+
+key_stats (lifetime)
+  key  attempts  correct  accuracy  last_practised_at
+  f         201      198    98.5%  2026-09-26T18:11:31
+  j         175      174    99.4%  2026-09-26T18:11:32
+  m          32       32   100.0%  2026-09-26T18:11:43
+  r          74       73    98.6%  2026-09-26T18:11:44
+  u          61       61   100.0%  2026-09-26T18:11:35
+  v          32       32   100.0%  2026-09-26T18:11:46
+
+key_attempts by calendar day
+  key  day        attempts  correct  accuracy
+  f    2026-09-26      200      197    98.5%
+  j    2026-09-26      175      174    99.4%
+  m    2026-09-26       32       32   100.0%
+  r    2026-09-26       74       73    98.6%
+  u    2026-09-26       61       61   100.0%
+  v    2026-09-26       32       32   100.0%
+
+milestones
+  (none)
+
+sessions
+    id  started_at           ended_at
+     1  2026-09-26T17:52:41  2026-09-26T18:12:06
 ```
-- **Result (D1):** 
+- **Result (D1):** pass
 
 ### RS-13 · E1–E8: focus and hostile input (S27)
 
@@ -314,16 +347,16 @@ Nothing here counts as an attempt. Do each with a letter being asked, and come b
 
 | Check | Do | Pass condition | Observed | Result |
 |---|---|---|---|---|
-| E1 | Alt+Tab away mid-prompt, then back | Pause announced when you leave, resume announced when you return, and the prompt asked again *after* the announcement, not over it | | |
+| E1 | Alt+Tab away mid-prompt, then back | Pause announced when you leave, resume announced when you return, and the prompt asked again *after* the announcement, not over it | | pass |
 | E2 | Alt+Tab away. Hold **F1** for 1 s | Takki raises itself and resumes, keyboard only | | |
-| E3 | Hold F1 from several different apps (Notepad, Explorer, browser, [2]) | Where the raise is refused, the Alt+Tab hint is spoken after ~1.5 s. List which apps raised and which gave the hint | | |
-| E4 | Press the Windows key (Start menu), then return | Pause, then resume | | |
+| E3 | Hold F1 from several different apps (Notepad, Explorer, browser, [2]) | Where the raise is refused, the Alt+Tab hint is spoken after ~1.5 s. List which apps raised and which gave the hint | did not manage to raise anywhere, did hear the alt0+tab hint sometimes | not sure|
+| E4 | Press the Windows key (Start menu), then return | Pause, then resume | works as expected| pass |
 | E5a | Win+L, log back in | Pause, then resume | | |
-| E5b | Ctrl+Alt+Del, then Cancel | Pause, then resume | | |
-| E5c | [2]: `Start-Process powershell -Verb RunAs` and answer **No** | Pause, then resume | | |
-| E6 | Press Shift 5 times (Sticky Keys dialog), dismiss it | Pause, then resume. No stuck modifier afterwards | | |
-| E7 | Mash Backspace, Tab, Enter, Delete, arrows, F-keys, Ctrl+letter, AltGr | Nothing counted, no crash, prompt unchanged | | |
-| E8 | Press the space bar repeatedly | Ignored | | |
+| E5b | Ctrl+Alt+Del, then Cancel | Pause, then resume | | pass |
+| E5c | [2]: `Start-Process powershell -Verb RunAs` and answer **No** | Pause, then resume | returns back to powershell not to Takki | fail? |
+| E6 | Press Shift 5 times (Sticky Keys dialog), dismiss it | Pause, then resume. No stuck modifier afterwards | | pass |
+| E7 | Mash Backspace, Tab, Enter, Delete, arrows, F-keys, Ctrl+letter, AltGr | Nothing counted, no crash, prompt unchanged | | pass |
+| E8 | Press the space bar repeatedly | Ignored | | pass |
 
 ### RS-14 · E12: layout switch mid-lesson (S28)
 
@@ -338,10 +371,10 @@ Nothing here counts as an attempt. Do each with a letter being asked, and come b
 
 **Expected (a known gap):** nothing is said, and the lesson carries on.
 
-- Chord used: 
-- Anything heard: 
-- A3 line after switching back: 
-- **Result (E12, recorded as a Beta item):** 
+- Chord used: Win+Space
+- Anything heard: No
+- A3 line after switching back: pass
+- **Result (E12, recorded as a Beta item):** pass
 
 ### RS-15 · E11: Ctrl+C in the launching console (S29)
 
@@ -352,10 +385,10 @@ Nothing here counts as an attempt. Do each with a letter being asked, and come b
    ```
    **Expect:** the session has an `ended_at`.
 
-- Printed in [T]: 
-- Exit code: 
-- `ended_at` present: 
-- **Result (E11):** 
+- Printed in [T]: Nothing
+- Exit code: no exit code
+- `ended_at` present: yes
+- **Result (E11):** fail?
 
 ### RS-16 · Back up (S30)
 
@@ -394,7 +427,7 @@ Get-ChildItem "$env:LOCALAPPDATA\Takki-backup"
 
 - `D3:` line: 
 - Progress still there after relaunch: 
-- **Result (D3):** 
+- **Result (D3):** pass
 
 ### RS-18 · A4 on the fresh database; day 1 dump (S35)
 
@@ -406,13 +439,60 @@ uv run python -m takki.progress_dump
 **Expect (A4):** `%LOCALAPPDATA%\Takki\takki.sqlite`, `journal_mode` `wal`, and **no** `Documents\Takki`.
 
 - A4 line: 
-- **Result (A4):** 
+- **Result (A4):** pass
 
 ```text
-(paste day 1 dump here)
+config.LANGUAGE = None (resolved language: 'en')
+
+Installed layouts (read by HKL, nothing activated):
+  HKL 04070407  lang=de  36 graphemes  own table: 'unexpected dead-acute'
+      as 'en': "language 'en' is configured but the active keyboard is 'de'"
+      as 'is': "language 'is' is configured but the active keyboard is 'de'"
+  HKL 04090409  lang=en  26 graphemes  own table: 'matches'
+      as 'de': "language 'de' is configured but the active keyboard is 'en'"
+      as 'is': "language 'is' is configured but the active keyboard is 'en'"
+  HKL 040f040f  lang=is  36 graphemes  own table: 'matches'
+      as 'en': "language 'en' is configured but the active keyboard is 'is'"
+      as 'de': "language 'de' is configured but the active keyboard is 'is'"
+
+Result column, one row per line:
+
+A1: Windows 11 Home 25H2 (build 26200.9550); Python 3.11.15; pygame 2.6.1 / SDL 2.28.4; Documents = `C:\Users\smara\Documents` (not OneDrive-redirected); administrator, not elevated (filtered token); commit b3fd7b4 (modified tracked files)
+A2: `en` from raw locale `en-150` -- pass
+A3: pass -- `Layout.lang` = `en` (locale `en-150`); 26 graphemes, 26 keys; anchors (2,4)=r (3,4)=f (4,4)=v (2,7)=u (3,7)=j (4,7)=m; verify_layout('en') = None (would start)
+A4: pass -- `C:\Users\smara\AppData\Local\Takki\takki.sqlite` (77824 bytes); journal_mode `wal`; -wal present, -shm present; stray Documents\Takki: none
+A4b: find_voice: pass -- `en` -> `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-US_DAVID_11.0`; `de` -> `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_DE-DE_HEDDA_11.0`; `is` -> `None`. Launch half: by hand
+A5: `None` (NVDA not running at capture)
+
+Profile: dev (id=1, language=en, created 2026-09-26T17:52:40)
+
+key_stats (lifetime)
+  key  attempts  correct  accuracy  last_practised_at
+  f         201      198    98.5%  2026-09-26T18:11:31
+  j         175      174    99.4%  2026-09-26T18:11:32
+  m          32       32   100.0%  2026-09-26T18:11:43
+  r          74       73    98.6%  2026-09-26T18:11:44
+  u          61       61   100.0%  2026-09-26T18:11:35
+  v          32       32   100.0%  2026-09-26T18:11:46
+
+key_attempts by calendar day
+  key  day        attempts  correct  accuracy
+  f    2026-09-26      200      197    98.5%
+  j    2026-09-26      175      174    99.4%
+  m    2026-09-26       32       32   100.0%
+  r    2026-09-26       74       73    98.6%
+  u    2026-09-26       61       61   100.0%
+  v    2026-09-26       32       32   100.0%
+
+milestones
+  (none)
+
+sessions
+    id  started_at           ended_at
+     1  2026-09-26T17:52:41  2026-09-26T18:12:06
 ```
 
-End time: 
+End time: 18:12:06 **with a lot of interruptions due to investigations**
 
 ---
 
