@@ -2,7 +2,8 @@
 
 **Status:** Accepted  
 **Date:** 2026-06-14  
-**Revised:** 2026-06-21 — §C8 keyboard ownership reworked: global `suppress=True` replaced by focus-gated dispatch over an always-on window.
+**Revised:** 2026-06-21 — §C8 keyboard ownership reworked: global `suppress=True` replaced by focus-gated dispatch over an always-on window.  
+**Amended:** 2026-09-26 — § Event model's premise refuted on hardware (alpha session 12b-2): pynput never delivers a composed character. The capture source is re-decided in alpha #13; see [roadmap A5](../roadmap.md#a-bites-alpha-specifically-the-next-step).
 
 > Part of the [Takki architecture](../architecture.md).  
 > Closes roadmap issues B5, B7, and C8. Amends [ADR-024](0024-drill-content-and-lesson-granularity.md), and (per the 2026-06-21 revision) [ADR-016](0016-visual-display-design.md) and [ADR-026](0026-platform-interface-abstraction.md). Extends [ADR-005](0005-keyboard-handling.md) and adds the `FocusSource` Protocol to [ADR-019](0019-testing-strategy-and-io-isolation.md).
@@ -41,6 +42,15 @@ pynput translates raw key events to characters via `ToUnicodeEx` on Windows befo
 The lesson engine therefore has no concept of "modifier key" or "compose state." `'á'` and `'a'` are equally atomic inputs. No compose-state management belongs inside the engine.
 
 **Compose state at prompt advance.** If a child presses a dead key mid-drill and the engine's auto-advance timeout fires before they press the base letter, the Windows compose buffer stays armed. The next character the child produces is the composed result. The engine receives that character event, compares it to the current prompt, and processes it normally: correct if it matches, auto-reject if not. The stale compose is consumed in either case. No explicit compose-state flush at prompt boundaries is needed; the existing auto-reject model handles spurious composed events without special treatment.
+
+> **Refuted on hardware (2026-09-26, alpha session 12b-2, [windows-validation](../research/windows-validation.md) C6).** The event model above does not hold for a pynput hook. On the Icelandic layout, the dead acute then `a` arrive as:
+>
+> | Physical input | What the hook delivers | What this section says |
+> |---|---|---|
+> | Dead-key press | `KeyCode(char='´', is_dead=True)`; `translate()` keeps only `'´'` | `None` or a combining character, discarded as *Composing* |
+> | Base letter after it | `KeyCode(char='a')` | `KeyCode(char='á')` |
+>
+> pynput does not call `ToUnicodeEx` per keypress, because calling it from the hook would disturb the compose state of the application that has focus. It looks each key up in a table built once, compose state flushed, for the layout its listener thread started with. So the compose buffer this section relies on is never consulted, and the Windows application with focus is the only place `á` exists. Consequences under the code as built: `'´'` is printable, `classify()` returns it as a `Character`, and a prompted `á` can never be answered. The "Compose state at prompt advance" paragraph falls with it. **Nothing here changes Alpha**, whose English has no dead key. The capture source is re-decided in [alpha-plan](../alpha-plan.md) #13, with the candidates in [roadmap A5](../roadmap.md#a-bites-alpha-specifically-the-next-step); this section is rewritten when that decision lands, not before.
 
 ### Composite ramp-up (B5)
 

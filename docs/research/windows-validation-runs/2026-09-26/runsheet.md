@@ -165,7 +165,7 @@ Add one in Windows Settings > Time & language > Speech > Manage voices, then sta
 - Exit code: 1
 - Time to exit: 9.5 sec
 - Audio restored and audible: check
-- **Result (A4c):** pass
+- **Result (A4c):** fail
 
 ### Part B: the key trace, no Takki (C1, C2, C4, C5, C6)
 

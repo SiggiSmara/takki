@@ -17,7 +17,7 @@ This means:
 - No layout definition files to maintain
 - No layout detection logic beyond reading the Windows locale
 - Automatic correct behaviour for all QWERTY, QWERTZ, AZERTY, and national variant layouts
-- Dead keys and AltGr combinations are handled by Windows before the app sees them
+- Dead keys and AltGr combinations are handled by Windows before the app sees them *(true for the window that has focus, false for the pynput hook; see below)*
 
 `pynput` is chosen over the `keyboard` library because it does not require elevated privileges on Windows for standard key capture.
 
@@ -32,6 +32,10 @@ Shift and Caps Lock themselves remain `System` in the ADR-028 taxonomy — they 
 ### Focus-gated dispatch (added 2026-06-21, per ADR-028)
 
 `pynput` remains the key source, but it no longer runs with `suppress=True`. Key events are processed as drill input only while Takki's window holds OS foreground; while it does not, the OS routes keys to whatever is focused and Takki is paused. The character-translation behaviour above is unchanged — only *when* an event counts as lesson input is now gated on focus. See [ADR-028 §C8](0028-composite-input-and-keyboard-ownership.md) for the full ownership model and the `FocusSource` Protocol.
+
+### What the hook actually reports (added 2026-09-26)
+
+Measured in alpha session 12b-2 ([windows-validation](../research/windows-validation.md) C6): pynput does not report "the character produced" in two cases this ADR assumed it did. A dead key arrives as its own standalone character (`'´'`) and the letter after it arrives uncomposed (`'a'`), because pynput never composes; and after a mid-session layout switch it goes on translating with the layout it started under. Both are pynput's design, not a bug to wait out. [ADR-028 § Event model](0028-composite-input-and-keyboard-ownership.md) carries the detail, and [roadmap A5](../roadmap.md#a-bites-alpha-specifically-the-next-step) the candidates for where Takki captures keys instead; the choice is alpha-plan #13's. Neither case occurs on US English, so Alpha's measurements stand.
 
 ### Alternatives Considered
 
