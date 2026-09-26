@@ -1,6 +1,6 @@
 # Windows validation run sheet (alpha #12b-2)
 
-> **What this is.** [windows-validation.md](windows-validation.md) § *Running order*, rendered as test cases in execution order: what to do, the exact command, what to expect, and where to write the result. **This sheet is the single source of truth for this run.** Record here during the run. Results, raw output and the finding stay here; nothing is copied back into the protocol.
+> **What this is.** [windows-validation.md](../../windows-validation.md) § *Running order*, rendered as test cases in execution order: what to do, the exact command, what to expect, and where to write the result. **This sheet is the single source of truth for this run.** Record here during the run. Results, raw output and the finding stay here; nothing is copied back into the protocol.
 > **Generated:** 2026-09-26, from the protocol at `5d34a46` plus the uncommitted 2026-09-26 edits that introduced run sheets.
 > **Protocol.** The steps, commands and pass conditions are copied from the protocol, and this sheet adds none of its own. Step numbers (**S1–S61**) are the protocol's *Running order* numbers. If the protocol changes before the run, generate a new dated sheet instead of editing this one.
 
@@ -98,8 +98,8 @@ New-Item -ItemType Directory "$env:LOCALAPPDATA\Takki-backup"
 
 ## Sitting 1: day 1 (~2 h)
 
-Date:  Start time: 
-Commit (`git rev-parse --short HEAD`): 
+Date:26-09-2026  Start time: 11:58
+Commit (`git rev-parse --short HEAD`): c049454
 
 ### Part A: three startup refusals
 
@@ -116,9 +116,12 @@ Each launch exits before a window or database exists.
 
 ↺ **Win+Space → English (US).**
 
-- Printed: 
-- Exit code: 
-- **Result (A3b):** 
+- Printed: pygame 2.6.1 (SDL 2.28.4, Python 3.11.15)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+Takki cannot start: language 'en' is configured but the active keyboard is 'de'.
+Set the active Windows keyboard layout to match the lesson language (Win+Space switches between installed layouts), then start Takki again.
+- Exit code: 2
+- **Result (A3b):**  pass
 
 ### RS-02 · A4b: refuses when no voice is installed (S4–S8)
 
@@ -137,10 +140,13 @@ git diff src/takki/config.py
 ```
 The diff must print nothing. ↺ **Win+Space → English (US).**
 
-- Printed: 
-- Exit code: 
-- Reverted, diff empty: 
-- **Result (A4b, launch half):** 
+- Printed: pygame 2.6.1 (SDL 2.28.4, Python 3.11.15)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+Takki cannot start: no text-to-speech voice is installed for 'is'.
+Add one in Windows Settings > Time & language > Speech > Manage voices, then start Takki again.
+- Exit code: 3
+- Reverted, diff empty: pass
+- **Result (A4b, launch half):** pass
 
 ### RS-03 · A4c: refuses when no audio output exists (S9–S11)
 
@@ -155,11 +161,11 @@ The diff must print nothing. ↺ **Win+Space → English (US).**
 
 ↺ **Restore:** Settings → System → Sound → *All sound devices* → Speakers → **Allow**. Headset back on. Play any sound and confirm you hear it.
 
-- Printed (or traceback last line): 
-- Exit code: 
-- Time to exit: 
-- Audio restored and audible: 
-- **Result (A4c):** 
+- Printed (or traceback last line): pygame.error: WASAPI can't find requested audio endpoint: Element not found.
+- Exit code: 1
+- Time to exit: 9.5 sec
+- Audio restored and audible: check
+- **Result (A4c):** pass
 
 ### Part B: the key trace, no Takki (C1, C2, C4, C5, C6)
 
@@ -170,7 +176,7 @@ Type into **Notepad**, so no keystroke reaches a console.
 1. Open Notepad.
 2. [2]
    ```powershell
-   uv run python spikes/pynput_trace_spike.py spikes/results/trace_12b2.log
+   uv run python spikes/pynput_trace_spike.py docs/research/windows-validation-runs/2026-09-26/RS-06.log
    ```
 3. Click into Notepad.
 
@@ -189,23 +195,21 @@ Do these in order, in Notepad. Pause a second between them so the sections are e
 ### RS-06 · Stop the trace and read it (S18)
 
 1. Click into [2] and press **Ctrl+C**.
-2. [2] Print the latest section (all of it, and copies it to the clipboard):
+2. [2] Print the latest section, all of it:
    ```powershell
-   $t = Get-Content spikes\results\trace_12b2.log; $i = ($t | Select-String '=== trace started' | Select-Object -Last 1).LineNumber; $t[($i-1)..($t.Count-1)] | Tee-Object -Variable s; $s | Set-Clipboard
+   $t = Get-Content docs\research\windows-validation-runs\2026-09-26\RS-06.log; $i = ($t | Select-String '=== trace started' | Select-Object -Last 1).LineNumber; $t[($i-1)..($t.Count-1)]
    ```
-3. Paste it into the block below, then judge each row.
-
-```text
-(paste trace section here)
-```
+3. Read it, then judge each row. The raw trace is committed next to this sheet, not pasted here:
+   - [RS-06.log](RS-06.log): C1, C2, C4, C5, and C6 as first written (trace started on US).
+   - [RS-06is.log](RS-06is.log): the C6 re-run, trace started with Icelandic active.
 
 | Check | Pass condition | Result |
 |---|---|---|
-| C1 | One `PRESS`, then more `PRESS` lines (repeats), then **one** `RELEASE`. No `RELEASE` between repeats | |
-| C2 | Press and release report the same key: `char='G'` down and `char='g'` up is a pass. `None` or an unrelated character on release is a fail | |
-| C4 | `PRESS`/`RELEASE`/`PRESS`/`RELEASE`: two actuations | |
-| C5 | One `PRESS`, repeats, one `RELEASE`: one actuation | |
-| C6 | One composed `char='á'` arrives | |
+| C1 | One `PRESS`, then more `PRESS` lines (repeats), then **one** `RELEASE`. No `RELEASE` between repeats | pass |
+| C2 | Press and release report the same key: `char='G'` down and `char='g'` up is a pass. `None` or an unrelated character on release is a fail | pass |
+| C4 | `PRESS`/`RELEASE`/`PRESS`/`RELEASE`: two actuations | pass |
+| C5 | One `PRESS`, repeats, one `RELEASE`: one actuation | pass |
+| C6 | One composed `char='á'` arrives | invalid as written, trace stayed on US mapping while Notepad composed á |
 
 ⛔ **S19: C1, C2, C4 or C5 failed → stop.** Do not practise Stage 0. Amend ADR-027 § First-Attempt Counting in a Claude session, then re-run tier C and all of D from a fresh database (RS-00.4 again).
 
@@ -460,7 +464,7 @@ uv run python -m takki.progress_dump
 
 1. With a letter being asked, **do not answer it.** [2]:
    ```powershell
-   uv run python spikes/pynput_trace_spike.py spikes/results/trace_12b2.log
+   uv run python spikes/pynput_trace_spike.py docs/research/windows-validation-runs/2026-09-26/RS-21.log
    ```
    Takki pauses. Alt+Tab back to Takki.
 2. **From here until step 5: do not leave the window, and do not press Escape.** Answer only after hearing the letter, and wait for introductions to finish. Answer about 40 prompts, mixing in:
@@ -478,7 +482,7 @@ uv run python -m takki.progress_dump
 5. Click into [2] and press **Ctrl+C** to stop the trace.
 6. [2]
    ```powershell
-   uv run python spikes/c7_trace_vs_dump.py spikes/results/trace_12b2.log
+   uv run python spikes/c7_trace_vs_dump.py docs/research/windows-validation-runs/2026-09-26/RS-21.log
    ```
    **Expect:** `C7: PASS`. **C3** passes if C7 passes *and* the trace line reports upper-case actuations above zero.
 
@@ -705,4 +709,4 @@ Fill in from the Result lines above. **Hard no-go** checks are in bold.
 | **D5** | | G3 | | **G6** | |
 | D6 | | | | | |
 
-When the run is done, update only this sheet's row in [windows-validation.md](windows-validation.md) § Runs: set its *Outcome* to go or no-go. Carry anything that outlives the run into an ADR amendment or roadmap § D.
+When the run is done, update only this sheet's row in [windows-validation.md](../../windows-validation.md) § Runs: set its *Outcome* to go or no-go. Carry anything that outlives the run into an ADR amendment or roadmap § D.

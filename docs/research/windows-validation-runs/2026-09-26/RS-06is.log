@@ -1,0 +1,14 @@
+
+=== trace started 2026-09-26 12:49:51.688 ===
+[    4.754s] PRESS    char='æ'      name=None
+[    4.898s] RELEASE  char='æ'      name=None
+[    8.073s] PRESS    char='+'      name=None
+[    8.234s] RELEASE  char='+'      name=None
+[    8.238s] PRESS    char='a'      name=None
+[    8.354s] RELEASE  char='a'      name=None
+[   11.331s] PRESS    char='´'      name=None
+[   11.478s] PRESS    char='a'      name=None
+[   11.518s] RELEASE  char='´'      name=None
+[   11.592s] RELEASE  char='a'      name=None
+[   19.735s] PRESS    char=None     name='ctrl_l'
+[   20.018s] PRESS    char='\x03'   name=None
