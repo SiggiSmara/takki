@@ -22,7 +22,7 @@ uv run takki; "exit $LASTEXITCODE"
 
 ## Sitting 0: prepare (any day before Sitting 1, ~15 min)
 
-Date: 
+Date:
 
 ### RS-00.1 No stray Python processes (S1)
 
@@ -32,7 +32,7 @@ Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Select-Object Proces
 ```
 **Expect:** only VS Code language servers. Stop anything else.
 
-- Listed / stopped: 
+- Listed / stopped:
 Listed, nothing stopped:
     18908 c:\Users\smara\github\takki\.venv\Scripts\python.exe c:\Users\smara\.vscode\extensions\ms-python.isort-202...
      3368 "C:\Users\smara\AppData\Roaming\uv\python\cpython-3.11-windows-x86_64-none\python.exe"  c:\Users\smara\.vs...
@@ -92,7 +92,7 @@ New-Item -ItemType Directory "$env:LOCALAPPDATA\Takki-backup"
 
 - Laptop charged (for G2): check
 - soundcore Space Q45 paired (for F3): check
-- Portable NVDA created (nvaccess.org → run → *Create portable copy*)? If not, G3 and A5 (with NVDA) are *Not run*: 
+- Portable NVDA created (nvaccess.org → run → *Create portable copy*)? If not, G3 and A5 (with NVDA) are *Not run*:
 
 ---
 
@@ -269,7 +269,7 @@ You cannot read this during the run. **Memorise this order**, then record everyt
    ```
    **Expect:** the last session has an `ended_at`.
 
-- Letter you quit on: 
+- Letter you quit on:
 - Exit code: 0
 - Last session `ended_at`: 2026-09-26T16:25:38
 - **Result (E9):** pass
@@ -399,7 +399,7 @@ Get-ChildItem "$env:LOCALAPPDATA\Takki-backup"
 ```
 *Restore, if D3 requires it:* close Takki, delete the files in `%LOCALAPPDATA%\Takki`, and copy these back.
 
-- Backed up: 
+- Backed up:
 
 ### RS-17 · D3: kill mid-write (S31–S34)
 
@@ -425,8 +425,8 @@ Get-ChildItem "$env:LOCALAPPDATA\Takki-backup"
    uv run takki; "exit $LASTEXITCODE"
    ```
 
-- `D3:` line: 
-- Progress still there after relaunch: 
+- `D3:` line:
+- Progress still there after relaunch:
 - **Result (D3):** pass
 
 ### RS-18 · A4 on the fresh database; day 1 dump (S35)
@@ -438,7 +438,7 @@ uv run python -m takki.progress_dump
 ```
 **Expect (A4):** `%LOCALAPPDATA%\Takki\takki.sqlite`, `journal_mode` `wal`, and **no** `Documents\Takki`.
 
-- A4 line: 
+- A4 line:
 - **Result (A4):** pass
 
 ```text
@@ -500,7 +500,7 @@ End time: 18:12:06 **with a lot of interruptions due to investigations**
 
 Start after local midnight following Sitting 1. Do not start before midnight and practise across it (that is D6).
 
-Date:  Start time: 
+Date:  Start time:
 
 ### RS-19 · Day 1 rows present (S36)
 
@@ -508,7 +508,7 @@ Date:  Start time:
 ```powershell
 uv run python -m takki.progress_dump
 ```
-- Day 1 rows present: 
+- Day 1 rows present:
 
 ### RS-20 · D4: the anchor rung (S37–S40)
 
@@ -532,9 +532,9 @@ uv run python -m takki.progress_dump
 | | | |
 | | | |
 
-- Keys never reached today after 30 min (finding): 
-- `anchor` count after the extra block: 
-- **Result (D4):** 
+- Keys never reached today after 30 min (finding):
+- `anchor` count after the extra block:
+- **Result (D4):**
 
 ```text
 (paste the final dump here)
@@ -571,9 +571,9 @@ uv run python -m takki.progress_dump
 ```text
 (paste full C7 output here)
 ```
-- C3 by ear (normal chime with Caps Lock): 
-- **Result (C7):** 
-- **Result (C3):** 
+- C3 by ear (normal chime with Caps Lock):
+- **Result (C7):**
+- **Result (C3):**
 
 ### RS-22 · F1 + E10: endurance and the mouse soak (S47–S50)
 
@@ -597,13 +597,13 @@ uv run python -m takki.progress_dump
    ```
 6. **E10:** close Takki with the mouse. It must close within a couple of seconds. If it does not, press Ctrl+C in [T] and record a fail.
 
-- Start time / WorkingSet64: 
-- Helper finished (minutes of motion): 
-- End time / WorkingSet64: 
-- Latency drift? Audio degradation? Cue still immediate at the end? 
-- **Result (F1):** 
-- Close time, exit code: 
-- **Result (E10):** 
+- Start time / WorkingSet64:
+- Helper finished (minutes of motion):
+- End time / WorkingSet64:
+- Latency drift? Audio degradation? Cue still immediate at the end?
+- **Result (F1):**
+- Close time, exit code:
+- **Result (E10):**
 
 ### RS-23 · Back up day 2 (S51)
 
@@ -612,9 +612,9 @@ uv run python -m takki.progress_dump
 New-Item -ItemType Directory "$env:LOCALAPPDATA\Takki-backup\day2"
 Copy-Item "$env:LOCALAPPDATA\Takki\takki.sqlite*" "$env:LOCALAPPDATA\Takki-backup\day2\"
 ```
-- Backed up: 
+- Backed up:
 
-End time: 
+End time:
 
 ---
 
@@ -622,7 +622,7 @@ End time:
 
 Each check changes something about the laptop. Each restore comes straight after its check.
 
-Date:  Start time: 
+Date:  Start time:
 
 ### RS-24 · F3: headset off mid-lesson (S52)
 
@@ -637,11 +637,11 @@ Date:  Start time:
 
 **Fail:** a frozen loop (no more prompts, and no cues after the headset is back).
 
-- `TTS engine failed` lines (count, N): 
-- Prompts kept coming: 
-- SAPI rerouted to the speakers by itself: 
-- Cues after the headset was back: 
-- **Result (F3, recorded as a Beta item):** 
+- `TTS engine failed` lines (count, N):
+- Prompts kept coming:
+- SAPI rerouted to the speakers by itself:
+- Cues after the headset was back:
+- **Result (F3, recorded as a Beta item):**
 
 ### RS-25 · F2: sleep and wake (S53)
 
@@ -649,9 +649,9 @@ Date:  Start time:
 2. Wake the laptop, log in, Alt+Tab to Takki, and answer 5 prompts. Each should chime.
 3. Close with the mouse. Watch [T]: a traceback at exit means the pynput listener died during sleep.
 
-- 5 prompts chimed: 
-- [T] output at exit, exit code: 
-- **Result (F2):** 
+- 5 prompts chimed:
+- [T] output at exit, exit code:
+- **Result (F2):**
 
 ### RS-26 · G2: battery and power saving (S54)
 
@@ -662,8 +662,8 @@ Date:  Start time:
    ```
 ↺ Restore the power mode, turn Energy saver off, and plug the charger in.
 
-- Responsiveness, speech latency: 
-- **Result (G2):** 
+- Responsiveness, speech latency:
+- **Result (G2):**
 
 ### RS-27 · G4: second instance (S55)
 
@@ -682,9 +682,9 @@ Date:  Start time:
    ```
 **Pass:** it fails clearly, or both work, and the integrity check is clean. Silent corruption is the failure.
 
-- Second instance behaviour, exit code: 
-- Integrity check line: 
-- **Result (G4):** 
+- Second instance behaviour, exit code:
+- Integrity check line:
+- **Result (G4):**
 
 ### RS-28 · G5: data directory not writable (S56–S58)
 
@@ -708,11 +708,11 @@ No line may contain `(DENY)`. Then [T] launch once to confirm Takki starts, and 
 uv run takki; "exit $LASTEXITCODE"
 ```
 
-- Everything printed (last line of any traceback): 
-- Exit code: 
-- Could a person act on it? 
-- Restored, no `(DENY)`, Takki starts: 
-- **Result (G5):** 
+- Everything printed (last line of any traceback):
+- Exit code:
+- Could a person act on it?
+- Restored, no `(DENY)`, Takki starts:
+- **Result (G5):**
 
 ### RS-29 · G3 + A5: NVDA (S59; only with portable NVDA)
 
@@ -727,18 +727,18 @@ uv run takki; "exit $LASTEXITCODE"
    ```
 4. Quit NVDA (Insert+Q).
 
-- A5 line: 
-- Double speaking / focus stealing / clean: 
-- **Result (A5, with NVDA):** 
-- **Result (G3, recorded as a Beta item):** 
+- A5 line:
+- Double speaking / focus stealing / clean:
+- **Result (A5, with NVDA):**
+- **Result (G3, recorded as a Beta item):**
 
 ### RS-30 · G1: UAC across the whole run (S60)
 
 Did any UAC prompt appear at any point in Sittings 1–3, *other than* the one you raised on purpose in E5c? None is a pass. One that Takki caused is a fail.
 
-- **Result (G1, hands-on half):** 
+- **Result (G1, hands-on half):**
 
-End time: 
+End time:
 
 ---
 
@@ -756,14 +756,14 @@ End time:
    ```
 **Expect:** that sitting's rows split across two dates.
 
-- Split seen: 
-- Does that feel right for a child? 
+- Split seen:
+- Does that feel right for a child?
 
 ---
 
 ## Summary
 
-**Finding (one line):** 
+**Finding (one line):**
 
 Fill in from the Result lines above. **Hard no-go** checks are in bold.
 
