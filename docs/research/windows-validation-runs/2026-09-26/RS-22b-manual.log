@@ -1,0 +1,2035 @@
+# silent_prompt_spike report
+
+prompts spoken (first asks + re-speaks): 275
+  AUDIBLE  87
+  FLAG     4
+  SHORT    0
+  CUT      152
+  MISSING  32
+
+## Every FLAG letter, with the 3 s of log before it
+
+*Trimmed 2026-09-27 to fit the repo's 500 KB file limit: the spike wrote an excerpt for every
+letter that was not AUDIBLE (152 CUT, 32 MISSING, 4 FLAG), 565 KB of lines all present in the
+full log below. Only the 4 FLAG excerpts are kept; CUT and MISSING are by design (RS-22b).
+Re-derive any excerpt from the full log by its timestamp.*
+
+[  69.313s] FLAG ask 'a' block_keys=alrs speak 0 ms
+      67.157s  key          's' repeat=False prompt='a' inside speak('a') +1047 ms
+      67.157s  worker.stop  last_enqueued=58 cancel_through=57->58 worker_speaking=True
+      67.157s  cue          error
+      67.157s  re-ask       'a' block_keys=alrs
+      67.157s  enqueue      id=59 'a'
+      67.219s  finished     id=58 cancelled
+      68.047s  key          'a' repeat=False prompt='a' inside speak('a') +828 ms
+      68.047s  worker.stop  last_enqueued=59 cancel_through=58->59 worker_speaking=True
+      68.047s  cue          correct
+      68.047s  ask          'l' block_keys=alrs
+      68.047s  enqueue      id=60 'l'
+      68.094s  finished     id=59 cancelled
+      69.313s  key          'l' repeat=False prompt='l' inside speak('l') +1219 ms
+      69.313s  worker.stop  last_enqueued=60 cancel_through=59->60 worker_speaking=False
+      69.313s  cue          correct
+      69.313s  ask          'a' block_keys=alrs
+      69.313s  enqueue      id=61 'a'
+      69.313s  finished     id=60 completed
+      69.328s  finished     id=61 completed
+
+[ 105.797s] FLAG ask 'a' block_keys=alrs speak 0 ms
+     103.485s  key          'a' repeat=False prompt='a' inside speak('a') +969 ms
+     103.485s  worker.stop  last_enqueued=87 cancel_through=86->87 worker_speaking=True
+     103.485s  cue          correct
+     103.485s  ask          'l' block_keys=alrs
+     103.485s  enqueue      id=88 'l'
+     103.547s  finished     id=87 cancelled
+     104.469s  key          'l' repeat=False prompt='l' inside speak('l') +937 ms
+     104.469s  worker.stop  last_enqueued=88 cancel_through=87->88 worker_speaking=True
+     104.469s  cue          correct
+     104.469s  ask          's' block_keys=alrs
+     104.469s  enqueue      id=89 's'
+     104.532s  finished     id=88 cancelled
+     105.797s  key          's' repeat=False prompt='s' inside speak('s') +1281 ms
+     105.797s  worker.stop  last_enqueued=89 cancel_through=88->89 worker_speaking=False
+     105.797s  cue          correct
+     105.797s  ask          'a' block_keys=alrs
+     105.797s  enqueue      id=90 'a'
+     105.797s  finished     id=89 completed
+     105.813s  finished     id=90 completed
+     107.985s  ESCAPE TAP (re-read)
+     107.985s  re-ask       'a' block_keys=alrs
+     107.985s  enqueue      id=91 'a'
+
+[ 260.813s] FLAG ask 'h' block_keys=aghrs speak 0 ms
+     258.532s  finished     id=246 completed
+     258.750s  key          'j' repeat=False prompt='g' no speak() in progress
+     258.750s  cue          error
+     258.750s  re-ask       'g' block_keys=aghrs
+     258.750s  enqueue      id=247 'g'
+     259.500s  key          'g' repeat=False prompt='g' inside speak('g') +750 ms
+     259.500s  worker.stop  last_enqueued=247 cancel_through=245->247 worker_speaking=True
+     259.500s  cue          correct
+     259.500s  ask          's' block_keys=aghrs
+     259.500s  enqueue      id=248 's'
+     259.563s  finished     id=247 cancelled
+     260.813s  key          's' repeat=False prompt='s' no speak() in progress
+     260.813s  worker.stop  last_enqueued=248 cancel_through=247->248 worker_speaking=False
+     260.813s  cue          correct
+     260.813s  ask          'h' block_keys=aghrs
+     260.813s  enqueue      id=249 'h'
+     260.813s  finished     id=248 completed
+     260.828s  finished     id=249 completed
+     262.969s  ESCAPE TAP (re-read)
+     262.969s  re-ask       'h' block_keys=aghrs
+     262.969s  enqueue      id=250 'h'
+
+[ 303.203s] FLAG ask 's' block_keys=aghrs speak 0 ms
+     300.422s  finished     id=273 completed
+     300.813s  key          'g' repeat=False prompt='g' no speak() in progress
+     300.813s  cue          correct
+     300.813s  ask          'h' block_keys=aghrs
+     300.813s  enqueue      id=274 'h'
+     302.063s  key          'h' repeat=False prompt='h' inside speak('h') +1250 ms
+     302.063s  worker.stop  last_enqueued=274 cancel_through=265->274 worker_speaking=True
+     302.063s  cue          correct
+     302.063s  ask          'a' block_keys=aghrs
+     302.063s  enqueue      id=275 'a'
+     302.125s  finished     id=274 cancelled
+     303.203s  key          'a' repeat=False prompt='a' no speak() in progress
+     303.203s  worker.stop  last_enqueued=275 cancel_through=274->275 worker_speaking=False
+     303.203s  cue          correct
+     303.203s  ask          's' block_keys=aghrs
+     303.203s  enqueue      id=276 's'
+     303.203s  finished     id=275 completed
+     303.235s  finished     id=276 completed
+     305.282s  ESCAPE TAP (re-read)
+     305.282s  re-ask       's' block_keys=aghrs
+     305.282s  enqueue      id=277 's'
+
+## Every Escape tap (4), with the 6 s of log before it
+
+[  72.375s] ESCAPE TAP
+      67.157s  key          's' repeat=False prompt='a' inside speak('a') +1047 ms
+      67.157s  worker.stop  last_enqueued=58 cancel_through=57->58 worker_speaking=True
+      67.157s  cue          error
+      67.157s  re-ask       'a' block_keys=alrs
+      67.157s  enqueue      id=59 'a'
+      67.219s  finished     id=58 cancelled
+      68.047s  key          'a' repeat=False prompt='a' inside speak('a') +828 ms
+      68.047s  worker.stop  last_enqueued=59 cancel_through=58->59 worker_speaking=True
+      68.047s  cue          correct
+      68.047s  ask          'l' block_keys=alrs
+      68.047s  enqueue      id=60 'l'
+      68.094s  finished     id=59 cancelled
+      69.313s  key          'l' repeat=False prompt='l' inside speak('l') +1219 ms
+      69.313s  worker.stop  last_enqueued=60 cancel_through=59->60 worker_speaking=False
+      69.313s  cue          correct
+      69.313s  ask          'a' block_keys=alrs
+      69.313s  enqueue      id=61 'a'
+      69.313s  finished     id=60 completed
+      69.328s  finished     id=61 completed
+      72.375s  ESCAPE TAP (re-read)
+      72.375s  re-ask       'a' block_keys=alrs
+      72.375s  enqueue      id=62 'a'
+
+[ 107.985s] ESCAPE TAP
+     102.469s  key          'r' repeat=False prompt='r' inside speak('r') +1062 ms
+     102.469s  worker.stop  last_enqueued=86 cancel_through=83->86 worker_speaking=True
+     102.469s  cue          correct
+     102.469s  ask          'a' block_keys=alrs
+     102.469s  enqueue      id=87 'a'
+     102.532s  finished     id=86 cancelled
+     103.485s  key          'a' repeat=False prompt='a' inside speak('a') +969 ms
+     103.485s  worker.stop  last_enqueued=87 cancel_through=86->87 worker_speaking=True
+     103.485s  cue          correct
+     103.485s  ask          'l' block_keys=alrs
+     103.485s  enqueue      id=88 'l'
+     103.547s  finished     id=87 cancelled
+     104.469s  key          'l' repeat=False prompt='l' inside speak('l') +937 ms
+     104.469s  worker.stop  last_enqueued=88 cancel_through=87->88 worker_speaking=True
+     104.469s  cue          correct
+     104.469s  ask          's' block_keys=alrs
+     104.469s  enqueue      id=89 's'
+     104.532s  finished     id=88 cancelled
+     105.797s  key          's' repeat=False prompt='s' inside speak('s') +1281 ms
+     105.797s  worker.stop  last_enqueued=89 cancel_through=88->89 worker_speaking=False
+     105.797s  cue          correct
+     105.797s  ask          'a' block_keys=alrs
+     105.797s  enqueue      id=90 'a'
+     105.797s  finished     id=89 completed
+     105.813s  finished     id=90 completed
+     107.985s  ESCAPE TAP (re-read)
+     107.985s  re-ask       'a' block_keys=alrs
+     107.985s  enqueue      id=91 'a'
+
+[ 262.969s] ESCAPE TAP
+     257.297s  key          'a' repeat=False prompt='a' inside speak('a') +906 ms
+     257.297s  worker.stop  last_enqueued=245 cancel_through=244->245 worker_speaking=True
+     257.297s  cue          correct
+     257.297s  ask          'g' block_keys=aghrs
+     257.297s  enqueue      id=246 'g'
+     257.344s  finished     id=245 cancelled
+     258.532s  finished     id=246 completed
+     258.750s  key          'j' repeat=False prompt='g' no speak() in progress
+     258.750s  cue          error
+     258.750s  re-ask       'g' block_keys=aghrs
+     258.750s  enqueue      id=247 'g'
+     259.500s  key          'g' repeat=False prompt='g' inside speak('g') +750 ms
+     259.500s  worker.stop  last_enqueued=247 cancel_through=245->247 worker_speaking=True
+     259.500s  cue          correct
+     259.500s  ask          's' block_keys=aghrs
+     259.500s  enqueue      id=248 's'
+     259.563s  finished     id=247 cancelled
+     260.813s  key          's' repeat=False prompt='s' no speak() in progress
+     260.813s  worker.stop  last_enqueued=248 cancel_through=247->248 worker_speaking=False
+     260.813s  cue          correct
+     260.813s  ask          'h' block_keys=aghrs
+     260.813s  enqueue      id=249 'h'
+     260.813s  finished     id=248 completed
+     260.828s  finished     id=249 completed
+     262.969s  ESCAPE TAP (re-read)
+     262.969s  re-ask       'h' block_keys=aghrs
+     262.969s  enqueue      id=250 'h'
+
+[ 305.282s] ESCAPE TAP
+     300.422s  finished     id=273 completed
+     300.813s  key          'g' repeat=False prompt='g' no speak() in progress
+     300.813s  cue          correct
+     300.813s  ask          'h' block_keys=aghrs
+     300.813s  enqueue      id=274 'h'
+     302.063s  key          'h' repeat=False prompt='h' inside speak('h') +1250 ms
+     302.063s  worker.stop  last_enqueued=274 cancel_through=265->274 worker_speaking=True
+     302.063s  cue          correct
+     302.063s  ask          'a' block_keys=aghrs
+     302.063s  enqueue      id=275 'a'
+     302.125s  finished     id=274 cancelled
+     303.203s  key          'a' repeat=False prompt='a' no speak() in progress
+     303.203s  worker.stop  last_enqueued=275 cancel_through=274->275 worker_speaking=False
+     303.203s  cue          correct
+     303.203s  ask          's' block_keys=aghrs
+     303.203s  enqueue      id=276 's'
+     303.203s  finished     id=275 completed
+     303.235s  finished     id=276 completed
+     305.282s  ESCAPE TAP (re-read)
+     305.282s  re-ask       's' block_keys=aghrs
+     305.282s  enqueue      id=277 's'
+
+## Full log
+   2.157s  block boundary
+   2.157s  enqueue      id=1 'New letter: A. Use your left little fing'
+   8.625s  finished     id=1 completed
+   8.625s  ask          'a' block_keys=a
+   8.625s  enqueue      id=2 'a'
+   9.563s  key          'a' repeat=False prompt='a' inside speak('a') +938 ms
+   9.563s  worker.stop  last_enqueued=2 cancel_through=0->2 worker_speaking=True
+   9.563s  cue          correct
+   9.563s  ask          'a' block_keys=a
+   9.563s  enqueue      id=3 'a'
+   9.610s  finished     id=2 cancelled
+  10.282s  key          'a' repeat=False prompt='a' inside speak('a') +672 ms
+  10.282s  worker.stop  last_enqueued=3 cancel_through=2->3 worker_speaking=True
+  10.282s  cue          correct
+  10.282s  ask          'a' block_keys=a
+  10.282s  enqueue      id=4 'a'
+  10.344s  finished     id=3 cancelled
+  11.375s  key          'a' repeat=False prompt='a' inside speak('a') +1047 ms
+  11.375s  worker.stop  last_enqueued=4 cancel_through=3->4 worker_speaking=True
+  11.375s  cue          correct
+  11.375s  ask          'a' block_keys=a
+  11.375s  enqueue      id=5 'a'
+  11.422s  finished     id=4 cancelled
+  12.360s  key          'a' repeat=False prompt='a' inside speak('a') +938 ms
+  12.360s  worker.stop  last_enqueued=5 cancel_through=4->5 worker_speaking=True
+  12.360s  cue          correct
+  12.360s  ask          'a' block_keys=a
+  12.360s  enqueue      id=6 'a'
+  12.407s  finished     id=5 cancelled
+  13.516s  finished     id=6 completed
+  13.516s  key          'a' repeat=False prompt='a' no speak() in progress
+  13.516s  cue          correct
+  13.516s  ask          'a' block_keys=a
+  13.516s  enqueue      id=7 'a'
+  14.547s  key          'a' repeat=False prompt='a' inside speak('a') +1031 ms
+  14.547s  worker.stop  last_enqueued=7 cancel_through=5->7 worker_speaking=True
+  14.547s  cue          correct
+  14.547s  ask          'a' block_keys=a
+  14.547s  enqueue      id=8 'a'
+  14.610s  finished     id=7 cancelled
+  15.703s  finished     id=8 completed
+  15.782s  key          'a' repeat=False prompt='a' no speak() in progress
+  15.782s  cue          correct
+  15.782s  ask          'a' block_keys=a
+  15.782s  enqueue      id=9 'a'
+  16.875s  finished     id=9 completed
+  16.891s  key          'a' repeat=False prompt='a' no speak() in progress
+  16.891s  cue          correct
+  16.891s  ask          'a' block_keys=a
+  16.891s  enqueue      id=10 'a'
+  18.000s  finished     id=10 completed
+  18.063s  key          'a' repeat=False prompt='a' no speak() in progress
+  18.063s  cue          correct
+  18.063s  ask          'a' block_keys=a
+  18.063s  enqueue      id=11 'a'
+  19.141s  key          'a' repeat=False prompt='a' inside speak('a') +1078 ms
+  19.141s  worker.stop  last_enqueued=11 cancel_through=7->11 worker_speaking=True
+  19.141s  cue          correct
+  19.141s  block boundary
+  19.141s  ask          's' block_keys=as
+  19.141s  enqueue      id=12 's'
+  19.203s  finished     id=11 cancelled
+  20.469s  finished     id=12 completed
+  21.078s  key          's' repeat=False prompt='s' no speak() in progress
+  21.078s  cue          correct
+  21.078s  ask          'a' block_keys=as
+  21.078s  enqueue      id=13 'a'
+  22.032s  key          'a' repeat=False prompt='a' inside speak('a') +954 ms
+  22.032s  worker.stop  last_enqueued=13 cancel_through=11->13 worker_speaking=True
+  22.032s  cue          correct
+  22.032s  ask          's' block_keys=as
+  22.032s  enqueue      id=14 's'
+  22.078s  finished     id=13 cancelled
+  23.078s  key          's' repeat=False prompt='s' inside speak('s') +1000 ms
+  23.078s  worker.stop  last_enqueued=14 cancel_through=13->14 worker_speaking=True
+  23.078s  cue          correct
+  23.078s  ask          'a' block_keys=as
+  23.078s  enqueue      id=15 'a'
+  23.125s  finished     id=14 cancelled
+  23.969s  key          'a' repeat=False prompt='a' inside speak('a') +859 ms
+  23.969s  worker.stop  last_enqueued=15 cancel_through=14->15 worker_speaking=True
+  23.969s  cue          correct
+  23.969s  ask          's' block_keys=as
+  23.969s  enqueue      id=16 's'
+  24.032s  finished     id=15 cancelled
+  24.828s  key          's' repeat=False prompt='s' inside speak('s') +812 ms
+  24.828s  worker.stop  last_enqueued=16 cancel_through=15->16 worker_speaking=True
+  24.828s  cue          correct
+  24.828s  ask          'a' block_keys=as
+  24.828s  enqueue      id=17 'a'
+  24.875s  finished     id=16 cancelled
+  25.703s  key          'a' repeat=False prompt='a' inside speak('a') +843 ms
+  25.703s  worker.stop  last_enqueued=17 cancel_through=16->17 worker_speaking=True
+  25.703s  cue          correct
+  25.703s  ask          's' block_keys=as
+  25.703s  enqueue      id=18 's'
+  25.750s  finished     id=17 cancelled
+  26.828s  key          's' repeat=False prompt='s' inside speak('s') +1078 ms
+  26.828s  worker.stop  last_enqueued=18 cancel_through=17->18 worker_speaking=True
+  26.828s  cue          correct
+  26.828s  ask          'a' block_keys=as
+  26.828s  enqueue      id=19 'a'
+  26.891s  finished     id=18 cancelled
+  27.953s  key          'a' repeat=False prompt='a' inside speak('a') +1062 ms
+  27.953s  worker.stop  last_enqueued=19 cancel_through=18->19 worker_speaking=True
+  27.953s  cue          correct
+  27.953s  ask          's' block_keys=as
+  27.953s  enqueue      id=20 's'
+  28.000s  finished     id=19 cancelled
+  28.969s  key          's' repeat=False prompt='s' inside speak('s') +969 ms
+  28.969s  worker.stop  last_enqueued=20 cancel_through=19->20 worker_speaking=True
+  28.969s  cue          correct
+  28.969s  ask          'a' block_keys=as
+  28.969s  enqueue      id=21 'a'
+  29.032s  finished     id=20 cancelled
+  30.000s  key          'a' repeat=False prompt='a' inside speak('a') +984 ms
+  30.000s  worker.stop  last_enqueued=21 cancel_through=20->21 worker_speaking=True
+  30.000s  cue          correct
+  30.000s  ask          's' block_keys=as
+  30.000s  enqueue      id=22 's'
+  30.063s  finished     id=21 cancelled
+  30.969s  key          's' repeat=False prompt='s' inside speak('s') +922 ms
+  30.969s  worker.stop  last_enqueued=22 cancel_through=21->22 worker_speaking=True
+  30.969s  cue          correct
+  30.969s  ask          'a' block_keys=as
+  30.969s  enqueue      id=23 'a'
+  31.032s  finished     id=22 cancelled
+  31.953s  key          'a' repeat=False prompt='a' inside speak('a') +937 ms
+  31.953s  worker.stop  last_enqueued=23 cancel_through=22->23 worker_speaking=True
+  31.953s  cue          correct
+  31.953s  ask          's' block_keys=as
+  31.953s  enqueue      id=24 's'
+  32.000s  finished     id=23 cancelled
+  32.953s  key          's' repeat=False prompt='s' inside speak('s') +968 ms
+  32.953s  worker.stop  last_enqueued=24 cancel_through=23->24 worker_speaking=True
+  32.953s  cue          correct
+  32.953s  ask          'a' block_keys=as
+  32.953s  enqueue      id=25 'a'
+  33.000s  finished     id=24 cancelled
+  33.891s  key          'a' repeat=False prompt='a' inside speak('a') +891 ms
+  33.891s  worker.stop  last_enqueued=25 cancel_through=24->25 worker_speaking=True
+  33.891s  cue          correct
+  33.891s  ask          's' block_keys=as
+  33.891s  enqueue      id=26 's'
+  33.953s  finished     id=25 cancelled
+  34.922s  key          's' repeat=False prompt='s' inside speak('s') +984 ms
+  34.922s  worker.stop  last_enqueued=26 cancel_through=25->26 worker_speaking=True
+  34.922s  cue          correct
+  34.922s  ask          'a' block_keys=as
+  34.922s  enqueue      id=27 'a'
+  34.969s  finished     id=26 cancelled
+  35.891s  key          'a' repeat=False prompt='a' inside speak('a') +922 ms
+  35.891s  worker.stop  last_enqueued=27 cancel_through=26->27 worker_speaking=True
+  35.891s  cue          correct
+  35.891s  ask          's' block_keys=as
+  35.891s  enqueue      id=28 's'
+  35.953s  finished     id=27 cancelled
+  36.875s  key          's' repeat=False prompt='s' inside speak('s') +937 ms
+  36.875s  worker.stop  last_enqueued=28 cancel_through=27->28 worker_speaking=True
+  36.875s  cue          correct
+  36.875s  ask          'a' block_keys=as
+  36.875s  enqueue      id=29 'a'
+  36.922s  finished     id=28 cancelled
+  37.875s  key          'a' repeat=False prompt='a' inside speak('a') +953 ms
+  37.875s  worker.stop  last_enqueued=29 cancel_through=28->29 worker_speaking=True
+  37.875s  cue          correct
+  37.875s  ask          's' block_keys=as
+  37.875s  enqueue      id=30 's'
+  37.938s  finished     id=29 cancelled
+  38.891s  key          's' repeat=False prompt='s' inside speak('s') +969 ms
+  38.891s  worker.stop  last_enqueued=30 cancel_through=29->30 worker_speaking=True
+  38.891s  cue          correct
+  38.891s  ask          'a' block_keys=as
+  38.891s  enqueue      id=31 'a'
+  38.953s  finished     id=30 cancelled
+  39.844s  key          'a' repeat=False prompt='a' inside speak('a') +906 ms
+  39.844s  worker.stop  last_enqueued=31 cancel_through=30->31 worker_speaking=True
+  39.844s  cue          correct
+  39.844s  ask          's' block_keys=as
+  39.844s  enqueue      id=32 's'
+  39.875s  finished     id=31 cancelled
+  40.828s  key          's' repeat=False prompt='s' inside speak('s') +953 ms
+  40.828s  worker.stop  last_enqueued=32 cancel_through=31->32 worker_speaking=True
+  40.828s  cue          correct
+  40.828s  ask          'a' block_keys=as
+  40.828s  enqueue      id=33 'a'
+  40.875s  finished     id=32 cancelled
+  41.969s  finished     id=33 completed
+  43.078s  key          'a' repeat=False prompt='a' no speak() in progress
+  43.078s  cue          correct
+  43.078s  ask          's' block_keys=as
+  43.078s  enqueue      id=34 's'
+  43.532s  key          's' repeat=False prompt='s' inside speak('s') +454 ms
+  43.532s  worker.stop  last_enqueued=34 cancel_through=32->34 worker_speaking=True
+  43.532s  cue          correct
+  43.532s  ask          'a' block_keys=as
+  43.532s  enqueue      id=35 'a'
+  43.875s  finished     id=34 cancelled
+  43.891s  key          'a' repeat=False prompt='a' inside speak('a') +16 ms
+  43.891s  worker.stop  last_enqueued=35 cancel_through=34->35 worker_speaking=True
+  43.891s  cue          correct
+  43.891s  ask          's' block_keys=as
+  43.891s  enqueue      id=36 's'
+  43.953s  finished     id=35 cancelled
+  44.250s  key          's' repeat=False prompt='s' inside speak('s') +312 ms
+  44.250s  worker.stop  last_enqueued=36 cancel_through=35->36 worker_speaking=True
+  44.250s  cue          correct
+  44.250s  ask          'a' block_keys=as
+  44.250s  enqueue      id=37 'a'
+  44.594s  key          'a' repeat=False prompt='a' inside speak('s') +656 ms
+  44.594s  worker.stop  last_enqueued=37 cancel_through=36->37 worker_speaking=True
+  44.594s  cue          correct
+  44.594s  ask          's' block_keys=as
+  44.594s  enqueue      id=38 's'
+  44.750s  finished     id=36 cancelled
+  44.750s  finished     id=37 cancelled
+  44.907s  key          's' repeat=False prompt='s' inside speak('s') +172 ms
+  44.907s  worker.stop  last_enqueued=38 cancel_through=37->38 worker_speaking=True
+  44.907s  cue          correct
+  44.907s  ask          'a' block_keys=as
+  44.907s  enqueue      id=39 'a'
+  45.532s  finished     id=38 cancelled
+  46.610s  finished     id=39 completed
+  47.203s  key          'a' repeat=False prompt='a' no speak() in progress
+  47.203s  cue          correct
+  47.203s  ask          's' block_keys=as
+  47.203s  enqueue      id=40 's'
+  48.469s  finished     id=40 completed
+  48.578s  key          's' repeat=False prompt='s' no speak() in progress
+  48.578s  cue          correct
+  48.578s  ask          'a' block_keys=as
+  48.578s  enqueue      id=41 'a'
+  49.578s  key          'a' repeat=False prompt='a' inside speak('a') +1000 ms
+  49.578s  worker.stop  last_enqueued=41 cancel_through=38->41 worker_speaking=True
+  49.578s  cue          correct
+  49.578s  ask          's' block_keys=as
+  49.578s  enqueue      id=42 's'
+  49.641s  finished     id=41 cancelled
+  49.907s  key          's' repeat=False prompt='s' inside speak('s') +282 ms
+  49.907s  worker.stop  last_enqueued=42 cancel_through=41->42 worker_speaking=True
+  49.907s  cue          correct
+  49.907s  ask          'a' block_keys=as
+  49.907s  enqueue      id=43 'a'
+  50.203s  key          'a' repeat=False prompt='a' inside speak('s') +578 ms
+  50.203s  worker.stop  last_enqueued=43 cancel_through=42->43 worker_speaking=True
+  50.203s  cue          correct
+  50.203s  ask          's' block_keys=as
+  50.203s  enqueue      id=44 's'
+  50.422s  finished     id=42 cancelled
+  50.422s  finished     id=43 cancelled
+  50.532s  key          's' repeat=False prompt='s' inside speak('s') +110 ms
+  50.532s  worker.stop  last_enqueued=44 cancel_through=43->44 worker_speaking=True
+  50.532s  cue          correct
+  50.532s  ask          'a' block_keys=as
+  50.532s  enqueue      id=45 'a'
+  50.860s  key          'a' repeat=False prompt='a' inside speak('s') +438 ms
+  50.860s  worker.stop  last_enqueued=45 cancel_through=44->45 worker_speaking=True
+  50.860s  cue          correct
+  50.860s  ask          's' block_keys=as
+  50.860s  enqueue      id=46 's'
+  51.172s  key          's' repeat=False prompt='s' inside speak('s') +750 ms
+  51.172s  worker.stop  last_enqueued=46 cancel_through=45->46 worker_speaking=True
+  51.172s  cue          correct
+  51.172s  ask          'a' block_keys=as
+  51.172s  enqueue      id=47 'a'
+  51.203s  finished     id=44 cancelled
+  51.203s  finished     id=45 cancelled
+  51.203s  finished     id=46 cancelled
+  51.500s  key          'a' repeat=False prompt='a' inside speak('a') +297 ms
+  51.500s  worker.stop  last_enqueued=47 cancel_through=46->47 worker_speaking=True
+  51.500s  cue          correct
+  51.500s  ask          's' block_keys=as
+  51.500s  enqueue      id=48 's'
+  51.782s  finished     id=47 cancelled
+  51.813s  key          's' repeat=False prompt='s' inside speak('s') +31 ms
+  51.813s  worker.stop  last_enqueued=48 cancel_through=47->48 worker_speaking=True
+  51.813s  cue          correct
+  51.813s  ask          'a' block_keys=as
+  51.813s  enqueue      id=49 'a'
+  52.563s  finished     id=48 cancelled
+  53.657s  finished     id=49 completed
+  54.282s  key          'a' repeat=False prompt='a' no speak() in progress
+  54.282s  cue          correct
+  54.282s  ask          's' block_keys=as
+  54.282s  enqueue      id=50 's'
+  55.157s  key          's' repeat=False prompt='s' inside speak('s') +875 ms
+  55.157s  worker.stop  last_enqueued=50 cancel_through=48->50 worker_speaking=True
+  55.157s  cue          correct
+  55.157s  ask          'a' block_keys=as
+  55.157s  enqueue      id=51 'a'
+  55.219s  finished     id=50 cancelled
+  56.313s  finished     id=51 completed
+  56.313s  key          'a' repeat=False prompt='a' no speak() in progress
+  56.313s  cue          correct
+  56.313s  block boundary
+  56.313s  ask          'l' block_keys=alrs
+  56.313s  enqueue      id=52 'l'
+  57.547s  finished     id=52 completed
+  60.016s  key          'l' repeat=False prompt='l' no speak() in progress
+  60.016s  cue          correct
+  60.016s  ask          'a' block_keys=alrs
+  60.016s  enqueue      id=53 'a'
+  61.125s  finished     id=53 completed
+  61.125s  key          'a' repeat=False prompt='a' no speak() in progress
+  61.125s  cue          correct
+  61.125s  ask          's' block_keys=alrs
+  61.125s  enqueue      id=54 's'
+  62.172s  key          's' repeat=False prompt='s' inside speak('s') +1047 ms
+  62.172s  worker.stop  last_enqueued=54 cancel_through=50->54 worker_speaking=True
+  62.172s  cue          correct
+  62.172s  ask          'a' block_keys=alrs
+  62.172s  enqueue      id=55 'a'
+  62.235s  finished     id=54 cancelled
+  63.328s  finished     id=55 completed
+  63.453s  key          'a' repeat=False prompt='a' no speak() in progress
+  63.453s  cue          correct
+  63.453s  ask          'r' block_keys=alrs
+  63.453s  enqueue      id=56 'r'
+  64.688s  finished     id=56 completed
+  64.891s  key          'r' repeat=False prompt='r' no speak() in progress
+  64.891s  cue          correct
+  64.891s  ask          'l' block_keys=alrs
+  64.891s  enqueue      id=57 'l'
+  66.047s  key          'l' repeat=False prompt='l' inside speak('l') +1156 ms
+  66.047s  worker.stop  last_enqueued=57 cancel_through=54->57 worker_speaking=True
+  66.047s  cue          correct
+  66.047s  ask          'a' block_keys=alrs
+  66.047s  enqueue      id=58 'a'
+  66.110s  finished     id=57 cancelled
+  67.157s  key          's' repeat=False prompt='a' inside speak('a') +1047 ms
+  67.157s  worker.stop  last_enqueued=58 cancel_through=57->58 worker_speaking=True
+  67.157s  cue          error
+  67.157s  re-ask       'a' block_keys=alrs
+  67.157s  enqueue      id=59 'a'
+  67.219s  finished     id=58 cancelled
+  68.047s  key          'a' repeat=False prompt='a' inside speak('a') +828 ms
+  68.047s  worker.stop  last_enqueued=59 cancel_through=58->59 worker_speaking=True
+  68.047s  cue          correct
+  68.047s  ask          'l' block_keys=alrs
+  68.047s  enqueue      id=60 'l'
+  68.094s  finished     id=59 cancelled
+  69.313s  key          'l' repeat=False prompt='l' inside speak('l') +1219 ms
+  69.313s  worker.stop  last_enqueued=60 cancel_through=59->60 worker_speaking=False
+  69.313s  cue          correct
+  69.313s  ask          'a' block_keys=alrs
+  69.313s  enqueue      id=61 'a'
+  69.313s  finished     id=60 completed
+  69.328s  finished     id=61 completed
+  72.375s  ESCAPE TAP (re-read)
+  72.375s  re-ask       'a' block_keys=alrs
+  72.375s  enqueue      id=62 'a'
+  73.485s  finished     id=62 completed
+  73.938s  key          'a' repeat=False prompt='a' no speak() in progress
+  73.938s  cue          correct
+  73.938s  ask          'r' block_keys=alrs
+  73.938s  enqueue      id=63 'r'
+  75.157s  key          'r' repeat=False prompt='r' inside speak('r') +1219 ms
+  75.157s  worker.stop  last_enqueued=63 cancel_through=60->63 worker_speaking=True
+  75.157s  cue          correct
+  75.157s  ask          'a' block_keys=alrs
+  75.157s  enqueue      id=64 'a'
+  75.219s  finished     id=63 cancelled
+  76.250s  key          'a' repeat=False prompt='a' inside speak('a') +1047 ms
+  76.250s  worker.stop  last_enqueued=64 cancel_through=63->64 worker_speaking=True
+  76.250s  cue          correct
+  76.250s  ask          'a' block_keys=alrs
+  76.250s  enqueue      id=65 'a'
+  76.313s  finished     id=64 cancelled
+  77.360s  key          'a' repeat=False prompt='a' inside speak('a') +1063 ms
+  77.360s  worker.stop  last_enqueued=65 cancel_through=64->65 worker_speaking=True
+  77.360s  cue          correct
+  77.360s  ask          's' block_keys=alrs
+  77.360s  enqueue      id=66 's'
+  77.407s  finished     id=65 cancelled
+  78.469s  key          's' repeat=False prompt='s' inside speak('s') +1078 ms
+  78.469s  worker.stop  last_enqueued=66 cancel_through=65->66 worker_speaking=True
+  78.469s  cue          correct
+  78.469s  ask          'a' block_keys=alrs
+  78.469s  enqueue      id=67 'a'
+  78.532s  finished     id=66 cancelled
+  79.625s  finished     id=67 completed
+  79.625s  key          'a' repeat=False prompt='a' no speak() in progress
+  79.625s  cue          correct
+  79.625s  ask          'r' block_keys=alrs
+  79.625s  enqueue      id=68 'r'
+  80.703s  key          'r' repeat=False prompt='r' inside speak('r') +1078 ms
+  80.719s  worker.stop  last_enqueued=68 cancel_through=66->68 worker_speaking=True
+  80.719s  cue          correct
+  80.719s  ask          'a' block_keys=alrs
+  80.719s  enqueue      id=69 'a'
+  80.766s  finished     id=68 cancelled
+  81.782s  key          'a' repeat=False prompt='a' inside speak('a') +1032 ms
+  81.782s  worker.stop  last_enqueued=69 cancel_through=68->69 worker_speaking=True
+  81.782s  cue          correct
+  81.782s  ask          'l' block_keys=alrs
+  81.782s  enqueue      id=70 'l'
+  81.844s  finished     id=69 cancelled
+  83.047s  finished     id=70 completed
+  83.094s  key          'l' repeat=False prompt='l' no speak() in progress
+  83.094s  cue          correct
+  83.094s  ask          'l' block_keys=alrs
+  83.094s  enqueue      id=71 'l'
+  84.141s  key          'l' repeat=False prompt='l' inside speak('l') +1047 ms
+  84.141s  worker.stop  last_enqueued=71 cancel_through=69->71 worker_speaking=True
+  84.141s  cue          correct
+  84.141s  ask          'a' block_keys=alrs
+  84.141s  enqueue      id=72 'a'
+  84.188s  finished     id=71 cancelled
+  85.282s  finished     id=72 completed
+  85.344s  key          'a' repeat=False prompt='a' no speak() in progress
+  85.344s  cue          correct
+  85.344s  ask          's' block_keys=alrs
+  85.344s  enqueue      id=73 's'
+  86.375s  key          's' repeat=False prompt='s' inside speak('s') +1031 ms
+  86.375s  worker.stop  last_enqueued=73 cancel_through=71->73 worker_speaking=True
+  86.375s  cue          correct
+  86.375s  ask          'a' block_keys=alrs
+  86.375s  enqueue      id=74 'a'
+  86.438s  finished     id=73 cancelled
+  87.547s  finished     id=74 completed
+  87.625s  key          'a' repeat=False prompt='a' no speak() in progress
+  87.625s  cue          correct
+  87.625s  ask          'l' block_keys=alrs
+  87.625s  enqueue      id=75 'l'
+  88.672s  key          'l' repeat=False prompt='l' inside speak('l') +1047 ms
+  88.672s  worker.stop  last_enqueued=75 cancel_through=73->75 worker_speaking=True
+  88.672s  cue          correct
+  88.672s  ask          'a' block_keys=alrs
+  88.672s  enqueue      id=76 'a'
+  88.750s  finished     id=75 cancelled
+  89.828s  finished     id=76 completed
+  89.844s  key          'a' repeat=False prompt='a' no speak() in progress
+  89.844s  cue          correct
+  89.844s  ask          's' block_keys=alrs
+  89.844s  enqueue      id=77 's'
+  90.828s  key          's' repeat=False prompt='s' inside speak('s') +984 ms
+  90.828s  worker.stop  last_enqueued=77 cancel_through=75->77 worker_speaking=True
+  90.828s  cue          correct
+  90.828s  ask          'l' block_keys=alrs
+  90.828s  enqueue      id=78 'l'
+  90.875s  finished     id=77 cancelled
+  92.094s  finished     id=78 completed
+  92.250s  key          'l' repeat=False prompt='l' no speak() in progress
+  92.250s  cue          correct
+  92.250s  ask          'a' block_keys=alrs
+  92.250s  enqueue      id=79 'a'
+  93.282s  key          'a' repeat=False prompt='a' inside speak('a') +1032 ms
+  93.282s  worker.stop  last_enqueued=79 cancel_through=77->79 worker_speaking=True
+  93.282s  cue          correct
+  93.282s  ask          'r' block_keys=alrs
+  93.282s  enqueue      id=80 'r'
+  93.328s  finished     id=79 cancelled
+  94.547s  key          'r' repeat=False prompt='r' inside speak('r') +1234 ms
+  94.547s  worker.stop  last_enqueued=80 cancel_through=79->80 worker_speaking=True
+  94.547s  cue          correct
+  94.547s  ask          'a' block_keys=alrs
+  94.547s  enqueue      id=81 'a'
+  94.547s  finished     id=80 cancelled
+  95.641s  finished     id=81 completed
+  95.891s  key          'a' repeat=False prompt='a' no speak() in progress
+  95.891s  cue          correct
+  95.891s  ask          's' block_keys=alrs
+  95.891s  enqueue      id=82 's'
+  97.157s  finished     id=82 completed
+  97.641s  key          's' repeat=False prompt='s' no speak() in progress
+  97.641s  cue          correct
+  97.641s  ask          'l' block_keys=alrs
+  97.641s  enqueue      id=83 'l'
+  98.813s  key          'l' repeat=False prompt='l' inside speak('l') +1172 ms
+  98.813s  worker.stop  last_enqueued=83 cancel_through=80->83 worker_speaking=True
+  98.813s  cue          correct
+  98.813s  ask          'a' block_keys=alrs
+  98.813s  enqueue      id=84 'a'
+  98.860s  finished     id=83 cancelled
+  99.953s  finished     id=84 completed
+ 100.016s  key          'a' repeat=False prompt='a' no speak() in progress
+ 100.016s  cue          correct
+ 100.016s  ask          's' block_keys=alrs
+ 100.016s  enqueue      id=85 's'
+ 101.297s  finished     id=85 completed
+ 101.407s  key          's' repeat=False prompt='s' no speak() in progress
+ 101.407s  cue          correct
+ 101.407s  ask          'r' block_keys=alrs
+ 101.407s  enqueue      id=86 'r'
+ 102.469s  key          'r' repeat=False prompt='r' inside speak('r') +1062 ms
+ 102.469s  worker.stop  last_enqueued=86 cancel_through=83->86 worker_speaking=True
+ 102.469s  cue          correct
+ 102.469s  ask          'a' block_keys=alrs
+ 102.469s  enqueue      id=87 'a'
+ 102.532s  finished     id=86 cancelled
+ 103.485s  key          'a' repeat=False prompt='a' inside speak('a') +969 ms
+ 103.485s  worker.stop  last_enqueued=87 cancel_through=86->87 worker_speaking=True
+ 103.485s  cue          correct
+ 103.485s  ask          'l' block_keys=alrs
+ 103.485s  enqueue      id=88 'l'
+ 103.547s  finished     id=87 cancelled
+ 104.469s  key          'l' repeat=False prompt='l' inside speak('l') +937 ms
+ 104.469s  worker.stop  last_enqueued=88 cancel_through=87->88 worker_speaking=True
+ 104.469s  cue          correct
+ 104.469s  ask          's' block_keys=alrs
+ 104.469s  enqueue      id=89 's'
+ 104.532s  finished     id=88 cancelled
+ 105.797s  key          's' repeat=False prompt='s' inside speak('s') +1281 ms
+ 105.797s  worker.stop  last_enqueued=89 cancel_through=88->89 worker_speaking=False
+ 105.797s  cue          correct
+ 105.797s  ask          'a' block_keys=alrs
+ 105.797s  enqueue      id=90 'a'
+ 105.797s  finished     id=89 completed
+ 105.813s  finished     id=90 completed
+ 107.985s  ESCAPE TAP (re-read)
+ 107.985s  re-ask       'a' block_keys=alrs
+ 107.985s  enqueue      id=91 'a'
+ 109.047s  key          'a' repeat=False prompt='a' inside speak('a') +1062 ms
+ 109.047s  worker.stop  last_enqueued=91 cancel_through=89->91 worker_speaking=True
+ 109.047s  cue          correct
+ 109.047s  ask          'l' block_keys=alrs
+ 109.047s  enqueue      id=92 'l'
+ 109.094s  finished     id=91 cancelled
+ 110.313s  finished     id=92 completed
+ 110.391s  key          'l' repeat=False prompt='l' no speak() in progress
+ 110.391s  cue          correct
+ 110.391s  ask          's' block_keys=alrs
+ 110.391s  enqueue      id=93 's'
+ 111.672s  finished     id=93 completed
+ 112.063s  key          's' repeat=False prompt='s' no speak() in progress
+ 112.063s  cue          correct
+ 112.063s  ask          'a' block_keys=alrs
+ 112.063s  enqueue      id=94 'a'
+ 113.032s  key          'a' repeat=False prompt='a' inside speak('a') +969 ms
+ 113.032s  worker.stop  last_enqueued=94 cancel_through=91->94 worker_speaking=True
+ 113.032s  cue          correct
+ 113.032s  ask          'l' block_keys=alrs
+ 113.032s  enqueue      id=95 'l'
+ 113.094s  finished     id=94 cancelled
+ 114.047s  key          'l' repeat=False prompt='l' inside speak('l') +969 ms
+ 114.047s  worker.stop  last_enqueued=95 cancel_through=94->95 worker_speaking=True
+ 114.047s  cue          correct
+ 114.047s  ask          'a' block_keys=alrs
+ 114.047s  enqueue      id=96 'a'
+ 114.110s  finished     id=95 cancelled
+ 115.203s  finished     id=96 completed
+ 115.344s  key          'a' repeat=False prompt='a' no speak() in progress
+ 115.344s  cue          correct
+ 115.344s  ask          'r' block_keys=alrs
+ 115.344s  enqueue      id=97 'r'
+ 116.500s  key          'r' repeat=False prompt='r' inside speak('r') +1156 ms
+ 116.500s  worker.stop  last_enqueued=97 cancel_through=95->97 worker_speaking=True
+ 116.500s  cue          correct
+ 116.500s  ask          'a' block_keys=alrs
+ 116.500s  enqueue      id=98 'a'
+ 116.547s  finished     id=97 cancelled
+ 117.641s  finished     id=98 completed
+ 118.094s  key          'a' repeat=False prompt='a' no speak() in progress
+ 118.094s  cue          correct
+ 118.094s  ask          's' block_keys=alrs
+ 118.094s  enqueue      id=99 's'
+ 119.141s  key          's' repeat=False prompt='s' inside speak('s') +1047 ms
+ 119.141s  worker.stop  last_enqueued=99 cancel_through=97->99 worker_speaking=True
+ 119.141s  cue          correct
+ 119.141s  ask          'a' block_keys=alrs
+ 119.141s  enqueue      id=100 'a'
+ 119.203s  finished     id=99 cancelled
+ 120.297s  finished     id=100 completed
+ 120.360s  key          'a' repeat=False prompt='a' no speak() in progress
+ 120.360s  cue          correct
+ 120.360s  ask          's' block_keys=alrs
+ 120.360s  enqueue      id=101 's'
+ 121.532s  key          's' repeat=False prompt='s' inside speak('s') +1172 ms
+ 121.532s  worker.stop  last_enqueued=101 cancel_through=99->101 worker_speaking=True
+ 121.532s  cue          correct
+ 121.532s  ask          'l' block_keys=alrs
+ 121.532s  enqueue      id=102 'l'
+ 121.578s  finished     id=101 cancelled
+ 122.610s  key          'l' repeat=False prompt='l' inside speak('l') +1032 ms
+ 122.610s  worker.stop  last_enqueued=102 cancel_through=101->102 worker_speaking=True
+ 122.610s  cue          correct
+ 122.610s  ask          'a' block_keys=alrs
+ 122.610s  enqueue      id=103 'a'
+ 122.657s  finished     id=102 cancelled
+ 123.641s  key          'a' repeat=False prompt='a' inside speak('a') +984 ms
+ 123.641s  worker.stop  last_enqueued=103 cancel_through=102->103 worker_speaking=True
+ 123.641s  cue          correct
+ 123.641s  ask          'l' block_keys=alrs
+ 123.641s  enqueue      id=104 'l'
+ 123.703s  finished     id=103 cancelled
+ 124.860s  key          'l' repeat=False prompt='l' inside speak('l') +1172 ms
+ 124.860s  worker.stop  last_enqueued=104 cancel_through=103->104 worker_speaking=True
+ 124.860s  cue          correct
+ 124.860s  ask          'a' block_keys=alrs
+ 124.860s  enqueue      id=105 'a'
+ 124.907s  finished     id=104 cancelled
+ 125.828s  key          'a' repeat=False prompt='a' inside speak('a') +921 ms
+ 125.828s  worker.stop  last_enqueued=105 cancel_through=104->105 worker_speaking=True
+ 125.828s  cue          correct
+ 125.828s  ask          'l' block_keys=alrs
+ 125.828s  enqueue      id=106 'l'
+ 125.875s  finished     id=105 cancelled
+ 127.016s  key          'l' repeat=False prompt='l' inside speak('l') +1141 ms
+ 127.016s  worker.stop  last_enqueued=106 cancel_through=105->106 worker_speaking=True
+ 127.016s  cue          correct
+ 127.016s  ask          'l' block_keys=alrs
+ 127.016s  enqueue      id=107 'l'
+ 127.094s  finished     id=106 cancelled
+ 128.141s  key          'l' repeat=False prompt='l' inside speak('l') +1078 ms
+ 128.141s  worker.stop  last_enqueued=107 cancel_through=106->107 worker_speaking=True
+ 128.141s  cue          correct
+ 128.141s  ask          'a' block_keys=alrs
+ 128.141s  enqueue      id=108 'a'
+ 128.203s  finished     id=107 cancelled
+ 129.188s  key          'a' repeat=False prompt='a' inside speak('a') +1000 ms
+ 129.188s  worker.stop  last_enqueued=108 cancel_through=107->108 worker_speaking=True
+ 129.188s  cue          correct
+ 129.188s  ask          'l' block_keys=alrs
+ 129.188s  enqueue      id=109 'l'
+ 129.235s  finished     id=108 cancelled
+ 130.282s  key          'l' repeat=False prompt='l' inside speak('l') +1047 ms
+ 130.282s  worker.stop  last_enqueued=109 cancel_through=108->109 worker_speaking=True
+ 130.282s  cue          correct
+ 130.282s  ask          'l' block_keys=alrs
+ 130.282s  enqueue      id=110 'l'
+ 130.344s  finished     id=109 cancelled
+ 131.360s  key          'l' repeat=False prompt='l' inside speak('l') +1032 ms
+ 131.360s  worker.stop  last_enqueued=110 cancel_through=109->110 worker_speaking=True
+ 131.360s  cue          correct
+ 131.360s  ask          'a' block_keys=alrs
+ 131.360s  enqueue      id=111 'a'
+ 131.422s  finished     id=110 cancelled
+ 132.500s  finished     id=111 completed
+ 132.563s  key          'a' repeat=False prompt='a' no speak() in progress
+ 132.563s  cue          correct
+ 132.563s  ask          'l' block_keys=alrs
+ 132.563s  enqueue      id=112 'l'
+ 133.469s  key          'l' repeat=False prompt='l' inside speak('l') +906 ms
+ 133.469s  worker.stop  last_enqueued=112 cancel_through=110->112 worker_speaking=True
+ 133.469s  cue          correct
+ 133.469s  ask          'l' block_keys=alrs
+ 133.469s  enqueue      id=113 'l'
+ 133.532s  finished     id=112 cancelled
+ 134.657s  key          'l' repeat=False prompt='l' inside speak('l') +1141 ms
+ 134.657s  worker.stop  last_enqueued=113 cancel_through=112->113 worker_speaking=True
+ 134.657s  cue          correct
+ 134.657s  ask          'a' block_keys=alrs
+ 134.657s  enqueue      id=114 'a'
+ 134.719s  finished     id=113 cancelled
+ 135.750s  key          'a' repeat=False prompt='a' inside speak('a') +1047 ms
+ 135.750s  worker.stop  last_enqueued=114 cancel_through=113->114 worker_speaking=True
+ 135.750s  cue          correct
+ 135.750s  ask          'a' block_keys=alrs
+ 135.750s  enqueue      id=115 'a'
+ 135.813s  finished     id=114 cancelled
+ 136.766s  key          'a' repeat=False prompt='a' inside speak('a') +984 ms
+ 136.766s  worker.stop  last_enqueued=115 cancel_through=114->115 worker_speaking=True
+ 136.766s  cue          correct
+ 136.766s  ask          'l' block_keys=alrs
+ 136.766s  enqueue      id=116 'l'
+ 136.813s  finished     id=115 cancelled
+ 137.750s  key          'l' repeat=False prompt='l' inside speak('l') +937 ms
+ 137.750s  worker.stop  last_enqueued=116 cancel_through=115->116 worker_speaking=True
+ 137.750s  cue          correct
+ 137.750s  ask          's' block_keys=alrs
+ 137.750s  enqueue      id=117 's'
+ 137.813s  finished     id=116 cancelled
+ 138.891s  key          's' repeat=False prompt='s' inside speak('s') +1094 ms
+ 138.891s  worker.stop  last_enqueued=117 cancel_through=116->117 worker_speaking=True
+ 138.891s  cue          correct
+ 138.891s  ask          'a' block_keys=alrs
+ 138.891s  enqueue      id=118 'a'
+ 138.938s  finished     id=117 cancelled
+ 140.032s  finished     id=118 completed
+ 140.078s  key          'a' repeat=False prompt='a' no speak() in progress
+ 140.078s  cue          correct
+ 140.078s  ask          'r' block_keys=alrs
+ 140.078s  enqueue      id=119 'r'
+ 141.157s  key          'r' repeat=False prompt='r' inside speak('r') +1079 ms
+ 141.157s  worker.stop  last_enqueued=119 cancel_through=117->119 worker_speaking=True
+ 141.157s  cue          correct
+ 141.157s  ask          'r' block_keys=alrs
+ 141.157s  enqueue      id=120 'r'
+ 141.219s  finished     id=119 cancelled
+ 142.250s  key          'r' repeat=False prompt='r' inside speak('r') +1047 ms
+ 142.250s  worker.stop  last_enqueued=120 cancel_through=119->120 worker_speaking=True
+ 142.250s  cue          correct
+ 142.250s  ask          'a' block_keys=alrs
+ 142.250s  enqueue      id=121 'a'
+ 142.328s  finished     id=120 cancelled
+ 143.250s  key          'a' repeat=False prompt='a' inside speak('a') +937 ms
+ 143.250s  worker.stop  last_enqueued=121 cancel_through=120->121 worker_speaking=True
+ 143.250s  cue          correct
+ 143.250s  ask          'r' block_keys=alrs
+ 143.250s  enqueue      id=122 'r'
+ 143.282s  finished     id=121 cancelled
+ 144.344s  key          'r' repeat=False prompt='r' inside speak('r') +1062 ms
+ 144.360s  worker.stop  last_enqueued=122 cancel_through=121->122 worker_speaking=True
+ 144.360s  cue          correct
+ 144.360s  ask          'a' block_keys=alrs
+ 144.360s  enqueue      id=123 'a'
+ 144.391s  finished     id=122 cancelled
+ 145.313s  key          'a' repeat=False prompt='a' inside speak('a') +922 ms
+ 145.313s  worker.stop  last_enqueued=123 cancel_through=122->123 worker_speaking=True
+ 145.313s  cue          correct
+ 145.313s  ask          'r' block_keys=alrs
+ 145.313s  enqueue      id=124 'r'
+ 145.375s  finished     id=123 cancelled
+ 146.282s  key          'r' repeat=False prompt='r' inside speak('r') +922 ms
+ 146.282s  worker.stop  last_enqueued=124 cancel_through=123->124 worker_speaking=True
+ 146.282s  cue          correct
+ 146.282s  ask          'a' block_keys=alrs
+ 146.282s  enqueue      id=125 'a'
+ 146.328s  finished     id=124 cancelled
+ 147.282s  key          'a' repeat=False prompt='a' inside speak('a') +954 ms
+ 147.282s  worker.stop  last_enqueued=125 cancel_through=124->125 worker_speaking=True
+ 147.282s  cue          correct
+ 147.282s  ask          'r' block_keys=alrs
+ 147.282s  enqueue      id=126 'r'
+ 147.328s  finished     id=125 cancelled
+ 148.407s  key          'r' repeat=False prompt='r' inside speak('r') +1079 ms
+ 148.407s  worker.stop  last_enqueued=126 cancel_through=125->126 worker_speaking=True
+ 148.407s  cue          correct
+ 148.407s  ask          'r' block_keys=alrs
+ 148.407s  enqueue      id=127 'r'
+ 148.469s  finished     id=126 cancelled
+ 149.641s  key          'r' repeat=False prompt='r' inside speak('r') +1172 ms
+ 149.641s  worker.stop  last_enqueued=127 cancel_through=126->127 worker_speaking=True
+ 149.641s  cue          correct
+ 149.641s  ask          'a' block_keys=alrs
+ 149.641s  enqueue      id=128 'a'
+ 149.688s  finished     id=127 cancelled
+ 150.782s  finished     id=128 completed
+ 151.391s  key          'a' repeat=False prompt='a' no speak() in progress
+ 151.391s  cue          correct
+ 151.391s  ask          'l' block_keys=alrs
+ 151.391s  enqueue      id=129 'l'
+ 152.625s  finished     id=129 completed
+ 152.953s  key          'l' repeat=False prompt='l' no speak() in progress
+ 152.953s  cue          correct
+ 152.953s  block boundary
+ 152.953s  enqueue      id=130 'New letter: G. Use your left index finge'
+ 159.485s  finished     id=130 completed
+ 159.485s  enqueue      id=131 'New letter: H. Use your right index fing'
+ 166.047s  finished     id=131 completed
+ 166.047s  ask          'g' block_keys=gh
+ 166.047s  enqueue      id=132 'g'
+ 167.250s  finished     id=132 completed
+ 168.328s  key          'g' repeat=False prompt='g' no speak() in progress
+ 168.328s  cue          correct
+ 168.328s  ask          'h' block_keys=gh
+ 168.328s  enqueue      id=133 'h'
+ 169.375s  key          'h' repeat=False prompt='h' inside speak('h') +1047 ms
+ 169.375s  worker.stop  last_enqueued=133 cancel_through=127->133 worker_speaking=True
+ 169.375s  cue          correct
+ 169.375s  ask          'g' block_keys=gh
+ 169.375s  enqueue      id=134 'g'
+ 169.453s  finished     id=133 cancelled
+ 170.203s  key          'g' repeat=False prompt='g' inside speak('g') +765 ms
+ 170.203s  worker.stop  last_enqueued=134 cancel_through=133->134 worker_speaking=True
+ 170.203s  cue          correct
+ 170.203s  ask          'h' block_keys=gh
+ 170.203s  enqueue      id=135 'h'
+ 170.250s  finished     id=134 cancelled
+ 171.172s  key          'h' repeat=False prompt='h' inside speak('h') +937 ms
+ 171.172s  worker.stop  last_enqueued=135 cancel_through=134->135 worker_speaking=True
+ 171.172s  cue          correct
+ 171.172s  ask          'g' block_keys=gh
+ 171.172s  enqueue      id=136 'g'
+ 171.235s  finished     id=135 cancelled
+ 172.110s  key          'g' repeat=False prompt='g' inside speak('g') +891 ms
+ 172.110s  worker.stop  last_enqueued=136 cancel_through=135->136 worker_speaking=True
+ 172.110s  cue          correct
+ 172.110s  ask          'h' block_keys=gh
+ 172.110s  enqueue      id=137 'h'
+ 172.172s  finished     id=136 cancelled
+ 173.032s  key          'h' repeat=False prompt='h' inside speak('h') +875 ms
+ 173.032s  worker.stop  last_enqueued=137 cancel_through=136->137 worker_speaking=True
+ 173.032s  cue          correct
+ 173.032s  ask          'g' block_keys=gh
+ 173.032s  enqueue      id=138 'g'
+ 173.078s  finished     id=137 cancelled
+ 173.891s  key          'g' repeat=False prompt='g' inside speak('g') +828 ms
+ 173.891s  worker.stop  last_enqueued=138 cancel_through=137->138 worker_speaking=True
+ 173.891s  cue          correct
+ 173.891s  ask          'h' block_keys=gh
+ 173.891s  enqueue      id=139 'h'
+ 173.938s  finished     id=138 cancelled
+ 174.735s  key          'h' repeat=False prompt='h' inside speak('h') +797 ms
+ 174.735s  worker.stop  last_enqueued=139 cancel_through=138->139 worker_speaking=True
+ 174.735s  cue          correct
+ 174.735s  ask          'g' block_keys=gh
+ 174.735s  enqueue      id=140 'g'
+ 174.782s  finished     id=139 cancelled
+ 175.625s  key          'g' repeat=False prompt='g' inside speak('g') +843 ms
+ 175.625s  worker.stop  last_enqueued=140 cancel_through=139->140 worker_speaking=True
+ 175.625s  cue          correct
+ 175.625s  ask          'h' block_keys=gh
+ 175.625s  enqueue      id=141 'h'
+ 175.672s  finished     id=140 cancelled
+ 176.563s  key          'h' repeat=False prompt='h' inside speak('h') +891 ms
+ 176.563s  worker.stop  last_enqueued=141 cancel_through=140->141 worker_speaking=True
+ 176.563s  cue          correct
+ 176.563s  ask          'g' block_keys=gh
+ 176.563s  enqueue      id=142 'g'
+ 176.610s  finished     id=141 cancelled
+ 177.500s  key          'g' repeat=False prompt='g' inside speak('g') +890 ms
+ 177.500s  worker.stop  last_enqueued=142 cancel_through=141->142 worker_speaking=True
+ 177.500s  cue          correct
+ 177.500s  ask          'h' block_keys=gh
+ 177.500s  enqueue      id=143 'h'
+ 177.547s  finished     id=142 cancelled
+ 178.422s  key          'h' repeat=False prompt='h' inside speak('h') +875 ms
+ 178.422s  worker.stop  last_enqueued=143 cancel_through=142->143 worker_speaking=True
+ 178.422s  cue          correct
+ 178.422s  ask          'g' block_keys=gh
+ 178.422s  enqueue      id=144 'g'
+ 178.469s  finished     id=143 cancelled
+ 179.375s  key          'g' repeat=False prompt='g' inside speak('g') +906 ms
+ 179.375s  worker.stop  last_enqueued=144 cancel_through=143->144 worker_speaking=True
+ 179.375s  cue          correct
+ 179.375s  ask          'h' block_keys=gh
+ 179.375s  enqueue      id=145 'h'
+ 179.422s  finished     id=144 cancelled
+ 180.282s  key          'h' repeat=False prompt='h' inside speak('h') +875 ms
+ 180.282s  worker.stop  last_enqueued=145 cancel_through=144->145 worker_speaking=True
+ 180.282s  cue          correct
+ 180.282s  ask          'g' block_keys=gh
+ 180.282s  enqueue      id=146 'g'
+ 180.344s  finished     id=145 cancelled
+ 181.172s  key          'g' repeat=False prompt='g' inside speak('g') +844 ms
+ 181.172s  worker.stop  last_enqueued=146 cancel_through=145->146 worker_speaking=True
+ 181.172s  cue          correct
+ 181.172s  ask          'h' block_keys=gh
+ 181.172s  enqueue      id=147 'h'
+ 181.219s  finished     id=146 cancelled
+ 182.078s  key          'h' repeat=False prompt='h' inside speak('h') +859 ms
+ 182.078s  worker.stop  last_enqueued=147 cancel_through=146->147 worker_speaking=True
+ 182.078s  cue          correct
+ 182.078s  ask          'g' block_keys=gh
+ 182.078s  enqueue      id=148 'g'
+ 182.141s  finished     id=147 cancelled
+ 183.078s  key          'g' repeat=False prompt='g' inside speak('g') +953 ms
+ 183.078s  worker.stop  last_enqueued=148 cancel_through=147->148 worker_speaking=True
+ 183.078s  cue          correct
+ 183.078s  ask          'h' block_keys=gh
+ 183.078s  enqueue      id=149 'h'
+ 183.141s  finished     id=148 cancelled
+ 184.032s  key          'h' repeat=False prompt='h' inside speak('h') +907 ms
+ 184.032s  worker.stop  last_enqueued=149 cancel_through=148->149 worker_speaking=True
+ 184.032s  cue          correct
+ 184.032s  ask          'g' block_keys=gh
+ 184.032s  enqueue      id=150 'g'
+ 184.094s  finished     id=149 cancelled
+ 185.000s  key          'g' repeat=False prompt='g' inside speak('g') +906 ms
+ 185.000s  worker.stop  last_enqueued=150 cancel_through=149->150 worker_speaking=True
+ 185.000s  cue          correct
+ 185.000s  ask          'h' block_keys=gh
+ 185.000s  enqueue      id=151 'h'
+ 185.063s  finished     id=150 cancelled
+ 185.860s  key          'h' repeat=False prompt='h' inside speak('h') +828 ms
+ 185.860s  worker.stop  last_enqueued=151 cancel_through=150->151 worker_speaking=True
+ 185.860s  cue          correct
+ 185.860s  block boundary
+ 185.860s  ask          'f' block_keys=fghj
+ 185.860s  enqueue      id=152 'f'
+ 185.907s  finished     id=151 cancelled
+ 187.141s  finished     id=152 completed
+ 187.782s  key          'f' repeat=False prompt='f' no speak() in progress
+ 187.782s  cue          correct
+ 187.782s  ask          'g' block_keys=fghj
+ 187.782s  enqueue      id=153 'g'
+ 188.969s  finished     id=153 completed
+ 189.360s  key          'g' repeat=False prompt='g' no speak() in progress
+ 189.360s  cue          correct
+ 189.360s  ask          'j' block_keys=fghj
+ 189.360s  enqueue      id=154 'j'
+ 190.563s  finished     id=154 completed
+ 190.750s  key          'j' repeat=False prompt='j' no speak() in progress
+ 190.750s  cue          correct
+ 190.750s  ask          'h' block_keys=fghj
+ 190.750s  enqueue      id=155 'h'
+ 191.750s  key          'h' repeat=False prompt='h' inside speak('h') +1000 ms
+ 191.750s  worker.stop  last_enqueued=155 cancel_through=151->155 worker_speaking=True
+ 191.750s  cue          correct
+ 191.750s  ask          'f' block_keys=fghj
+ 191.750s  enqueue      id=156 'f'
+ 191.813s  finished     id=155 cancelled
+ 192.750s  key          'f' repeat=False prompt='f' inside speak('f') +953 ms
+ 192.750s  worker.stop  last_enqueued=156 cancel_through=155->156 worker_speaking=True
+ 192.750s  cue          correct
+ 192.750s  ask          'g' block_keys=fghj
+ 192.750s  enqueue      id=157 'g'
+ 192.813s  finished     id=156 cancelled
+ 193.750s  key          'j' repeat=False prompt='g' inside speak('g') +953 ms
+ 193.750s  worker.stop  last_enqueued=157 cancel_through=156->157 worker_speaking=True
+ 193.750s  cue          error
+ 193.750s  re-ask       'g' block_keys=fghj
+ 193.750s  enqueue      id=158 'g'
+ 193.813s  finished     id=157 cancelled
+ 194.985s  finished     id=158 completed
+ 195.203s  key          'g' repeat=False prompt='g' no speak() in progress
+ 195.203s  cue          correct
+ 195.203s  ask          'j' block_keys=fghj
+ 195.203s  enqueue      id=159 'j'
+ 196.407s  finished     id=159 completed
+ 196.422s  key          'j' repeat=False prompt='j' no speak() in progress
+ 196.422s  cue          correct
+ 196.422s  ask          'h' block_keys=fghj
+ 196.422s  enqueue      id=160 'h'
+ 197.422s  key          'h' repeat=False prompt='h' inside speak('h') +1000 ms
+ 197.422s  worker.stop  last_enqueued=160 cancel_through=157->160 worker_speaking=True
+ 197.422s  cue          correct
+ 197.422s  ask          'f' block_keys=fghj
+ 197.422s  enqueue      id=161 'f'
+ 197.485s  finished     id=160 cancelled
+ 198.578s  key          'f' repeat=False prompt='f' inside speak('f') +1109 ms
+ 198.578s  worker.stop  last_enqueued=161 cancel_through=160->161 worker_speaking=True
+ 198.578s  cue          correct
+ 198.578s  ask          'g' block_keys=fghj
+ 198.578s  enqueue      id=162 'g'
+ 198.625s  finished     id=161 cancelled
+ 199.016s  key          'g' repeat=False prompt='g' inside speak('g') +391 ms
+ 199.016s  worker.stop  last_enqueued=162 cancel_through=161->162 worker_speaking=True
+ 199.016s  cue          correct
+ 199.016s  ask          'j' block_keys=fghj
+ 199.016s  enqueue      id=163 'j'
+ 199.328s  finished     id=162 cancelled
+ 199.360s  key          'j' repeat=False prompt='j' inside speak('j') +47 ms
+ 199.360s  worker.stop  last_enqueued=163 cancel_through=162->163 worker_speaking=True
+ 199.360s  cue          correct
+ 199.360s  ask          'h' block_keys=fghj
+ 199.360s  enqueue      id=164 'h'
+ 199.703s  key          'h' repeat=False prompt='h' inside speak('j') +390 ms
+ 199.703s  worker.stop  last_enqueued=164 cancel_through=163->164 worker_speaking=True
+ 199.703s  cue          correct
+ 199.703s  ask          'f' block_keys=fghj
+ 199.703s  enqueue      id=165 'f'
+ 200.016s  finished     id=163 cancelled
+ 200.016s  finished     id=164 cancelled
+ 200.016s  key          'f' repeat=False prompt='f' inside speak('f') +16 ms
+ 200.016s  worker.stop  last_enqueued=165 cancel_through=164->165 worker_speaking=True
+ 200.016s  cue          correct
+ 200.016s  ask          'g' block_keys=fghj
+ 200.016s  enqueue      id=166 'g'
+ 200.078s  finished     id=165 cancelled
+ 200.328s  key          'g' repeat=False prompt='g' inside speak('g') +265 ms
+ 200.328s  worker.stop  last_enqueued=166 cancel_through=165->166 worker_speaking=True
+ 200.328s  cue          correct
+ 200.328s  ask          'j' block_keys=fghj
+ 200.328s  enqueue      id=167 'j'
+ 200.578s  key          'j' repeat=False prompt='j' inside speak('g') +515 ms
+ 200.578s  worker.stop  last_enqueued=167 cancel_through=166->167 worker_speaking=True
+ 200.578s  cue          correct
+ 200.578s  ask          'h' block_keys=fghj
+ 200.578s  enqueue      id=168 'h'
+ 200.766s  finished     id=166 cancelled
+ 200.766s  finished     id=167 cancelled
+ 200.907s  key          'h' repeat=False prompt='h' inside speak('h') +172 ms
+ 200.907s  worker.stop  last_enqueued=168 cancel_through=167->168 worker_speaking=True
+ 200.907s  cue          correct
+ 200.907s  ask          'f' block_keys=fghj
+ 200.907s  enqueue      id=169 'f'
+ 201.188s  key          'f' repeat=False prompt='f' inside speak('h') +453 ms
+ 201.188s  worker.stop  last_enqueued=169 cancel_through=168->169 worker_speaking=True
+ 201.188s  cue          correct
+ 201.188s  ask          'g' block_keys=fghj
+ 201.188s  enqueue      id=170 'g'
+ 201.485s  key          'g' repeat=False prompt='g' inside speak('h') +750 ms
+ 201.485s  worker.stop  last_enqueued=170 cancel_through=169->170 worker_speaking=True
+ 201.485s  cue          correct
+ 201.485s  ask          'j' block_keys=fghj
+ 201.485s  enqueue      id=171 'j'
+ 201.547s  finished     id=168 cancelled
+ 201.547s  finished     id=169 cancelled
+ 201.547s  finished     id=170 cancelled
+ 201.735s  key          'j' repeat=False prompt='j' inside speak('j') +203 ms
+ 201.735s  worker.stop  last_enqueued=171 cancel_through=170->171 worker_speaking=True
+ 201.735s  cue          correct
+ 201.735s  ask          'h' block_keys=fghj
+ 201.735s  enqueue      id=172 'h'
+ 202.094s  key          'h' repeat=False prompt='h' inside speak('j') +562 ms
+ 202.094s  worker.stop  last_enqueued=172 cancel_through=171->172 worker_speaking=True
+ 202.094s  cue          correct
+ 202.094s  ask          'f' block_keys=fghj
+ 202.094s  enqueue      id=173 'f'
+ 202.235s  finished     id=171 cancelled
+ 202.235s  finished     id=172 cancelled
+ 202.360s  key          'f' repeat=False prompt='f' inside speak('f') +141 ms
+ 202.360s  worker.stop  last_enqueued=173 cancel_through=172->173 worker_speaking=True
+ 202.360s  cue          correct
+ 202.360s  ask          'g' block_keys=fghj
+ 202.360s  enqueue      id=174 'g'
+ 202.672s  key          'g' repeat=False prompt='g' inside speak('f') +453 ms
+ 202.672s  worker.stop  last_enqueued=174 cancel_through=173->174 worker_speaking=True
+ 202.672s  cue          correct
+ 202.672s  ask          'j' block_keys=fghj
+ 202.672s  enqueue      id=175 'j'
+ 202.891s  key          'j' repeat=False prompt='j' inside speak('f') +672 ms
+ 202.891s  worker.stop  last_enqueued=175 cancel_through=174->175 worker_speaking=True
+ 202.891s  cue          correct
+ 202.891s  ask          'h' block_keys=fghj
+ 202.891s  enqueue      id=176 'h'
+ 202.953s  finished     id=173 cancelled
+ 202.953s  finished     id=174 cancelled
+ 202.953s  finished     id=175 cancelled
+ 203.266s  key          'h' repeat=False prompt='h' inside speak('h') +313 ms
+ 203.266s  worker.stop  last_enqueued=176 cancel_through=175->176 worker_speaking=True
+ 203.266s  cue          correct
+ 203.266s  ask          'f' block_keys=fghj
+ 203.266s  enqueue      id=177 'f'
+ 203.516s  key          'f' repeat=False prompt='f' inside speak('h') +563 ms
+ 203.516s  worker.stop  last_enqueued=177 cancel_through=176->177 worker_speaking=True
+ 203.516s  cue          correct
+ 203.516s  ask          'g' block_keys=fghj
+ 203.516s  enqueue      id=178 'g'
+ 203.766s  finished     id=176 cancelled
+ 203.766s  finished     id=177 cancelled
+ 203.828s  key          'g' repeat=False prompt='g' inside speak('g') +78 ms
+ 203.828s  worker.stop  last_enqueued=178 cancel_through=177->178 worker_speaking=True
+ 203.828s  cue          correct
+ 203.828s  ask          'j' block_keys=fghj
+ 203.828s  enqueue      id=179 'j'
+ 204.047s  key          'j' repeat=False prompt='j' inside speak('g') +297 ms
+ 204.047s  worker.stop  last_enqueued=179 cancel_through=178->179 worker_speaking=True
+ 204.047s  cue          correct
+ 204.047s  ask          'h' block_keys=fghj
+ 204.047s  enqueue      id=180 'h'
+ 204.438s  finished     id=178 cancelled
+ 204.438s  finished     id=179 cancelled
+ 204.438s  key          'h' repeat=False prompt='h' inside speak('h') +16 ms
+ 204.438s  worker.stop  last_enqueued=180 cancel_through=179->180 worker_speaking=True
+ 204.438s  cue          correct
+ 204.438s  ask          'f' block_keys=fghj
+ 204.438s  enqueue      id=181 'f'
+ 204.485s  finished     id=180 cancelled
+ 205.735s  finished     id=181 completed
+ 206.141s  key          'f' repeat=False prompt='f' no speak() in progress
+ 206.141s  cue          correct
+ 206.141s  ask          'g' block_keys=fghj
+ 206.141s  enqueue      id=182 'g'
+ 206.985s  key          'g' repeat=False prompt='g' inside speak('g') +844 ms
+ 206.985s  worker.stop  last_enqueued=182 cancel_through=180->182 worker_speaking=True
+ 206.985s  cue          correct
+ 206.985s  ask          'j' block_keys=fghj
+ 206.985s  enqueue      id=183 'j'
+ 207.047s  finished     id=182 cancelled
+ 208.094s  key          'j' repeat=False prompt='j' inside speak('j') +1062 ms
+ 208.094s  worker.stop  last_enqueued=183 cancel_through=182->183 worker_speaking=True
+ 208.094s  cue          correct
+ 208.094s  ask          'h' block_keys=fghj
+ 208.094s  enqueue      id=184 'h'
+ 208.125s  finished     id=183 cancelled
+ 208.891s  key          'h' repeat=False prompt='h' inside speak('h') +766 ms
+ 208.891s  worker.stop  last_enqueued=184 cancel_through=183->184 worker_speaking=True
+ 208.891s  cue          correct
+ 208.891s  ask          'f' block_keys=fghj
+ 208.891s  enqueue      id=185 'f'
+ 208.953s  finished     id=184 cancelled
+ 210.172s  finished     id=185 completed
+ 210.719s  key          'f' repeat=False prompt='f' no speak() in progress
+ 210.719s  cue          correct
+ 210.719s  ask          'g' block_keys=fghj
+ 210.719s  enqueue      id=186 'g'
+ 211.000s  key          'g' repeat=False prompt='g' inside speak('g') +281 ms
+ 211.000s  worker.stop  last_enqueued=186 cancel_through=184->186 worker_speaking=True
+ 211.000s  cue          correct
+ 211.000s  ask          'j' block_keys=fghj
+ 211.000s  enqueue      id=187 'j'
+ 211.250s  key          'j' repeat=False prompt='j' inside speak('g') +531 ms
+ 211.250s  worker.stop  last_enqueued=187 cancel_through=186->187 worker_speaking=True
+ 211.250s  cue          correct
+ 211.250s  ask          'h' block_keys=fghj
+ 211.250s  enqueue      id=188 'h'
+ 211.438s  finished     id=186 cancelled
+ 211.438s  finished     id=187 cancelled
+ 211.578s  key          'h' repeat=False prompt='h' inside speak('h') +156 ms
+ 211.578s  worker.stop  last_enqueued=188 cancel_through=187->188 worker_speaking=True
+ 211.578s  cue          correct
+ 211.578s  ask          'f' block_keys=fghj
+ 211.578s  enqueue      id=189 'f'
+ 211.860s  key          'f' repeat=False prompt='f' inside speak('h') +438 ms
+ 211.860s  worker.stop  last_enqueued=189 cancel_through=188->189 worker_speaking=True
+ 211.860s  cue          correct
+ 211.860s  ask          'g' block_keys=fghj
+ 211.860s  enqueue      id=190 'g'
+ 212.125s  key          'g' repeat=False prompt='g' inside speak('h') +703 ms
+ 212.125s  worker.stop  last_enqueued=190 cancel_through=189->190 worker_speaking=True
+ 212.125s  cue          correct
+ 212.125s  ask          'j' block_keys=fghj
+ 212.125s  enqueue      id=191 'j'
+ 212.203s  finished     id=188 cancelled
+ 212.203s  finished     id=189 cancelled
+ 212.203s  finished     id=190 cancelled
+ 212.344s  key          'j' repeat=False prompt='j' inside speak('j') +141 ms
+ 212.344s  worker.stop  last_enqueued=191 cancel_through=190->191 worker_speaking=True
+ 212.344s  cue          correct
+ 212.344s  ask          'h' block_keys=fghj
+ 212.344s  enqueue      id=192 'h'
+ 212.625s  key          'h' repeat=False prompt='h' inside speak('j') +422 ms
+ 212.625s  worker.stop  last_enqueued=192 cancel_through=191->192 worker_speaking=True
+ 212.625s  cue          correct
+ 212.625s  ask          'f' block_keys=fghj
+ 212.625s  enqueue      id=193 'f'
+ 212.891s  key          'f' repeat=False prompt='f' inside speak('f') +0 ms
+ 212.891s  worker.stop  last_enqueued=193 cancel_through=192->193 worker_speaking=True
+ 212.891s  cue          correct
+ 212.891s  ask          'g' block_keys=fghj
+ 212.891s  enqueue      id=194 'g'
+ 212.891s  finished     id=191 cancelled
+ 212.891s  finished     id=192 cancelled
+ 212.953s  finished     id=193 cancelled
+ 213.157s  key          'g' repeat=False prompt='g' inside speak('g') +204 ms
+ 213.157s  worker.stop  last_enqueued=194 cancel_through=193->194 worker_speaking=True
+ 213.157s  cue          correct
+ 213.157s  ask          'j' block_keys=fghj
+ 213.157s  enqueue      id=195 'j'
+ 213.375s  key          'j' repeat=False prompt='j' inside speak('g') +422 ms
+ 213.375s  worker.stop  last_enqueued=195 cancel_through=194->195 worker_speaking=True
+ 213.375s  cue          correct
+ 213.375s  ask          'h' block_keys=fghj
+ 213.375s  enqueue      id=196 'h'
+ 213.641s  finished     id=194 cancelled
+ 213.641s  finished     id=195 cancelled
+ 213.703s  key          'h' repeat=False prompt='h' inside speak('h') +78 ms
+ 213.719s  worker.stop  last_enqueued=196 cancel_through=195->196 worker_speaking=True
+ 213.719s  cue          correct
+ 213.719s  ask          'f' block_keys=fghj
+ 213.719s  enqueue      id=197 'f'
+ 213.953s  key          'f' repeat=False prompt='f' inside speak('h') +328 ms
+ 213.953s  worker.stop  last_enqueued=197 cancel_through=196->197 worker_speaking=True
+ 213.953s  cue          correct
+ 213.953s  ask          'g' block_keys=fghj
+ 213.953s  enqueue      id=198 'g'
+ 214.266s  key          'g' repeat=False prompt='g' inside speak('h') +641 ms
+ 214.266s  worker.stop  last_enqueued=198 cancel_through=197->198 worker_speaking=True
+ 214.266s  cue          correct
+ 214.266s  ask          'j' block_keys=fghj
+ 214.266s  enqueue      id=199 'j'
+ 214.422s  finished     id=196 cancelled
+ 214.422s  finished     id=197 cancelled
+ 214.422s  finished     id=198 cancelled
+ 214.485s  key          'j' repeat=False prompt='j' inside speak('j') +78 ms
+ 214.485s  worker.stop  last_enqueued=199 cancel_through=198->199 worker_speaking=True
+ 214.485s  cue          correct
+ 214.485s  ask          'h' block_keys=fghj
+ 214.485s  enqueue      id=200 'h'
+ 214.813s  key          'h' repeat=False prompt='h' inside speak('j') +406 ms
+ 214.813s  worker.stop  last_enqueued=200 cancel_through=199->200 worker_speaking=True
+ 214.813s  cue          correct
+ 214.813s  ask          'f' block_keys=fghj
+ 214.813s  enqueue      id=201 'f'
+ 215.047s  key          'f' repeat=False prompt='f' inside speak('j') +640 ms
+ 215.047s  worker.stop  last_enqueued=201 cancel_through=200->201 worker_speaking=True
+ 215.047s  cue          correct
+ 215.047s  ask          'g' block_keys=fghj
+ 215.047s  enqueue      id=202 'g'
+ 215.094s  finished     id=199 cancelled
+ 215.094s  finished     id=200 cancelled
+ 215.094s  finished     id=201 cancelled
+ 215.391s  key          'g' repeat=False prompt='g' inside speak('g') +297 ms
+ 215.391s  worker.stop  last_enqueued=202 cancel_through=201->202 worker_speaking=True
+ 215.391s  cue          correct
+ 215.391s  ask          'j' block_keys=fghj
+ 215.391s  enqueue      id=203 'j'
+ 215.563s  key          'j' repeat=False prompt='j' inside speak('g') +469 ms
+ 215.563s  worker.stop  last_enqueued=203 cancel_through=202->203 worker_speaking=True
+ 215.563s  cue          correct
+ 215.563s  ask          'h' block_keys=fghj
+ 215.563s  enqueue      id=204 'h'
+ 215.766s  finished     id=202 cancelled
+ 215.766s  finished     id=203 cancelled
+ 215.891s  key          'h' repeat=False prompt='h' inside speak('h') +125 ms
+ 215.891s  worker.stop  last_enqueued=204 cancel_through=203->204 worker_speaking=True
+ 215.891s  cue          correct
+ 215.891s  ask          'f' block_keys=fghj
+ 215.891s  enqueue      id=205 'f'
+ 216.125s  key          'f' repeat=False prompt='f' inside speak('h') +359 ms
+ 216.125s  worker.stop  last_enqueued=205 cancel_through=204->205 worker_speaking=True
+ 216.125s  cue          correct
+ 216.125s  ask          'g' block_keys=fghj
+ 216.125s  enqueue      id=206 'g'
+ 216.469s  key          'g' repeat=False prompt='g' inside speak('h') +703 ms
+ 216.469s  worker.stop  last_enqueued=206 cancel_through=205->206 worker_speaking=True
+ 216.469s  cue          correct
+ 216.469s  ask          'j' block_keys=fghj
+ 216.469s  enqueue      id=207 'j'
+ 216.563s  finished     id=204 cancelled
+ 216.563s  finished     id=205 cancelled
+ 216.563s  finished     id=206 cancelled
+ 216.672s  key          'j' repeat=False prompt='j' inside speak('j') +109 ms
+ 216.672s  worker.stop  last_enqueued=207 cancel_through=206->207 worker_speaking=True
+ 216.672s  cue          correct
+ 216.672s  ask          'h' block_keys=fghj
+ 216.672s  enqueue      id=208 'h'
+ 217.016s  key          'h' repeat=False prompt='h' inside speak('j') +453 ms
+ 217.016s  worker.stop  last_enqueued=208 cancel_through=207->208 worker_speaking=True
+ 217.016s  cue          correct
+ 217.016s  ask          'f' block_keys=fghj
+ 217.016s  enqueue      id=209 'f'
+ 217.219s  key          'f' repeat=False prompt='f' inside speak('j') +656 ms
+ 217.219s  worker.stop  last_enqueued=209 cancel_through=208->209 worker_speaking=True
+ 217.219s  cue          correct
+ 217.219s  ask          'g' block_keys=fghj
+ 217.219s  enqueue      id=210 'g'
+ 217.235s  finished     id=207 cancelled
+ 217.235s  finished     id=208 cancelled
+ 217.235s  finished     id=209 cancelled
+ 217.547s  key          'g' repeat=False prompt='g' inside speak('g') +312 ms
+ 217.547s  worker.stop  last_enqueued=210 cancel_through=209->210 worker_speaking=True
+ 217.547s  cue          correct
+ 217.547s  ask          'j' block_keys=fghj
+ 217.547s  enqueue      id=211 'j'
+ 217.797s  key          'j' repeat=False prompt='j' inside speak('g') +562 ms
+ 217.797s  worker.stop  last_enqueued=211 cancel_through=210->211 worker_speaking=True
+ 217.797s  cue          correct
+ 217.797s  ask          'h' block_keys=fghj
+ 217.797s  enqueue      id=212 'h'
+ 217.922s  finished     id=210 cancelled
+ 217.922s  finished     id=211 cancelled
+ 218.141s  key          'h' repeat=False prompt='h' inside speak('h') +219 ms
+ 218.141s  worker.stop  last_enqueued=212 cancel_through=211->212 worker_speaking=True
+ 218.141s  cue          correct
+ 218.141s  ask          'f' block_keys=fghj
+ 218.141s  enqueue      id=213 'f'
+ 218.344s  key          'f' repeat=False prompt='f' inside speak('h') +422 ms
+ 218.344s  worker.stop  last_enqueued=213 cancel_through=212->213 worker_speaking=True
+ 218.344s  cue          correct
+ 218.344s  ask          'g' block_keys=fghj
+ 218.344s  enqueue      id=214 'g'
+ 218.641s  key          'g' repeat=False prompt='g' inside speak('h') +719 ms
+ 218.641s  worker.stop  last_enqueued=214 cancel_through=213->214 worker_speaking=True
+ 218.641s  cue          correct
+ 218.641s  ask          'j' block_keys=fghj
+ 218.641s  enqueue      id=215 'j'
+ 218.719s  finished     id=212 cancelled
+ 218.719s  finished     id=213 cancelled
+ 218.719s  finished     id=214 cancelled
+ 218.875s  key          'j' repeat=False prompt='j' inside speak('j') +172 ms
+ 218.875s  worker.stop  last_enqueued=215 cancel_through=214->215 worker_speaking=True
+ 218.875s  cue          correct
+ 218.875s  ask          'h' block_keys=fghj
+ 218.875s  enqueue      id=216 'h'
+ 219.219s  key          'h' repeat=False prompt='h' inside speak('j') +516 ms
+ 219.219s  worker.stop  last_enqueued=216 cancel_through=215->216 worker_speaking=True
+ 219.219s  cue          correct
+ 219.219s  ask          'f' block_keys=fghj
+ 219.219s  enqueue      id=217 'f'
+ 219.391s  finished     id=215 cancelled
+ 219.391s  finished     id=216 cancelled
+ 220.610s  finished     id=217 completed
+ 220.922s  key          'f' repeat=False prompt='f' no speak() in progress
+ 220.922s  cue          correct
+ 220.922s  ask          'g' block_keys=fghj
+ 220.922s  enqueue      id=218 'g'
+ 222.110s  finished     id=218 completed
+ 222.407s  key          'g' repeat=False prompt='g' no speak() in progress
+ 222.407s  cue          correct
+ 222.407s  ask          'j' block_keys=fghj
+ 222.407s  enqueue      id=219 'j'
+ 223.594s  finished     id=219 completed
+ 224.203s  key          'j' repeat=False prompt='j' no speak() in progress
+ 224.203s  cue          correct
+ 224.203s  ask          'h' block_keys=fghj
+ 224.203s  enqueue      id=220 'h'
+ 225.485s  finished     id=220 completed
+ 225.828s  key          'h' repeat=False prompt='h' no speak() in progress
+ 225.828s  cue          correct
+ 225.828s  ask          'f' block_keys=fghj
+ 225.828s  enqueue      id=221 'f'
+ 227.078s  finished     id=221 completed
+ 227.157s  key          'f' repeat=False prompt='f' no speak() in progress
+ 227.157s  cue          correct
+ 227.157s  ask          'g' block_keys=fghj
+ 227.157s  enqueue      id=222 'g'
+ 228.328s  finished     id=222 completed
+ 228.922s  key          'g' repeat=False prompt='g' no speak() in progress
+ 228.922s  cue          correct
+ 228.922s  ask          'j' block_keys=fghj
+ 228.922s  enqueue      id=223 'j'
+ 229.110s  key          'j' repeat=False prompt='j' inside speak('j') +188 ms
+ 229.110s  worker.stop  last_enqueued=223 cancel_through=216->223 worker_speaking=True
+ 229.110s  cue          correct
+ 229.110s  ask          'h' block_keys=fghj
+ 229.110s  enqueue      id=224 'h'
+ 229.610s  finished     id=223 cancelled
+ 230.797s  key          'h' repeat=False prompt='h' inside speak('h') +1187 ms
+ 230.797s  worker.stop  last_enqueued=224 cancel_through=223->224 worker_speaking=True
+ 230.797s  cue          correct
+ 230.797s  ask          'f' block_keys=fghj
+ 230.797s  enqueue      id=225 'f'
+ 230.844s  finished     id=224 cancelled
+ 232.000s  key          'f' repeat=False prompt='f' inside speak('f') +1156 ms
+ 232.000s  worker.stop  last_enqueued=225 cancel_through=224->225 worker_speaking=True
+ 232.000s  cue          correct
+ 232.000s  ask          'g' block_keys=fghj
+ 232.000s  enqueue      id=226 'g'
+ 232.063s  finished     id=225 cancelled
+ 233.000s  key          'g' repeat=False prompt='g' inside speak('g') +953 ms
+ 233.000s  worker.stop  last_enqueued=226 cancel_through=225->226 worker_speaking=True
+ 233.000s  cue          correct
+ 233.000s  ask          'j' block_keys=fghj
+ 233.000s  enqueue      id=227 'j'
+ 233.063s  finished     id=226 cancelled
+ 234.219s  finished     id=227 completed
+ 234.969s  key          'j' repeat=False prompt='j' no speak() in progress
+ 234.969s  cue          correct
+ 234.969s  ask          'h' block_keys=fghj
+ 234.969s  enqueue      id=228 'h'
+ 235.157s  key          'h' repeat=False prompt='h' inside speak('h') +188 ms
+ 235.157s  worker.stop  last_enqueued=228 cancel_through=226->228 worker_speaking=True
+ 235.157s  cue          correct
+ 235.157s  ask          'f' block_keys=fghj
+ 235.157s  enqueue      id=229 'f'
+ 235.782s  finished     id=228 cancelled
+ 237.000s  finished     id=229 completed
+ 237.032s  key          'f' repeat=False prompt='f' no speak() in progress
+ 237.032s  cue          correct
+ 237.032s  ask          'g' block_keys=fghj
+ 237.032s  enqueue      id=230 'g'
+ 238.219s  finished     id=230 completed
+ 239.125s  key          'g' repeat=False prompt='g' no speak() in progress
+ 239.125s  cue          correct
+ 239.125s  ask          'j' block_keys=fghj
+ 239.125s  enqueue      id=231 'j'
+ 240.328s  finished     id=231 completed
+ 240.453s  key          'j' repeat=False prompt='j' no speak() in progress
+ 240.453s  cue          correct
+ 240.453s  ask          'h' block_keys=fghj
+ 240.453s  enqueue      id=232 'h'
+ 241.422s  key          'h' repeat=False prompt='h' inside speak('h') +969 ms
+ 241.422s  worker.stop  last_enqueued=232 cancel_through=228->232 worker_speaking=True
+ 241.422s  cue          correct
+ 241.422s  block boundary
+ 241.422s  ask          'f' block_keys=fghj
+ 241.422s  enqueue      id=233 'f'
+ 241.469s  finished     id=232 cancelled
+ 242.375s  key          'f' repeat=False prompt='f' inside speak('f') +906 ms
+ 242.375s  worker.stop  last_enqueued=233 cancel_through=232->233 worker_speaking=True
+ 242.375s  cue          correct
+ 242.375s  ask          'g' block_keys=fghj
+ 242.375s  enqueue      id=234 'g'
+ 242.438s  finished     id=233 cancelled
+ 243.391s  key          'g' repeat=False prompt='g' inside speak('g') +969 ms
+ 243.391s  worker.stop  last_enqueued=234 cancel_through=233->234 worker_speaking=True
+ 243.391s  cue          correct
+ 243.391s  ask          'j' block_keys=fghj
+ 243.391s  enqueue      id=235 'j'
+ 243.453s  finished     id=234 cancelled
+ 244.360s  key          'h' repeat=False prompt='j' inside speak('j') +922 ms
+ 244.360s  worker.stop  last_enqueued=235 cancel_through=234->235 worker_speaking=True
+ 244.360s  cue          error
+ 244.360s  re-ask       'j' block_keys=fghj
+ 244.360s  enqueue      id=236 'j'
+ 244.407s  finished     id=235 cancelled
+ 245.610s  finished     id=236 completed
+ 245.735s  key          'j' repeat=False prompt='j' no speak() in progress
+ 245.735s  cue          correct
+ 245.735s  ask          'h' block_keys=fghj
+ 245.735s  enqueue      id=237 'h'
+ 246.719s  key          'h' repeat=False prompt='h' inside speak('h') +984 ms
+ 246.719s  worker.stop  last_enqueued=237 cancel_through=235->237 worker_speaking=True
+ 246.719s  cue          correct
+ 246.719s  block boundary
+ 246.719s  ask          'a' block_keys=aghrs
+ 246.719s  enqueue      id=238 'a'
+ 246.782s  finished     id=237 cancelled
+ 247.875s  finished     id=238 completed
+ 248.782s  key          'a' repeat=False prompt='a' no speak() in progress
+ 248.782s  cue          correct
+ 248.782s  ask          'g' block_keys=aghrs
+ 248.782s  enqueue      id=239 'g'
+ 249.969s  finished     id=239 completed
+ 250.391s  key          'g' repeat=False prompt='g' no speak() in progress
+ 250.391s  cue          correct
+ 250.391s  ask          'a' block_keys=aghrs
+ 250.391s  enqueue      id=240 'a'
+ 251.500s  finished     id=240 completed
+ 251.532s  key          'a' repeat=False prompt='a' no speak() in progress
+ 251.532s  cue          correct
+ 251.532s  ask          's' block_keys=aghrs
+ 251.532s  enqueue      id=241 's'
+ 252.813s  finished     id=241 completed
+ 252.860s  key          's' repeat=False prompt='s' no speak() in progress
+ 252.860s  cue          correct
+ 252.860s  ask          's' block_keys=aghrs
+ 252.860s  enqueue      id=242 's'
+ 253.875s  key          's' repeat=False prompt='s' inside speak('s') +1015 ms
+ 253.875s  worker.stop  last_enqueued=242 cancel_through=237->242 worker_speaking=True
+ 253.875s  cue          correct
+ 253.875s  ask          'h' block_keys=aghrs
+ 253.875s  enqueue      id=243 'h'
+ 253.922s  finished     id=242 cancelled
+ 255.203s  finished     id=243 completed
+ 255.282s  key          'h' repeat=False prompt='h' no speak() in progress
+ 255.282s  cue          correct
+ 255.282s  ask          'a' block_keys=aghrs
+ 255.282s  enqueue      id=244 'a'
+ 256.344s  key          'a' repeat=False prompt='a' inside speak('a') +1062 ms
+ 256.344s  worker.stop  last_enqueued=244 cancel_through=242->244 worker_speaking=True
+ 256.344s  cue          correct
+ 256.344s  ask          'a' block_keys=aghrs
+ 256.344s  enqueue      id=245 'a'
+ 256.391s  finished     id=244 cancelled
+ 257.297s  key          'a' repeat=False prompt='a' inside speak('a') +906 ms
+ 257.297s  worker.stop  last_enqueued=245 cancel_through=244->245 worker_speaking=True
+ 257.297s  cue          correct
+ 257.297s  ask          'g' block_keys=aghrs
+ 257.297s  enqueue      id=246 'g'
+ 257.344s  finished     id=245 cancelled
+ 258.532s  finished     id=246 completed
+ 258.750s  key          'j' repeat=False prompt='g' no speak() in progress
+ 258.750s  cue          error
+ 258.750s  re-ask       'g' block_keys=aghrs
+ 258.750s  enqueue      id=247 'g'
+ 259.500s  key          'g' repeat=False prompt='g' inside speak('g') +750 ms
+ 259.500s  worker.stop  last_enqueued=247 cancel_through=245->247 worker_speaking=True
+ 259.500s  cue          correct
+ 259.500s  ask          's' block_keys=aghrs
+ 259.500s  enqueue      id=248 's'
+ 259.563s  finished     id=247 cancelled
+ 260.813s  key          's' repeat=False prompt='s' no speak() in progress
+ 260.813s  worker.stop  last_enqueued=248 cancel_through=247->248 worker_speaking=False
+ 260.813s  cue          correct
+ 260.813s  ask          'h' block_keys=aghrs
+ 260.813s  enqueue      id=249 'h'
+ 260.813s  finished     id=248 completed
+ 260.828s  finished     id=249 completed
+ 262.969s  ESCAPE TAP (re-read)
+ 262.969s  re-ask       'h' block_keys=aghrs
+ 262.969s  enqueue      id=250 'h'
+ 264.266s  finished     id=250 completed
+ 264.563s  key          'h' repeat=False prompt='h' no speak() in progress
+ 264.563s  cue          correct
+ 264.563s  ask          'g' block_keys=aghrs
+ 264.563s  enqueue      id=251 'g'
+ 265.750s  finished     id=251 completed
+ 266.563s  key          'g' repeat=False prompt='g' no speak() in progress
+ 266.563s  cue          correct
+ 266.563s  ask          'r' block_keys=aghrs
+ 266.563s  enqueue      id=252 'r'
+ 267.813s  finished     id=252 completed
+ 267.907s  key          'r' repeat=False prompt='r' no speak() in progress
+ 267.907s  cue          correct
+ 267.907s  ask          's' block_keys=aghrs
+ 267.907s  enqueue      id=253 's'
+ 269.188s  finished     id=253 completed
+ 270.610s  key          's' repeat=False prompt='s' no speak() in progress
+ 270.610s  cue          correct
+ 270.610s  ask          'h' block_keys=aghrs
+ 270.610s  enqueue      id=254 'h'
+ 271.907s  finished     id=254 completed
+ 272.094s  key          'h' repeat=False prompt='h' no speak() in progress
+ 272.094s  cue          correct
+ 272.094s  ask          'a' block_keys=aghrs
+ 272.094s  enqueue      id=255 'a'
+ 273.203s  finished     id=255 completed
+ 273.782s  key          'a' repeat=False prompt='a' no speak() in progress
+ 273.782s  cue          correct
+ 273.782s  ask          'g' block_keys=aghrs
+ 273.782s  enqueue      id=256 'g'
+ 274.969s  finished     id=256 completed
+ 275.719s  key          'g' repeat=False prompt='g' no speak() in progress
+ 275.719s  cue          correct
+ 275.719s  ask          'a' block_keys=aghrs
+ 275.719s  enqueue      id=257 'a'
+ 276.828s  finished     id=257 completed
+ 277.141s  key          'a' repeat=False prompt='a' no speak() in progress
+ 277.141s  cue          correct
+ 277.141s  ask          'r' block_keys=aghrs
+ 277.141s  enqueue      id=258 'r'
+ 278.375s  key          'r' repeat=False prompt='r' inside speak('r') +1234 ms
+ 278.375s  worker.stop  last_enqueued=258 cancel_through=248->258 worker_speaking=True
+ 278.375s  cue          correct
+ 278.375s  ask          'a' block_keys=aghrs
+ 278.375s  enqueue      id=259 'a'
+ 278.391s  finished     id=258 cancelled
+ 279.485s  finished     id=259 completed
+ 280.000s  key          'a' repeat=False prompt='a' no speak() in progress
+ 280.000s  cue          correct
+ 280.000s  ask          's' block_keys=aghrs
+ 280.000s  enqueue      id=260 's'
+ 281.282s  finished     id=260 completed
+ 281.922s  key          's' repeat=False prompt='s' no speak() in progress
+ 281.922s  cue          correct
+ 281.922s  ask          'h' block_keys=aghrs
+ 281.922s  enqueue      id=261 'h'
+ 283.235s  finished     id=261 completed
+ 283.297s  key          'h' repeat=False prompt='h' no speak() in progress
+ 283.297s  cue          correct
+ 283.297s  ask          's' block_keys=aghrs
+ 283.297s  enqueue      id=262 's'
+ 284.578s  finished     id=262 completed
+ 285.016s  key          's' repeat=False prompt='s' no speak() in progress
+ 285.016s  cue          correct
+ 285.016s  ask          'a' block_keys=aghrs
+ 285.016s  enqueue      id=263 'a'
+ 286.125s  finished     id=263 completed
+ 286.157s  key          'a' repeat=False prompt='a' no speak() in progress
+ 286.157s  cue          correct
+ 286.157s  ask          'g' block_keys=aghrs
+ 286.157s  enqueue      id=264 'g'
+ 287.344s  finished     id=264 completed
+ 288.063s  key          'g' repeat=False prompt='g' no speak() in progress
+ 288.063s  cue          correct
+ 288.063s  ask          's' block_keys=aghrs
+ 288.063s  enqueue      id=265 's'
+ 289.219s  key          's' repeat=False prompt='s' inside speak('s') +1156 ms
+ 289.219s  worker.stop  last_enqueued=265 cancel_through=258->265 worker_speaking=True
+ 289.219s  cue          correct
+ 289.219s  ask          'h' block_keys=aghrs
+ 289.219s  enqueue      id=266 'h'
+ 289.282s  finished     id=265 cancelled
+ 290.563s  finished     id=266 completed
+ 290.719s  key          'h' repeat=False prompt='h' no speak() in progress
+ 290.719s  cue          correct
+ 290.719s  ask          'r' block_keys=aghrs
+ 290.719s  enqueue      id=267 'r'
+ 291.953s  finished     id=267 completed
+ 292.110s  key          'r' repeat=False prompt='r' no speak() in progress
+ 292.110s  cue          correct
+ 292.110s  ask          'a' block_keys=aghrs
+ 292.110s  enqueue      id=268 'a'
+ 293.219s  finished     id=268 completed
+ 293.360s  key          'a' repeat=False prompt='a' no speak() in progress
+ 293.360s  cue          correct
+ 293.360s  ask          'g' block_keys=aghrs
+ 293.360s  enqueue      id=269 'g'
+ 294.547s  finished     id=269 completed
+ 295.250s  key          'g' repeat=False prompt='g' no speak() in progress
+ 295.250s  cue          correct
+ 295.250s  ask          'h' block_keys=aghrs
+ 295.250s  enqueue      id=270 'h'
+ 296.547s  finished     id=270 completed
+ 296.766s  key          'h' repeat=False prompt='h' no speak() in progress
+ 296.766s  cue          correct
+ 296.766s  ask          'a' block_keys=aghrs
+ 296.766s  enqueue      id=271 'a'
+ 297.875s  finished     id=271 completed
+ 298.094s  key          'a' repeat=False prompt='a' no speak() in progress
+ 298.094s  cue          correct
+ 298.094s  ask          'a' block_keys=aghrs
+ 298.094s  enqueue      id=272 'a'
+ 299.203s  finished     id=272 completed
+ 299.250s  key          'a' repeat=False prompt='a' no speak() in progress
+ 299.250s  cue          correct
+ 299.250s  ask          'g' block_keys=aghrs
+ 299.250s  enqueue      id=273 'g'
+ 300.422s  finished     id=273 completed
+ 300.813s  key          'g' repeat=False prompt='g' no speak() in progress
+ 300.813s  cue          correct
+ 300.813s  ask          'h' block_keys=aghrs
+ 300.813s  enqueue      id=274 'h'
+ 302.063s  key          'h' repeat=False prompt='h' inside speak('h') +1250 ms
+ 302.063s  worker.stop  last_enqueued=274 cancel_through=265->274 worker_speaking=True
+ 302.063s  cue          correct
+ 302.063s  ask          'a' block_keys=aghrs
+ 302.063s  enqueue      id=275 'a'
+ 302.125s  finished     id=274 cancelled
+ 303.203s  key          'a' repeat=False prompt='a' no speak() in progress
+ 303.203s  worker.stop  last_enqueued=275 cancel_through=274->275 worker_speaking=False
+ 303.203s  cue          correct
+ 303.203s  ask          's' block_keys=aghrs
+ 303.203s  enqueue      id=276 's'
+ 303.203s  finished     id=275 completed
+ 303.235s  finished     id=276 completed
+ 305.282s  ESCAPE TAP (re-read)
+ 305.282s  re-ask       's' block_keys=aghrs
+ 305.282s  enqueue      id=277 's'
+ 306.563s  finished     id=277 completed
+ 306.625s  key          's' repeat=False prompt='s' no speak() in progress
+ 306.625s  cue          correct
+ 306.625s  ask          'g' block_keys=aghrs
+ 306.625s  enqueue      id=278 'g'
+ 307.813s  finished     id=278 completed
+
+## Every speak() call
+   2.157s    6453 ms  flag_in=False flag_out=False 'New letter: A. Use your left little finger. Reach '
+   8.625s     985 ms  flag_in=False flag_out=True  'a'
+   9.610s     718 ms  flag_in=False flag_out=True  'a'
+  10.328s    1094 ms  flag_in=False flag_out=True  'a'
+  11.422s     985 ms  flag_in=False flag_out=True  'a'
+  12.407s    1093 ms  flag_in=False flag_out=False 'a'
+  13.516s    1078 ms  flag_in=False flag_out=True  'a'
+  14.594s    1094 ms  flag_in=False flag_out=False 'a'
+  15.782s    1093 ms  flag_in=False flag_out=False 'a'
+  16.891s    1094 ms  flag_in=False flag_out=False 'a'
+  18.063s    1125 ms  flag_in=False flag_out=True  'a'
+  19.188s    1265 ms  flag_in=False flag_out=False 's'
+  21.078s    1000 ms  flag_in=False flag_out=True  'a'
+  22.078s    1032 ms  flag_in=False flag_out=True  's'
+  23.110s     906 ms  flag_in=False flag_out=True  'a'
+  24.016s     844 ms  flag_in=False flag_out=True  's'
+  24.860s     890 ms  flag_in=False flag_out=True  'a'
+  25.750s    1141 ms  flag_in=False flag_out=True  's'
+  26.891s    1109 ms  flag_in=False flag_out=True  'a'
+  28.000s    1016 ms  flag_in=False flag_out=True  's'
+  29.016s    1031 ms  flag_in=False flag_out=True  'a'
+  30.047s     969 ms  flag_in=False flag_out=True  's'
+  31.016s     969 ms  flag_in=False flag_out=True  'a'
+  31.985s    1015 ms  flag_in=False flag_out=True  's'
+  33.000s     938 ms  flag_in=False flag_out=True  'a'
+  33.938s    1031 ms  flag_in=False flag_out=True  's'
+  34.969s     969 ms  flag_in=False flag_out=True  'a'
+  35.938s     984 ms  flag_in=False flag_out=True  's'
+  36.922s    1000 ms  flag_in=False flag_out=True  'a'
+  37.922s    1016 ms  flag_in=False flag_out=True  's'
+  38.938s     937 ms  flag_in=False flag_out=True  'a'
+  39.875s    1000 ms  flag_in=False flag_out=True  's'
+  40.875s    1094 ms  flag_in=False flag_out=False 'a'
+  43.078s     797 ms  flag_in=False flag_out=True  's'
+  43.875s      63 ms  flag_in=False flag_out=True  'a'
+  43.938s     797 ms  flag_in=False flag_out=True  's'
+  44.735s     781 ms  flag_in=False flag_out=True  's'
+  45.516s    1094 ms  flag_in=False flag_out=False 'a'
+  47.203s    1266 ms  flag_in=False flag_out=False 's'
+  48.578s    1047 ms  flag_in=False flag_out=True  'a'
+  49.625s     797 ms  flag_in=False flag_out=True  's'
+  50.422s     781 ms  flag_in=False flag_out=True  's'
+  51.203s     579 ms  flag_in=False flag_out=True  'a'
+  51.782s     781 ms  flag_in=False flag_out=True  's'
+  52.563s    1078 ms  flag_in=False flag_out=False 'a'
+  54.282s     921 ms  flag_in=False flag_out=True  's'
+  55.203s    1094 ms  flag_in=False flag_out=False 'a'
+  56.313s    1234 ms  flag_in=False flag_out=False 'l'
+  60.016s    1094 ms  flag_in=False flag_out=False 'a'
+  61.125s    1094 ms  flag_in=False flag_out=True  's'
+  62.219s    1094 ms  flag_in=False flag_out=False 'a'
+  63.453s    1235 ms  flag_in=False flag_out=False 'r'
+  64.891s    1219 ms  flag_in=False flag_out=True  'l'
+  66.110s    1109 ms  flag_in=False flag_out=True  'a'
+  67.219s     875 ms  flag_in=False flag_out=True  'a'
+  68.094s    1219 ms  flag_in=False flag_out=False 'l'
+  69.313s       0 ms  flag_in=True  flag_out=True  'a'
+  72.375s    1094 ms  flag_in=False flag_out=False 'a'
+  73.938s    1265 ms  flag_in=False flag_out=True  'r'
+  75.203s    1094 ms  flag_in=False flag_out=True  'a'
+  76.297s    1094 ms  flag_in=False flag_out=True  'a'
+  77.391s    1125 ms  flag_in=False flag_out=True  's'
+  78.516s    1094 ms  flag_in=False flag_out=False 'a'
+  79.625s    1125 ms  flag_in=False flag_out=True  'r'
+  80.750s    1078 ms  flag_in=False flag_out=True  'a'
+  81.828s    1219 ms  flag_in=False flag_out=False 'l'
+  83.094s    1094 ms  flag_in=False flag_out=True  'l'
+  84.188s    1094 ms  flag_in=False flag_out=False 'a'
+  85.344s    1094 ms  flag_in=False flag_out=True  's'
+  86.438s    1094 ms  flag_in=False flag_out=False 'a'
+  87.625s    1110 ms  flag_in=False flag_out=True  'l'
+  88.735s    1078 ms  flag_in=False flag_out=False 'a'
+  89.844s    1031 ms  flag_in=False flag_out=True  's'
+  90.875s    1219 ms  flag_in=False flag_out=False 'l'
+  92.250s    1063 ms  flag_in=False flag_out=True  'a'
+  93.313s    1234 ms  flag_in=False flag_out=True  'r'
+  94.547s    1094 ms  flag_in=False flag_out=False 'a'
+  95.891s    1266 ms  flag_in=False flag_out=False 's'
+  97.641s    1219 ms  flag_in=False flag_out=True  'l'
+  98.860s    1093 ms  flag_in=False flag_out=False 'a'
+ 100.016s    1266 ms  flag_in=False flag_out=False 's'
+ 101.407s    1109 ms  flag_in=False flag_out=True  'r'
+ 102.516s    1016 ms  flag_in=False flag_out=True  'a'
+ 103.532s     984 ms  flag_in=False flag_out=True  'l'
+ 104.516s    1281 ms  flag_in=False flag_out=False 's'
+ 105.797s       0 ms  flag_in=True  flag_out=True  'a'
+ 107.985s    1093 ms  flag_in=False flag_out=True  'a'
+ 109.078s    1219 ms  flag_in=False flag_out=False 'l'
+ 110.391s    1266 ms  flag_in=False flag_out=False 's'
+ 112.063s    1015 ms  flag_in=False flag_out=True  'a'
+ 113.078s    1016 ms  flag_in=False flag_out=True  'l'
+ 114.094s    1094 ms  flag_in=False flag_out=False 'a'
+ 115.344s    1203 ms  flag_in=False flag_out=True  'r'
+ 116.547s    1094 ms  flag_in=False flag_out=False 'a'
+ 118.094s    1109 ms  flag_in=False flag_out=True  's'
+ 119.203s    1094 ms  flag_in=False flag_out=False 'a'
+ 120.360s    1218 ms  flag_in=False flag_out=True  's'
+ 121.578s    1079 ms  flag_in=False flag_out=True  'l'
+ 122.657s    1031 ms  flag_in=False flag_out=True  'a'
+ 123.688s    1219 ms  flag_in=False flag_out=True  'l'
+ 124.907s     968 ms  flag_in=False flag_out=True  'a'
+ 125.875s    1188 ms  flag_in=False flag_out=True  'l'
+ 127.063s    1125 ms  flag_in=False flag_out=True  'l'
+ 128.188s    1047 ms  flag_in=False flag_out=True  'a'
+ 129.235s    1093 ms  flag_in=False flag_out=True  'l'
+ 130.328s    1079 ms  flag_in=False flag_out=True  'l'
+ 131.407s    1093 ms  flag_in=False flag_out=False 'a'
+ 132.563s     953 ms  flag_in=False flag_out=True  'l'
+ 133.516s    1187 ms  flag_in=False flag_out=True  'l'
+ 134.703s    1079 ms  flag_in=False flag_out=True  'a'
+ 135.782s    1031 ms  flag_in=False flag_out=True  'a'
+ 136.813s     984 ms  flag_in=False flag_out=True  'l'
+ 137.797s    1141 ms  flag_in=False flag_out=True  's'
+ 138.938s    1094 ms  flag_in=False flag_out=False 'a'
+ 140.078s    1125 ms  flag_in=False flag_out=True  'r'
+ 141.203s    1110 ms  flag_in=False flag_out=True  'r'
+ 142.313s     969 ms  flag_in=False flag_out=True  'a'
+ 143.282s    1109 ms  flag_in=False flag_out=True  'r'
+ 144.391s     969 ms  flag_in=False flag_out=True  'a'
+ 145.360s     968 ms  flag_in=False flag_out=True  'r'
+ 146.328s    1000 ms  flag_in=False flag_out=True  'a'
+ 147.328s    1141 ms  flag_in=False flag_out=True  'r'
+ 148.469s    1203 ms  flag_in=False flag_out=True  'r'
+ 149.672s    1094 ms  flag_in=False flag_out=False 'a'
+ 151.391s    1219 ms  flag_in=False flag_out=False 'l'
+ 152.953s    6516 ms  flag_in=False flag_out=False 'New letter: G. Use your left index finger. Reach o'
+ 159.485s    6531 ms  flag_in=False flag_out=False 'New letter: H. Use your right index finger. Reach '
+ 166.047s    1172 ms  flag_in=False flag_out=False 'g'
+ 168.328s    1110 ms  flag_in=False flag_out=True  'h'
+ 169.438s     797 ms  flag_in=False flag_out=True  'g'
+ 170.235s     984 ms  flag_in=False flag_out=True  'h'
+ 171.219s     938 ms  flag_in=False flag_out=True  'g'
+ 172.157s     906 ms  flag_in=False flag_out=True  'h'
+ 173.063s     875 ms  flag_in=False flag_out=True  'g'
+ 173.938s     844 ms  flag_in=False flag_out=True  'h'
+ 174.782s     890 ms  flag_in=False flag_out=True  'g'
+ 175.672s     938 ms  flag_in=False flag_out=True  'h'
+ 176.610s     937 ms  flag_in=False flag_out=True  'g'
+ 177.547s     922 ms  flag_in=False flag_out=True  'h'
+ 178.469s     938 ms  flag_in=False flag_out=True  'g'
+ 179.407s     921 ms  flag_in=False flag_out=True  'h'
+ 180.328s     891 ms  flag_in=False flag_out=True  'g'
+ 181.219s     906 ms  flag_in=False flag_out=True  'h'
+ 182.125s    1000 ms  flag_in=False flag_out=True  'g'
+ 183.125s     969 ms  flag_in=False flag_out=True  'h'
+ 184.094s     938 ms  flag_in=False flag_out=True  'g'
+ 185.032s     875 ms  flag_in=False flag_out=True  'h'
+ 185.907s    1234 ms  flag_in=False flag_out=False 'f'
+ 187.782s    1187 ms  flag_in=False flag_out=False 'g'
+ 189.360s    1187 ms  flag_in=False flag_out=False 'j'
+ 190.750s    1047 ms  flag_in=False flag_out=True  'h'
+ 191.797s    1000 ms  flag_in=False flag_out=True  'f'
+ 192.797s    1000 ms  flag_in=False flag_out=True  'g'
+ 193.797s    1172 ms  flag_in=False flag_out=False 'g'
+ 195.203s    1188 ms  flag_in=False flag_out=False 'j'
+ 196.422s    1047 ms  flag_in=False flag_out=True  'h'
+ 197.469s    1156 ms  flag_in=False flag_out=True  'f'
+ 198.625s     688 ms  flag_in=False flag_out=True  'g'
+ 199.313s     687 ms  flag_in=False flag_out=True  'j'
+ 200.000s      63 ms  flag_in=False flag_out=True  'f'
+ 200.063s     672 ms  flag_in=False flag_out=True  'g'
+ 200.735s     797 ms  flag_in=False flag_out=True  'h'
+ 201.532s     687 ms  flag_in=False flag_out=True  'j'
+ 202.219s     734 ms  flag_in=False flag_out=True  'f'
+ 202.953s     797 ms  flag_in=False flag_out=True  'h'
+ 203.750s     672 ms  flag_in=False flag_out=True  'g'
+ 204.422s      63 ms  flag_in=False flag_out=True  'h'
+ 204.485s    1234 ms  flag_in=False flag_out=False 'f'
+ 206.141s     891 ms  flag_in=False flag_out=True  'g'
+ 207.032s    1093 ms  flag_in=False flag_out=True  'j'
+ 208.125s     813 ms  flag_in=False flag_out=True  'h'
+ 208.938s    1219 ms  flag_in=False flag_out=False 'f'
+ 210.719s     703 ms  flag_in=False flag_out=True  'g'
+ 211.422s     781 ms  flag_in=False flag_out=True  'h'
+ 212.203s     688 ms  flag_in=False flag_out=True  'j'
+ 212.891s      62 ms  flag_in=False flag_out=True  'f'
+ 212.953s     672 ms  flag_in=False flag_out=True  'g'
+ 213.625s     782 ms  flag_in=False flag_out=True  'h'
+ 214.407s     687 ms  flag_in=False flag_out=True  'j'
+ 215.094s     672 ms  flag_in=False flag_out=True  'g'
+ 215.766s     797 ms  flag_in=False flag_out=True  'h'
+ 216.563s     672 ms  flag_in=False flag_out=True  'j'
+ 217.235s     687 ms  flag_in=False flag_out=True  'g'
+ 217.922s     781 ms  flag_in=False flag_out=True  'h'
+ 218.703s     672 ms  flag_in=False flag_out=True  'j'
+ 219.375s    1235 ms  flag_in=False flag_out=False 'f'
+ 220.922s    1188 ms  flag_in=False flag_out=False 'g'
+ 222.407s    1171 ms  flag_in=False flag_out=False 'j'
+ 224.203s    1282 ms  flag_in=False flag_out=False 'h'
+ 225.828s    1235 ms  flag_in=False flag_out=False 'f'
+ 227.157s    1171 ms  flag_in=False flag_out=False 'g'
+ 228.922s     688 ms  flag_in=False flag_out=True  'j'
+ 229.610s    1234 ms  flag_in=False flag_out=True  'h'
+ 230.844s    1203 ms  flag_in=False flag_out=True  'f'
+ 232.047s    1000 ms  flag_in=False flag_out=True  'g'
+ 233.047s    1172 ms  flag_in=False flag_out=False 'j'
+ 234.969s     797 ms  flag_in=False flag_out=True  'h'
+ 235.766s    1219 ms  flag_in=False flag_out=False 'f'
+ 237.032s    1187 ms  flag_in=False flag_out=False 'g'
+ 239.125s    1188 ms  flag_in=False flag_out=False 'j'
+ 240.453s    1016 ms  flag_in=False flag_out=True  'h'
+ 241.469s     953 ms  flag_in=False flag_out=True  'f'
+ 242.422s    1016 ms  flag_in=False flag_out=True  'g'
+ 243.438s     969 ms  flag_in=False flag_out=True  'j'
+ 244.407s    1187 ms  flag_in=False flag_out=False 'j'
+ 245.735s    1031 ms  flag_in=False flag_out=True  'h'
+ 246.766s    1094 ms  flag_in=False flag_out=False 'a'
+ 248.782s    1187 ms  flag_in=False flag_out=False 'g'
+ 250.391s    1094 ms  flag_in=False flag_out=False 'a'
+ 251.532s    1265 ms  flag_in=False flag_out=False 's'
+ 252.860s    1047 ms  flag_in=False flag_out=True  's'
+ 253.907s    1281 ms  flag_in=False flag_out=False 'h'
+ 255.282s    1109 ms  flag_in=False flag_out=True  'a'
+ 256.391s     953 ms  flag_in=False flag_out=True  'a'
+ 257.344s    1188 ms  flag_in=False flag_out=False 'g'
+ 258.750s     797 ms  flag_in=False flag_out=True  'g'
+ 259.547s    1266 ms  flag_in=False flag_out=False 's'
+ 260.813s       0 ms  flag_in=True  flag_out=True  'h'
+ 262.969s    1281 ms  flag_in=False flag_out=False 'h'
+ 264.563s    1187 ms  flag_in=False flag_out=False 'g'
+ 266.563s    1234 ms  flag_in=False flag_out=False 'r'
+ 267.907s    1281 ms  flag_in=False flag_out=False 's'
+ 270.610s    1297 ms  flag_in=False flag_out=False 'h'
+ 272.094s    1094 ms  flag_in=False flag_out=False 'a'
+ 273.782s    1187 ms  flag_in=False flag_out=False 'g'
+ 275.719s    1094 ms  flag_in=False flag_out=False 'a'
+ 277.141s    1250 ms  flag_in=False flag_out=True  'r'
+ 278.391s    1078 ms  flag_in=False flag_out=False 'a'
+ 280.000s    1282 ms  flag_in=False flag_out=False 's'
+ 281.922s    1297 ms  flag_in=False flag_out=False 'h'
+ 283.297s    1266 ms  flag_in=False flag_out=False 's'
+ 285.016s    1094 ms  flag_in=False flag_out=False 'a'
+ 286.157s    1171 ms  flag_in=False flag_out=False 'g'
+ 288.063s    1203 ms  flag_in=False flag_out=True  's'
+ 289.266s    1281 ms  flag_in=False flag_out=False 'h'
+ 290.719s    1219 ms  flag_in=False flag_out=False 'r'
+ 292.110s    1093 ms  flag_in=False flag_out=False 'a'
+ 293.360s    1187 ms  flag_in=False flag_out=False 'g'
+ 295.250s    1266 ms  flag_in=False flag_out=False 'h'
+ 296.766s    1094 ms  flag_in=False flag_out=False 'a'
+ 298.094s    1094 ms  flag_in=False flag_out=False 'a'
+ 299.250s    1172 ms  flag_in=False flag_out=False 'g'
+ 300.813s    1297 ms  flag_in=False flag_out=True  'h'
+ 302.110s    1093 ms  flag_in=False flag_out=False 'a'
+ 303.203s       0 ms  flag_in=True  flag_out=True  's'
+ 305.282s    1281 ms  flag_in=False flag_out=False 's'
+ 306.625s    1172 ms  flag_in=False flag_out=False 'g'

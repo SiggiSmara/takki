@@ -27,6 +27,12 @@ never reaches the ear (an output device dropping audio). Listen during the
 run; a silence the report calls AUDIBLE points at the output side.
 
     uv run python spikes/silent_prompt_spike.py [--minutes 15] [--out PATH]
+    uv run python spikes/silent_prompt_spike.py --manual [--out PATH]
+
+--manual (added 2026-09-27) runs no bot: you type, and tap Escape the moment
+a letter goes unspoken. Each key is logged with whether it landed inside a
+speak() call, and each tap is reported with the 6 s of log before it. Close
+the window to end.
 
 **Do not touch the keyboard or mouse while it runs.** The bot types only
 while Takki is the foreground window and the target letter is on the same
@@ -67,6 +73,10 @@ class Speak:
     flag_on_entry: bool
     left: float | None = None
     flag_on_exit: bool = False
+    # perf_counter: time.monotonic() ticks at ~15.6 ms on Windows, too coarse
+    # to place a keypress against the end of a letter (flag_race_sweep.py).
+    p_entered: float = field(default_factory=time.perf_counter)
+    p_left: float | None = None
 
     @property
     def duration(self) -> float:
@@ -104,6 +114,7 @@ def _instrument() -> None:
         try:
             original_speak(self, text)
         finally:
+            record.p_left = time.perf_counter()
             record.left = time.monotonic()
             record.flag_on_exit = self._cancel.is_set()
             with LOG.lock:
@@ -183,6 +194,26 @@ def _instrument() -> None:
 
         setattr(session.SessionLoop, name, wrapped)
 
+    # --manual: the human's keys, with where they landed relative to speech --
+    # the one timing the bot never exercises (it presses only after speak()
+    # has returned).
+    original_character = session.SessionLoop._on_character
+
+    def on_character(self, typed) -> None:  # type: ignore[no-untyped-def]
+        with LOG.lock:
+            speaking = LOG.in_speak
+        where = (
+            f"inside speak({speaking.text[:12]!r}) +{(time.monotonic() - speaking.entered) * 1000:.0f} ms"
+            if speaking
+            else "no speak() in progress"
+        )
+        LOG.line(
+            f"key          {typed.char!r} repeat={typed.repeat} prompt={self._prompt!r} {where}"
+        )
+        original_character(self, typed)
+
+    session.SessionLoop._on_character = on_character  # type: ignore[method-assign]
+    wrap("_on_reread", "ESCAPE TAP (re-read)")
     wrap("_on_timeout", "timeout (B9)")
     wrap("_on_restart", "restart")
     wrap("_begin_block", "block boundary")
@@ -299,6 +330,13 @@ def _report(out: Path, t0: float) -> None:
             for when, text in lines:
                 if at - 3.0 <= when <= at + LETTER_WAIT_S:
                     f.write(f"    {when - t0:8.3f}s  {text}\n")
+        taps = [when for when, text in lines if text.startswith("ESCAPE TAP")]
+        f.write(f"\n## Every Escape tap ({len(taps)}), with the 6 s of log before it\n")
+        for at in taps:
+            f.write(f"\n[{at - t0:8.3f}s] ESCAPE TAP\n")
+            for when, text in lines:
+                if at - 6.0 <= when <= at:
+                    f.write(f"    {when - t0:8.3f}s  {text}\n")
         f.write("\n## Full log\n")
         for when, text in lines:
             f.write(f"{when - t0:8.3f}s  {text}\n")
@@ -333,6 +371,11 @@ def main() -> int:
     parser.add_argument("--minutes", type=float, default=15.0)
     parser.add_argument("--out", type=Path, default=Path("spikes/results/silent_prompt.log"))
     parser.add_argument("--seed", type=int, default=None)
+    parser.add_argument(
+        "--manual",
+        action="store_true",
+        help="no bot: you type, and tap Escape the moment a letter goes unspoken; close the window to end",
+    )
     args = parser.parse_args()
 
     from takki.data_dir import database_path
@@ -360,7 +403,12 @@ def main() -> int:
 
     t0 = time.monotonic()
     rng = random.Random(args.seed)
-    threading.Thread(target=_bot, args=(args.minutes, rng), daemon=True, name="bot").start()
+    if args.manual:
+        print(
+            "manual: type as usual; tap Escape (short) the moment a letter goes unspoken; close the window to end"
+        )
+    else:
+        threading.Thread(target=_bot, args=(args.minutes, rng), daemon=True, name="bot").start()
     code = 0
     try:
         code = takki_main.main()

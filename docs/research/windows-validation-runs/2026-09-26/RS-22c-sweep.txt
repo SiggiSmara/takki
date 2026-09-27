@@ -1,0 +1,57 @@
+# flag_race_sweep report
+
+trials: 596  SILENT: 61
+control inside: 54 trials, 0 SILENT
+control after : 58 trials, 0 SILENT
+end-of-letter prediction error: median -0.2 ms, sd 3.6 ms, n=284
+send -> key dispatched: median 10.2 ms, max 29.9 ms (hook latency + wait for the tick)
+rule 'SILENT iff key dispatched before finished and the letter was not cut': holds on 190 of 190
+
+offset from the letter's end (send time), 2 ms bins, sweep trials:
+
+   bin (ms)      n  SILENT  cut  basis
+  [  -60,  -58)    18       0   18  0/18 actual
+  [  -58,  -56)    14       0   14  0/14 actual
+  [  -56,  -54)    12       0   12  0/12 actual
+  [  -54,  -52)    12       0   12  0/12 actual
+  [  -52,  -50)    11       0   11  0/11 actual
+  [  -50,  -48)     8       0    8  0/8 actual
+  [  -48,  -46)    10       0   10  0/10 actual
+  [  -46,  -44)    12       0   12  0/12 actual
+  [  -44,  -42)     6       0    6  0/6 actual
+  [  -42,  -40)     4       0    4  0/4 actual
+  [  -40,  -38)     5       0    5  0/5 actual
+  [  -38,  -36)    12       0   12  0/12 actual
+  [  -36,  -34)    13       0   13  0/13 actual
+  [  -34,  -32)     9       0    9  0/9 actual
+  [  -32,  -30)     7       0    7  0/7 actual
+  [  -30,  -28)    11       0   11  0/11 actual
+  [  -28,  -26)    14       0   14  0/14 actual
+  [  -26,  -24)     8       0    8  0/8 actual
+  [  -24,  -22)    17       0   17  0/17 actual
+  [  -22,  -20)    10       1    9  1/10 actual  #
+  [  -20,  -18)     8       2    6  2/8 actual  ##
+  [  -18,  -16)    18       5   13  5/18 actual  #####
+  [  -16,  -14)     9       3    6  3/9 actual  ###
+  [  -14,  -12)    15       8    7  8/15 actual  ########
+  [  -12,  -10)     9       6    3  6/9 actual  ######
+  [  -10,   -8)    10       6    4  6/10 actual  ######
+  [   -8,   -6)    14      10    4  10/14 actual  ##########
+  [   -6,   -4)    15      13    2  13/15 actual  #############
+  [   -4,   -2)    10       7    1  9/10 actual  #######
+  [   -2,   +0)     8       0    0  8/8 actual
+  [   +0,   +2)    11       0    0  11/11 actual
+  [   +2,   +4)    11       0    0  11/11 actual
+  [   +4,   +6)    13       0    0  13/13 actual
+  [   +6,   +8)    11       0    0  11/11 actual
+  [   +8,  +10)     9       0    0  9/9 actual
+  [  +10,  +12)    10       0    0  10/10 actual
+  [  +12,  +14)     9       0    0  9/9 actual
+  [  +14,  +16)     6       0    0  6/6 actual
+  [  +16,  +18)     8       0    0  8/8 actual
+  [  +18,  +20)    12       0    0  12/12 actual
+  [  +20,  +22)     7       0    0  7/7 actual
+  [  +22,  +24)     9       0    0  9/9 actual
+  [  +24,  +26)    13       0    0  13/13 actual
+  [  +26,  +28)    12       0    0  12/12 actual
+  [  +28,  +30)     5       0    0  5/5 actual

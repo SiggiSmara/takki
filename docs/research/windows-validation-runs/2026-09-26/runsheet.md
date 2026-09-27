@@ -507,7 +507,7 @@ End time: 18:12:06 **with a lot of interruptions due to investigations**
 
 Start after local midnight following Sitting 1. Do not start before midnight and practise across it (that is D6).
 
-Date:  Start time:
+Date:  27-09-2026 Start time: 08:15
 
 ### RS-19 · Day 1 rows present (S36)
 
@@ -515,7 +515,51 @@ Date:  Start time:
 ```powershell
 uv run python -m takki.progress_dump
 ```
-- Day 1 rows present:
+- Day 1 rows present: **yes**, all six anchors have a `2026-09-26` row. *Taken 08:25, after RS-20 had started (Takki launched 08:16, session 2 in progress), so day-2 rows are already present too.* `f`'s day-1 row shows 180, where RS-12/RS-18 showed 200. This is the 200-attempt rolling window (`ATTEMPT_WINDOW`, [sqlite_store.py](../../../../src/takki/persistence/sqlite_store.py) prunes each key's oldest rows): 180 + 20 today = 200. `key_stats` is lifetime and unpruned (221). Expected, not data loss. Sitting 1 notes say "nine keys"; the database on disk had six at the end of day 1, as the RS-12/RS-18 dumps show.
+- **Result (RS-19):** pass
+
+```text
+Profile: dev (id=1, language=en, created 2026-09-26T17:52:40)
+
+key_stats (lifetime)
+  key  attempts  correct  accuracy  last_practised_at
+  d          70       67    95.7%  2026-09-27T08:23:51
+  f         221      217    98.2%  2026-09-27T08:18:06
+  j         195      194    99.5%  2026-09-27T08:18:06
+  k          62       62   100.0%  2026-09-27T08:23:48
+  l          11       11   100.0%  2026-09-27T08:23:50
+  m          38       38   100.0%  2026-09-27T08:23:10
+  r         121      119    98.3%  2026-09-27T08:23:07
+  s          11       11   100.0%  2026-09-27T08:23:46
+  u          91       89    97.8%  2026-09-27T08:23:12
+  v          32       32   100.0%  2026-09-26T18:11:46
+
+key_attempts by calendar day
+  key  day        attempts  correct  accuracy
+  d    2026-09-27       70       67    95.7%
+  f    2026-09-26      180      177    98.3%
+  f    2026-09-27       20       19    95.0%
+  j    2026-09-26      175      174    99.4%
+  j    2026-09-27       20       20   100.0%
+  k    2026-09-27       62       62   100.0%
+  l    2026-09-27       11       11   100.0%
+  m    2026-09-26       32       32   100.0%
+  m    2026-09-27        6        6   100.0%
+  r    2026-09-26       74       73    98.6%
+  r    2026-09-27       47       46    97.9%
+  s    2026-09-27       11       11   100.0%
+  u    2026-09-26       61       61   100.0%
+  u    2026-09-27       30       28    93.3%
+  v    2026-09-26       32       32   100.0%
+
+milestones
+  (none)
+
+sessions
+    id  started_at           ended_at
+     1  2026-09-26T17:52:41  2026-09-26T18:12:06
+     2  2026-09-27T08:16:37  (in progress)
+```
 
 ### RS-20 · D4: the anchor rung (S37–S40)
 
@@ -529,22 +573,65 @@ uv run python -m takki.progress_dump
    uv run python -m takki.progress_dump
    ```
    Each of `r f v u j m` needs a row dated **today**, ≥ 25 attempts, ≥ 95% accuracy.
+   > **Sheet error, corrected 2026-09-27 during the run.** The protocol's D4 row and `ANCHOR_CRITERION` ([milestones.py](../../../../src/takki/lesson/milestones.py)) define the bar as ≥ 25 attempts and ≥ 95% accuracy **over the key's last 200 attempts, across both days**, plus practice on **≥ 2 dates**. A row dated today proves the second date, and any number of attempts counts. "Qualifying" in the table below uses this reading. The bar is checked at block boundaries.
 4. When `anchor` appears in `milestones`, practise **one more block**, then dump again. `anchor` must be there **exactly once**.
 5. If after 30 min some anchor key still has no row for today, write down which one. That is a finding.
 
 | Time | Keys qualifying today | `anchor` in milestones? |
 |---|---|---|
-| | | |
+| 08:25 | `r f u j m` (window: r 98.3%, f 98.0%, u 97.8%, j 99.5%, m 100%, all on 2 dates). **`v` not yet**: 32 attempts at 100%, but no attempt today. `d k l s` introduced since 08:16 | no |
+| 08:29 | Unchanged: `r f u j m` (window: r 98.4%, u 98.1%, f/j/m untouched since 08:18/08:23). **`v` still no attempt today.** No new letter since `s`; this stretch went to `d k l s u r` | no |
 | | | |
 | | | |
 | | | |
 
-- Keys never reached today after 30 min (finding):
-- `anchor` count after the extra block:
-- **Result (D4):**
+- Keys never reached today after 30 min (finding): *(confirmed from the code at ~08:33, before the 30 minutes were up)* **`v`**, with zero prompts since 08:16. [session.py](../../../../src/takki/session.py) `_begin_block` runs `_introduce()` before `next_block()`. So the boundary where one ramp-up ends starts the next step's ramp-up, and no steady-state block runs between steps. This is a within-session form of #12d, not only the restart form. Mechanism, from [drills.py](../../../../src/takki/lesson/drills.py) `next_block`: spaced re-exposure (`_reexpose`) is the path that serves a key not practised this session, rarest first. That would be `v`. It only runs on steady-state blocks, and ramp-up blocks skip it. Session 2 has done nothing but ramp-ups (`d`, `k`, `l`, `s` introduced in ~7 min, alpha-plan #12d). Phase C's partners are the 2–3 most frequent Active keys, which never includes `v` (#12e). So `v` cannot be asked until introductions stop. Consequence for D4: **the anchor rung is blocked by the introduction pacing, not by the child's accuracy.** Five of six anchors already meet the bar.
+- `anchor` count after the extra block: 0. The rung never fired, so step 4 was never reached.
+- **Result (D4):** **Fail**, recorded 08:38 at the developer's call. The rung is unreachable in this build because introductions starve `v`. Persistence and the gate itself did not fail: five of six anchors meet the bar over two dates. **Design decision reopened** (developer, 2026-09-27): whether the curriculum waits for the anchor rung. Learning six keys in one day is realistic only for a child already used to a keyboard or with exceptional motor skills, so the day-one cost that decided "does not wait" is smaller than assumed. See roadmap § D *Does the curriculum wait for the anchor gate?* and alpha-plan #12d. **D4 must be re-run** after #12d/#12e.
 
 ```text
-(paste the final dump here)
+Taken 08:38; no attempts since 08:29:19.
+
+Profile: dev (id=1, language=en, created 2026-09-26T17:52:40)
+
+key_stats (lifetime)
+  key  attempts  correct  accuracy  last_practised_at
+  d          92       89    96.7%  2026-09-27T08:29:13
+  f         221      217    98.2%  2026-09-27T08:18:06
+  j         195      194    99.5%  2026-09-27T08:18:06
+  k          81       81   100.0%  2026-09-27T08:28:03
+  l          49       48    98.0%  2026-09-27T08:29:19
+  m          38       38   100.0%  2026-09-27T08:23:10
+  r         125      123    98.4%  2026-09-27T08:28:46
+  s          45       44    97.8%  2026-09-27T08:29:16
+  u         103      101    98.1%  2026-09-27T08:29:18
+  v          32       32   100.0%  2026-09-26T18:11:46
+
+key_attempts by calendar day
+  key  day        attempts  correct  accuracy
+  d    2026-09-27       92       89    96.7%
+  f    2026-09-26      180      177    98.3%
+  f    2026-09-27       20       19    95.0%
+  j    2026-09-26      175      174    99.4%
+  j    2026-09-27       20       20   100.0%
+  k    2026-09-27       81       81   100.0%
+  l    2026-09-27       49       48    98.0%
+  m    2026-09-26       32       32   100.0%
+  m    2026-09-27        6        6   100.0%
+  r    2026-09-26       74       73    98.6%
+  r    2026-09-27       51       50    98.0%
+  s    2026-09-27       45       44    97.8%
+  u    2026-09-26       61       61   100.0%
+  u    2026-09-27       42       40    95.2%
+  v    2026-09-26       32       32   100.0%
+
+milestones
+  (none)
+
+sessions
+    id  started_at           ended_at
+     1  2026-09-26T17:52:41  2026-09-26T18:12:06
+     2  2026-09-27T08:16:37  (in progress)
 ```
 
 ### RS-21 · C7 + C3: trace against dump (S41–S46)
@@ -576,11 +663,25 @@ uv run python -m takki.progress_dump
 ⛔ **C7 fails:** read the divergence block first. If it points at something you did (typed during an introduction, left the window, pressed Escape near 800 ms), run RS-21 again. If not, stop: the dump's numbers are not what the engine thinks.
 
 ```text
-(paste full C7 output here)
+Trace: docs\research\windows-validation-runs\2026-09-26\RS-21.log section 1 of 1, started 2026-09-27 10:45:52.702
+DB:    C:\Users\smara\AppData\Local\Takki\takki.sqlite profile 1; 53 key_attempts rows in [10:45:52, 10:50:56]
+
+Trace: 553 presses, 96 releases; 122 named-key events; 408 held-key repeats removed (rule 2); 59 actuations, 18 of them upper case (rule 1); 0 releases reported a different case than their press
+Walk:  53 attempts derived; 0 retry presses; 0 restarts abandoning an answered prompt, 0 on an unanswered one; 0 actuations after the last row
+
+  key  trace att  trace ok  dump att  dump ok
+  d            7         6         7        6
+  l           14        13        14       13
+  r            7         6         7        6
+  s           15        13        15       13
+  u           10         9        10        9
+  all         53        47        53       47
+
+C7: PASS -- 53 prompts; trace-derived 53 attempts / 47 correct, dump 53 / 47; 408 held repeats, 18 upper-case, 0 retries, 0 restarts; attempt-to-row skew +0..+0 s
 ```
 - C3 by ear (normal chime with Caps Lock):
-- **Result (C7):**
-- **Result (C3):**
+- **Result (C7):** pass
+- **Result (C3):** pass
 
 ### RS-22 · F1 + E10: endurance and the mouse soak (S47–S50)
 
@@ -604,13 +705,74 @@ uv run python -m takki.progress_dump
    ```
 6. **E10:** close Takki with the mouse. It must close within a couple of seconds. If it does not, press Ctrl+C in [T] and record a fail.
 
-- Start time / WorkingSet64:
-- Helper finished (minutes of motion):
-- End time / WorkingSet64:
-- Latency drift? Audio degradation? Cue still immediate at the end?
-- **Result (F1):**
-- Close time, exit code:
-- **Result (E10):**
+> **Deviation: F1 was run by a bot, not by hand** (developer's decision, 2026-09-27). `spikes/silent_prompt_spike.py --minutes 60` ran the real Takki: real SAPI voice, window, mixer, pynput hook and `SendInput` keys. It used a **copy** of the database, so the real one was not written. A bot answered every prompt correctly, only after the letter had finished and a 0.4–1.2 s pause. What that leaves out: wrong answers (the error tone), held keys, and typing over speech. The spike also keeps its log in memory, so a slope of about 1–3 MB is its own. The developer listened for sound quality. Memory was sampled every minute from [2]: [RS-22-memory.csv](RS-22-memory.csv), with both `WorkingSet64` (the protocol's measure) and private bytes. Full speech/cue log: [RS-22-silent-prompt.log](RS-22-silent-prompt.log).
+
+- Start time / WorkingSet64: 11:59:03, 82.2 MB (private 561.4 MB). **12:00:03, after start-up: 117.5 MB (private 592.5 MB)**, the baseline used.
+- Helper finished (minutes of motion): not started (E10 not run, see below). Step 3 skipped.
+- Mid-run readings (added, not in the protocol; every minute, excerpt), `WorkingSet64` / private:
+
+  | Time | Working set | Private |
+  |---|---|---|
+  | 12:00 | 117.5 | 592.5 |
+  | 12:09 | 119.3 | 593.8 |
+  | 12:29 | 121.4 | 594.9 |
+  | 12:39 | 84.6 | 595.0 |
+  | 12:49 | 60.8 | 596.2 |
+  | 12:59 | 60.0 | 596.2 |
+
+- End time / WorkingSet64: 12:59:04, **60.0 MB** (private **596.2 MB**). Private memory grew 3.7 MB over 1,894 answers (~2 KB each), in steps that stopped rising after 12:49. That is consistent with the spike's in-memory log (~11,500 lines plus 1,895 speech records) plus 16 introductions' worth of drill state, and not with a per-prompt leak. The working set's fall after 12:35 is Windows trimming the working set, not Takki releasing memory. The protocol's measure alone would read as a 57 MB *drop*.
+- Latency drift? Keypress to cue, from the log (1,894 pairs; values are quantised by Windows' ~15.6 ms clock):
+
+  | Minutes | n | Median | p95 | Max |
+  |---|---|---|---|---|
+  | 0–10 | 309 | 16 ms | 32 ms | 63 ms |
+  | 10–20 | 313 | 16 ms | 32 ms | 47 ms |
+  | 20–30 | 322 | 16 ms | 31 ms | 32 ms |
+  | 30–40 | 311 | 16 ms | 32 ms | 32 ms |
+  | 40–50 | 320 | 16 ms | 32 ms | 32 ms |
+  | 50–60 | 317 | 16 ms | 32 ms | 32 ms |
+
+  No drift. Audio degradation: **none heard** (developer). Cue still immediate at the end: yes, 16 ms median in the last 10 minutes.
+- Speech path (#12c (1), run as part of this): **1,895 letters spoken, 1,895 AUDIBLE**, with no FLAG, SHORT, CUT or MISSING, and no B9 timeouts. With no keypress overlapping speech, no letter was lost in Takki's speech path over an hour. **By ear:** the developer listened only for about the first and last minute and heard nothing missing. A loss on the output side during the other 58 minutes would not have been noticed, and the spike cannot see one. **Contrast:** letters went unspoken *often* during this sitting's hand practice (RS-20, RS-21), on the same machine and the same day. The bot presses only 0.4–1.2 s *after SAPI returns*, so it never pressed at the moment a letter ends. That moment turned out to be the cause: see RS-22b.
+- Side observation: the copy introduced **16 letters in 60 minutes** (`a`, then pairs roughly every 7.5 min, to `z`). With a perfect bot the pacing gates are legitimately open, so this is not by itself #12d. But it is the rhythm an accurate child would get.
+- **Result (F1):** **pass**, run by a bot, as the deviation note says.
+- Close time, exit code: not a mouse close: the bot stopped Takki through the session loop at 60:04. `takki exit 0`.
+- **Result (E10):** **Not run**, the developer's decision, 2026-09-27. The overflow is visible in the code, so a run would only confirm it. [focus.py](../../../../src/takki/display/focus.py) `poll()` takes three event types off SDL's queue and nothing else reads it, so every other event accumulates to the 65,535 cap, after which `QUIT` is dropped. Treated as an architectural flaw to fix, not a behaviour to measure: alpha-plan #12c item (3). E10 becomes that fix's regression check in #14's re-run.
+
+### RS-22b · Silent letters, by hand (added 2026-09-27; not a protocol step)
+
+Why: the bot run (RS-22) lost no letters, while this sitting's hand practice lost them often. [2] `uv run python spikes/silent_prompt_spike.py --manual --out docs/research/windows-validation-runs/2026-09-26/RS-22b-manual.log`: the same instrumented Takki on a copy of the database, no bot. The developer typed as usual and tapped Escape the moment a letter went unspoken. The spike logs each key with whether it landed inside `speak()`. Memory: [RS-22b-memory.csv](RS-22b-memory.csv), private 592.6 → 592.9 MB over 5 min, flat. Report: [RS-22b-manual.log](RS-22b-manual.log).
+
+- About 5 min, 270 keypresses, 275 letters spoken or queued. No B9 timeouts.
+- **Escape taps: 4. FLAG letters: 4. Stops issued after `speak()` had already returned (`worker_speaking=False`): 4.** They are the same four events, one to one:
+
+  The sequence immediately before each tap:
+
+  | Tap | Previous letter's `speak()` | It ended | Key | Key minus end | Next letter |
+  |---|---|---|---|---|---|
+  | 72.4 s | `l`, from 68.094 s, 1219 ms | 69.313 s | `l` 69.313 s | 0 ms | `a`: FLAG, 0 ms, "completed" |
+  | 108.0 s | `s`, from 104.516 s, 1281 ms | 105.797 s | `s` 105.797 s | 0 ms | `a`: FLAG, 0 ms |
+  | 263.0 s | `s`, from 259.547 s, 1266 ms | 260.813 s | `s` 260.813 s | 0 ms | `h`: FLAG, 0 ms |
+  | 305.3 s | `a`, from 302.110 s, 1093 ms | 303.203 s | `a` 303.203 s | 0 ms | `s`: FLAG, 0 ms |
+
+  Each key arrived in the same clock reading as SAPI's return (Windows' clock resolution is ~16 ms).
+
+- **Mechanism:** alpha-plan #12c (1)'s race, confirmed on hardware. The press reaches `Speaker.interrupt()` after SAPI has returned but before the `finished` event has been dispatched, so the Speaker still believes the letter is sounding. `stop()` sets the cancel flag with nothing left to cancel. The worker has already cleared it and is blocked in `get()`. The next letter's id is above `_cancel_through`, so it is spoken, but `SapiTTS.speak()` finds the flag set and returns at once, and the worker reports it `completed`. Silence until Escape or B9.
+- **The window is one clock tick at the letter's end.** A press anywhere inside the letter is harmless. The developer deliberately pressed into speech during the predictable patterns, and none of those presses caused a silence. A press after the `finished` event has been handled is harmless too. 4 in 270 presses (~1.5%) is what presses landing in a ~16 ms window by chance would give, which is several per ten minutes of practice. The bot never hit it because it pressed 0.4–1.2 s after the return.
+- **Not silences:** 152 CUT (a press cutting the letter it answers, as designed) and 32 MISSING. The MISSING came from the deliberate presses into the predictable `f g j h` ramp-up cycle, where letters were answered before they started and were cancelled in the queue. No tap followed any of them.
+- **Result:** cause of the silent letters found. The output side is cleared: every silence is accounted for by FLAG.
+
+### RS-22c · The window, mapped by script (added 2026-09-27; not a protocol step)
+
+[2] `uv run python spikes/flag_race_sweep.py --minutes 15 --out docs/research/windows-validation-runs/2026-09-26/RS-22c-sweep.txt`. A bot presses the prompted letter at a random offset from its predicted end: −60 to +30 ms, plus controls at −400 ms and +150 ms. It records whether the next letter enters `speak()` with the cancel flag set. Real Takki on a copy of the database. Report [RS-22c-sweep.txt](RS-22c-sweep.txt), per-trial data [RS-22c-sweep.csv](RS-22c-sweep.csv).
+
+**Prediction written before the run**, from `TTSWorker.run_one()` (`speak()` returns → `put(finished)` → `clear_cancel()` → `get()`) and `SessionLoop.tick()` (drains the inbound queue every 1/60 s, in order): a key that reaches the queue before the letter ends but is drained after it is dispatched ahead of `finished`. Its `stop()` sets a flag nothing will clear, and the next letter is silent. So the window is at most one tick (16.7 ms) wide, ends at the letter's end, and moves earlier by the hook latency. There should be no silences outside it.
+
+- 596 trials, **61 SILENT**, all inside **−20.5 to −3.1 ms** of the letter's end (send time). Rate by 2 ms bin: 1/10 at −22, rising to 13/15 at −6 to −4, then **0 from −2 ms on**.
+- Controls: mid-letter 0/54, +150 ms 0/58. The 41 bins outside the window: 0 SILENT.
+- Rule "SILENT iff the key was dispatched before `finished` and the letter was not cut": **held on 190 of 190** trials where both dispatch times were captured. The other 406 were cut letters or presses after `finished` was dispatched, all clean.
+- End-of-letter prediction: median −0.2 ms, sd 3.6 ms (n = 284). Send → key dispatched: median 10.2 ms, max 29.9 ms.
+- **Result:** prediction confirmed. The window is one loop tick just before a letter ends, exactly as the code implies.
 
 ### RS-23 · Back up day 2 (S51)
 
@@ -619,9 +781,9 @@ uv run python -m takki.progress_dump
 New-Item -ItemType Directory "$env:LOCALAPPDATA\Takki-backup\day2"
 Copy-Item "$env:LOCALAPPDATA\Takki\takki.sqlite*" "$env:LOCALAPPDATA\Takki-backup\day2\"
 ```
-- Backed up:
+- Backed up: **yes**, 2026-09-27 ~13:05, to `%LOCALAPPDATA%\Takki-backup\day2\`. `takki.sqlite` 106,496 bytes (last written 10:50:48, the end of RS-21), `-wal` empty, `-shm` 32,768 bytes. The hash of the copied `takki.sqlite` matches the live one. No Takki process was running. RS-22's bot ran on a copy, so this is the database as RS-21 left it.
 
-End time:
+End time: ~13:05
 
 ---
 
