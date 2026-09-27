@@ -241,11 +241,11 @@ You cannot read this during the run. **Memorise this order**, then record everyt
 
 | Check | Pass condition | Observed | Result |
 |---|---|---|---|
-| G6 | Never needed the screen, the console or the mouse, launch → second introduction | | |
+| G6 | Never needed the screen, the console or the mouse, launch → second introduction | Launch opens the Takki window, which stays active unless the user interacts with something else on the computer. Neither the screen, the console nor the mouse was needed. *(Recorded 2026-09-27.)* | pass |
 | B1 | Window took the foreground without a click. No "Paused" first | | pass |
 | B2 | Launch → first word, in seconds (expect ~2 s; note anything past ~5 s) | 3,4 s | pass |
 | B3 | `f` and `j` introduction lines complete, in order, before the first prompt | | pass |
-| B4 | Letter names, not words: `f` `j` now; `r` `v` `u` `m` fill in by RS-12 | f: j: r: v: u: m: | |
+| B4 | Letter names, not words: `f` `j` now; `r` `v` `u` `m` fill in by RS-12 | f: name · j: name · r: name · v: name · u: name · m: name. Every other letter heard in Sittings 1–2 was a name too. *(Recorded 2026-09-27.)* Separate observation: with the current voice `g` and `j` are not always easy to tell apart, see roadmap § D | pass |
 | B5 | Chime, then the next letter; the chime feels immediate | | pass |
 | B6 | Error tone, **same** letter asked again, prompt stays open | | pass |
 | B7 | Letter cut, chime not delayed | difficult to hit before end of letter | pass |
