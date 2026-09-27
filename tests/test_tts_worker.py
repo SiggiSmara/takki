@@ -1,4 +1,5 @@
 import queue
+import threading
 
 import pytest
 
@@ -12,6 +13,7 @@ from takki.speech import Speaker
 from tests.fakes.fake_clock import FakeClock
 from tests.fakes.fake_focus_source import FakeFocusSource
 from tests.fakes.fake_tts import FakeTTSEngine
+from tests.fakes.waiting_queue import install
 
 
 class _StopMidSpeakEngine:
@@ -193,6 +195,90 @@ class TestTTSWorkerCancelAiming:
         assert [outbound.get_nowait().status for _ in range(2)] == ["cancelled", "completed"]
 
 
+class TestTTSWorkerLateStop:
+    """alpha-plan #12c (1): the silent letter, measured on hardware in RS-22b/c.
+
+    A keypress that reaches the loop just before a letter ends is dispatched
+    after the worker has returned from speak() and cleared the flag, but
+    before the loop has seen that letter's SpeechFinished. The stop() it
+    causes is aimed at an utterance that is already over. Its flag survives
+    into the next utterance, which the engine skips and the worker reports
+    "completed". The child hears nothing.
+    """
+
+    def test_an_utterance_enqueued_after_a_late_stop_is_spoken(self) -> None:
+        engine = FakeTTSEngine()
+        outbound: queue.Queue[SpeechFinished] = queue.Queue()
+        worker = TTSWorker(lambda: engine, outbound)
+        commands = install(worker)
+        first = worker.enqueue_speak("f")
+        worker.run_one()
+        second: list[int] = []
+
+        def late_stop() -> None:
+            worker.stop()
+            second.append(worker.enqueue_speak("j"))
+
+        commands.while_waiting = late_stop
+        worker.run_one()
+        assert (engine.spoken, engine.skipped) == (["f", "j"], [])
+        assert [outbound.get_nowait() for _ in range(2)] == [
+            SpeechFinished(first, "completed"),
+            SpeechFinished(second[0], "completed"),
+        ]
+        assert outbound.empty()
+
+    def test_a_stop_aimed_at_the_waiting_utterance_still_cancels_it(self) -> None:
+        # The other side of the fix: a stop issued after the next utterance was
+        # enqueued belongs to it, and must not be cleared away with the late one.
+        engine = FakeTTSEngine()
+        outbound: queue.Queue[SpeechFinished] = queue.Queue()
+        worker = TTSWorker(lambda: engine, outbound)
+        commands = install(worker)
+        first = worker.enqueue_speak("f")
+        worker.run_one()
+        second: list[int] = []
+
+        def enqueue_then_stop() -> None:
+            second.append(worker.enqueue_speak("j"))
+            worker.stop()
+
+        commands.while_waiting = enqueue_then_stop
+        worker.run_one()
+        assert engine.spoken == ["f"]
+        assert [outbound.get_nowait() for _ in range(2)] == [
+            SpeechFinished(first, "completed"),
+            SpeechFinished(second[0], "cancelled"),
+        ]
+        assert outbound.empty()
+
+    def test_with_a_real_worker_thread(self) -> None:
+        # The production order, no hook: the worker thread itself clears the
+        # flag and blocks in get(); the stop arrives from this thread after.
+        cleared = threading.Semaphore(0)
+
+        class SignallingEngine(FakeTTSEngine):
+            def clear_cancel(self) -> None:
+                super().clear_cancel()
+                cleared.release()
+
+        engine = SignallingEngine()
+        outbound: queue.Queue[SpeechFinished] = queue.Queue()
+        worker = TTSWorker(lambda: engine, outbound)
+        worker.start()
+        first = worker.enqueue_speak("f")
+        assert outbound.get(timeout=5) == SpeechFinished(first, "completed")
+        # Once before the first get(), once after "f": now waiting for the next.
+        assert cleared.acquire(timeout=5) and cleared.acquire(timeout=5)
+        worker.stop()
+        second = worker.enqueue_speak("j")
+        assert outbound.get(timeout=5) == SpeechFinished(second, "completed")
+        worker.enqueue_shutdown()
+        worker.join(timeout=5)
+        assert (engine.spoken, engine.skipped) == (["f", "j"], [])
+        assert outbound.empty()
+
+
 class TestTTSWorkerSurvivesEngineFailure:
     # SapiTTS.speak() raising used to propagate out of run() and end the
     # worker thread: no SpeechFinished, the Speaker busy forever, a silent app
@@ -344,3 +430,14 @@ def test_speak_and_shutdown_are_commands() -> None:
 def test_fake_tts_engine_conforms_to_protocol() -> None:
     engine: TTSEngine = FakeTTSEngine()
     assert engine is not None
+
+
+def test_the_fake_skips_an_utterance_entered_with_the_flag_set() -> None:
+    # Mirrors SapiTTS, pinned on the real engine by test_sapi_tts.py::
+    # test_a_stop_before_speak_with_no_clear_between_skips_the_utterance.
+    engine = FakeTTSEngine()
+    engine.stop()
+    engine.speak("skipped")
+    engine.clear_cancel()
+    engine.speak("spoken")
+    assert (engine.spoken, engine.skipped) == (["spoken"], ["skipped"])

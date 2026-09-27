@@ -6,6 +6,7 @@ from typing import Any
 import pytest
 
 from takki import config
+from takki.audio.synthetic_letters import SyntheticLetterAudioSource
 from takki.audio.tts_worker import SpeechFinished, TTSWorker
 from takki.events import Quit
 from takki.input import KeyEvent
@@ -23,6 +24,7 @@ from tests.fakes.fake_store import FakeStore
 from tests.fakes.fake_tts import FakeTTSEngine
 from tests.fakes.fixed_list_source import FixedListSource
 from tests.fakes.scripted_key_stream import ScriptedKeyStream
+from tests.fakes.waiting_queue import install
 
 EN_WORDS: dict[str, float] = {
     "the": 100.0,
@@ -57,6 +59,7 @@ class Harness:
         now: Callable[[], str] | None = None,
         key_events: list[KeyEvent] | None = None,
         seed: dict[str, int] | None = None,
+        synthetic_letters: bool = False,
     ) -> None:
         self.layout = build_en()
         self.source = source or FixedListSource(words if words is not None else EN_WORDS)
@@ -86,7 +89,10 @@ class Harness:
             focus=self.focus,
             keys=self.stream,
             speech=self.worker,
-            letters=self.letters,
+            # Production Alpha's letters go through the TTS worker; the fake
+            # keeps them off it, which is simpler to assert on but cannot show
+            # a letter lost there (alpha-plan #12c (1)).
+            letters=SyntheticLetterAudioSource(self.worker) if synthetic_letters else self.letters,
             cues=self.cues,
             rng=random.Random(1),
             celebrant=celebrant,
@@ -805,6 +811,31 @@ class TestSpeechEvents:
         harness.inbound.put(SpeechFinished(9999, "completed"))
         harness.loop.tick()
         assert harness.loop.prompt == "f"
+
+
+class TestLateStop:
+    def test_a_key_drained_ahead_of_its_letters_finish_does_not_silence_the_next_letter(
+        self,
+    ) -> None:
+        # alpha-plan #12c (1), the exact condition RS-22c measured: the answer
+        # reaches the inbound queue just before its letter ends, so one drain
+        # holds [key, SpeechFinished(letter)] in that order, and that drain
+        # runs while the worker has cleared its flag and waits for the next.
+        harness = Harness(synthetic_letters=True)
+        commands = install(harness.worker)
+        harness.loop.start()
+        harness.settle()
+        target = harness.loop.prompt
+        assert target is not None
+        harness.press(target)
+        harness.worker.run_one()
+        spoken = list(harness.engine.spoken)
+        assert spoken[-1] == target
+        commands.while_waiting = harness.loop.tick
+        harness.worker.run_one()
+        following = harness.loop.prompt
+        assert following is not None
+        assert (harness.engine.spoken, harness.engine.skipped) == ([*spoken, following], [])
 
 
 class TestLayerTwo:

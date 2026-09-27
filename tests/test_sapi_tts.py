@@ -221,6 +221,36 @@ class TestSapiTTSCancellation:
         assert FULL_MIN < after < FULL_MAX, after
 
 
+class TestTheFakeHonoursTheSameFlag:
+    def test_a_stop_before_speak_with_no_clear_between_skips_the_utterance(self) -> None:
+        # The behaviour FakeTTSEngine mirrors (its counterpart is
+        # test_tts_worker.py::test_the_fake_skips_an_utterance_entered_with_the_flag_set).
+        # The fake used to ignore it, and that is why no test could see
+        # alpha-plan #12c (1): a late stop() silences the next utterance only
+        # because this engine returns at once when its flag is already set.
+        if sys.platform != "win32":
+            return
+        from takki.audio.sapi_tts import SapiTTS
+
+        voice = _voice()
+
+        def body() -> tuple[float, float]:
+            engine = SapiTTS(voice)
+            engine.speak("warm up")
+            engine.stop()
+            start = time.monotonic()
+            engine.speak(LONG)
+            skipped = time.monotonic() - start
+            engine.clear_cancel()
+            start = time.monotonic()
+            engine.speak(LONG)
+            return skipped, time.monotonic() - start
+
+        skipped, spoken = _result(_spawn(body))
+        assert skipped < 0.1, skipped
+        assert FULL_MIN < spoken < FULL_MAX, spoken
+
+
 class TestSapiTTSDoesNotHang:
     def test_an_utterance_that_never_finishes_is_abandoned(self) -> None:
         # The failure a windows-latest runner found (alpha session 12a-2): with

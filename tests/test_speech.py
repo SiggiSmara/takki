@@ -5,6 +5,7 @@ from takki.audio.tts_worker import SpeechFinished, TTSWorker
 from takki.speech import Speaker
 from tests.fakes.fake_letters import FakeLetterAudioSource
 from tests.fakes.fake_tts import FakeTTSEngine
+from tests.fakes.waiting_queue import WaitingCommandQueue, install
 
 Built = tuple[
     Speaker, TTSWorker, FakeTTSEngine, FakeLetterAudioSource, "queue.Queue[SpeechFinished]"
@@ -178,3 +179,65 @@ class TestInterrupt:
         speaker.interrupt()
         assert engine.stopped == 0
         assert letters.stopped == 0
+
+
+class TestLateStop:
+    """alpha-plan #12c (1), from the Speaker's side: every path that stops an
+    utterance which has already ended -- its SpeechFinished not yet delivered
+    here -- and then queues another. The worker has cleared the flag and is
+    waiting for that next utterance, which the late stop must not silence.
+    Only the first path was observed on hardware (RS-22b/c); the rest follow
+    from the same code.
+    """
+
+    def test_the_answer_key_does_not_silence_the_next_prompt(self) -> None:
+        # SessionLoop._on_character: interrupt(), then the next prompt's letter.
+        speaker, engine, commands, worker = self.letter_spoken("f")
+
+        def answer() -> None:
+            speaker.interrupt()
+            speaker.letter("j")
+
+        commands.while_waiting = answer
+        worker.run_one()
+        assert (engine.spoken, engine.skipped) == (["f", "j"], [])
+
+    def test_the_re_read_is_not_itself_silenced(self) -> None:
+        # Escape tapped as the letter ends: letter() stops the outstanding one
+        # and plays it again. The recovery key must not be the thing that fails.
+        speaker, engine, commands, worker = self.letter_spoken("f")
+        commands.while_waiting = lambda: speaker.letter("f")
+        worker.run_one()
+        assert (engine.spoken, engine.skipped) == (["f", "f"], [])
+
+    def test_an_announcement_over_a_finished_letter_is_spoken(self) -> None:
+        # A focus change as the letter ends: announce() interrupts, then says.
+        speaker, engine, commands, worker = self.letter_spoken("f")
+        commands.while_waiting = lambda: speaker.announce("paused")
+        worker.run_one()
+        assert (engine.spoken, engine.skipped) == (["f", "paused"], [])
+
+    def test_an_announcement_over_a_finished_line_of_a_sequence_is_spoken(self) -> None:
+        # The in-flight path (worker.stop(), not the letter source): focus
+        # changes as the first line of an introduction script ends.
+        engine = FakeTTSEngine()
+        worker = TTSWorker(lambda: engine, queue.Queue[SpeechFinished]())
+        commands = install(worker)
+        speaker = Speaker(worker, SyntheticLetterAudioSource(worker))
+        speaker.say("New letter: F.", "Use your left index finger.")
+        worker.run_one()
+        commands.while_waiting = lambda: speaker.announce("paused")
+        worker.run_one()
+        assert (engine.spoken, engine.skipped) == (["New letter: F.", "paused"], [])
+
+    def letter_spoken(
+        self, char: str
+    ) -> tuple[Speaker, FakeTTSEngine, WaitingCommandQueue, TTSWorker]:
+        """A letter the worker has finished speaking, its SpeechFinished undelivered."""
+        engine = FakeTTSEngine()
+        worker = TTSWorker(lambda: engine, queue.Queue[SpeechFinished]())
+        commands = install(worker)
+        speaker = Speaker(worker, SyntheticLetterAudioSource(worker))
+        speaker.letter(char)
+        worker.run_one()
+        return speaker, engine, commands, worker
