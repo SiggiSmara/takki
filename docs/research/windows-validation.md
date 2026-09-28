@@ -353,6 +353,20 @@ F3 (C14, already scheduled) · E12 (mid-lesson layout switch, roadmap § D) · G
 
 ---
 
+## Fix verification
+
+*(Added 2026-09-28, alpha #12c.)* The full Running order proves the Alpha claim once. After that, defects found by a run are fixed one at a time, and each fix needs its own proof on this laptop, under the conditions the defect was found in. This section lists those proofs. It is a protocol of its own, not a partial Running order: its steps are **FV-01, FV-02, …**, never S-numbers.
+
+**One sheet for the whole series.** Fix verification is recorded in **one** run sheet, generated when the first fix landed (2026-09-28) and kept for every fix after it, through #12c and whatever follows. This is the one exception to "generate a new one rather than editing an old one". When a fix lands, its step is added to this section **first**, and then copied into the sheet as a new test case with the same ID. The sheet still adds no steps or pass conditions of its own. Raw files are named after the test case (`FV-01-sweep.txt`), as for any run.
+
+**Hardware only.** A step here is something the default suite cannot show: behaviour of SAPI, the hook, the window or the device. The regression test that failed before the fix is in the default suite, and its green run is recorded in the fix's commit, not here.
+
+| Step | Fix | Do | Pass |
+|---|---|---|---|
+| **FV-01** | #12c (1): a keypress at a letter's end silences the next letter | Hands off the machine. [2] `uv run python spikes/flag_race_sweep.py --minutes 15 --out <run>/<tc>-sweep.txt` | **0 SILENT** in every bin and both controls, **and** the `race hit` line shows ≥ 1 trial with 0 SILENT (the race occurred and nothing went silent). The first measurement, before the fix: 61 SILENT in 596, all within −20.5 to −3.1 ms ([2026-09-26 RS-22c](windows-validation-runs/2026-09-26/runsheet.md)). **No separate check by ear** (decided 2026-09-28): RS-22b matched every silence heard to a FLAG letter, one for one, so the flag is the measure, and the sweep's −60 to +30 ms range covers the whole window found |
+
+---
+
 ## Runs
 
 One line per run folder, newest last. Results, raw output and the run's one-line finding live in the sheet, not here. Anything that outlives the run goes into an ADR amendment or [roadmap](../roadmap.md) § D, per [alpha-plan](../alpha-plan.md) step 5.
@@ -360,6 +374,7 @@ One line per run folder, newest last. Results, raw output and the run's one-line
 | Run folder | Generated | Run (#) | Outcome |
 |---|---|---|---|
 | [windows-validation-runs/2026-09-26/](windows-validation-runs/2026-09-26/runsheet.md) | 2026-09-26 | #12b-2 | **no-go** (run 2026-09-26 to 2026-09-28; D6 deferred) |
+| [windows-validation-runs/2026-09-28/](windows-validation-runs/2026-09-28/runsheet.md) | 2026-09-28 | #12c onwards: § Fix verification | open, one test case per fix |
 
 ## Results (before run sheets)
 
