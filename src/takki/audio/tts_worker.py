@@ -114,13 +114,15 @@ class TTSWorker:
     def run_one(self) -> bool:
         """Process one queued command; False on Shutdown. Drivable without a thread, for tests."""
         engine = self.build_engine()
-        # Before the blocking get(), never after: from here on every cancel is
-        # aimed at the command this call is about to receive, and nothing can
-        # clear it out from under that utterance (TTSEngine.clear_cancel()).
-        engine.clear_cancel()
         command = self._commands.get()
         if isinstance(command, Shutdown):
             return False
+        # After the get(), then the threshold: a stop() issued while this worker
+        # waited was aimed at an utterance that had already ended, and its flag
+        # would silence this one (alpha-plan #12c (1), RS-22b/c). A stop() aimed
+        # at this command raises the threshold before it sets the flag, so if
+        # the clear wipes its flag the check below still sees it.
+        engine.clear_cancel()
         if command.utterance_id <= self._cancel_through:
             # Cancelled while it sat in the queue: never speak it at all.
             self._outbound.put(SpeechFinished(command.utterance_id, "cancelled"))

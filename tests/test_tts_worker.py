@@ -5,7 +5,7 @@ import pytest
 
 from takki.audio.synthetic_letters import SyntheticLetterAudioSource
 from takki.audio.tts import TTSEngine
-from takki.audio.tts_worker import Shutdown, Speak, SpeechFinished, TTSWorker
+from takki.audio.tts_worker import Command, Shutdown, Speak, SpeechFinished, TTSWorker
 from takki.display.focus import FocusEvent, FocusLost
 from takki.events import Quit
 from takki.focus_model import FocusModel
@@ -167,9 +167,10 @@ class TestTTSWorkerRunOne:
 
 
 class TestTTSWorkerCancelAiming:
-    def test_the_cancel_flag_is_cleared_before_the_dequeue_not_after(self) -> None:
-        # Clearing after the get() would let the engine discard a stop() aimed
-        # at the utterance it is about to speak (alpha session 12a-2).
+    def test_the_cancel_flag_is_cleared_once_per_dequeue(self) -> None:
+        # After the get(), so a stop() aimed at an utterance that has already
+        # ended cannot silence the next (alpha-plan #12c (1)); the threshold
+        # check that follows keeps a stop() aimed at this one (12a-2).
         engine = FakeTTSEngine()
         worker = TTSWorker(lambda: engine, queue.Queue[SpeechFinished]())
         worker.enqueue_speak("a")
@@ -179,7 +180,7 @@ class TestTTSWorkerCancelAiming:
         worker.run_one()
         assert engine.cancels_cleared == 2
 
-    def test_a_cancelled_utterance_still_clears_before_the_next_dequeue(self) -> None:
+    def test_a_cancelled_utterance_leaves_no_stale_cancel_for_the_next(self) -> None:
         # The skipped utterance must not leave a stale cancel behind, or the
         # next one -- enqueued after the stop -- is silently swallowed too.
         engine = FakeTTSEngine()
@@ -253,23 +254,24 @@ class TestTTSWorkerLateStop:
         assert outbound.empty()
 
     def test_with_a_real_worker_thread(self) -> None:
-        # The production order, no hook: the worker thread itself clears the
-        # flag and blocks in get(); the stop arrives from this thread after.
-        cleared = threading.Semaphore(0)
+        # The production order, no hook: the worker thread itself blocks in
+        # get() after "f"; the stop arrives from this thread after.
+        waiting = threading.Semaphore(0)
 
-        class SignallingEngine(FakeTTSEngine):
-            def clear_cancel(self) -> None:
-                super().clear_cancel()
-                cleared.release()
+        class SignallingQueue(queue.Queue[Command]):
+            def get(self, block: bool = True, timeout: float | None = None) -> Command:
+                waiting.release()
+                return super().get(block, timeout)
 
-        engine = SignallingEngine()
+        engine = FakeTTSEngine()
         outbound: queue.Queue[SpeechFinished] = queue.Queue()
         worker = TTSWorker(lambda: engine, outbound)
+        worker._commands = SignallingQueue()  # pyright: ignore[reportPrivateUsage]
         worker.start()
         first = worker.enqueue_speak("f")
         assert outbound.get(timeout=5) == SpeechFinished(first, "completed")
-        # Once before the first get(), once after "f": now waiting for the next.
-        assert cleared.acquire(timeout=5) and cleared.acquire(timeout=5)
+        # Once for "f", once more: now waiting for the next command.
+        assert waiting.acquire(timeout=5) and waiting.acquire(timeout=5)
         worker.stop()
         second = worker.enqueue_speak("j")
         assert outbound.get(timeout=5) == SpeechFinished(second, "completed")

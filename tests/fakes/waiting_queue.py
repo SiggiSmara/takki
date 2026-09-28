@@ -7,11 +7,11 @@ from takki.audio.tts_worker import Command, TTSWorker
 class WaitingCommandQueue(queue.Queue[Command]):
     """The worker's command queue, with a hook run while the worker waits in get().
 
-    That is after `run_one()` has cleared the engine's cancel flag and before it
+    That is after the previous utterance has finished and before the worker
     receives the next command -- the moment RS-22c measured a stop() landing
     when a keypress beats the finished letter's `SpeechFinished` through the
-    loop. A test drives `run_one()` by hand, so without this the clear always
-    comes *after* the test's stop() and the defect cannot occur.
+    loop. A test drives `run_one()` by hand, so without this the test's stop()
+    lands before `run_one()` starts, never while it waits.
     """
 
     def __init__(self) -> None:

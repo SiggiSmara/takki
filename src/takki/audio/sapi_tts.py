@@ -142,9 +142,9 @@ class SapiTTS:
         self._voice.Rate = _RATE
 
     def speak(self, text: str) -> None:
-        # Deliberately does not clear the flag: the worker does that before it
-        # dequeues, so a stop() arriving any time after that belongs to this
-        # utterance. See TTSEngine.clear_cancel().
+        # Deliberately does not clear the flag: the worker does that after it
+        # dequeues and before its threshold check, so a stop() arriving any time
+        # after that belongs to this utterance. See TTSEngine.clear_cancel().
         if self._cancel.is_set():
             return
         self._voice.Speak(text, _SPF_ASYNC)
