@@ -276,6 +276,13 @@ def _report(out: Path, lo: float, hi: float) -> None:
         f"rule 'SILENT iff key dispatched before finished and the letter was not cut': "
         f"holds on {rule} of {len(order)}"
     )
+    # After the #12c (1) fix the rule above stops holding, so a clean run needs
+    # its own evidence that the race actually occurred.
+    race = [r for r in order if r["key_before_finished"] is True and not r["letter_cut"]]
+    lines.append(
+        f"race hit (key dispatched before finished, letter not cut): {len(race)}, "
+        f"SILENT: {sum(r['outcome'] == 'SILENT' for r in race)}"
+    )
     lines += ["", "offset from the letter's end (send time), 2 ms bins, sweep trials:", ""]
     lines.append("   bin (ms)      n  SILENT  cut  basis")
     sweep = [r for r in rows if r["kind"] == "sweep"]
