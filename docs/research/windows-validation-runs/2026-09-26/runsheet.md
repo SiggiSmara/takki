@@ -209,7 +209,7 @@ Do these in order, in Notepad. Pause a second between them so the sections are e
 | C2 | Press and release report the same key: `char='G'` down and `char='g'` up is a pass. `None` or an unrelated character on release is a fail | pass |
 | C4 | `PRESS`/`RELEASE`/`PRESS`/`RELEASE`: two actuations | pass |
 | C5 | One `PRESS`, repeats, one `RELEASE`: one actuation | pass |
-| C6 | One composed `char='á'` arrives | invalid as written, trace stayed on US mapping while Notepad composed á |
+| C6 | One composed `char='á'` arrives | invalid as written, trace stayed on US mapping while Notepad composed á. **Not run as written**; the Icelandic re-run ([RS-06is.log](RS-06is.log)) is carried by roadmap A5 and alpha-plan #13/#14 *(decided 2026-09-28)* |
 
 ⛔ **S19: C1, C2, C4 or C5 failed → stop.** Do not practise Stage 0. Amend ADR-027 § First-Attempt Counting in a Claude session, then re-run tier C and all of D from a fresh database (RS-00.4 again).
 
@@ -284,7 +284,7 @@ uv run takki; "exit $LASTEXITCODE"
 
 - Re-introduced: No
 - **Result (D2):** pass
-- **Result (D5):** pass? what I heard was simply the next letter
+- **Result (D5):** **fail** *(decided 2026-09-28)*. The pass condition is that the letter quit on **is** introduced again. What was heard was simply the next letter. Likely the same cause as alpha-plan #12d: every start introduces the next step.
 
 ### RS-11 · Finish Stage 0 (S25)
 
@@ -348,12 +348,12 @@ Nothing here counts as an attempt. Do each with a letter being asked, and come b
 | Check | Do | Pass condition | Observed | Result |
 |---|---|---|---|---|
 | E1 | Alt+Tab away mid-prompt, then back | Pause announced when you leave, resume announced when you return, and the prompt asked again *after* the announcement, not over it | | pass |
-| E2 | Alt+Tab away. Hold **F1** for 1 s | Takki raises itself and resumes, keyboard only | | |
-| E3 | Hold F1 from several different apps (Notepad, Explorer, browser, [2]) | Where the raise is refused, the Alt+Tab hint is spoken after ~1.5 s. List which apps raised and which gave the hint | did not manage to raise anywhere, did hear the alt0+tab hint sometimes | not sure|
+| E2 | Alt+Tab away. Hold **F1** for 1 s | Takki raises itself and resumes, keyboard only | never raised from any app (see E3) | **fail** *(decided 2026-09-28)* |
+| E3 | Hold F1 from several different apps (Notepad, Explorer, browser, [2]) | Where the raise is refused, the Alt+Tab hint is spoken after ~1.5 s. List which apps raised and which gave the hint | did not manage to raise anywhere, did hear the alt0+tab hint sometimes | **fail** *(decided 2026-09-28)*: the hint should follow every refused raise, and it came only sometimes |
 | E4 | Press the Windows key (Start menu), then return | Pause, then resume | works as expected| pass |
-| E5a | Win+L, log back in | Pause, then resume | | |
+| E5a | Win+L, log back in | Pause, then resume | *(recorded 2026-09-28)* | pass |
 | E5b | Ctrl+Alt+Del, then Cancel | Pause, then resume | | pass |
-| E5c | [2]: `Start-Process powershell -Verb RunAs` and answer **No** | Pause, then resume | returns back to powershell not to Takki | fail? |
+| E5c | [2]: `Start-Process powershell -Verb RunAs` and answer **No** | Pause, then resume | returns back to powershell not to Takki; resumes after Alt+Tab back | pass *(decided 2026-09-28)*: Windows returns focus to the window that raised the prompt |
 | E6 | Press Shift 5 times (Sticky Keys dialog), dismiss it | Pause, then resume. No stuck modifier afterwards | | pass |
 | E7 | Mash Backspace, Tab, Enter, Delete, arrows, F-keys, Ctrl+letter, AltGr | Nothing counted, no crash, prompt unchanged | | pass |
 | E8 | Press the space bar repeatedly | Ignored | | pass |
@@ -388,7 +388,7 @@ Nothing here counts as an attempt. Do each with a letter being asked, and come b
 - Printed in [T]: Nothing
 - Exit code: no exit code
 - `ended_at` present: yes
-- **Result (E11):** fail?
+- **Result (E11):** pass *(decided 2026-09-28)*. `ended_at` present, so Takki shut down cleanly. The exit code was not recorded: Ctrl+C in PowerShell cancels the rest of the launch line, so `"exit $LASTEXITCODE"` never runs. Reading `$LASTEXITCODE` afterwards would capture it.
 
 ### RS-16 · Back up (S30)
 
@@ -791,7 +791,7 @@ End time: ~13:05
 
 Each check changes something about the laptop. Each restore comes straight after its check.
 
-Date:  Start time:
+Date: 28-09-2026 Start time: ~19:59 (first Takki session of the sitting)
 
 ### RS-24 · F3: headset off mid-lesson (S52)
 
@@ -806,11 +806,11 @@ Date:  Start time:
 
 **Fail:** a frozen loop (no more prompts, and no cues after the headset is back).
 
-- `TTS engine failed` lines (count, N):
-- Prompts kept coming:
-- SAPI rerouted to the speakers by itself:
-- Cues after the headset was back:
-- **Result (F3, recorded as a Beta item):**
+- `TTS engine failed` lines (count, N): no fails
+- Prompts kept coming: yes
+- SAPI rerouted to the speakers by itself: yes
+- Cues after the headset was back: yes
+- **Result (F3, recorded as a Beta item):** pass
 
 ### RS-25 · F2: sleep and wake (S53)
 
@@ -818,9 +818,10 @@ Date:  Start time:
 2. Wake the laptop, log in, Alt+Tab to Takki, and answer 5 prompts. Each should chime.
 3. Close with the mouse. Watch [T]: a traceback at exit means the pynput listener died during sleep.
 
-- 5 prompts chimed:
-- [T] output at exit, exit code:
-- **Result (F2):**
+- 5 prompts chimed: yes
+- [T] output at exit, exit code: 0
+- **Result (F2):** pass
+- *Incidental, not a protocol check:* the first attempt pressed the power button, which **shut the laptop down** with Takki running (it does not sleep on this machine). The laptop was restarted and the sleep test done properly. That run is session 3 (started 19:59:01), left unended by the power-off. The database survived: RS-27's `db_integrity_check.py` reports `integrity_check: ok`, 0 foreign-key violations, `key_stats` consistent with `key_attempts` for 19 keys. This is D3-like evidence at a harder level than a process kill.
 
 ### RS-26 · G2: battery and power saving (S54)
 
@@ -831,8 +832,8 @@ Date:  Start time:
    ```
 ↺ Restore the power mode, turn Energy saver off, and plug the charger in.
 
-- Responsiveness, speech latency:
-- **Result (G2):**
+- Responsiveness, speech latency: no change
+- **Result (G2):** pass
 
 ### RS-27 · G4: second instance (S55)
 
@@ -851,9 +852,11 @@ Date:  Start time:
    ```
 **Pass:** it fails clearly, or both work, and the integrity check is clean. Silent corruption is the failure.
 
-- Second instance behaviour, exit code:
-- Integrity check line:
-- **Result (G4):**
+- Second instance behaviour, exit code: started normallz, exit code 0
+- Integrity check line: pass, but according to test neither takki was used to practice
+- **Re-run with writes** (2026-09-28): the first attempt wrote from one copy only. Sessions 5 and 6 overlapped from 20:10:51, and all 9 of its attempts (20:10:05–20:10:21) came before the second copy started. The protocol's step 55 and G4 row are now amended to require practice in both. In the re-run, session 8 (20:21:12) wrote `t o` at 20:21:29–30. Session 9 (20:21:40) wrote `c i c` at 20:21:52–55, while session 8 still had the database open. **5 answered, 5 rows in `key_attempts`: no lost write.** `db_integrity_check.py`: `integrity_check: ok`, 0 foreign-key violations, consistent for 19 keys. Both sessions closed normally. *Limit:* only one direction was exercised during the overlap, the second copy writing while the first held the database open. The first copy did not write again once the second had started.
+- *Side observation:* the second copy introduced a new step (`c i`) straight away while the first was still on `t o` (#12d's start-of-session introduction). With two copies on one profile, each teaches its own step.
+- **Result (G4):** pass
 
 ### RS-28 · G5: data directory not writable (S56–S58)
 
@@ -877,11 +880,11 @@ No line may contain `(DENY)`. Then [T] launch once to confirm Takki starts, and 
 uv run takki; "exit $LASTEXITCODE"
 ```
 
-- Everything printed (last line of any traceback):
-- Exit code:
-- Could a person act on it?
-- Restored, no `(DENY)`, Takki starts:
-- **Result (G5):**
+- Everything printed (last line of any traceback):sqlite3.OperationalError: unable to open database file
+- Exit code: 1
+- Could a person act on it? no
+- Restored, no `(DENY)`, Takki starts: yes
+- **Result (G5):** pass
 
 ### RS-29 · G3 + A5: NVDA (S59; only with portable NVDA)
 
@@ -896,16 +899,16 @@ uv run takki; "exit $LASTEXITCODE"
    ```
 4. Quit NVDA (Insert+Q).
 
-- A5 line:
-- Double speaking / focus stealing / clean:
-- **Result (A5, with NVDA):**
-- **Result (G3, recorded as a Beta item):**
+- A5 line: not captured, NVDA not run.
+- Double speaking / focus stealing / clean: not tested.
+- **Result (A5, with NVDA):** **Not run**, NVDA not tested in this run (developer, 2026-09-28). A5 without NVDA stands from RS-18: `None`.
+- **Result (G3, recorded as a Beta item):** **Not run**, same reason. ADR-028 open question 4 (the NVDA decision) stays without evidence from this run.
 
 ### RS-30 · G1: UAC across the whole run (S60)
 
 Did any UAC prompt appear at any point in Sittings 1–3, *other than* the one you raised on purpose in E5c? None is a pass. One that Takki caused is a fail.
 
-- **Result (G1, hands-on half):**
+- **Result (G1, hands-on half):** pass
 
 End time:
 
@@ -925,37 +928,39 @@ End time:
    ```
 **Expect:** that sitting's rows split across two dates.
 
-- Split seen:
+- Split seen: *not run yet, planned for a weekend night (developer, 2026-09-28)*
 - Does that feel right for a child?
 
 ---
 
 ## Summary
 
-**Finding (one line):**
+**Finding (one line):** Almost there: 43 of the 48 checks that ran pass. The no-go comes down to three things, each with a known cause: letter pacing (D4, D5 → #12d/#12e), window raise (E2, E3), and the silent-letter race found in RS-22b/c (#12c, fix known, failing tests in place).
+
+**Outcome:** no-go.
 
 Fill in from the Result lines above. **Hard no-go** checks are in bold.
 
 | Check | Result | Check | Result | Check | Result |
 |---|---|---|---|---|---|
-| A3b | | **B8** | | **E1** | |
-| A4b (launch) | | **B9** | | **E2** | |
-| A4c | | **B10** | | E3 | |
-| **A4** (fresh DB) | | **B11** | | E4 | |
-| A5 (NVDA) | | **B12** | | **E5** | |
-| **B1** | | B13 | | E6 | |
-| **B2** | | B14 | | E7 | |
-| **B3** | | **C1** | | E8 | |
-| **B4** | | **C2** | | **E9** | |
-| **B5** | | C3 | | **E10** | |
-| **B6** | | **C4** | | **E11** | |
-| **B7** | | **C5** | | E12 | |
-| | | C6 | | **F1** | |
-| **D1** | | **C7** | | **F2** | |
-| **D2** | | | | F3 | |
-| **D3** | | **G1** | | G4 | |
-| **D4** | | G2 | | G5 | |
-| **D5** | | G3 | | **G6** | |
-| D6 | | | | | |
+| A3b | pass | **B8** | pass | **E1** | pass |
+| A4b (launch) | pass | **B9** | pass | **E2** | **fail** |
+| A4c | fail (#12c item 2) | **B10** | pass | E3 | fail |
+| **A4** (fresh DB) | pass | **B11** | pass | E4 | pass |
+| A5 (NVDA) | not run | **B12** | pass (RS-11) | **E5** | pass (a, b, c) |
+| **B1** | pass | B13 | pass (RS-11) | E6 | pass |
+| **B2** | pass | B14 | pass | E7 | pass |
+| **B3** | pass | **C1** | pass | E8 | pass |
+| **B4** | pass | **C2** | pass | **E9** | pass |
+| **B5** | pass | C3 | pass | **E10** | not run (#12c item 3) |
+| **B6** | pass | **C4** | pass | **E11** | pass |
+| **B7** | pass | **C5** | pass | E12 | pass (Beta item) |
+| | | C6 | not run as written (→ #14) | **F1** | pass (bot run) |
+| **D1** | pass | **C7** | pass | **F2** | pass |
+| **D2** | pass | | | F3 | pass (Beta item) |
+| **D3** | pass | **G1** | pass | G4 | pass |
+| **D4** | **fail** | G2 | pass | G5 | pass (traceback only) |
+| **D5** | **fail** | G3 | not run | **G6** | pass |
+| D6 | deferred (optional) | | | | |
 
 When the run is done, update only this sheet's row in [windows-validation.md](../../windows-validation.md) § Runs: set its *Outcome* to go or no-go. Carry anything that outlives the run into an ADR amendment or roadmap § D.
