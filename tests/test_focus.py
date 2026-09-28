@@ -123,14 +123,45 @@ class TestPygameFocusSourceUnderDummyDriver:
         assert outbound.empty()
         source.close()
 
-    def test_poll_leaves_events_it_does_not_own_on_the_sdl_queue(self) -> None:
-        # poll() must still type-filter its get(): an unfiltered drain would
-        # swallow every other SDL event too.
+    def test_poll_discards_events_it_does_not_own(self) -> None:
+        # Nothing else reads SDL's queue (keys come from pynput), so anything
+        # poll() leaves there stays until the queue is full (alpha-plan #12c (3)).
         outbound: queue.Queue[FocusEvent | Quit] = queue.Queue()
         source = PygameFocusSource(outbound)
         pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_a))
         source.poll()
-        assert pygame.event.get(pygame.KEYDOWN), "poll() consumed KEYDOWN"
+        assert pygame.event.get(pump=False) == []
+        source.close()
+
+    def test_every_owned_event_in_a_tick_is_acted_on_not_just_the_first(self) -> None:
+        # The unfiltered get() drops other types, never a second owned event.
+        outbound: queue.Queue[FocusEvent | Quit] = queue.Queue()
+        source = PygameFocusSource(outbound)
+        outbound.get_nowait()
+        pygame.event.post(pygame.event.Event(pygame.WINDOWFOCUSGAINED))
+        pygame.event.post(pygame.event.Event(pygame.MOUSEMOTION, pos=(1, 1)))
+        pygame.event.post(pygame.event.Event(pygame.QUIT))
+        source.poll()
+        assert [outbound.get_nowait() for _ in range(2)] == [FocusGained(), Quit()]
+        assert outbound.empty()
+        source.close()
+
+    def test_quit_still_arrives_after_more_events_than_sdl_can_queue(self) -> None:
+        # E10: mouse motion alone fills SDL's 65,535-event queue in 18-20
+        # minutes, and from then on SDL refuses every new event, QUIT included,
+        # so the close button stops working. 1,000 a tick stands in for that
+        # long run.
+        outbound: queue.Queue[FocusEvent | Quit] = queue.Queue()
+        source = PygameFocusSource(outbound)
+        outbound.get_nowait()
+        for _ in range(70):
+            for _ in range(1_000):
+                pygame.event.post(pygame.event.Event(pygame.MOUSEMOTION, pos=(1, 1)))
+            source.poll()
+        pygame.event.post(pygame.event.Event(pygame.QUIT))
+        source.poll()
+        assert outbound.get_nowait() == Quit()
+        assert outbound.empty()
         source.close()
 
     def test_repeated_focus_events_emit_only_on_change(self) -> None:

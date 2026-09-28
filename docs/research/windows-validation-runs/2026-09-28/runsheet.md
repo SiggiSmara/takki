@@ -34,7 +34,7 @@ Report: [FV-01-sweep.txt](FV-01-sweep.txt) · per-trial data: [FV-01-sweep.csv](
 
 ## FV-02 · #12c (2): no audio device exits 4, not a traceback
 
-**Fix under test** (uncommitted working tree on `983f17d`; commit: ____): `PygameMixerCues()` raises `CueOutputError` in place of SDL's `pygame.error`, and `main()` catches it in the same guard as the voice probe: remedy on stderr, `EXIT_NO_AUDIO`.
+**Fix under test** (uncommitted working tree on `983f17d`, committed as `0cce9e7`): `PygameMixerCues()` raises `CueOutputError` in place of SDL's `pygame.error`, and `main()` catches it in the same guard as the voice probe: remedy on stderr, `EXIT_NO_AUDIO`.
 
 1. Turn the headset **off**.
 2. Settings → System → Sound → *Speakers (Realtek)* → **Don't allow**. The Sound page must list **no** output device. If one is left, the check tests nothing.
@@ -63,9 +63,40 @@ Date: 2026-09-28
 
 ---
 
+## FV-03 · #12c (3): the close button still works after SDL's queue would have filled (E10)
+
+**Fix under test** (commit: ____): `PygameFocusSource.poll()` takes every event off SDL's queue with one unfiltered `get()` and ignores all but focus-gained, focus-lost and `QUIT`. Before the fix it took only those three, and everything else stayed queued up to SDL's 65,535 cap, after which `QUIT` was refused.
+
+1. [T] launch line:
+   ```powershell
+   uv run takki; "exit $LASTEXITCODE"
+   ```
+2. [2] start the mouse helper:
+   ```powershell
+   uv run python spikes/sdl_queue_soak.py drive --minutes 25
+   ```
+3. Alt+Tab to Takki. The cursor circles inside Takki's window. It pauses while another window is in front, and stops if you move the mouse yourself.
+4. Leave it for **at least 25 minutes** of motion (the helper prints one line per minute). Practising meanwhile is fine.
+5. Close Takki with the mouse. If it does not close, press Ctrl+C in [T] and record the fail.
+
+**Pass:** **Still closes**, within a couple of seconds of the click.
+
+Date:
+
+- Minutes of motion (the helper's last progress line):
+- Helper stopped early (you moved the mouse, or anything else):
+- Closed with the mouse: yes / no
+- Time from click to close:
+- Exit code:
+
+**Result:**
+
+---
+
 ## Summary
 
 | Test case | Fix | Result |
 |---|---|---|
 | FV-01 | #12c (1), by script | Pass |
 | FV-02 | #12c (2), by hand | Pass |
+| FV-03 | #12c (3), E10 | |

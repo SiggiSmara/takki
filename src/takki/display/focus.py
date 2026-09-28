@@ -58,10 +58,16 @@ class PygameFocusSource:
         self._outbound.put(FocusGained() if self._focused else FocusLost())
 
     def poll(self) -> None:
-        # Type-filtered: an unfiltered get() drains the whole SDL queue, which
-        # would swallow QUIT before the core loop (session 11) ever sees it.
+        # Unfiltered: takes every queued event in order, acts on each focus and
+        # QUIT event, and drops every other type. Nothing else reads this queue
+        # (keys come from pynput), so anything left on it stays there.
+        # A type-filtered get() let mouse motion and key events pile up to
+        # SDL's 65,535-event cap, after which SDL refuses QUIT and the close
+        # button stops working (alpha-plan #12c (3), windows-validation E10).
         delivered = False
-        for ev in pygame.event.get([pygame.WINDOWFOCUSGAINED, pygame.WINDOWFOCUSLOST, pygame.QUIT]):
+        for ev in pygame.event.get():
+            if ev.type not in (pygame.WINDOWFOCUSGAINED, pygame.WINDOWFOCUSLOST, pygame.QUIT):
+                continue
             if ev.type == pygame.QUIT:
                 # This pump is the only thing that sees QUIT, so it is the only
                 # thing that can normalise it onto the core's one inbound
