@@ -1,7 +1,7 @@
 import pygame
 
 from takki import config
-from takki.audio.cues import CueName
+from takki.audio.cues import CueName, CueOutputError
 from takki.audio.tone import generate_sweep, generate_tone
 
 # Cue -> class -> reserved channel (ADR-012 Sound cue channel policy). A cue
@@ -23,12 +23,18 @@ CLASS_CHANNEL: dict[str, int] = {
 
 class PygameMixerCues:
     def __init__(self) -> None:
-        pygame.mixer.init(
-            frequency=config.MIXER_FREQUENCY,
-            size=config.MIXER_SIZE,
-            channels=config.MIXER_CHANNELS,
-            buffer=config.MIXER_BUFFER,
-        )
+        # With no output device SDL raises here (A4c, 2026-09-26: "WASAPI can't
+        # find requested audio endpoint"). Translated so main() can stop with
+        # the no-audio remedy without depending on pygame.
+        try:
+            pygame.mixer.init(
+                frequency=config.MIXER_FREQUENCY,
+                size=config.MIXER_SIZE,
+                channels=config.MIXER_CHANNELS,
+                buffer=config.MIXER_BUFFER,
+            )
+        except pygame.error as error:
+            raise CueOutputError(f"the sound cues cannot play any sound ({error})") from error
         pygame.mixer.set_reserved(len(CLASS_CHANNEL))
         self._channels = {
             cue_class: pygame.mixer.Channel(index) for cue_class, index in CLASS_CHANNEL.items()

@@ -1,6 +1,6 @@
 import pytest
 
-from takki.audio.cues import SoundCuePlayer
+from takki.audio.cues import CueOutputError, SoundCuePlayer
 from takki.audio.pygame_cues import CLASS_CHANNEL, CUE_CLASS, PygameMixerCues
 from tests.fakes.fake_sound_cues import FakeSoundCues
 
@@ -46,6 +46,20 @@ class TestCueClassMap:
 
     def test_channels_are_distinct(self) -> None:
         assert len(set(CLASS_CHANNEL.values())) == len(CLASS_CHANNEL)
+
+
+class TestPygameMixerCuesWithoutADevice:
+    def test_no_output_device_is_a_cue_output_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # What SDL raised on the laptop with every output disabled (A4c,
+        # 2026-09-26). Faked because the dummy driver always initialises.
+        import pygame
+
+        def no_device(**_: int) -> None:
+            raise pygame.error("WASAPI can't find requested audio endpoint")
+
+        monkeypatch.setattr(pygame.mixer, "init", no_device)
+        with pytest.raises(CueOutputError, match="WASAPI can't find requested audio endpoint"):
+            PygameMixerCues()
 
 
 @pytest.mark.audio

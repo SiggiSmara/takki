@@ -1,10 +1,15 @@
+from collections.abc import Callable
 from dataclasses import replace
 
 import pytest
 
+from takki.audio.cues import CueOutputError
+from takki.audio.tts import SpeechOutputError
 from takki.main import (
     EXIT_LAYOUT_MISMATCH,
+    EXIT_NO_AUDIO,
     EXIT_NO_VOICE,
+    main,
     resolve_language,
     verify_layout,
 )
@@ -93,3 +98,60 @@ class TestVoiceAvailability:
         # "no voice" -- the two have different remedies.
         assert EXIT_NO_VOICE != 0
         assert EXIT_NO_VOICE != EXIT_LAYOUT_MISMATCH
+
+
+class TestNoAudioOutput:
+    """A4c: with no output device, startup stops with EXIT_NO_AUDIO and the remedy, not a traceback."""
+
+    REMEDY = (
+        "Check that speakers or headphones are connected and selected as the "
+        "Windows sound output, then start Takki again.\n"
+    )
+
+    @pytest.fixture
+    def platform(self, monkeypatch: pytest.MonkeyPatch) -> FakePlatformInterface:
+        platform = FakePlatformInterface()
+        monkeypatch.setattr("takki.main.config.LANGUAGE", "en")
+        monkeypatch.setattr("takki.main.select_platform_interface", lambda: platform)
+
+        # No window: startup stops before the focus source is used.
+        def no_window(inbound: object) -> None:
+            return None
+
+        monkeypatch.setattr("takki.main.PygameFocusSource", no_window)
+        return platform
+
+    def test_the_mixer_failing_exits_no_audio(
+        self,
+        platform: FakePlatformInterface,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        def no_device() -> None:
+            raise CueOutputError("the sound cues cannot play (no endpoint)")
+
+        monkeypatch.setattr("takki.main.PygameMixerCues", no_device)
+        assert main() == EXIT_NO_AUDIO
+        assert capsys.readouterr().err == (
+            "Takki cannot start: the sound cues cannot play (no endpoint).\n" + self.REMEDY
+        )
+
+    def test_the_voice_failing_exits_no_audio(
+        self,
+        platform: FakePlatformInterface,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        def mute() -> None:
+            raise SpeechOutputError("the voice cannot play any sound (no endpoint)")
+
+        monkeypatch.setattr("takki.main.PygameMixerCues", lambda: None)
+
+        def mute_factory(voice_id: str) -> Callable[[], None]:
+            return mute
+
+        monkeypatch.setattr(platform, "get_fallback_tts", mute_factory)
+        assert main() == EXIT_NO_AUDIO
+        assert capsys.readouterr().err == (
+            "Takki cannot start: the voice cannot play any sound (no endpoint).\n" + self.REMEDY
+        )

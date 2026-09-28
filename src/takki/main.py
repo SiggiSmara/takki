@@ -13,6 +13,7 @@ from collections.abc import Callable
 from types import FrameType
 
 from takki import config
+from takki.audio.cues import CueOutputError
 from takki.audio.pygame_cues import PygameMixerCues
 from takki.audio.synthetic_letters import SyntheticLetterAudioSource
 from takki.audio.tts import SpeechOutputError
@@ -125,7 +126,6 @@ def main() -> int:
     # ahead of everything else. `PygameMixerCues` calls `pygame.mixer.init()`
     # itself, which is why the two need sequencing here at all.
     focus = PygameFocusSource(inbound)
-    cues = PygameMixerCues()
 
     # The voice verified above is applied here, and `get_fallback_tts` hands
     # back a factory rather than an engine -- the worker builds it on its own
@@ -135,11 +135,14 @@ def main() -> int:
     # reads the registry and cannot see the output device, so the engine proves
     # it by speaking as it is built (ADR-019 § Headless audio/video). Stop, as
     # for the other two -- an audio-first app with no audio has nothing to offer,
-    # and nothing to say it with, so the reason goes to stderr.
+    # and nothing to say it with, so the reason goes to stderr. The mixer is
+    # inside the same guard: with no device it fails first, and on its own it
+    # used to end startup in a traceback (A4c, alpha-plan #12c (2)).
     speech = TTSWorker(platform.get_fallback_tts(voice), inbound)
     try:
+        cues = PygameMixerCues()
         speech.start()
-    except SpeechOutputError as error:
+    except (CueOutputError, SpeechOutputError) as error:
         print(f"Takki cannot start: {error}.", file=sys.stderr)
         print(
             "Check that speakers or headphones are connected and selected as the "
