@@ -94,7 +94,7 @@ Date: 2026-09-28, run overnight (result read 2026-09-29)
 
 ## FV-04 · E2/E3 follow-up: the pause announcement names the way back (E1)
 
-**Change under test** (commit: ____): the pause announcement is now *"Paused. Press Alt+Tab to come back to Takki."* In Alpha, Alt+Tab is the resume path, and the held-key raise (E2/E3) moved to Beta ([ADR-028 § C8](../../../adr/0028-composite-input-and-keyboard-ownership.md), *Resume in Alpha*; [roadmap C18](../../../roadmap.md#c-genuinely-unhandled-corner-cases-mostly-voicebeta-but-cheap-to-decide-now)).
+**Change under test** (`1a33006`): the pause announcement is now *"Paused. Press Alt+Tab to come back to Takki."* In Alpha, Alt+Tab is the resume path, and the held-key raise (E2/E3) moved to Beta ([ADR-028 § C8](../../../adr/0028-composite-input-and-keyboard-ownership.md), *Resume in Alpha*; [roadmap C18](../../../roadmap.md#c-genuinely-unhandled-corner-cases-mostly-voicebeta-but-cheap-to-decide-now)).
 
 1. [T] launch line:
    ```powershell
@@ -105,13 +105,15 @@ Date: 2026-09-28, run overnight (result read 2026-09-29)
 
 **Pass:** On leaving, *"Paused. Press Alt+Tab to come back to Takki."* On returning, *"Back in Takki."*, then the open prompt **asked again after** the announcement, not over it.
 
-Date:
+Date: 2026-09-29
 
-- Heard on leaving:
-- Heard on returning:
-- Prompt asked again after the announcement, not over it: yes / no
+- Heard on leaving: *"Paused. Press Alt+Tab to come back to Takki."*
+- Heard on returning: *"Back in Takki."*
+- Prompt asked again after the announcement, not over it: yes
 
-**Result:**
+(Recorded as a pass on the pass condition's wording; the developer reported the result as a pass rather than word for word.)
+
+**Result:** Pass
 
 ---
 
@@ -122,4 +124,4 @@ Date:
 | FV-01 | #12c (1), by script | Pass |
 | FV-02 | #12c (2), by hand | Pass |
 | FV-03 | #12c (3), E10 | Pass |
-| FV-04 | E2/E3 follow-up, E1 by ear | |
+| FV-04 | E2/E3 follow-up, E1 by ear | Pass |
