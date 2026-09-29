@@ -52,6 +52,8 @@ CREATE TABLE key_stats (
     attempt_count     INTEGER NOT NULL DEFAULT 0,
     correct_count     INTEGER NOT NULL DEFAULT 0,
     last_practised_at TEXT,         -- NULL if never practised
+    introduced_at     TEXT,         -- when the step carrying this key was spoken;
+                                    -- one value shared by both members of a pair
     PRIMARY KEY (profile_id, key_char)
 );
 
@@ -68,11 +70,21 @@ CREATE TABLE key_attempts (
     profile_id   INTEGER NOT NULL REFERENCES profiles(id),
     key_char     TEXT    NOT NULL,
     attempted_at TEXT    NOT NULL,  -- local time, ISO-8601
-    correct      INTEGER NOT NULL   -- 1 = first keystroke correct, 0 = wrong
+    correct      INTEGER NOT NULL,  -- 1 = first keystroke correct, 0 = wrong
+    latency_ms   INTEGER,           -- prompt to first press; NULL = unmeasured
+    prev_char    TEXT               -- the preceding prompt; NULL = first of a block
 );
 ```
 
 The `key_attempts` table is a rolling window: at most 200 rows per (profile_id, key_char). The persistence layer deletes the oldest row on each INSERT when the cap is exceeded. This table is authoritative for the Known criterion — see ADR-027.
+
+**`latency_ms`, `prev_char` and `introduced_at`** *(added 2026-09-29, alpha-plan #12d, for [ADR-024 § Ramp-up variability, derived exit bars, and the "I know this one" probe](0024-drill-content-and-lesson-granularity.md).)* The three columns exist for one reason: the ramp-up's exit bars stop being session-local state and become queries over what is already stored, which is what makes a ramp-up survive the app closing. What each buys, since none is speculative:
+
+- **`latency_ms`** is the only signal that separates retrieval from anticipation. Correctness cannot: a child following a predictable cycle presses the right key without hearing the prompt. It is read as a **median ratio against the child's own baseline over their Known keys**, never as an absolute figure — an absolute threshold would encode a sighted adult's reaction time. NULL where no prompt time was available, and a NULL never fails a bar.
+- **`prev_char`** makes "correct when the next prompt could not be predicted" derivable after a restart rather than only inside the session that generated it. It is also what lets a later reader check ADR-024's anchor invariant against the stored history instead of trusting the generator.
+- **`introduced_at`** on `key_stats` answers *which step is current*, which nothing could answer before: Active is row presence, and insertion order was recoverable only from an implicit `rowid`. Both members of a pair step are written with **one shared timestamp value**, so a pair is recovered by exact equality rather than by proximity — second-resolution timestamps cannot be compared for nearness safely.
+
+**This makes explicit what `key_attempts` already was:** an append-only event log with a windowed trim, ordered by `(attempted_at, rowid)`. No ordering column is added, because the existing trim already relies on that tiebreaker. What is added is a **read** that returns the window's rows in order; every query before this one wanted aggregates, and a streak or a run-with-a-budget cannot be computed from aggregates. Migration is three `ALTER TABLE ... ADD COLUMN` statements, all nullable, so an existing profile keeps every row it has and simply has no latency or predecessor history for attempts recorded before the change — which is correct, because it does not.
 
 #### Deferred to Beta
 
