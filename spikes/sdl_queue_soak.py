@@ -17,6 +17,11 @@ by how often the loop pumps (TICK_HZ), and E10's soak has to outlast
         "Takki" to come to the front, then circles the cursor inside it,
         pausing whenever another window is in front, and prints a progress
         line per minute of motion. Then close Takki with the mouse.
+    uv run python spikes/sdl_queue_soak.py drive --minutes 25 --close
+        As drive, then closes Takki itself (added 2026-09-28, alpha #12c,
+        FV-03): posts WM_CLOSE to its window, which is what the close button
+        sends, so SDL has to queue a QUIT exactly as for a click. Reports how
+        long the window took to go, or that it never did.
 
 Both stop the moment the cursor is not where this script last put it --
 move the mouse yourself to take it back -- and neither moves it while
@@ -34,6 +39,8 @@ import time
 os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 
 SDL_MAX_QUEUED_EVENTS = 65535
+WM_CLOSE = 0x0010
+CLOSE_WAIT_SECONDS = 10.0
 STEP_HZ = 250  # cursor moves per second: well above any pump rate, so the pump is the bound
 
 
@@ -47,6 +54,8 @@ def _user32() -> ctypes.WinDLL:
     user32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
     user32.GetClientRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
     user32.ClientToScreen.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.POINT)]
+    user32.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+    user32.IsWindow.argtypes = [wintypes.HWND]
     return user32
 
 
@@ -158,7 +167,23 @@ def measure(seconds: float) -> int:
     return 0 if stopped is None else 1
 
 
-def drive(minutes: float) -> int:
+def close(user32: ctypes.WinDLL, hwnd: int) -> int:
+    user32.PostMessageW(hwnd, WM_CLOSE, 0, 0)
+    posted = time.monotonic()
+    while user32.IsWindow(hwnd):
+        waited = time.monotonic() - posted
+        if waited > CLOSE_WAIT_SECONDS:
+            print(
+                f"STILL OPEN {CLOSE_WAIT_SECONDS:.0f} s after WM_CLOSE: E10 fails. "
+                "Press Ctrl+C in the Takki console."
+            )
+            return 1
+        time.sleep(0.02)
+    print(f"CLOSED in {time.monotonic() - posted:.2f} s after WM_CLOSE.")
+    return 0
+
+
+def drive(minutes: float, close_after: bool) -> int:
     user32 = _user32()
     mouse = Mouse(user32, "Takki")
     print(
@@ -191,6 +216,13 @@ def drive(minutes: float) -> int:
             reported = int(driven // 60)
             print(f"  {reported} min")
         time.sleep(1.0 / STEP_HZ)
+    if close_after:
+        hwnd = mouse._foreground()  # pyright: ignore[reportPrivateUsage]
+        if hwnd is None:
+            print(f"Done: {minutes:.0f} min of motion, but Takki is not in front; not closing it.")
+            return 1
+        print(f"Done: {minutes:.0f} min of motion over Takki. Closing it.")
+        return close(user32, hwnd)
     print(
         f"Done: {minutes:.0f} min of motion over Takki. Keep practising; close Takki with the mouse at the end (E10)."
     )
@@ -204,9 +236,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").split("\n\n")[0])
     sub = parser.add_subparsers(dest="mode", required=True)
     sub.add_parser("measure").add_argument("--seconds", type=float, default=10.0)
-    sub.add_parser("drive").add_argument("--minutes", type=float, default=25.0)
+    driver = sub.add_parser("drive")
+    driver.add_argument("--minutes", type=float, default=25.0)
+    driver.add_argument("--close", action="store_true", help="close Takki via WM_CLOSE when done")
     args = parser.parse_args()
-    return measure(args.seconds) if args.mode == "measure" else drive(args.minutes)
+    return measure(args.seconds) if args.mode == "measure" else drive(args.minutes, args.close)
 
 
 if __name__ == "__main__":
