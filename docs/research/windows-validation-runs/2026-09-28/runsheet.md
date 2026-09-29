@@ -65,7 +65,7 @@ Date: 2026-09-28
 
 ## FV-03 · #12c (3): the close button still works after SDL's queue would have filled (E10)
 
-**Fix under test** (commit: ____): `PygameFocusSource.poll()` takes every event off SDL's queue with one unfiltered `get()` and ignores all but focus-gained, focus-lost and `QUIT`. Before the fix it took only those three, and everything else stayed queued up to SDL's 65,535 cap, after which `QUIT` was refused.
+**Fix under test** (`1ac6689`): `PygameFocusSource.poll()` takes every event off SDL's queue with one unfiltered `get()` and ignores all but focus-gained, focus-lost and `QUIT`. Before the fix it took only those three, and everything else stayed queued up to SDL's 65,535 cap, after which `QUIT` was refused.
 
 1. [T] launch line:
    ```powershell
@@ -73,21 +73,43 @@ Date: 2026-09-28
    ```
 2. [2] start the mouse helper:
    ```powershell
-   uv run python spikes/sdl_queue_soak.py drive --minutes 25
+   uv run python spikes/sdl_queue_soak.py drive --minutes 25 --close
    ```
 3. Alt+Tab to Takki. The cursor circles inside Takki's window. It pauses while another window is in front, and stops if you move the mouse yourself.
-4. Leave it for **at least 25 minutes** of motion (the helper prints one line per minute). Practising meanwhile is fine.
-5. Close Takki with the mouse. If it does not close, press Ctrl+C in [T] and record the fail.
+4. Leave it for **at least 25 minutes** of motion (the helper prints one line per minute). Practising meanwhile is fine. Wait for the first one or two minute lines before leaving it unattended.
+5. The helper then closes Takki itself: it posts `WM_CLOSE`, which is what the close button sends, and waits up to 10 s for the window to go. If Takki is still open, press Ctrl+C in [T] and record the fail.
 
-**Pass:** **Still closes**, within a couple of seconds of the click.
+**Pass:** **Still closes**, within a couple of seconds: the helper prints `CLOSED in … s`, not `STILL OPEN`.
+
+Date: 2026-09-28, run overnight (result read 2026-09-29)
+
+- Minutes of motion (the helper's last progress line): 25. The helper posts `WM_CLOSE` only after the full `--minutes` of motion, and an early stop returns without closing, so the close line below implies all 25.
+- Helper stopped early (you moved the mouse, or anything else): no
+- Helper's close line (`CLOSED in … s` or `STILL OPEN …`): `CLOSED in 0.05 s after WM_CLOSE.`
+- Exit code ([T]): 0
+
+**Result:** Pass
+
+---
+
+## FV-04 · E2/E3 follow-up: the pause announcement names the way back (E1)
+
+**Change under test** (commit: ____): the pause announcement is now *"Paused. Press Alt+Tab to come back to Takki."* In Alpha, Alt+Tab is the resume path, and the held-key raise (E2/E3) moved to Beta ([ADR-028 § C8](../../../adr/0028-composite-input-and-keyboard-ownership.md), *Resume in Alpha*; [roadmap C18](../../../roadmap.md#c-genuinely-unhandled-corner-cases-mostly-voicebeta-but-cheap-to-decide-now)).
+
+1. [T] launch line:
+   ```powershell
+   uv run takki; "exit $LASTEXITCODE"
+   ```
+2. While a letter is being asked, Alt+Tab to another window. Listen.
+3. Alt+Tab back to Takki. Listen.
+
+**Pass:** On leaving, *"Paused. Press Alt+Tab to come back to Takki."* On returning, *"Back in Takki."*, then the open prompt **asked again after** the announcement, not over it.
 
 Date:
 
-- Minutes of motion (the helper's last progress line):
-- Helper stopped early (you moved the mouse, or anything else):
-- Closed with the mouse: yes / no
-- Time from click to close:
-- Exit code:
+- Heard on leaving:
+- Heard on returning:
+- Prompt asked again after the announcement, not over it: yes / no
 
 **Result:**
 
@@ -99,4 +121,5 @@ Date:
 |---|---|---|
 | FV-01 | #12c (1), by script | Pass |
 | FV-02 | #12c (2), by hand | Pass |
-| FV-03 | #12c (3), E10 | |
+| FV-03 | #12c (3), E10 | Pass |
+| FV-04 | E2/E3 follow-up, E1 by ear | |

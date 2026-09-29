@@ -613,7 +613,7 @@ class TestPausedRoundTrip:
         harness.pump()
         harness.loop.tick()
         assert harness.engine.spoken == [
-            "Paused. Takki is not the active window.",
+            "Paused. Press Alt+Tab to come back to Takki.",
             "Back in Takki.",
         ]
         assert harness.letters.played == ["f"]

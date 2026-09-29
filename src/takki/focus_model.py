@@ -16,7 +16,11 @@ from takki.speech import Speaker
 
 # Placeholder English. ADR-022 moves every user-facing string to per-language
 # YAML; no string table exists yet, so these live here until it does.
-PAUSED_ANNOUNCEMENT = "Paused. Takki is not the active window."
+# Names the way back, not just the state: Alt+Tab is the one resume path that
+# works on every machine. The held-key raise never got past Windows' foreground
+# lock on the test laptop, and its F1 sat behind Fn there (windows-validation
+# E2/E3, 2026-09-28; ADR-028 § Resume in Alpha).
+PAUSED_ANNOUNCEMENT = "Paused. Press Alt+Tab to come back to Takki."
 RESUMED_ANNOUNCEMENT = "Back in Takki."
 ALT_TAB_HINT = "Press Alt+Tab to come back to Takki."
 
