@@ -32,6 +32,11 @@ class Speaker:
         # letter is never queued behind an unfinished first, where the worker
         # would play it after the cue and over the next prompt.
         self._letter_id: int | None = None
+        # Set when the outstanding letter's own SpeechFinished arrives, which is
+        # the moment a prompt actually became audible. The loop reads and clears
+        # it to time the child's answer from the end of the letter rather than
+        # from the enqueue (ADR-011 § latency_ms).
+        self.letter_finished = False
 
     @property
     def busy(self) -> bool:
@@ -83,6 +88,7 @@ class Speaker:
         """
         if event.utterance_id == self._letter_id:
             self._letter_id = None
+            self.letter_finished = True
             return False
         if event.utterance_id != self._in_flight:
             return False

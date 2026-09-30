@@ -1,11 +1,31 @@
-from datetime import datetime
+from collections.abc import Sequence
+from datetime import UTC, datetime
 
 from takki import config
-from takki.persistence import KeyStat, Profile, WindowStats
+from takki.persistence import Attempt, Introduction, KeyStat, Profile, WindowStats
 
 
 def _now() -> str:
-    return datetime.now().isoformat(timespec="seconds")
+    # UTC, as SqliteStore writes (ADR-011 § Timestamps are UTC).
+    return datetime.now(UTC).isoformat(timespec="seconds")
+
+
+def _local_day(stamp: str) -> str:
+    """The local calendar day of a UTC stamp — SQLite's `date(x, 'localtime')`.
+
+    A practice day is the child's day, not UTC's: an evening session either side
+    of midnight UTC is one day at the keyboard (ADR-027 § Known). Parity with
+    the real store matters here, since `distinct_days` gates Known.
+    """
+    try:
+        parsed = datetime.fromisoformat(stamp)
+    except ValueError:
+        return stamp[:10]
+    if parsed.tzinfo is None:
+        # Written before ADR-011's UTC rule; taken at face value, as SQLite's
+        # date() does with a naive string.
+        return parsed.date().isoformat()
+    return parsed.astimezone().date().isoformat()
 
 
 class FakeStore:
@@ -15,7 +35,9 @@ class FakeStore:
         self._sessions: dict[int, tuple[int, str, str | None]] = {}
         self._next_session_id = 1
         self._key_stats: dict[tuple[int, str], tuple[int, int, str | None]] = {}
-        self._key_attempts: dict[tuple[int, str], list[tuple[str, int]]] = {}
+        self._introductions: dict[tuple[int, str], Introduction] = {}
+        self._phases: dict[tuple[int, str, str], int] = {}
+        self._key_attempts: dict[tuple[int, str], list[Attempt]] = {}
         self._milestones: dict[tuple[int, str], str] = {}
         self._cap = window_cap
 
@@ -99,23 +121,66 @@ class FakeStore:
             ac, cc, _ = self._key_stats[key]
             self._key_stats[key] = (ac, cc, ts)
 
+    def mark_introduced(
+        self,
+        profile_id: int,
+        key_chars: Sequence[str],
+        introduced_at: str | None = None,
+    ) -> int:
+        # Microseconds, not seconds: this timestamp *identifies a step* -- both
+        # members share one value and equality is what recovers the pair -- so
+        # two steps sharing a second would read as one step of four members.
+        ts = introduced_at or datetime.now().isoformat()
+        steps = [i.step for (pid, _), i in self._introductions.items() if pid == profile_id]
+        step = max(steps, default=0) + 1
+        for position, key_char in enumerate(key_chars):
+            # First introduction wins, as SqliteStore's INSERT OR IGNORE does.
+            self._introductions.setdefault(
+                (profile_id, key_char),
+                Introduction(key_char=key_char, step=step, position=position, introduced_at=ts),
+            )
+        return step
+
+    def record_phase(
+        self,
+        profile_id: int,
+        key_char: str,
+        phase: str,
+        attempts_at: int,
+        completed_at: str | None = None,
+    ) -> None:
+        del completed_at  # Write-once; the fake has no reader for the timestamp.
+        self._phases.setdefault((profile_id, key_char, phase), attempts_at)
+
+    def completed_phases(self, profile_id: int, key_char: str) -> dict[str, int]:
+        return {
+            phase: attempts_at
+            for (pid, name, phase), attempts_at in self._phases.items()
+            if pid == profile_id and name == key_char
+        }
+
     def append_attempt(
         self,
         profile_id: int,
         key_char: str,
         correct: bool,
         attempted_at: str | None = None,
+        latency_ms: int | None = None,
+        prev_char: str | None = None,
     ) -> None:
         ts = attempted_at or _now()
         key = (profile_id, key_char)
         if key not in self._key_attempts:
             self._key_attempts[key] = []
         attempts = self._key_attempts[key]
-        attempts.append((ts, int(correct)))
+        attempts.append(
+            Attempt(correct=correct, attempted_at=ts, latency_ms=latency_ms, prev_char=prev_char)
+        )
         if len(attempts) > self._cap:
-            # Oldest by timestamp, ties broken by insertion order: what
-            # SqliteStore's ORDER BY attempted_at ASC, rowid ASC evicts.
-            del attempts[min(range(len(attempts)), key=lambda i: (attempts[i][0], i))]
+            # Insertion order, which is what SqliteStore's ORDER BY rowid ASC
+            # evicts. Evicting by timestamp would drop the row just written
+            # whenever the clock has moved backwards.
+            del attempts[0]
 
     def key_stats(self, profile_id: int) -> dict[str, KeyStat]:
         return {
@@ -124,13 +189,28 @@ class FakeStore:
             if pid == profile_id
         }
 
+    def introductions(self, profile_id: int) -> list[Introduction]:
+        return sorted(
+            (i for (pid, _), i in self._introductions.items() if pid == profile_id),
+            key=lambda i: (i.step, i.position),
+        )
+
     def window_stats(self, profile_id: int, key_char: str) -> WindowStats:
         attempts = self._key_attempts.get((profile_id, key_char), [])
         return WindowStats(
             attempt_count=len(attempts),
-            correct_count=sum(c for _, c in attempts),
-            distinct_days=len({ts[:10] for ts, _ in attempts}),
+            correct_count=sum(int(a.correct) for a in attempts),
+            distinct_days=len({_local_day(a.attempted_at) for a in attempts}),
         )
+
+    def window_attempts(
+        self, profile_id: int, key_char: str, limit: int | None = None
+    ) -> list[Attempt]:
+        # Insertion order, untouched: SqliteStore orders by rowid alone, so the
+        # list as appended *is* the answer. Sorting by timestamp here is what
+        # made the fake agree with a real store that was itself wrong.
+        attempts = self._key_attempts.get((profile_id, key_char), [])
+        return list(attempts if limit is None else attempts[-limit:])
 
     def record_milestone(
         self,

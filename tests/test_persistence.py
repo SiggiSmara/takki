@@ -1,3 +1,5 @@
+import sqlite3
+from pathlib import Path
 from typing import cast
 
 import pytest
@@ -323,9 +325,10 @@ class TestKeyStatsRead:
 
 
 class TestEvictionParity:
-    def test_the_oldest_attempt_goes_whatever_order_it_arrived_in(self, any_store: Store) -> None:
-        # Out-of-order arrival is not hypothetical: the window is timestamped
-        # in local time, which steps back an hour at the DST boundary.
+    def test_out_of_order_timestamps_still_aggregate(self, any_store: Store) -> None:
+        # Out-of-order arrival is not hypothetical. Timestamps are UTC now, which
+        # has no fall-back hour, but the system clock they come from is not
+        # monotonic: an NTP correction or a manual fix steps it back.
         store = any_store
         p = store.create_profile("Alice", "en")
         store.append_attempt(p.id, "f", False, attempted_at="2026-01-01T02:30:00")
@@ -333,12 +336,138 @@ class TestEvictionParity:
         store.append_attempt(p.id, "f", True, attempted_at="2026-01-01T03:00:00")
         assert store.window_stats(p.id, "f") == WindowStats(3, 2, 1)
 
-    def test_eviction_drops_the_oldest_by_timestamp(self) -> None:
+    def test_eviction_drops_the_first_to_arrive_not_the_oldest_stamp(self) -> None:
+        """ADR-011: the window forgets in arrival order, both stores alike.
+
+        Distinguishing the two rules takes a row whose *outcome* differs from the
+        one a timestamp rule would drop -- the version of this test that only
+        varied the stamps could not tell them apart, because both rules left two
+        rows with one correct between them. Arrival order is what the derived
+        ramp-up means by "the child's answers", and evicting by stamp let a clock
+        that had run ahead delete the row just written, freezing the window.
+        """
         stores: list[Store] = [SqliteStore(":memory:", window_cap=2), FakeStore(window_cap=2)]
         for store in stores:
             p = store.create_profile("Alice", "en")
             store.append_attempt(p.id, "f", True, attempted_at="2026-01-01T02:00:00")
-            store.append_attempt(p.id, "f", True, attempted_at="2026-01-01T01:00:00")
-            store.append_attempt(p.id, "f", False, attempted_at="2026-01-01T03:00:00")
-            # The 01:00 row is the oldest, even though it arrived second.
-            assert store.window_stats(p.id, "f") == WindowStats(2, 1, 1)
+            store.append_attempt(p.id, "f", False, attempted_at="2026-01-01T01:00:00")
+            store.append_attempt(p.id, "f", True, attempted_at="2026-01-01T03:00:00")
+            # The 02:00 row arrived first and goes, though 01:00 is the older stamp.
+            assert [row.correct for row in store.window_attempts(p.id, "f")] == [False, True]
+
+
+class TestIntroductions:
+    """ADR-011's `introductions` — which step is current, after a restart."""
+
+    def profile(self, any_store: Store) -> int:
+        return any_store.create_profile("Alice").id
+
+    def test_a_step_is_one_ordinal_and_keeps_its_member_order(self, any_store: Store) -> None:
+        # The ordinal groups the step and the position preserves ADR-023's
+        # left-hand-member-first order, which `members[0]` is read as.
+        pid = self.profile(any_store)
+        assert any_store.mark_introduced(pid, ["f", "j"]) == 1
+        introduced = any_store.introductions(pid)
+        assert [(i.key_char, i.step, i.position) for i in introduced] == [
+            ("f", 1, 0),
+            ("j", 1, 1),
+        ]
+
+    def test_steps_are_ordered_by_ordinal_not_by_clock(self, any_store: Store) -> None:
+        # The second step's *timestamp* is older here, as an NTP correction or a
+        # manual clock fix can make it even in UTC -- the system clock is not
+        # monotonic. The ordinal is what says which came later.
+        pid = self.profile(any_store)
+        any_store.mark_introduced(pid, ["f", "j"], "2026-09-29T02:30:00+00:00")
+        any_store.mark_introduced(pid, ["r", "u"], "2026-09-29T01:30:00+00:00")
+        introduced = any_store.introductions(pid)
+        assert [i.key_char for i in introduced] == ["f", "j", "r", "u"]
+        assert {i.step for i in introduced if i.key_char in "fj"} == {1}
+        assert {i.step for i in introduced if i.key_char in "ru"} == {2}
+
+    def test_the_first_introduction_wins(self, any_store: Store) -> None:
+        # A step introduced again -- the child never answered it -- keeps the
+        # step identity it had, instead of moving under a resumed ramp-up.
+        pid = self.profile(any_store)
+        any_store.mark_introduced(pid, ["f"], "2026-09-01T10:00:00+00:00")
+        any_store.mark_introduced(pid, ["f"], "2026-09-29T10:00:00+00:00")
+        introduced = any_store.introductions(pid)
+        assert [(i.key_char, i.step, i.introduced_at) for i in introduced] == [
+            ("f", 1, "2026-09-01T10:00:00+00:00")
+        ]
+
+    def test_an_introduction_alone_does_not_make_a_key_active(self, any_store: Store) -> None:
+        # Active is row presence in `key_stats` (ADR-027 § Key States). Writing
+        # one here would consume the introduction of a step the child never
+        # answered, which ADR-023 says is owed its script again.
+        pid = self.profile(any_store)
+        any_store.mark_introduced(pid, ["f", "j"])
+        assert any_store.key_stats(pid) == {}
+
+    def test_a_profile_with_no_introductions_is_empty(self, any_store: Store) -> None:
+        assert any_store.introductions(self.profile(any_store)) == []
+
+
+class TestWindowAttempts:
+    """The ordered window read ADR-024's derived bars need."""
+
+    def test_rows_come_back_oldest_first_with_their_columns(self, any_store: Store) -> None:
+        pid = any_store.create_profile("Alice").id
+        any_store.append_attempt(pid, "f", True, "2026-09-29T10:00:00", 120, None)
+        any_store.append_attempt(pid, "f", False, "2026-09-29T10:00:01", None, "j")
+        rows = any_store.window_attempts(pid, "f")
+        assert [(r.correct, r.latency_ms, r.prev_char) for r in rows] == [
+            (True, 120, None),
+            (False, None, "j"),
+        ]
+
+    def test_equal_timestamps_keep_insertion_order(self, any_store: Store) -> None:
+        # A drill puts several attempts inside one second, and a streak read in
+        # the wrong order is a different streak.
+        pid = any_store.create_profile("Alice").id
+        for correct in (True, False, True, True):
+            any_store.append_attempt(pid, "f", correct, "2026-09-29T10:00:00")
+        assert [r.correct for r in any_store.window_attempts(pid, "f")] == [
+            True,
+            False,
+            True,
+            True,
+        ]
+
+    def test_an_untouched_key_has_no_rows(self, any_store: Store) -> None:
+        pid = any_store.create_profile("Alice").id
+        assert any_store.window_attempts(pid, "f") == []
+
+
+class TestMigration:
+    def test_a_database_written_before_the_new_columns_still_opens(self, tmp_path: Path) -> None:
+        # ADR-011, 2026-09-29: two nullable additions, so an existing profile
+        # keeps every row and simply has no latency or predecessor history for
+        # what it already recorded.
+        path = str(tmp_path / "takki.sqlite")
+        old = sqlite3.connect(path)
+        old.executescript("""
+            CREATE TABLE profiles (
+                id INTEGER PRIMARY KEY, name TEXT NOT NULL, language TEXT NOT NULL,
+                tts_voice TEXT, tts_rate REAL, talk_key TEXT, reread_key TEXT,
+                restart_key TEXT, ptt_mode TEXT, created_at TEXT NOT NULL
+            );
+            CREATE TABLE key_attempts (
+                profile_id INTEGER NOT NULL, key_char TEXT NOT NULL,
+                attempted_at TEXT NOT NULL, correct INTEGER NOT NULL
+            );
+            INSERT INTO profiles (name, language, created_at)
+                VALUES ('Alice', 'en', '2026-09-01T10:00:00');
+            INSERT INTO key_attempts VALUES (1, 'f', '2026-09-01T10:00:00', 1);
+        """)
+        old.commit()
+        old.close()
+
+        store = SqliteStore(path)
+        rows = store.window_attempts(1, "f")
+        assert [(r.correct, r.latency_ms, r.prev_char) for r in rows] == [(True, None, None)]
+        # And the new writes work on the migrated table.
+        store.append_attempt(1, "f", True, "2026-09-29T10:00:00", 300, "j")
+        assert store.window_attempts(1, "f")[-1].latency_ms == 300
+        store.mark_introduced(1, ["f"])
+        assert [i.key_char for i in store.introductions(1)] == ["f"]

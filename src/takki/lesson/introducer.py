@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from collections.abc import Set as AbstractSet
 from dataclasses import dataclass
 from typing import Protocol
@@ -252,6 +253,16 @@ class KeyIntroducer:
         # ADR-023: the child can re-hear the introduction script via the re-read key.
         return self._last_step
 
+    def remember(self, step: IntroductionStep) -> None:
+        """Adopt a step this introducer did not emit — a resumed one.
+
+        Without this, a session that resumes a ramp-up (alpha-plan #12d) never
+        emits a step, so `last_step` stays None and the re-read key has nothing
+        to say: a blind child presses it between blocks and hears silence.
+        """
+        self._introduced.update(k.grapheme for k in step.keys)
+        self._last_step = step
+
     def _had(self) -> set[str]:
         return self._states.active_keys() | self._introduced
 
@@ -390,6 +401,34 @@ def _build_step(
         introduced.add(name)
         struck.update(layout.graphemes[name].prereq_keys)
     return IntroductionStep(slot.stage, tuple(introductions))
+
+
+def resume_step(layout: Layout, graphemes: Sequence[str]) -> IntroductionStep:
+    """Rebuild a step already introduced, so its ramp-up can be re-entered.
+
+    For [ADR-024](../../../docs/adr/0024-drill-content-and-lesson-granularity.md)
+    § Ramp-up variability's cross-session resume. **Never spoken.** The script's
+    clauses -- location, and a modifier's introduction -- are a teaching moment
+    the child already had, and re-deriving them here would invite a caller to
+    re-speak them; they are left empty so a resumed step carries only what the
+    drill generator reads: the stage, each member's grapheme, and its base key.
+    """
+    stage = STAGE_0 if set(graphemes) <= set(anchor_keys(layout)) else CURRICULUM
+    keys = tuple(
+        KeyIntroduction(
+            grapheme=name,
+            mechanism=layout.graphemes[name].mechanism,
+            keys=layout.graphemes[name].prereq_keys,
+            base=base_key(layout, name).name,
+            finger=base_key(layout, name).finger,
+            side=base_key(layout, name).side,
+            location=None,
+            modifier=None,
+        )
+        for name in graphemes
+        if name in layout.graphemes
+    )
+    return IntroductionStep(stage, keys)
 
 
 def _introduce(

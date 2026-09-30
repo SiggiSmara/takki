@@ -62,11 +62,13 @@ def _print_key_stats(conn: sqlite3.Connection, profile_id: int) -> None:
 
 
 def _print_attempts_by_day(conn: sqlite3.Connection, profile_id: int) -> None:
-    # date(attempted_at) -- the same grouping ADR-027's window_stats() uses
-    # for distinct_days, so this dump agrees with what the engine counts.
+    # date(attempted_at, 'localtime') -- the same grouping window_stats() uses
+    # for distinct_days, so this dump agrees with what the engine counts. Stored
+    # timestamps are UTC (ADR-011) and a practice day is the child's own day.
     rows = conn.execute(
         """
-        SELECT key_char, date(attempted_at) AS day, COUNT(*), SUM(correct)
+        SELECT key_char, date(attempted_at, 'localtime') AS day, COUNT(*), SUM(correct),
+               AVG(latency_ms), COUNT(latency_ms)
         FROM key_attempts
         WHERE profile_id = ?
         GROUP BY key_char, day
@@ -74,14 +76,57 @@ def _print_attempts_by_day(conn: sqlite3.Connection, profile_id: int) -> None:
         """,
         (profile_id,),
     ).fetchall()
-    print("\nkey_attempts by calendar day")
+    print("\nkey_attempts by local calendar day")
     if not rows:
         print("  (none)")
         return
-    print(f"  {'key':<4} {'day':<10} {'attempts':>8} {'correct':>8} {'accuracy':>9}")
-    for key_char, day, attempts, correct in rows:
+    header = f"  {'key':<4} {'day':<10} {'attempts':>8} {'correct':>8} {'accuracy':>9}"
+    print(f"{header} {'mean ms':>8} {'timed':>6}")
+    for key_char, day, attempts, correct, mean_latency, timed in rows:
         accuracy = correct / attempts if attempts else 0.0
-        print(f"  {key_char:<4} {day:<10} {attempts:>8} {correct:>8} {accuracy:>8.1%}")
+        latency = f"{mean_latency:>8.0f}" if mean_latency is not None else f"{'-':>8}"
+        print(
+            f"  {key_char:<4} {day:<10} {attempts:>8} {correct:>8} {accuracy:>8.1%}"
+            f" {latency} {timed:>6}"
+        )
+
+
+def _print_ramp_up(conn: sqlite3.Connection, profile_id: int) -> None:
+    """Introduction steps and the phases each member has passed (ADR-024).
+
+    The only place a resumed ramp-up is observable. Without it, a session that
+    paces wrongly after a restart cannot be told apart from one that paces
+    wrongly for any other reason -- which is the position alpha-plan #12d was
+    diagnosed from.
+    """
+    steps = conn.execute(
+        """
+        SELECT step, key_char, position, introduced_at FROM introductions
+        WHERE profile_id = ?
+        ORDER BY step, position
+        """,
+        (profile_id,),
+    ).fetchall()
+    print("\nintroductions and ramp-up phases")
+    if not steps:
+        print("  (none)")
+        return
+    passed: dict[str, str] = {}
+    for key_char, phase, attempts_at in conn.execute(
+        """
+        SELECT key_char, phase, attempts_at FROM ramp_up_phases
+        WHERE profile_id = ?
+        ORDER BY key_char, phase
+        """,
+        (profile_id,),
+    ).fetchall():
+        passed[key_char] = f"{passed.get(key_char, '')}{phase}@{attempts_at} "
+    print(f"  {'step':>4} {'key':<4} {'pos':>3}  {'phases passed':<24} introduced_at")
+    for step, key_char, position, introduced_at in steps:
+        print(
+            f"  {step:>4} {key_char:<4} {position:>3}  "
+            f"{passed.get(key_char, '(none)'):<24} {introduced_at}"
+        )
 
 
 def _print_milestones(conn: sqlite3.Connection, profile_id: int) -> None:
@@ -132,6 +177,7 @@ def main() -> None:
             return
         _print_key_stats(conn, profile_id)
         _print_attempts_by_day(conn, profile_id)
+        _print_ramp_up(conn, profile_id)
         _print_milestones(conn, profile_id)
         _print_sessions(conn, profile_id)
     finally:

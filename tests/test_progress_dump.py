@@ -15,7 +15,11 @@ def _seed_db(path: Path) -> int:
     store.upsert_key_stat(profile.id, "f", False, practised_at="2026-09-19T09:02:00")
     store.append_attempt(profile.id, "f", True, attempted_at="2026-09-19T09:01:00")
     store.append_attempt(profile.id, "f", False, attempted_at="2026-09-19T09:02:00")
-    store.append_attempt(profile.id, "f", True, attempted_at="2026-09-20T10:00:00")
+    store.append_attempt(
+        profile.id, "f", True, attempted_at="2026-09-20T10:00:00", latency_ms=420, prev_char="j"
+    )
+    store.mark_introduced(profile.id, ["f", "j"], introduced_at="2026-09-19T09:00:00+00:00")
+    store.record_phase(profile.id, "f", "A", 10, completed_at="2026-09-19T09:05:00+00:00")
     store.record_milestone(profile.id, "anchor", achieved_at="2026-09-20T11:00:00")
     ended = store.start_session(profile.id, started_at="2026-09-19T09:00:00")
     store.end_session(ended, ended_at="2026-09-19T09:20:00")
@@ -85,10 +89,15 @@ class TestMain:
 
         assert "Profile: dev" in out
         assert "key_stats (lifetime)" in out
-        assert "key_attempts by calendar day" in out
-        # date(attempted_at) grouping — must agree with ADR-027's window_stats().
+        assert "key_attempts by local calendar day" in out
+        # date(attempted_at, 'localtime') grouping — must agree with window_stats().
         assert "2026-09-19" in out
         assert "2026-09-20" in out
+        # The mean latency of the one timed attempt, and how many were timed.
+        assert "420" in out
+        # Introductions and phases: the only place a resumed ramp-up is visible.
+        assert "introductions and ramp-up phases" in out
+        assert "A@10" in out
         assert "milestones" in out
         assert "anchor" in out
         assert "sessions" in out

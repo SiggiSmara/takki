@@ -52,9 +52,25 @@ CREATE TABLE key_stats (
     attempt_count     INTEGER NOT NULL DEFAULT 0,
     correct_count     INTEGER NOT NULL DEFAULT 0,
     last_practised_at TEXT,         -- NULL if never practised
-    introduced_at     TEXT,         -- when the step carrying this key was spoken;
-                                    -- one value shared by both members of a pair
     PRIMARY KEY (profile_id, key_char)
+);
+
+CREATE TABLE introductions (
+    profile_id    INTEGER NOT NULL REFERENCES profiles(id),
+    key_char      TEXT    NOT NULL,
+    step          INTEGER NOT NULL,  -- per-profile ordinal: groups and orders steps
+    position      INTEGER NOT NULL,  -- 0-based; ADR-023 puts the left hand first
+    introduced_at TEXT    NOT NULL,  -- UTC, ISO-8601
+    PRIMARY KEY (profile_id, key_char)
+);
+
+CREATE TABLE ramp_up_phases (
+    profile_id   INTEGER NOT NULL REFERENCES profiles(id),
+    key_char     TEXT    NOT NULL,
+    phase        TEXT    NOT NULL,   -- "A", "B", "C" (ADR-024's ramp-up)
+    attempts_at  INTEGER NOT NULL,   -- key_stats.attempt_count when it was passed
+    completed_at TEXT    NOT NULL,   -- UTC, ISO-8601
+    PRIMARY KEY (profile_id, key_char, phase)
 );
 
 CREATE TABLE milestones (
@@ -76,15 +92,33 @@ CREATE TABLE key_attempts (
 );
 ```
 
+### Timestamps are UTC
+
+*(Added 2026-09-30, alpha-plan #12d.)* Every timestamp in this schema is **UTC**, ISO-8601. Local time is a presentation concern: reports and any spoken or displayed date convert on the way out.
+
+Two things forced it. Naive local strings are not an ordering — an hour repeats every autumn — and this schema is now read positionally by the derived ramp-up and trimmed by the same key, so an ordering that goes backwards is a correctness problem rather than a cosmetic one. And "the same instant" has to survive a machine moving timezone, which a child's laptop does.
+
+**The one place local time is still the meaning is a practice *day*.** ADR-027's Known criterion counts distinct practice days, and that is the child's day at the keyboard, not UTC's — an evening session either side of midnight UTC is one day. So `window_stats` groups by `date(attempted_at, 'localtime')`, and the fake mirrors it by converting rather than by slicing the string. Getting that wrong would move a Known gate by a day for anyone east or west of Greenwich.
+
+Rows written before this rule are naive local. They are not migrated: Alpha data is disposable, and a converted timestamp would be a guess at the offset in force when it was written.
+
 The `key_attempts` table is a rolling window: at most 200 rows per (profile_id, key_char). The persistence layer deletes the oldest row on each INSERT when the cap is exceeded. This table is authoritative for the Known criterion — see ADR-027.
 
-**`latency_ms`, `prev_char` and `introduced_at`** *(added 2026-09-29, alpha-plan #12d, for [ADR-024 § Ramp-up variability, derived exit bars, and the "I know this one" probe](0024-drill-content-and-lesson-granularity.md).)* The three columns exist for one reason: the ramp-up's exit bars stop being session-local state and become queries over what is already stored, which is what makes a ramp-up survive the app closing. What each buys, since none is speculative:
+**`latency_ms`, `prev_char` and the `introductions` table** *(added 2026-09-29, alpha-plan #12d, for [ADR-024 § Ramp-up variability, derived exit bars, and the "I know this one" probe](0024-drill-content-and-lesson-granularity.md).)* Two columns and one table, all for one reason: the ramp-up's exit bars stop being session-local state and become queries over what is already stored, which is what makes a ramp-up survive the app closing. What each buys, since none is speculative:
 
 - **`latency_ms`** is the only signal that separates retrieval from anticipation. Correctness cannot: a child following a predictable cycle presses the right key without hearing the prompt. It is read as a **median ratio against the child's own baseline over their Known keys**, never as an absolute figure — an absolute threshold would encode a sighted adult's reaction time. NULL where no prompt time was available, and a NULL never fails a bar.
 - **`prev_char`** makes "correct when the next prompt could not be predicted" derivable after a restart rather than only inside the session that generated it. It is also what lets a later reader check ADR-024's anchor invariant against the stored history instead of trusting the generator.
-- **`introduced_at`** on `key_stats` answers *which step is current*, which nothing could answer before: Active is row presence, and insertion order was recoverable only from an implicit `rowid`. Both members of a pair step are written with **one shared timestamp value**, so a pair is recovered by exact equality rather than by proximity — second-resolution timestamps cannot be compared for nearness safely.
+- **`introductions`** answers *which step is current*, which nothing could answer before: Active is row presence in `key_stats`, and insertion order was recoverable only from an implicit `rowid`. The **`step` ordinal** is what groups a step's members and orders the steps — deliberately not the timestamp. A timestamp cannot do either job: two steps introduced inside one clock tick read as one step of four members, and `max()` over clock strings picks the wrong step for good whenever the clock has stepped backwards, at which point the genuinely current step can never be resumed again. **UTC removes the seasonal case and not the general one:** there is no fall-back hour in UTC, but `datetime.now(UTC)` reads the system clock, which is not monotonic — an NTP correction, a manual fix, or a boot with a dead CMOS battery all step it back. An ordinal is not a clock and needs none of this to be true. `position` keeps the member order ADR-023 defines, since the drill generator reads `members[0]` as the left-hand member.
 
-**This makes explicit what `key_attempts` already was:** an append-only event log with a windowed trim, ordered by `(attempted_at, rowid)`. No ordering column is added, because the existing trim already relies on that tiebreaker. What is added is a **read** that returns the window's rows in order; every query before this one wanted aggregates, and a streak or a run-with-a-budget cannot be computed from aggregates. Migration is three `ALTER TABLE ... ADD COLUMN` statements, all nullable, so an existing profile keeps every row it has and simply has no latency or predecessor history for attempts recorded before the change — which is correct, because it does not.
+- **`ramp_up_phases`** records that a member has **passed** a phase of ADR-024's ramp-up, write-once. See ADR-024 § A phase completion is an event for why this is stored rather than re-derived; the short version is that `key_attempts` is a window built to forget, so a phase read off it un-passes itself when the window rolls, and the curriculum can lock. `attempts_at` is the key's lifetime `key_stats.attempt_count` at that moment, which is what bounds the next phase's evidence without depending on rows that may since have been evicted.
+
+  **It is its own table rather than an `introduced_at` column on `key_stats`, and that is not a filing preference.** A `key_stats` row *is* Active ([ADR-027](0027-key-and-accuracy-state-model.md) § Key States), so stamping the introduction there would make a key Active before the child had answered a single prompt on it. The introducer reads Active as "already had", so the step would never be offered again and its script — which [ADR-023](0023-key-introduction-protocol.md) § What the introducer remembers calls that letter's only teaching moment — would be silently spent on a child who heard it once and typed nothing. That case is not hypothetical: it is in the #12b-2 log, where `u` was introduced, never answered, and correctly introduced again next session. Keeping introductions separate leaves Active, the milestone denominators, the Layer-2 unlock and ADR-010's gate exactly as they were.
+
+**This makes explicit what `key_attempts` already was:** an append-only event log with a windowed trim. What is added is a **read** that returns the window's rows in order; every query before this one wanted aggregates, and a streak or a run-with-a-budget cannot be computed from aggregates. That read takes an optional row limit, because a bar knows how many rows it can possibly need and pulling two hundred to decide a ten-long streak is work done on every keypress.
+
+**The window is ordered by `rowid`, not by `attempted_at`** *(2026-09-29.)* Both the ordered read and the trim order by insertion. A timestamp is not an ordering: a clock that steps backwards makes a later answer sort earlier, and then the derived ramp-up reads a child's answers in an order they never typed them in — measured, it can declare a ramp-up complete off a stretch that was never the last thirty answers. The trim was worse: with rows stamped ahead of the clock (a first boot in the wrong zone, a dead CMOS battery), every newly written row was the lexicographic oldest, so the trim deleted the row just written and the window froze. Insertion order is what every consumer actually means by "the child's answers, in order".
+
+**Migration is two `ALTER TABLE ... ADD COLUMN` statements** on `key_attempts`, both nullable, plus the two new tables. An existing profile keeps every row it has and has no latency or predecessor history for attempts recorded before the change — which is correct, because it does not. **There is no backfill of `introductions`**, and the consequence is stated rather than hidden: the first session after an upgrade has no step to resume, so it introduces a new key as it would have before #12d, once, and is correct from then on. Alpha's databases are development data and disposable; a pilot profile would need a backfill written, and it would have to guess at step boundaries `key_stats` does not record.
 
 #### Deferred to Beta
 

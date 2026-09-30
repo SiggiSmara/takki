@@ -886,3 +886,31 @@ class TestStrategySeam:
         assert emitted == [["f", "j"], ["r", "u"], ["v", "m"]] + [
             [c] for c in "abcdeghiklnopqstwxyz"
         ]
+
+
+class TestRemember:
+    def test_a_remembered_step_becomes_the_one_the_re_read_key_speaks(self) -> None:
+        # A resumed session's step is not emitted by the introducer (alpha-plan
+        # #12d), so it has to be handed over: ADR-023 makes `last_step` how the
+        # child re-hears the script, and a None there is silence.
+        layout = build_en()
+        source = FixedListSource(EN_WORDS)
+        store = FakeStore()
+        profile = store.create_profile("kid").id
+        introducer = KeyIntroducer(layout, source, KeyStates(store, profile))
+        assert introducer.last_step is None
+        step = introduction_sequence(layout, source)[0]
+        introducer.remember(step)
+        assert introducer.last_step is step
+
+    def test_a_remembered_step_is_not_introduced_again(self) -> None:
+        layout = build_en()
+        source = FixedListSource(EN_WORDS)
+        store = FakeStore()
+        profile = store.create_profile("kid").id
+        introducer = KeyIntroducer(layout, source, KeyStates(store, profile))
+        first, second = introduction_sequence(layout, source)[:2]
+        introducer.remember(first)
+        emitted = introducer.introduce_next()
+        assert emitted is not None
+        assert [k.grapheme for k in emitted.keys] == [k.grapheme for k in second.keys]

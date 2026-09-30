@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import Enum, auto
 
 from takki import config
-from takki.persistence import Store, WindowStats
+from takki.persistence import Attempt, Store, WindowStats
 
 
 class KeyState(Enum):
@@ -66,6 +66,11 @@ class KeyStates:
         # anchor accuracy against ANCHOR_MIN_ACCURACY, which is a different bar
         # from any KnownCriterion this class holds.
         return self._store.window_stats(self._profile_id, key_char)
+
+    def window_attempts(self, key_char: str) -> list[Attempt]:
+        # The window's rows in order, for ADR-024's derived ramp-up bars: a
+        # streak and a run-with-a-budget cannot be computed from aggregates.
+        return self._store.window_attempts(self._profile_id, key_char)
 
     def known_keys(self) -> set[str]:
         return {c for c in self.active_keys() if self._known(c)}

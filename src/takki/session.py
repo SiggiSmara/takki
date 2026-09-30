@@ -46,10 +46,12 @@ from takki.lesson.introducer import (
     IntroductionStrategy,
     KeyIntroducer,
     describe,
+    resume_step,
 )
 from takki.lesson.key_state import KeyStates
 from takki.lesson.milestones import MilestoneDetector
 from takki.lesson.progression import layer_two_unlocked, ready_for_new_key
+from takki.lesson.rampup import RampUpProgress
 from takki.persistence import Store
 from takki.platform.layout import Layout
 from takki.speech import Speaker
@@ -122,7 +124,7 @@ class SessionLoop:
         self._celebrant = celebrant
         self._now = now
         self._states = KeyStates(store, profile_id)
-        self._attempts = AttemptCounter(store, profile_id, now)
+        self._attempts = AttemptCounter(store, profile_id, now, clock)
         self._speaker = Speaker(speech, letters)
         # The gate speaks through the same Speaker the loop does: one object
         # knows what is audible, so the loop can hold a prompt behind a pause
@@ -173,8 +175,14 @@ class SessionLoop:
         self._session_id = self._store.start_session(self._profile_id)
         self._introducer = KeyIntroducer(self._layout, self._source, self._states, self._strategy)
         self._drills = DrillGenerator(
-            self._layout, self._source, self._states, self._clock, self._rng
+            self._layout,
+            self._source,
+            self._states,
+            self._clock,
+            self._rng,
+            RampUpProgress(self._store, self._profile_id),
         )
+        self._resume_ramp_up()
         self._keys.start()
         self.running = True
         # The first spoken line of the session comes out of here: a cold
@@ -220,6 +228,11 @@ class SessionLoop:
             return
         if isinstance(event, SpeechFinished):
             self._speaker.on_finished(event)
+            if self._speaker.letter_finished:
+                # The prompt has finished sounding, so the child's answer is
+                # timed from here rather than from the enqueue (ADR-011).
+                self._speaker.letter_finished = False
+                self._attempts.mark_audible()
         else:
             paused = self._focus_model.state is FocusState.PAUSED
             self._run(self._focus_model.handle(event))
@@ -378,14 +391,18 @@ class SessionLoop:
         # ended a block, cut the introduction script for a letter the child has
         # not been told about yet, and then do nothing else.
         self._speaker.interrupt()
+        self._reprompts = 0
+        # The cue first: it is the child's feedback and it is immediate, while
+        # `record_attempt` below reads this key's window back out of SQLite to
+        # see whether a bar was met. On the slowest hardware the project
+        # supports, doing that first is audible delay on every keypress.
+        self._cues.play("correct" if outcome is PressOutcome.CORRECT else "error")
         if self._first_press:
             # Once per prompt, with the first press's outcome, paired
             # one-for-one with the counter's own write. A retry press must not
             # reach here or Phase C stops measuring first-attempt accuracy.
             self._first_press = False
             self._drills.record_attempt(target, outcome is PressOutcome.CORRECT)
-        self._reprompts = 0
-        self._cues.play("correct" if outcome is PressOutcome.CORRECT else "error")
         if outcome is PressOutcome.WRONG:
             # ADR-012 § Wrong character handling: auto-rejected, and the same
             # character is re-prompted. The prompt stays open and stays the
@@ -492,6 +509,45 @@ class SessionLoop:
         if lines:
             self._speaker.say(*lines, interruptible=False)
 
+    def _resume_ramp_up(self) -> None:
+        """Re-enter the newest step's ramp-up before the first block boundary.
+
+        The cross-session half of alpha-plan #12d. Until this existed, a session
+        started with no ramp-up in progress, so its first block boundary
+        introduced another key however far the last session had got -- four
+        starts introduced all of Stage 0. The phase is not restored from a saved
+        field: ADR-024 § Ramp-up variability derives it from the child's own
+        rows, so what this does is name the step and let the generator read it.
+        """
+        assert self._drills is not None and self._introducer is not None
+        newest = self._newest_step()
+        if not newest:
+            return
+        step = resume_step(self._layout, newest)
+        if self._drills.resume_step(step):
+            # The introducer did not emit this step, so it has to be told: the
+            # re-read key reads the script off `last_step`, and a resumed session
+            # would otherwise answer a blind child's Escape with silence.
+            self._introducer.remember(step)
+
+    def _newest_step(self) -> list[str]:
+        """The newest step's graphemes, in the step's own order (ADR-011 § The step ordinal).
+
+        By step ordinal, never by timestamp: a clock that has gone backwards --
+        an NTP correction, a manual fix, a boot with a dead battery --
+        would otherwise make an older step the newest one for good. Order is the
+        step's stored `position`, because ADR-023 puts the left-hand member first
+        and the drill generator reads `members[0]` as that member.
+        """
+        introduced = self._store.introductions(self._profile_id)
+        if not introduced:
+            # A cold profile, or one whose rows predate the `introductions`
+            # table: nothing to resume, and the introducer opens the session as
+            # it always did.
+            return []
+        newest = max(entry.step for entry in introduced)
+        return [entry.key_char for entry in introduced if entry.step == newest]
+
     def _introduce(self) -> None:
         assert self._drills is not None and self._introducer is not None
         if self._drills.ramp_up is not None:
@@ -501,5 +557,20 @@ class SessionLoop:
         step = self._introducer.introduce_next()
         if step is None:
             return
-        self._drills.begin_step(step)
+        # Before the drill, and before the script: ADR-011's `introductions` is
+        # what tells the next session which step is current, and one shared
+        # timestamp for both members is what makes a pair recoverable by
+        # equality. It deliberately does *not* touch `key_stats`, which is where
+        # Active lives -- see the ADR-011 note on why.
+        self._store.mark_introduced(
+            self._profile_id,
+            [intro.grapheme for intro in step.keys],
+            self._now() if self._now is not None else None,
+        )
+        if not self._drills.begin_step(step):
+            # Every phase already passed -- only reachable for a strategy that
+            # hands over a key the child has drilled. Speaking the script would
+            # spend that letter's teaching moment on nothing, and leaving the
+            # loop with no ramp-up is correct: the next boundary moves on.
+            return
         self._speak_introduction(step)

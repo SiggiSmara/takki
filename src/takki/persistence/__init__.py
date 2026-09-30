@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -30,6 +31,37 @@ class WindowStats:
     attempt_count: int
     correct_count: int
     distinct_days: int
+
+
+@dataclass(frozen=True)
+class Attempt:
+    """One row of the rolling window, in insertion order (ADR-011).
+
+    The aggregate `WindowStats` cannot answer a streak or a run-with-a-budget,
+    which is what ADR-024's derived ramp-up bars are. `attempted_at` is UTC and
+    is *not* what orders these rows -- see `window_attempts`.
+    """
+
+    correct: bool
+    attempted_at: str
+    latency_ms: int | None = None
+    prev_char: str | None = None
+
+
+@dataclass(frozen=True)
+class Introduction:
+    """One grapheme's introduction, and the step it belonged to (ADR-011).
+
+    `step` is a per-profile ordinal, not a timestamp: it both groups a step's
+    members and orders the steps, exactly and without a clock. `position` keeps
+    the step's own member order, which ADR-023 defines as left-hand member
+    first and which the drill generator reads off `members[0]`.
+    """
+
+    key_char: str
+    step: int
+    position: int
+    introduced_at: str
 
 
 class Store(Protocol):
@@ -76,11 +108,37 @@ class Store(Protocol):
         key_char: str,
         correct: bool,
         attempted_at: str | None = None,
+        latency_ms: int | None = None,
+        prev_char: str | None = None,
     ) -> None: ...
+
+    def mark_introduced(
+        self,
+        profile_id: int,
+        key_chars: Sequence[str],
+        introduced_at: str | None = None,
+    ) -> int: ...
+
+    def record_phase(
+        self,
+        profile_id: int,
+        key_char: str,
+        phase: str,
+        attempts_at: int,
+        completed_at: str | None = None,
+    ) -> None: ...
+
+    def completed_phases(self, profile_id: int, key_char: str) -> dict[str, int]: ...
+
+    def introductions(self, profile_id: int) -> list[Introduction]: ...
 
     def key_stats(self, profile_id: int) -> dict[str, KeyStat]: ...
 
     def window_stats(self, profile_id: int, key_char: str) -> WindowStats: ...
+
+    def window_attempts(
+        self, profile_id: int, key_char: str, limit: int | None = None
+    ) -> list[Attempt]: ...
 
     def record_milestone(
         self,

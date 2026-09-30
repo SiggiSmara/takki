@@ -120,6 +120,12 @@ PHASE_B_ATTEMPTS = 20
 PHASE_B_MAX_REJECTIONS = 1
 PHASE_C_ATTEMPTS = 30
 PHASE_C_MIN_ACCURACY = 0.85
+# ADR-024 § Ramp-up variability: Phase C's speed term, a ratio against the
+# child's own median latency over their Known keys -- never an absolute
+# millisecond figure, which would encode a sighted adult's reaction time. With
+# no Known keys there is no baseline and the term is skipped.
+PHASE_C_MAX_LATENCY_RATIO = 1.5
+
 # How many previously-active graphemes Phase C mixes the new one with, and how
 # often a sampled bigram is grown into ADR-024's "3-letter sequence".
 PHASE_C_PARTNERS = 3

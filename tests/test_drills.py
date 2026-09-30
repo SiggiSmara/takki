@@ -1,4 +1,5 @@
 import random
+from collections import Counter
 from itertools import pairwise
 
 import pytest
@@ -16,6 +17,7 @@ from takki.lesson.introducer import (
     introduction_sequence,
 )
 from takki.lesson.key_state import KeyStates
+from takki.lesson.rampup import RampUpProgress
 from takki.platform.layout import Layout, build_en, build_is
 from tests.fakes.fake_clock import FakeClock
 from tests.fakes.fake_store import FakeStore
@@ -79,8 +81,14 @@ class Fixture:
         self.clock = FakeClock()
         for name in active:
             self.activate(name)
+        self.progress = RampUpProgress(self.store, self.profile)
         self.generator = DrillGenerator(
-            self.layout, self.source, self.states, self.clock, random.Random(seed)
+            self.layout,
+            self.source,
+            self.states,
+            self.clock,
+            random.Random(seed),
+            self.progress,
         )
 
     def activate(self, grapheme: str, *, attempts: int = 1, wrong: int = 0) -> None:
@@ -89,35 +97,58 @@ class Fixture:
             self.store.upsert_key_stat(self.profile, grapheme, correct)
             self.store.append_attempt(self.profile, grapheme, correct)
 
+    def attempt(self, grapheme: str, correct: bool, *, latency_ms: int | None = None) -> None:
+        # The store first, then the generator -- the order the session loop uses
+        # (`AttemptCounter.press` writes, then `DrillGenerator.record_attempt`).
+        # Since 2026-09-29 it is load-bearing: the ramp-up's phase is derived
+        # from these rows, so a generator told about an attempt that was never
+        # written would read the window as one attempt short.
+        self.store.upsert_key_stat(self.profile, grapheme, correct)
+        self.store.append_attempt(self.profile, grapheme, correct, latency_ms=latency_ms)
+        self.generator.record_attempt(grapheme, correct)
+
     def answer(
         self, block_prompts: tuple[str, ...], *, correct: bool = True, seconds_each: float = 0.0
     ) -> None:
         for grapheme in block_prompts:
             self.clock.advance(seconds_each)
-            self.generator.record_attempt(grapheme, correct)
+            self.attempt(grapheme, correct)
 
     def practise_all(self) -> None:
         for grapheme in sorted(self.states.active_keys()):
-            self.generator.record_attempt(grapheme, True)
+            self.attempt(grapheme, True)
 
 
 def press(fixture: Fixture, grapheme: str, count: int, *, correct: bool = True) -> None:
     for _ in range(count):
-        fixture.generator.record_attempt(grapheme, correct)
+        fixture.attempt(grapheme, correct)
 
 
 class TestPhaseA:
-    def test_solo_step_is_pure_repetition(self) -> None:
+    def test_solo_step_repeats_the_member_and_engages_the_other_hand(self) -> None:
+        # ADR-024 property 3: Phase A keeps the new key isolated on its own hand
+        # -- no same-finger anchor -- but the other hand's home key joins the
+        # inventory so no hand sits idle. `a` on English is the audible case:
+        # column 10's home cell holds no letter, so nothing pairs with it.
         fixture = Fixture(active=ANCHOR_SIX)
         fixture.generator.begin_step(make_step(fixture.layout, "a"))
-        assert fixture.generator.next_block().prompts == ("a",) * config.PHASE_A_STREAK
+        block = fixture.generator.next_block()
+        assert Counter(block.units) == {
+            ("a",): config.PHASE_A_STREAK,
+            ("j",): config.PHASE_A_STREAK,
+        }
 
-    def test_pair_interleaves_left_then_right(self) -> None:
+    def test_pair_engages_both_hands_without_borrowing_an_anchor(self) -> None:
+        # A pair already uses both hands (ADR-028 § Pair ramp-up), so nothing is
+        # borrowed and each member gets the same number of prompts. Order is
+        # shuffled per ADR-024 property 1, so the count is the contract.
         fixture = Fixture(active=ANCHOR_SIX)
         fixture.generator.begin_step(make_step(fixture.layout, "d", "k"))
         block = fixture.generator.next_block()
-        assert block.units == (("d",), ("k",)) * config.PHASE_A_STREAK
-        assert block.prompts == ("d", "k") * config.PHASE_A_STREAK
+        assert Counter(block.units) == {
+            ("d",): config.PHASE_A_STREAK,
+            ("k",): config.PHASE_A_STREAK,
+        }
 
     def test_ten_in_succession_advances(self) -> None:
         fixture = Fixture(active=ANCHOR_SIX)
@@ -132,7 +163,7 @@ class TestPhaseA:
         fixture = Fixture(active=ANCHOR_SIX)
         fixture.generator.begin_step(make_step(fixture.layout, "d"))
         press(fixture, "d", 9)
-        fixture.generator.record_attempt("d", False)
+        fixture.attempt("d", False)
         press(fixture, "d", 9)
         assert fixture.generator.ramp_up is not None
         assert fixture.generator.ramp_up.phase is RampUpPhase.A
@@ -154,17 +185,27 @@ class TestPhaseB:
         press(fixture, "d", 10)
         press(fixture, "k", 10)
         block = fixture.generator.next_block()
-        # L-anchor, L-new, R-anchor, R-new (ADR-028 § Pair ramp-up).
-        assert block.units[:2] == (("f", "d"), ("j", "k"))
-        assert block.prompts[:8] == ("f", "d", "j", "k", "f", "d", "j", "k")
-        assert len(block.units) % 2 == 0
+        # Each member alternates with its own anchor (ADR-028 § Pair ramp-up).
+        # Either direction may be emitted -- `d f` is the return `f d` leaves
+        # owed -- so the pairing is the contract and the order is not.
+        assert Counter(frozenset(unit) for unit in block.units) == {
+            frozenset({"f", "d"}): len(block.units) // 2,
+            frozenset({"j", "k"}): len(block.units) // 2,
+        }
 
     def test_anchor_is_the_same_finger_home_row_key(self) -> None:
         fixture = Fixture(active=ANCHOR_SIX + "dk")
         # ADR-024's own example: E is L-mid row 2, so it alternates with D.
         fixture.generator.begin_step(make_step(fixture.layout, "e"))
         press(fixture, "e", 10)
-        assert fixture.generator.next_block().prompts[:4] == ("d", "e", "d", "e")
+        block = fixture.generator.next_block()
+        # The other hand joins as its own unit, never paired with the member: a
+        # cross-hand pair would carry the member's hand off home with no home key
+        # of that hand to return to (ADR-024 properties 2 and 3).
+        assert {frozenset(unit) for unit in block.units} == {
+            frozenset({"d", "e"}),
+            frozenset({"j"}),
+        }
 
     def test_same_hand_fallback_when_no_same_finger_anchor_exists(self) -> None:
         fixture = Fixture(active=ANCHOR_SIX)
@@ -172,14 +213,18 @@ class TestPhaseB:
         # L-mid, so the nearest key on the same hand stands in.
         fixture.generator.begin_step(make_step(fixture.layout, "d"))
         press(fixture, "d", 10)
-        assert fixture.generator.next_block().prompts[:4] == ("f", "d", "f", "d")
+        block = fixture.generator.next_block()
+        assert {frozenset(unit) for unit in block.units} == {
+            frozenset({"f", "d"}),
+            frozenset({"j"}),
+        }
 
     def test_twenty_correct_with_one_rejection_advances(self) -> None:
         fixture = Fixture(active=ANCHOR_SIX)
         fixture.generator.begin_step(make_step(fixture.layout, "d"))
         press(fixture, "d", 10)
         press(fixture, "d", 10)
-        fixture.generator.record_attempt("d", False)
+        fixture.attempt("d", False)
         press(fixture, "d", 9)
         assert fixture.generator.ramp_up is not None
         assert fixture.generator.ramp_up.phase is RampUpPhase.B
@@ -191,8 +236,8 @@ class TestPhaseB:
         fixture.generator.begin_step(make_step(fixture.layout, "d"))
         press(fixture, "d", 10)
         press(fixture, "d", 19)
-        fixture.generator.record_attempt("d", False)
-        fixture.generator.record_attempt("d", False)
+        fixture.attempt("d", False)
+        fixture.attempt("d", False)
         press(fixture, "d", 19)
         assert fixture.generator.ramp_up is not None
         assert fixture.generator.ramp_up.phase is RampUpPhase.B
@@ -252,10 +297,15 @@ class TestComposites:
         layout = build_is()
         fixture = Fixture(layout, FixedListSource({"úúú": 10.0, "sumar": 5.0}), active="us")
         fixture.generator.begin_step(make_step(layout, "ú"))
-        assert fixture.generator.next_block().prompts[:4] == ("ú", "ú", "ú", "ú")
+        # No other hand to engage: `ú` is right-handed and `f` is not Active in
+        # this fixture, and ADR-024 property 3 borrows a key the child already
+        # has rather than teaching one to fill the gap.
+        assert set(fixture.generator.next_block().units) == {("ú",)}
         press(fixture, "ú", config.PHASE_A_STREAK)
         # ADR-028 § Phase B: the anchor for a composite is its own base letter.
-        assert fixture.generator.next_block().prompts[:4] == ("u", "ú", "u", "ú")
+        assert {frozenset(unit) for unit in fixture.generator.next_block().units} == {
+            frozenset({"u", "ú"})
+        }
 
     def test_composite_paired_with_a_letter_takes_the_pair_path(self) -> None:
         layout = build_is()
@@ -265,10 +315,21 @@ class TestComposites:
         step = make_step(layout, "á", "ð")
         assert sum(len(intro.keys) for intro in step.keys) == 3
         fixture.generator.begin_step(step)
-        assert fixture.generator.next_block().prompts[:4] == ("á", "ð", "á", "ð")
+        block = fixture.generator.next_block()
+        assert Counter(block.units) == {
+            ("á",): config.PHASE_A_STREAK,
+            ("ð",): config.PHASE_A_STREAK,
+        }
         press(fixture, "á", config.PHASE_A_STREAK)
         press(fixture, "ð", config.PHASE_A_STREAK)
-        assert fixture.generator.next_block().prompts[:4] == ("a", "á", "æ", "ð")
+        # Each composite alternates with its own base letter, which ADR-028
+        # § Phase B makes its anchor: the same physical key with and without the
+        # modifier gesture.
+        block = fixture.generator.next_block()
+        assert Counter(frozenset(unit) for unit in block.units) == {
+            frozenset({"a", "á"}): len(block.units) // 2,
+            frozenset({"æ", "ð"}): len(block.units) // 2,
+        }
 
 
 class TestStageZero:
@@ -290,7 +351,10 @@ class TestStageZero:
         layout, source, steps = self.steps()
         fixture = Fixture(layout, source)
         fixture.generator.begin_step(steps[0])
-        assert fixture.generator.next_block().prompts == ("f", "j") * config.PHASE_A_STREAK
+        assert Counter(fixture.generator.next_block().units) == {
+            ("f",): config.PHASE_A_STREAK,
+            ("j",): config.PHASE_A_STREAK,
+        }
 
     @pytest.mark.parametrize(
         ("index", "active", "expected"),
@@ -310,8 +374,11 @@ class TestStageZero:
         fixture = Fixture(layout, source, active=active)
         fixture.generator.begin_step(steps[index])
         block = fixture.generator.next_block()
-        assert block.prompts[:8] == expected * 2
-        assert set(block.units) == {expected[:2], expected[2:]}
+        left, right = expected[:2], expected[2:]
+        assert Counter(frozenset(unit) for unit in block.units) == {
+            frozenset(left): len(block.units) // 2,
+            frozenset(right): len(block.units) // 2,
+        }
 
     def test_no_stage_zero_block_ever_repeats_a_prompt(self) -> None:
         layout, source, steps = self.steps()
@@ -357,7 +424,7 @@ class TestReexposure:
         fixture = Fixture(active=ANCHOR_SIX + "dk", seed=5)
         for grapheme in sorted(fixture.states.active_keys()):
             if grapheme != stale:
-                fixture.generator.record_attempt(grapheme, True)
+                fixture.attempt(grapheme, True)
         fixture.clock.advance(10.0)
         return fixture, fixture.generator.next_block().units
 
@@ -379,7 +446,7 @@ class TestReexposure:
         # same, which without a name tie-break would resolve by set order.
         fixture = Fixture(source=FixedListSource({"fff": 10.0, "jjj": 10.0}), active="fjz", seed=3)
         for grapheme in ("f", "j"):
-            fixture.generator.record_attempt(grapheme, True)
+            fixture.attempt(grapheme, True)
         fixture.clock.advance(10.0)
         injected = [unit for unit in fixture.generator.next_block().units if "z" in unit]
         assert injected == [("z", "f")]
@@ -424,8 +491,9 @@ class TestAnchorMaintenance:
 
     def test_too_few_attempts_is_not_a_slipping_anchor(self) -> None:
         fixture = Fixture(active=ANCHOR_SIX + "dk", seed=5)
-        # One short of the bar: the fixture already recorded one attempt on f.
-        fixture.activate("f", attempts=config.ANCHOR_MIN_ATTEMPTS - 2, wrong=10)
+        # One short of the bar: the fixture recorded one attempt on f when it
+        # activated the key, and `practise_all` below records another.
+        fixture.activate("f", attempts=config.ANCHOR_MIN_ATTEMPTS - 3, wrong=10)
         fixture.practise_all()
         fixture.clock.advance(10.0)
         assert fixture.generator.next_block().units == TestReexposure().baseline(stale=None)[1]
@@ -435,7 +503,7 @@ class TestAnchorMaintenance:
         fixture.activate("f", attempts=40, wrong=20)
         for grapheme in sorted(fixture.states.active_keys()):
             if grapheme != "k":
-                fixture.generator.record_attempt(grapheme, True)
+                fixture.attempt(grapheme, True)
         fixture.clock.advance(10.0)
         units = fixture.generator.next_block().units
         fresh = TestReexposure().baseline(stale=None)[1]
@@ -466,6 +534,34 @@ class TestBlockLength:
         fixture.answer(fixture.generator.next_block().prompts, seconds_each=1 / 3)
         fixture.generator.begin_step(make_step(fixture.layout, "d", "k"))
         assert len(fixture.generator.next_block().prompts) == 2 * config.PHASE_A_STREAK
+
+    def test_a_solo_step_is_sized_by_the_bar_and_not_by_the_inventory(self) -> None:
+        # The member owes PHASE_A_STREAK prompts and appears once per cycle, so
+        # the block is PHASE_A_STREAK cycles -- of two prompts each, the member
+        # and the borrowed other hand. Counting prompts owed instead of cycles
+        # owed would double it, and only a solo step can show the difference.
+        fixture = Fixture(active=ANCHOR_SIX)
+        fixture.practise_all()
+        fixture.answer(fixture.generator.next_block().prompts, seconds_each=1 / 3)
+        fixture.generator.begin_step(make_step(fixture.layout, "d"))
+        block = fixture.generator.next_block()
+        assert len(block.units) == 2 * config.PHASE_A_STREAK
+        assert Counter(block.prompts) == {
+            "d": config.PHASE_A_STREAK,
+            "j": config.PHASE_A_STREAK,
+        }
+
+    def test_a_solo_phase_b_block_is_sized_by_the_bar(self) -> None:
+        fixture = Fixture(active=ANCHOR_SIX)
+        fixture.practise_all()
+        fixture.answer(fixture.generator.next_block().prompts, seconds_each=1 / 3)
+        fixture.generator.begin_step(make_step(fixture.layout, "d"))
+        press(fixture, "d", config.PHASE_A_STREAK)
+        block = fixture.generator.next_block()
+        # Inventory ('f','d') and ('j',): the member owes PHASE_B_ATTEMPTS and
+        # gets one prompt per three.
+        assert Counter(block.prompts)["d"] == config.PHASE_B_ATTEMPTS
+        assert len(block.prompts) == 3 * config.PHASE_B_ATTEMPTS
 
     def test_blocks_end_on_a_unit_boundary(self) -> None:
         fixture = Fixture(active=ANCHOR_SIX)

@@ -1,5 +1,7 @@
+from takki import config
 from takki.lesson.attempts import AttemptCounter, PressOutcome
-from takki.persistence import KeyStat, WindowStats
+from takki.persistence import Attempt, KeyStat, WindowStats
+from tests.fakes.fake_clock import FakeClock
 from tests.fakes.fake_store import FakeStore
 
 
@@ -187,3 +189,88 @@ class TestStoreTimestamps:
             counter.start_prompt("f")
             counter.press("f")
         assert store.window_stats(profile.id, "f") == WindowStats(2, 2, 2)
+
+
+class TestLatencyAndPredecessor:
+    """ADR-011's `latency_ms` and `prev_char`, which ADR-024's Phase C bar reads."""
+
+    def harness(self) -> tuple[Harness, FakeClock]:
+        h = Harness()
+        clock = FakeClock()
+        h.counter = AttemptCounter(h.store, h.profile.id, h.stamp, clock)
+        return h, clock
+
+    def rows(self, h: Harness, key_char: str) -> list[Attempt]:
+        return h.store.window_attempts(h.profile.id, key_char)
+
+    def test_latency_runs_from_the_end_of_the_spoken_prompt(self) -> None:
+        h, clock = self.harness()
+        h.counter.start_prompt("f")
+        # The letter is synthesised and played first; the child cannot answer
+        # before it has been heard, so the clock starts when it has.
+        clock.advance(0.60)
+        h.counter.mark_audible()
+        clock.advance(0.75)
+        h.counter.press("f")
+        assert [row.latency_ms for row in self.rows(h, "f")] == [750]
+
+    def test_a_prompt_that_never_became_audible_is_unmeasured(self) -> None:
+        h, clock = self.harness()
+        h.counter.start_prompt("f")
+        clock.advance(0.75)
+        h.counter.press("f")
+        assert [row.latency_ms for row in self.rows(h, "f")] == [None]
+
+    def test_a_re_spoken_prompt_is_timed_from_the_version_heard(self) -> None:
+        # Every re-speak route re-stamps, so a prompt left open through a pause or
+        # a timeout is not recorded as a very slow answer -- and a genuinely slow
+        # answer is still recorded, which is the child the speed term is for.
+        h, clock = self.harness()
+        h.counter.start_prompt("f")
+        h.counter.mark_audible()
+        clock.advance(config.PROMPT_TIMEOUT_SECONDS * 3)
+        h.counter.mark_audible()
+        clock.advance(2.0)
+        h.counter.press("f")
+        assert [row.latency_ms for row in self.rows(h, "f")] == [2000]
+
+    def test_a_retry_does_not_move_the_recorded_latency(self) -> None:
+        # The row is written on the first press and ADR-027 counts nothing after
+        # it, so the number stays the time the child took to answer first.
+        h, clock = self.harness()
+        h.counter.start_prompt("f")
+        h.counter.mark_audible()
+        clock.advance(0.20)
+        h.counter.press("j")
+        clock.advance(5.0)
+        h.counter.press("f")
+        assert [row.latency_ms for row in self.rows(h, "f")] == [200]
+
+    def test_no_clock_measures_nothing(self) -> None:
+        h = Harness()
+        h.counter.start_prompt("f")
+        h.counter.mark_audible()
+        h.counter.press("f")
+        assert [row.latency_ms for row in self.rows(h, "f")] == [None]
+
+    def test_prev_char_names_the_prompt_before_this_one(self) -> None:
+        h, _ = self.harness()
+        for target in ("f", "j", "f"):
+            h.counter.start_prompt(target)
+            h.counter.mark_audible()
+            h.counter.press(target)
+        assert [row.prev_char for row in self.rows(h, "f")] == [None, "j"]
+        assert [row.prev_char for row in self.rows(h, "j")] == ["f"]
+
+    def test_a_retry_is_not_a_predecessor(self) -> None:
+        # `prev_char` is the previous *prompt*, not the last key the child hit:
+        # a wrong press is not something they were asked for.
+        h, _ = self.harness()
+        h.counter.start_prompt("f")
+        h.counter.press("f")
+        h.counter.start_prompt("j")
+        h.counter.press("v")
+        h.counter.press("j")
+        h.counter.start_prompt("r")
+        h.counter.press("r")
+        assert [row.prev_char for row in self.rows(h, "r")] == ["j"]

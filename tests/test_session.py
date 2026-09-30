@@ -1,6 +1,8 @@
 import queue
 import random
+from collections import Counter
 from collections.abc import Callable
+from itertools import pairwise
 from typing import Any
 
 import pytest
@@ -13,6 +15,8 @@ from takki.input import KeyEvent
 from takki.language import WordSource
 from takki.lesson.drills import DrillGenerator
 from takki.lesson.introducer import KeyIntroducer, describe, introduction_sequence
+from takki.lesson.rampup import RampUpProgress
+from takki.persistence import Profile
 from takki.platform.layout import Layout, build_en
 from takki.session import Celebrant, InboundEvent, SessionLoop
 from tests.fakes.fake_clock import FakeClock
@@ -60,6 +64,8 @@ class Harness:
         key_events: list[KeyEvent] | None = None,
         seed: dict[str, int] | None = None,
         synthetic_letters: bool = False,
+        store: FakeStore | None = None,
+        profile: Profile | None = None,
     ) -> None:
         self.layout = build_en()
         self.source = source or FixedListSource(words if words is not None else EN_WORDS)
@@ -72,8 +78,10 @@ class Harness:
         self.focus = FakeFocusSource(self.inbound)
         self.stream = ScriptedKeyStream(key_events or [], self.inbound)
         self.frames = FakeFrameLimiter()
-        self.store = FakeStore()
-        self.profile = self.store.create_profile("kid")
+        # A caller may pass both, to run several sessions against one profile
+        # the way a child restarting Takki does (alpha-plan #12d).
+        self.store = store if store is not None else FakeStore()
+        self.profile = profile if profile is not None else self.store.create_profile("kid")
         for name, count in (seed or {}).items():
             for _ in range(count):
                 self.store.upsert_key_stat(self.profile.id, name, True)
@@ -122,6 +130,22 @@ class Harness:
 
     def key(self, name: str, *, pressed: bool = True) -> None:
         self.inbound.put(KeyEvent(pressed=pressed, char=None, name=name))
+
+    def opened(self) -> str:
+        """The prompt now open, whichever member of the step it is.
+
+        Stage 0's home pair is emitted in a shuffled order (ADR-024 § Ramp-up
+        variability property 1), so a test about pairing, timeouts or focus asks
+        which letter came up instead of assuming `f`.
+        """
+        self.settle()
+        target = self.loop.prompt
+        assert target is not None
+        return target
+
+    def partner(self, target: str) -> str:
+        """The other member of Stage 0's home pair — a press that is always wrong for `target`."""
+        return "j" if target == "f" else "f"
 
     def answer(self, count: int = 1) -> list[str]:
         """Answer `count` prompts correctly; returns the graphemes asked for."""
@@ -199,19 +223,24 @@ class TestStageZeroEndToEnd:
 
         # Phase A of Stage 0 is the L-R interleave of f and j -- ADR-024 § Stage
         # 0's blocks are not ordinary ramp-up. Ten cycles, capped by the phase's
-        # own remaining requirement (PHASE_A_STREAK).
+        # own remaining requirement (PHASE_A_STREAK). The *order* within a block
+        # is shuffled (ADR-024 property 1), so each phase is checked by what it
+        # asked for and how often, and by the one thing the shuffle must never
+        # do: ask for the same letter twice running.
         phase_a = harness.answer(2 * config.PHASE_A_STREAK)
-        assert phase_a == ["f", "j"] * config.PHASE_A_STREAK
+        assert Counter(phase_a) == {"f": config.PHASE_A_STREAK, "j": config.PHASE_A_STREAK}
+        assert [a for a, b in pairwise(phase_a) if a == b] == []
 
         # Phase B keeps the same alternation -- the pair has no anchor behind it
         # yet -- and runs to its own bar, per member.
         phase_b = harness.answer(2 * config.PHASE_B_ATTEMPTS)
-        assert phase_b == ["f", "j"] * config.PHASE_B_ATTEMPTS
+        assert Counter(phase_b) == {"f": config.PHASE_B_ATTEMPTS, "j": config.PHASE_B_ATTEMPTS}
+        assert [a for a, b in pairwise(phase_b) if a == b] == []
 
         # Phase C: no partner is Active yet and the corpus has no f-f or j-j
         # bigram, so each member alternates solo (ADR-024 § Phase C fallback).
         phase_c = harness.answer(2 * config.PHASE_C_ATTEMPTS)
-        assert phase_c == ["f", "j"] * config.PHASE_C_ATTEMPTS
+        assert Counter(phase_c) == {"f": config.PHASE_C_ATTEMPTS, "j": config.PHASE_C_ATTEMPTS}
 
         # Out the other side: the ramp-up has ended and ready_for_new_key holds,
         # so the boundary asks the introducer for Stage 0's second step.
@@ -299,8 +328,9 @@ class TestAttemptPairing:
         recorded = self.spy(monkeypatch)
         harness = Harness()
         harness.loop.start()
-        harness.answer(4)
-        assert recorded == [("f", True), ("j", True), ("f", True), ("j", True)]
+        asked = harness.answer(4)
+        assert Counter(asked) == {"f": 2, "j": 2}
+        assert recorded == [(name, True) for name in asked]
 
     def test_a_retry_press_never_reaches_record_attempt(
         self, monkeypatch: pytest.MonkeyPatch
@@ -310,28 +340,27 @@ class TestAttemptPairing:
         recorded = self.spy(monkeypatch)
         harness = Harness()
         harness.loop.start()
-        harness.settle()
-        assert harness.loop.prompt == "f"
-        harness.press("j")
+        target = harness.opened()
+        harness.press(harness.partner(target))
         harness.loop.tick()
         harness.press("u")
         harness.loop.tick()
-        harness.press("f")
+        harness.press(target)
         harness.loop.tick()
-        assert recorded == [("f", False)]
+        assert recorded == [(target, False)]
         assert harness.cues.played == ["error", "error", "correct"]
 
     def test_a_retry_sequence_writes_exactly_one_key_attempts_row(self) -> None:
         harness = Harness()
         harness.loop.start()
-        harness.settle()
-        harness.press("j")
+        target = harness.opened()
+        harness.press(harness.partner(target))
         harness.loop.tick()
         harness.press("u")
         harness.loop.tick()
-        harness.press("f")
+        harness.press(target)
         harness.loop.tick()
-        window = harness.store.window_stats(harness.profile.id, "f")
+        window = harness.store.window_stats(harness.profile.id, target)
         assert (window.attempt_count, window.correct_count) == (1, 0)
 
     def test_an_auto_repeat_press_is_ignored_entirely(
@@ -340,13 +369,13 @@ class TestAttemptPairing:
         recorded = self.spy(monkeypatch)
         harness = Harness()
         harness.loop.start()
-        harness.settle()
-        harness.press("f", release=False)
+        target = harness.opened()
+        harness.press(target, release=False)
         harness.loop.tick()
         # Same key, still physically down: an OS auto-repeat.
-        harness.press("f", release=False)
+        harness.press(target, release=False)
         harness.loop.tick()
-        assert recorded == [("f", True)]
+        assert recorded == [(target, True)]
         assert harness.cues.played == ["correct"]
 
 
@@ -407,9 +436,9 @@ class TestTypeAhead:
         # keystrokes queued in one drain, and the second must still land.
         harness = Harness()
         harness.loop.start()
-        harness.settle()
-        harness.press("f")
-        harness.press("j")
+        target = harness.opened()
+        harness.press(target)
+        harness.press(harness.partner(target))
         harness.loop.tick()
         assert harness.cues.played == ["correct", "correct"]
         for name in ("f", "j"):
@@ -515,44 +544,44 @@ class TestTimeout:
     def test_the_timeout_re_prompts_without_re_latching_the_prompt(self) -> None:
         harness = Harness()
         harness.loop.start()
-        harness.settle()
+        target = harness.opened()
         harness.letters.played.clear()
         harness.clock.advance(config.PROMPT_TIMEOUT_SECONDS)
         harness.loop.tick()
-        assert harness.letters.played == ["f"]
-        assert harness.loop.prompt == "f"
+        assert harness.letters.played == [target]
+        assert harness.loop.prompt == target
         # Not a new prompt: the child's first keystroke is still a first
         # attempt, so one wrong press writes one row and no more.
-        harness.press("j")
+        harness.press(harness.partner(target))
         harness.loop.tick()
-        window = harness.store.window_stats(harness.profile.id, "f")
+        window = harness.store.window_stats(harness.profile.id, target)
         assert (window.attempt_count, window.correct_count) == (1, 0)
 
     def test_re_prompting_is_bounded_and_then_goes_quiet(self) -> None:
         harness = Harness()
         harness.loop.start()
-        harness.settle()
+        target = harness.opened()
         harness.letters.played.clear()
         for _ in range(config.PROMPT_MAX_REPROMPTS + 3):
             harness.clock.advance(config.PROMPT_TIMEOUT_SECONDS)
             harness.loop.tick()
-        assert harness.letters.played == ["f"] * config.PROMPT_MAX_REPROMPTS
+        assert harness.letters.played == [target] * config.PROMPT_MAX_REPROMPTS
         # The prompt is still open through the silence.
-        assert harness.loop.prompt == "f"
+        assert harness.loop.prompt == target
 
     def test_a_press_resets_the_re_prompt_budget(self) -> None:
         harness = Harness()
         harness.loop.start()
-        harness.settle()
+        target = harness.opened()
         for _ in range(config.PROMPT_MAX_REPROMPTS):
             harness.clock.advance(config.PROMPT_TIMEOUT_SECONDS)
             harness.loop.tick()
-        harness.press("j")
+        harness.press(harness.partner(target))
         harness.loop.tick()
         harness.letters.played.clear()
         harness.clock.advance(config.PROMPT_TIMEOUT_SECONDS)
         harness.loop.tick()
-        assert harness.letters.played == ["f"]
+        assert harness.letters.played == [target]
 
     def test_a_pause_does_not_spend_the_re_prompt_budget(self) -> None:
         # Monotonic time runs through a PAUSED interval, so a deadline left
@@ -560,7 +589,7 @@ class TestTimeout:
         # otherwise exhaust the budget and leave the prompt silent for good.
         harness = Harness()
         harness.loop.start()
-        harness.settle()
+        target = harness.opened()
         for _ in range(config.PROMPT_MAX_REPROMPTS + 1):
             harness.focus.lose_focus()
             harness.loop.tick()
@@ -572,7 +601,7 @@ class TestTimeout:
         harness.letters.played.clear()
         harness.clock.advance(config.PROMPT_TIMEOUT_SECONDS)
         harness.loop.tick()
-        assert harness.letters.played == ["f"]
+        assert harness.letters.played == [target]
 
     def test_the_deadline_does_not_run_while_paused(self) -> None:
         harness = Harness()
@@ -590,12 +619,11 @@ class TestPausedRoundTrip:
     def test_resuming_re_issues_the_open_prompt_without_re_latching_it(self) -> None:
         harness = Harness()
         harness.loop.start()
-        harness.settle()
-        assert harness.loop.prompt == "f"
+        target = harness.opened()
         # A wrong press first, so the prompt's outcome is already decided: if
         # the resume re-latched it, the later correct press would write a
         # second row.
-        harness.press("j")
+        harness.press(harness.partner(target))
         harness.loop.tick()
         harness.letters.played.clear()
         harness.engine.spoken.clear()
@@ -616,12 +644,12 @@ class TestPausedRoundTrip:
             "Paused. Press Alt+Tab to come back to Takki.",
             "Back in Takki.",
         ]
-        assert harness.letters.played == ["f"]
-        assert harness.loop.prompt == "f"
+        assert harness.letters.played == [target]
+        assert harness.loop.prompt == target
 
-        harness.press("f")
+        harness.press(target)
         harness.loop.tick()
-        window = harness.store.window_stats(harness.profile.id, "f")
+        window = harness.store.window_stats(harness.profile.id, target)
         assert (window.attempt_count, window.correct_count) == (1, 0)
 
     def test_keystrokes_while_paused_reach_nothing(self) -> None:
@@ -640,14 +668,14 @@ class TestRecoveryKeys:
     def test_a_re_read_tap_re_speaks_the_open_prompt(self) -> None:
         harness = Harness()
         harness.loop.start()
-        harness.settle()
+        target = harness.opened()
         harness.letters.played.clear()
         harness.key(config.REREAD_KEY)
         harness.loop.tick()
         harness.key(config.REREAD_KEY, pressed=False)
         harness.loop.tick()
-        assert harness.letters.played == ["f"]
-        assert harness.loop.prompt == "f"
+        assert harness.letters.played == [target]
+        assert harness.loop.prompt == target
 
     def test_a_restart_hold_re_presents_the_whole_unit(self) -> None:
         # Steady state, where a unit is a bigram: seeded under
@@ -801,7 +829,7 @@ class TestSpeechEvents:
         harness.settle()
         assert harness.engine.failed == script
         assert harness.engine.spoken == []
-        assert harness.loop.prompt == "f"
+        assert harness.loop.prompt in {"f", "j"}
 
     def test_a_speech_finished_for_a_letter_is_dropped(self) -> None:
         harness = Harness()
@@ -810,7 +838,7 @@ class TestSpeechEvents:
         # An id the core never held -- a letter's, or a superseded utterance's.
         harness.inbound.put(SpeechFinished(9999, "completed"))
         harness.loop.tick()
-        assert harness.loop.prompt == "f"
+        assert harness.loop.prompt in {"f", "j"}
 
 
 class TestLateStop:
@@ -849,3 +877,139 @@ class TestLayerTwo:
 class TestQuitEvent:
     def test_quit_is_frozen_and_comparable(self) -> None:
         assert Quit() == Quit()
+
+
+class TestIntroductionPacingAcrossSessions:
+    """alpha-plan #12d — every restart used to introduce the next step at once.
+
+    The run of 2026-09-26 found four sessions against one store introducing all
+    of Stage 0: the ramp-up lived only in the session that started it, so a new
+    session's first block boundary found no ramp-up in progress and ADR-010's
+    aggregate gate had nothing to say about a set this new.
+    """
+
+    def run_sessions(self, count: int, answers: int) -> tuple[FakeStore, list[list[str]]]:
+        """Start, answer, quit — `count` times over one profile. Returns what each introduced."""
+        store = FakeStore()
+        profile = store.create_profile("kid")
+        introduced: list[list[str]] = []
+        for _ in range(count):
+            before = {i.key_char for i in store.introductions(profile.id)}
+            harness = Harness(store=store, profile=profile)
+            harness.loop.start()
+            harness.answer(answers)
+            harness.loop.stop()
+            introduced.append(
+                sorted({i.key_char for i in store.introductions(profile.id)} - before)
+            )
+        return store, introduced
+
+    def test_a_restart_mid_ramp_up_introduces_nothing_new(self) -> None:
+        # The scenario from the run, with the numbers it used: four sessions,
+        # each quitting well inside the first step's ramp-up.
+        _, introduced = self.run_sessions(4, answers=12)
+        assert introduced == [["f", "j"], [], [], []]
+
+    def test_the_resumed_session_drills_the_step_it_left(self) -> None:
+        store = FakeStore()
+        profile = store.create_profile("kid")
+        first = Harness(store=store, profile=profile)
+        first.loop.start()
+        first.answer(12)
+        first.loop.stop()
+
+        second = Harness(store=store, profile=profile)
+        second.loop.start()
+        asked = second.answer(8)
+        # Still Stage 0's home pair, not a new letter and not the steady-state
+        # mix over everything Active.
+        assert set(asked) == {"f", "j"}
+
+    def test_a_finished_ramp_up_lets_the_next_session_introduce(self) -> None:
+        # The gate must not become a lock. A profile whose newest step has met
+        # every bar -- Phase A + B + C worth of clean attempts on both members --
+        # resumes nothing and moves on to Stage 0's second step.
+        store = FakeStore()
+        profile = store.create_profile("kid")
+        store.mark_introduced(profile.id, ["f", "j"])
+        progress = RampUpProgress(store, profile.id)
+        for name in ("f", "j"):
+            for bar in (
+                config.PHASE_A_STREAK,
+                config.PHASE_B_ATTEMPTS,
+                config.PHASE_C_ATTEMPTS,
+            ):
+                for _ in range(bar):
+                    store.upsert_key_stat(profile.id, name, True)
+                    store.append_attempt(profile.id, name, True)
+                assert progress.advance(progress.member(name)) is True
+
+        harness = Harness(store=store, profile=profile)
+        harness.loop.start()
+        harness.settle()
+        assert sorted({i.key_char for i in store.introductions(profile.id)} - {"f", "j"}) == [
+            "r",
+            "u",
+        ]
+
+    def test_the_phase_the_child_reached_is_recorded_and_survives_the_restart(self) -> None:
+        # The durable half of the fix. Session 1 gets past Phase A's bar; the
+        # completion is written, so session 2 resumes in Phase B instead of
+        # re-deriving it from a window that may since have forgotten.
+        store = FakeStore()
+        profile = store.create_profile("kid")
+        first = Harness(store=store, profile=profile)
+        first.loop.start()
+        first.answer(2 * config.PHASE_A_STREAK)
+        first.loop.stop()
+        assert store.completed_phases(profile.id, "f") == {"A": config.PHASE_A_STREAK}
+        assert store.completed_phases(profile.id, "j") == {"A": config.PHASE_A_STREAK}
+
+        second = Harness(store=store, profile=profile)
+        second.loop.start()
+        second.answer(4)
+        # Still the same step, and no new letter -- the ramp-up is in Phase B.
+        assert {i.key_char for i in store.introductions(profile.id)} == {"f", "j"}
+        assert store.completed_phases(profile.id, "f") == {"A": config.PHASE_A_STREAK}
+
+    def test_a_resumed_session_can_still_re_read_the_introduction(self) -> None:
+        # The re-read key reads the script off the introducer's `last_step`, and a
+        # resumed session emits no step -- so without the introducer being told,
+        # a blind child's Escape between blocks answers with silence.
+        store = FakeStore()
+        profile = store.create_profile("kid")
+        first = Harness(store=store, profile=profile)
+        first.loop.start()
+        first.answer(6)
+        first.loop.stop()
+
+        second = Harness(store=store, profile=profile)
+        second.loop.start()
+        second.settle()
+        # Reading the introducer's own state rather than staging the route that
+        # consumes it: `_on_reread` only reaches the script while no prompt is
+        # open, which in a running session means during a celebration, and what
+        # went wrong here was upstream of that -- the resumed step was never
+        # given to the introducer at all, so there was nothing to speak.
+        introducer = second.loop._introducer  # pyright: ignore[reportPrivateUsage]
+        assert introducer is not None
+        remembered = introducer.last_step
+        assert remembered is not None
+        assert [intro.grapheme for intro in remembered.keys] == ["f", "j"]
+
+    def test_a_step_introduced_and_never_answered_is_introduced_again(self) -> None:
+        # ADR-023 § What the introducer remembers: the script is that letter's
+        # only teaching moment, so a child who heard it and typed nothing is owed
+        # it again rather than dropped into drills for a key they never tried.
+        store = FakeStore()
+        profile = store.create_profile("kid")
+        first = Harness(store=store, profile=profile)
+        first.loop.start()
+        first.settle()
+        first.loop.stop()
+        assert first.engine.spoken == intro_lines(("f", "j"))
+
+        second = Harness(store=store, profile=profile)
+        second.loop.start()
+        second.settle()
+        assert second.engine.spoken == intro_lines(("f", "j"))
