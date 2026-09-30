@@ -1,12 +1,23 @@
+import math
 import random
 from collections import Counter
 from itertools import pairwise
+from typing import ClassVar
 
 import pytest
 
 from takki import config
 from takki.language import WordSource
-from takki.lesson.drills import DrillBlock, DrillGenerator, RampUpPhase
+from takki.lesson.drills import (
+    CONFIDENCE_Z,
+    MAX_KEY_SHARE,
+    DrillBlock,
+    DrillGenerator,
+    RampUpPhase,
+    accuracy_bound,
+    plan_targets,
+    presses_needed,
+)
 from takki.lesson.introducer import (
     CURRICULUM,
     STAGE_0,
@@ -18,6 +29,7 @@ from takki.lesson.introducer import (
 )
 from takki.lesson.key_state import KeyStates
 from takki.lesson.rampup import RampUpProgress
+from takki.persistence import WindowStats
 from takki.platform.layout import Layout, build_en, build_is
 from tests.fakes.fake_clock import FakeClock
 from tests.fakes.fake_store import FakeStore
@@ -419,99 +431,281 @@ class TestSteadyState:
         assert blocks[0] != blocks[1]
 
 
-class TestReexposure:
-    def baseline(self, *, stale: str | None) -> tuple[Fixture, tuple[tuple[str, ...], ...]]:
-        fixture = Fixture(active=ANCHOR_SIX + "dk", seed=5)
-        for grapheme in sorted(fixture.states.active_keys()):
-            if grapheme != stale:
-                fixture.attempt(grapheme, True)
-        fixture.clock.advance(10.0)
-        return fixture, fixture.generator.next_block().units
+# Every letter's only carrier is its own double, so each unit names the key it
+# was planned for and a block's per-key counts are the plan's, exactly.
+def doubles(letters: str) -> FixedListSource:
+    return FixedListSource({letter * 2: 1.0 for letter in letters})
 
-    def test_nothing_fires_when_every_key_is_fresh(self) -> None:
-        _, units = self.baseline(stale=None)
-        assert len(units) == config.FIRST_BLOCK_PROMPTS // 2
 
-    def test_one_stale_key_replaces_exactly_one_unit(self) -> None:
-        _, fresh = self.baseline(stale=None)
-        _, reexposed = self.baseline(stale="k")
-        assert len(reexposed) == len(fresh)
-        differences = [i for i, unit in enumerate(reexposed) if unit != fresh[i]]
-        assert len(differences) == 1
-        assert "k" in reexposed[differences[0]]
+# What a finished ramp-up leaves in each member's window (ADR-024 § New-key
+# ramp-up): the presses of phases A, B and C, all correct.
+RAMP_UP_PRESSES = config.PHASE_A_STREAK + config.PHASE_B_ATTEMPTS + config.PHASE_C_ATTEMPTS
+FIRST_SLOTS = config.FIRST_BLOCK_PROMPTS // 2
+
+
+def cap(slots: int, keys: int) -> int:
+    return max(1, math.floor(slots * MAX_KEY_SHARE), math.ceil(slots / keys))
+
+
+def stats(attempts: int, correct: int) -> WindowStats:
+    return WindowStats(attempt_count=attempts, correct_count=correct, distinct_days=1)
+
+
+class TestAccuracyBound:
+    def test_no_presses_is_no_evidence(self) -> None:
+        assert accuracy_bound(0, 0) == 0.0
+
+    @pytest.mark.parametrize("presses", [1, 3, 25, 60, 90, 200])
+    def test_a_perfect_key_is_bounded_by_its_evidence(self, presses: int) -> None:
+        # Wilson's bound at p = 1 reduces to n / (n + z^2): a perfect run is
+        # only as sure as it is long.
+        expected = presses / (presses + CONFIDENCE_Z**2)
+        assert math.isclose(accuracy_bound(presses, presses), expected)
+
+    def test_more_correct_presses_raise_the_bound(self) -> None:
+        assert accuracy_bound(81, 101) > accuracy_bound(80, 100)
+
+
+class TestPressesNeeded:
+    def test_a_key_fresh_from_its_ramp_up_needs_the_rest_of_known_s_floor(self) -> None:
+        need = presses_needed(stats(RAMP_UP_PRESSES, RAMP_UP_PRESSES), config.ANCHOR_MIN_ACCURACY)
+        assert need == config.KNOWN_MIN_ATTEMPTS - RAMP_UP_PRESSES
+
+    def test_a_perfect_key_at_the_floor_needs_nothing(self) -> None:
+        floor = config.KNOWN_MIN_ATTEMPTS
+        assert presses_needed(stats(floor, floor), config.ANCHOR_MIN_ACCURACY) == 0
+
+    # The grid includes the case #12e was made for -- a key well past Known's
+    # floor that is still missing its bar, which a count rule would call done --
+    # and keys short on both counts at once.
+    @pytest.mark.parametrize(
+        ("attempts", "wrong"),
+        [
+            (attempts, wrong)
+            for attempts in (0, 5, 30, RAMP_UP_PRESSES, 90, 120, 200)
+            for wrong in (0, 1, 4, 12, 40)
+            if wrong <= attempts
+        ],
+    )
+    @pytest.mark.parametrize("bar", [config.KNOWN_MIN_ACCURACY, config.ANCHOR_MIN_ACCURACY])
+    def test_need_is_the_larger_shortfall_and_exactly_enough(
+        self, attempts: int, wrong: int, bar: float
+    ) -> None:
+        correct = attempts - wrong
+        need = presses_needed(stats(attempts, correct), bar)
+        gap = max(0, config.KNOWN_MIN_ATTEMPTS - attempts)
+        assert need >= gap
+        # Enough correct presses clear the bar, and one fewer would not --
+        # unless the gap, not the bar, is what sets the number.
+        assert accuracy_bound(correct + need, attempts + need) >= bar
+        if need > gap:
+            assert accuracy_bound(correct + need - 1, attempts + need - 1) < bar
+
+
+class TestPlanTargets:
+    def test_two_equal_needs_split_the_block_ties_by_name(self) -> None:
+        counts = plan_targets({"j": 30, "f": 30}, FIRST_SLOTS, random.Random(1))
+        assert counts == {"f": -(-FIRST_SLOTS // 2), "j": FIRST_SLOTS // 2}
+
+    def test_a_struggling_key_takes_no_more_than_the_cap(self) -> None:
+        needs = {"e": 10_000} | dict.fromkeys("fjruvmdk", 0)
+        counts = plan_targets(needs, FIRST_SLOTS, random.Random(1))
+        limit = cap(FIRST_SLOTS, len(needs))
+        assert counts["e"] == limit
+        # The rest goes round the others evenly.
+        others = [counts[name] for name in "fjruvmdk"]
+        assert sum(others) == FIRST_SLOTS - limit
+        assert max(others) - min(others) <= 1
+
+    def test_shares_follow_need_when_the_cap_does_not_bind(self) -> None:
+        # D'Hondt by hand, 12 slots, cap max(4, 2) = 4. Quotients above 10:
+        # a 40, 20, 13.3; b 20 -- four slots. At 10: a's fourth, b's second, and
+        # c d e f's first -- six more, a now at its cap. Then b's 6.7, then a
+        # five-way tie at 5 between b's fourth and c d e f's second, which b
+        # takes by name.
+        needs = {"a": 40, "b": 20, "c": 10, "d": 10, "e": 10, "f": 10}
+        assert cap(12, len(needs)) == 4
+        counts = plan_targets(needs, 12, random.Random(1))
+        assert counts == {"a": 4, "b": 4, "c": 1, "d": 1, "e": 1, "f": 1}
+
+    def test_slots_nobody_needs_go_round_evenly(self) -> None:
+        counts = plan_targets(dict.fromkeys("fjruvm", 0), 12, random.Random(1))
+        assert counts == dict.fromkeys("fjruvm", 2)
+
+    # Seeds and need shapes chosen to include a starved key beside a flooded
+    # one, which is the case the plan exists for.
+    @pytest.mark.parametrize("seed", range(5))
+    @pytest.mark.parametrize(
+        "needs",
+        [
+            {"f": 0, "j": 30},
+            {"f": 30, "j": 30},
+            {"f": 10_000, "j": 0, "r": 0},
+            {"f": 3, "j": 1, "r": 0, "u": 200, "v": 0, "m": 7},
+            dict.fromkeys("abcdefghijklmnopq", 5),
+        ],
+    )
+    @pytest.mark.parametrize("slots", [1, 2, 5, 15, 25])
+    def test_every_slot_is_planned_and_no_key_passes_the_cap(
+        self, needs: dict[str, int], slots: int, seed: int
+    ) -> None:
+        counts = plan_targets(needs, slots, random.Random(seed))
+        assert sum(counts.values()) == slots
+        assert max(counts.values()) <= cap(slots, len(needs))
+
+
+class TestSteadyPlan:
+    def test_stage_0_keys_fresh_from_their_ramp_up_get_the_block(self) -> None:
+        # f j r u are at Known's floor and perfect; v and m have just finished
+        # their ramp-up. The two new keys take the cap each, and what is left
+        # goes round the other four.
+        fixture = Fixture(source=doubles(ANCHOR_SIX))
+        for name in "fjru":
+            fixture.activate(name, attempts=config.KNOWN_MIN_ATTEMPTS)
+        for name in "vm":
+            fixture.activate(name, attempts=RAMP_UP_PRESSES)
+        limit = cap(FIRST_SLOTS, len(ANCHOR_SIX))
+        assert config.KNOWN_MIN_ATTEMPTS - RAMP_UP_PRESSES >= limit
+        counts = Counter(unit[0] for unit in fixture.generator.next_block().units)
+        assert counts["v"] == counts["m"] == limit
+        rest = [counts[name] for name in "fjru"]
+        assert sum(rest) == FIRST_SLOTS - 2 * limit
+        assert max(rest) - min(rest) <= 1
+
+    def test_a_key_at_the_session_ceiling_is_not_planned(self) -> None:
+        fixture = Fixture(source=doubles("dk"))
+        fixture.activate("k", attempts=RAMP_UP_PRESSES)
+        fixture.activate("d")
+        # Wrong every time: d needs more practice than anything, and has had
+        # all this sitting should give it.
+        press(fixture, "d", config.SESSION_KEY_CEILING, correct=False)
+        units = fixture.generator.next_block().units
+        assert len(units) == FIRST_SLOTS
+        assert set(units) == {("k", "k")}
+
+    def test_when_every_key_is_at_the_ceiling_none_is_excluded(self) -> None:
+        fixture = Fixture(source=doubles("dk"))
+        for name in "dk":
+            fixture.activate(name)
+            press(fixture, name, config.SESSION_KEY_CEILING)
+        units = fixture.generator.next_block().units
+        # Neither needs anything, so the block goes round both evenly.
+        counts = Counter(units)
+        assert set(counts) == {("d", "d"), ("k", "k")}
+        assert sorted(counts.values()) == [FIRST_SLOTS // 2, -(-FIRST_SLOTS // 2)]
+
+    def test_equal_groups_interleave_evenly(self) -> None:
+        # d is fresh from its ramp-up and takes the cap, a third of the block;
+        # k and l need nothing and share the rest. Three groups of five, each
+        # spread at a fifth of the block from its own phase, so every stretch of
+        # a fifth holds exactly one unit of each: every key recurs every third
+        # unit, never twice running.
+        fixture = Fixture(source=doubles("dkl"))
+        fixture.activate("d", attempts=RAMP_UP_PRESSES)
+        for name in "kl":
+            fixture.activate(name, attempts=config.KNOWN_MIN_ATTEMPTS)
+        units = fixture.generator.next_block().units
+        assert Counter(units) == {("d", "d"): 5, ("k", "k"): 5, ("l", "l"): 5}
+        for name in "dkl":
+            positions = [i for i, unit in enumerate(units) if unit[0] == name]
+            assert [b - a for a, b in pairwise(positions)] == [3] * 4
 
     def test_the_fallback_partner_breaks_weight_ties_by_name(self) -> None:
-        # No bigram in this corpus carries z, so the stale unit falls back to
-        # pairing it with the heaviest active letter -- and f and j weigh the
-        # same, which without a name tie-break would resolve by set order.
+        # No bigram in this corpus carries z, so its units fall back to pairing
+        # it with the heaviest active letter -- and f and j weigh the same,
+        # which without a name tie-break would resolve by set order.
         fixture = Fixture(source=FixedListSource({"fff": 10.0, "jjj": 10.0}), active="fjz", seed=3)
-        for grapheme in ("f", "j"):
-            fixture.attempt(grapheme, True)
-        fixture.clock.advance(10.0)
-        injected = [unit for unit in fixture.generator.next_block().units if "z" in unit]
-        assert injected == [("z", "f")]
+        carried = [unit for unit in fixture.generator.next_block().units if "z" in unit]
+        assert carried
+        assert set(carried) == {("z", "f")}
 
-    def test_a_key_practised_inside_the_window_is_not_stale(self) -> None:
-        fixture = Fixture(active=ANCHOR_SIX + "dk", seed=5)
-        fixture.practise_all()
-        fixture.clock.advance(config.REEXPOSURE_STALE_SECONDS - 1)
-        before = fixture.generator.next_block().units
-        assert before == self.baseline(stale=None)[1]
+
+class TestStarvationRegression:
+    """Alpha-plan #12e: frequency-weighted steady state starved the letter being learned.
+
+    Reproduced in #12b-2 with real English over {f, j}: 80 answers came out 76
+    `f` and 4 `j`, because the language offers almost only `ff`. The corpus here
+    carries those four bigrams at English's weights. Steady state is reached
+    deliberately -- both keys as a finished ramp-up leaves them -- since #12d
+    closed the restart route to it.
+    """
+
+    ENGLISH_FJ: ClassVar[dict[str, float]] = {
+        "ff": 0.0047,
+        "fj": 0.000008,
+        "jf": 0.000002,
+        "jj": 0.000002,
+    }
+
+    def test_j_holds_half_of_every_block_over_a_long_session(self) -> None:
+        fixture = Fixture(source=FixedListSource(self.ENGLISH_FJ))
+        for name in "fj":
+            fixture.activate(name, attempts=RAMP_UP_PRESSES)
+        prompts: list[str] = []
+        for _ in range(20):
+            block = fixture.generator.next_block()
+            # Every j unit carries at least one j, and j's need never falls
+            # below f's -- f gets two presses from each `ff` -- so j is planned
+            # for at least the smaller half of every block.
+            assert sum("j" in unit for unit in block.units) >= len(block.units) // 2
+            fixture.answer(block.prompts, seconds_each=2.0)
+            prompts += block.prompts
+        shares = Counter(prompts)
+        assert len(prompts) > 2 * config.SESSION_KEY_CEILING
+        # At least one j in at least half of the units: a quarter of the prompts.
+        assert shares["j"] * 4 >= len(prompts)
 
 
 class TestAnchorMaintenance:
-    def slipping(self, grapheme: str) -> Fixture:
-        fixture = Fixture(active=ANCHOR_SIX + "dk", seed=5)
-        # Well past ANCHOR_MIN_ATTEMPTS, well under ANCHOR_MIN_ACCURACY.
-        fixture.activate(grapheme, attempts=40, wrong=20)
-        fixture.practise_all()
-        fixture.clock.advance(10.0)
+    # Doubles only, so the one unit that is a reach followed by its anchor can
+    # only have come from the maintenance path.
+    def fixture(self) -> Fixture:
+        fixture = Fixture(source=doubles(ANCHOR_SIX + "dk"), seed=5)
+        for name in ANCHOR_SIX + "dk":
+            fixture.activate(name, attempts=config.KNOWN_MIN_ATTEMPTS)
+        return fixture
+
+    def return_drills(self, units: tuple[tuple[str, ...], ...]) -> list[tuple[str, ...]]:
+        reaches = {"f": ("r", "v"), "j": ("u", "m")}
+        return [u for u in units if len(u) == 2 and u[0] in reaches.get(u[1], ())]
+
+    def slipping(self, *graphemes: str) -> Fixture:
+        fixture = self.fixture()
+        for grapheme in graphemes:
+            # Well past ANCHOR_MIN_ATTEMPTS, well under ANCHOR_MIN_ACCURACY.
+            press(fixture, grapheme, 40, correct=False)
         return fixture
 
     def test_the_bump_keys_are_the_maintained_ones(self) -> None:
         assert home_anchor_keys(build_en()) == ("f", "j")
 
-    def test_a_slipping_anchor_gets_a_return_drill(self) -> None:
-        fixture = self.slipping("f")
-        units = fixture.generator.next_block().units
-        injected = [unit for unit in units if unit[-1] == "f" and unit[0] in ("r", "v")]
-        assert len(injected) == 1
-        assert len(units) == config.FIRST_BLOCK_PROMPTS // 2
+    def test_a_slipping_anchor_gets_one_return_drill_in_a_block_of_the_same_length(self) -> None:
+        units = self.slipping("f").generator.next_block().units
+        assert [unit[1] for unit in self.return_drills(units)] == ["f"]
+        assert len(units) == FIRST_SLOTS
 
-    def test_a_slipping_ordinary_key_gets_nothing(self) -> None:
-        fixture = self.slipping("d")
-        assert fixture.generator.next_block().units == TestReexposure().baseline(stale=None)[1]
+    def test_both_anchors_slipping_take_one_slot_each(self) -> None:
+        units = self.slipping("f", "j").generator.next_block().units
+        assert sorted(unit[1] for unit in self.return_drills(units)) == ["f", "j"]
+        assert len(units) == FIRST_SLOTS
+
+    def test_a_slipping_ordinary_key_gets_no_return_drill(self) -> None:
+        assert self.return_drills(self.slipping("d").generator.next_block().units) == []
 
     def test_an_anchor_above_the_bar_gets_nothing(self) -> None:
-        fixture = Fixture(active=ANCHOR_SIX + "dk", seed=5)
-        fixture.activate("f", attempts=40, wrong=1)
-        fixture.practise_all()
-        fixture.clock.advance(10.0)
-        assert fixture.generator.next_block().units == TestReexposure().baseline(stale=None)[1]
+        fixture = self.fixture()
+        press(fixture, "f", 1, correct=False)
+        stats_f = fixture.states.window_stats("f")
+        assert stats_f.correct_count / stats_f.attempt_count >= config.ANCHOR_MIN_ACCURACY
+        assert self.return_drills(fixture.generator.next_block().units) == []
 
     def test_too_few_attempts_is_not_a_slipping_anchor(self) -> None:
-        fixture = Fixture(active=ANCHOR_SIX + "dk", seed=5)
-        # One short of the bar: the fixture recorded one attempt on f when it
-        # activated the key, and `practise_all` below records another.
-        fixture.activate("f", attempts=config.ANCHOR_MIN_ATTEMPTS - 3, wrong=10)
-        fixture.practise_all()
-        fixture.clock.advance(10.0)
-        assert fixture.generator.next_block().units == TestReexposure().baseline(stale=None)[1]
-
-    def test_both_triggers_in_one_block_take_one_slot_each(self) -> None:
-        fixture = Fixture(active=ANCHOR_SIX + "dk", seed=5)
-        fixture.activate("f", attempts=40, wrong=20)
-        for grapheme in sorted(fixture.states.active_keys()):
-            if grapheme != "k":
-                fixture.attempt(grapheme, True)
-        fixture.clock.advance(10.0)
-        units = fixture.generator.next_block().units
-        fresh = TestReexposure().baseline(stale=None)[1]
-        differences = [i for i, unit in enumerate(units) if unit != fresh[i]]
-        assert len(units) == len(fresh)
-        assert len(differences) == 2
-        assert units[differences[0]][-1] == "f"
-        assert "k" in units[differences[1]]
+        fixture = Fixture(source=doubles(ANCHOR_SIX), seed=5)
+        for name in ANCHOR_SIX:
+            fixture.activate(name)
+        press(fixture, "f", config.ANCHOR_MIN_ATTEMPTS - 2, correct=False)
+        assert fixture.states.window_stats("f").attempt_count == config.ANCHOR_MIN_ATTEMPTS - 1
+        assert self.return_drills(fixture.generator.next_block().units) == []
 
 
 class TestBlockLength:

@@ -131,11 +131,6 @@ PHASE_C_MAX_LATENCY_RATIO = 1.5
 PHASE_C_PARTNERS = 3
 PHASE_C_TRIGRAM_CHANCE = 0.5
 
-# ADR-024 § Spaced re-exposure. Session time, not wall clock -- the cross-session
-# anchor (`key_stats.last_practised_at`) is the Beta fix noted in that section
-# and in roadmap D.
-REEXPOSURE_STALE_SECONDS = 300.0
-
 # ADR-024 § Lesson granularity. The block's wall-clock duration stays roughly
 # constant and the volume of practice scales with the child's pace, so a slow
 # typist is not punished with a disproportionately long block.
@@ -156,8 +151,8 @@ PACE_IDLE_GAP_SECONDS = 30.0
 SESSION_KEY_FLOOR = 45
 # ADR-010 § Session Pacing -- the other end of the same research band, where
 # single-session accuracy penalties begin. A soft engine cap on how much one
-# key may be drilled in one sitting, never a hard interrupt: no consumer yet,
-# and ADR-024's block generator is where it lands.
+# key may be drilled in one sitting, never a hard interrupt: ADR-024's block
+# plan stops targeting a key that has reached it.
 SESSION_KEY_CEILING = 90
 
 # concurrency-model.md § The loop. 60 Hz caps the latency the loop itself adds

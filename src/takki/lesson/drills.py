@@ -1,18 +1,20 @@
 """ADR-024 — Layer 1 drill content and lesson granularity.
 
-Four phases of ramp-up after an introduction step, frequency-weighted bigrams
-in steady state, one re-exposure slot with two triggers, and blocks sized by
-the child's own pace. Pure logic: no store writes, no audio, no timers.
+Four phases of ramp-up after an introduction step, steady-state blocks planned
+by each key's need, anchor return-drills, and blocks sized by the child's own
+pace. Pure logic: no store writes, no audio, no timers.
 """
 
+import math
 import random
 from collections import Counter, deque
 from collections.abc import Set as AbstractSet
 from dataclasses import dataclass
+from fractions import Fraction
 
 from takki import config
 from takki.clock import Clock
-from takki.language import WordSource, sample_bigrams
+from takki.language import WordSource
 from takki.lesson import rampup
 from takki.lesson.introducer import (
     DIRECT,
@@ -20,12 +22,14 @@ from takki.lesson.introducer import (
     STAGE_0,
     IntroductionStep,
     KeyIntroduction,
+    anchor_keys,
     base_key,
     home_anchor_keys,
     key_distance,
 )
 from takki.lesson.key_state import KeyStates
 from takki.lesson.rampup import PHASE_ORDER, MemberProgress, RampUpPhase, RampUpProgress
+from takki.persistence import WindowStats
 from takki.platform.layout import Layout
 
 # A unit is one bigram or short sequence, and each of its members is one prompt
@@ -37,6 +41,85 @@ Unit = tuple[str, ...]
 # A baseline of None is a real answer -- the child has no Known key yet -- so it
 # cannot double as "not computed".
 _UNSET: float = -1.0
+
+# ADR-024 § Steady-state drill generation (alpha-plan #12e). Constants in code
+# rather than config on the developer's call: they are tuning knobs for whoever
+# works on the engine, not settings a parent should meet.
+#
+# The most of one block any single key may be planned for, so a struggling key
+# cannot turn a block into a one-letter drill. A Fraction so that "a third of 15
+# slots" is 5 and not 4.999...
+MAX_KEY_SHARE = Fraction(1, 3)
+# How cautious the accuracy reading is: one standard error. Known's press floor
+# already demands the evidence, so the bound only has to stop a lucky short run
+# reading as a confirmed key. Revisited with decay in alpha-plan #12f.
+CONFIDENCE_Z = 1.0
+
+
+def accuracy_bound(correct: int, attempts: int) -> float:
+    """Wilson lower bound on first-press accuracy: how accurate the key surely is."""
+    if attempts == 0:
+        return 0.0
+    z2 = CONFIDENCE_Z**2
+    p = correct / attempts
+    centre = p + z2 / (2 * attempts)
+    spread = CONFIDENCE_Z * math.sqrt(p * (1 - p) / attempts + z2 / (4 * attempts**2))
+    return (centre - spread) / (1 + z2 / attempts)
+
+
+def presses_needed(stats: WindowStats, bar: float) -> int:
+    """A key's need in presses: the larger of its Known-floor gap and its accuracy shortfall."""
+    # One number in the unit the plan hands out, so a key short on both is not
+    # queued behind either reason.
+    gap = max(0, config.KNOWN_MIN_ATTEMPTS - stats.attempt_count)
+    return max(gap, _presses_to_confirm(stats.correct_count, stats.attempt_count, bar))
+
+
+def _presses_to_confirm(correct: int, attempts: int, bar: float) -> int:
+    # The window's own forgetting is ignored -- old misses dropping out would
+    # make it sooner -- so this over-estimates a struggling key's need, which
+    # MAX_KEY_SHARE absorbs. The bound rises with every correct press and tends
+    # to 1, so for any bar below 1 the doubling search ends.
+    def confirmed(extra: int) -> bool:
+        return accuracy_bound(correct + extra, attempts + extra) >= bar
+
+    if confirmed(0):
+        return 0
+    low, high = 0, 1
+    while not confirmed(high):
+        low, high = high, high * 2
+    while high - low > 1:
+        middle = (low + high) // 2
+        low, high = (low, middle) if confirmed(middle) else (middle, high)
+    return high
+
+
+def plan_targets(needs: dict[str, int], slots: int, rng: random.Random) -> dict[str, int]:
+    """How many of a block's slots each key is the target of."""
+    # Shared by need, never beyond a key's need or the cap; slots nobody needs
+    # go round the keys evenly. The cap never falls below an even share, or a
+    # two-key set could not fill its block.
+    counts = dict.fromkeys(sorted(needs), 0)
+    if not counts or slots <= 0:
+        return counts
+    cap = max(1, math.floor(slots * MAX_KEY_SHARE), -(-slots // len(counts)))
+    for _ in range(slots):
+        # D'Hondt: the next slot goes to the most need per slot already given,
+        # so every key in need moves forward every block rather than waiting in
+        # a queue behind a needier one. `max` keeps the first of a tie, and
+        # `counts` is in name order.
+        eligible = [name for name in counts if counts[name] < min(cap, needs[name])]
+        if not eligible:
+            break
+        best = max(eligible, key=lambda name: needs[name] / (counts[name] + 1))
+        counts[best] += 1
+    spare = slots - sum(counts.values())
+    while spare and (room := [name for name in counts if counts[name] < cap]):
+        rng.shuffle(room)
+        for name in room[:spare]:
+            counts[name] += 1
+        spare -= min(spare, len(room))
+    return counts
 
 
 @dataclass(frozen=True)
@@ -91,7 +174,7 @@ class DrillGenerator:
     halfway through Phase B next session (ADR-024 § Ramp-up variability, and
     alpha-plan #12d for what the old session-local lifetime cost). What is held
     here is a cache of that reading, plus the session-local things that really
-    are session-local -- the pace measure and the re-exposure clock.
+    are session-local -- the pace measure and the per-key session counts.
     """
 
     def __init__(
@@ -105,17 +188,12 @@ class DrillGenerator:
     ) -> None:
         self._layout = layout
         self._source = source
+        self._anchor_six = frozenset(anchor_keys(layout))
         self._states = key_states
         self._progress = progress
         self._clock = clock
         self._rng = rng
         self._ramp_up: RampUp | None = None
-        # ADR-024 § Spaced re-exposure, session-time clock. A grapheme absent
-        # here has not been practised this session, which reads as maximally
-        # stale -- the first-block flood ADR-024 files as Beta scope. Switching
-        # the anchor to `key_stats.last_practised_at` replaces this dict and
-        # nothing else.
-        self._last_practised: dict[str, float] = {}
         self._session_attempts: dict[str, int] = {}
         # Both derived tables are a full pass over the corpus, and the block
         # generator reads them several times per block.
@@ -205,8 +283,7 @@ class DrillGenerator:
         target = self._target_prompts()
         ramp = self._ramp_up
         if ramp is None:
-            pool = self._pool(self._active())
-            units = self._reexpose(self._steady_units(target, pool), pool)
+            units = self._steady_units(target)
         elif ramp.phase is RampUpPhase.C:
             units = self._phase_c_units(ramp, target)
         else:
@@ -235,13 +312,12 @@ class DrillGenerator:
             self._block_seconds += gap
             self._paced_attempts += 1
         self._session_attempts[grapheme] = self._session_attempts.get(grapheme, 0) + 1
-        self._last_practised[grapheme] = now
         ramp = self._ramp_up
         if ramp is None:
             return
         if grapheme not in ramp.graphemes:
             # An anchor or a Phase C partner. It is practice, and it counts for
-            # recency and the session floor, but the phase bar is the *new*
+            # the session floor and ceiling, but the phase bar is the *new*
             # letter's (ADR-024 § New-key ramp-up).
             return
         self._refresh_ramp()
@@ -570,74 +646,97 @@ class DrillGenerator:
         keys = sorted(options)
         return self._rng.choices(keys, weights=[options[key] for key in keys])[0]
 
-    def _steady_units(self, target: int, pool: dict[str, float]) -> list[Unit]:
-        # ADR-024 § Steady-state: frequency-weighted over the Active set, with
-        # no comfort-class adjustment. Same-finger bigrams are practised, not
-        # avoided -- they exist in the language and avoiding them is a debt
-        # that comes due in Layer 2.
-        count = max(1, -(-target // 2))
-        if pool:
-            return [(bigram[0], bigram[1]) for bigram in sample_bigrams(pool, count, self._rng)]
-        # No corpus bigram over the Active set yet -- true for the first steps
-        # of the curriculum, where the child has a handful of letters that never
-        # co-occur. Pair single letters by their own frequency instead.
-        active = sorted(self._active())
+    def _steady_units(self, target: int) -> list[Unit]:
+        # ADR-024 § Steady-state drill generation (alpha-plan #12e): each block
+        # is planned. *Which* key a unit practises is decided by the learner's
+        # need; the bigram that carries it is still the language's, so
+        # same-finger bigrams and a word's own double letter are practised, not
+        # avoided -- they exist in the language and avoiding them is a debt that
+        # comes due in Layer 2.
+        active = self._active()
         if not active:
             # Nothing has been introduced yet. An empty block is the honest
             # answer -- the caller's next act is an introduction, and the same
             # state is what `session_complete` guards against.
             return []
-        draws = self._weighted_draws(active, count * 2)
-        return [(draws[i], draws[i + 1]) for i in range(0, len(draws), 2)]
+        slots = max(1, -(-target // 2))
+        drills = self._anchor_drills()[:slots]
+        # ADR-010's soft ceiling: a key drilled SESSION_KEY_CEILING times this
+        # sitting is no longer planned as a target. It still turns up inside
+        # other keys' bigrams. If every key is there, nobody is excluded -- the
+        # block has to be about something.
+        targetable = {
+            name
+            for name in active
+            if self._session_attempts.get(name, 0) < config.SESSION_KEY_CEILING
+        } or active
+        needs = {
+            name: presses_needed(self._states.window_stats(name), self._bar(name))
+            for name in targetable
+        }
+        counts = plan_targets(needs, slots - len(drills), self._rng)
+        pool = self._pool(active)
+        groups = [[drill] for drill in drills]
+        groups += [
+            [self._carrier(name, pool, active) for _ in range(counts[name])]
+            for name in sorted(counts)
+        ]
+        return self._spread([group for group in groups if group])
 
-    def _weighted_draws(self, active: list[str], count: int) -> list[str]:
-        weights = [self._weight(name) for name in active]
-        if sum(weights) <= 0:
-            weights = [1.0] * len(active)
-        return self._rng.choices(active, weights=weights, k=count)
+    def _bar(self, grapheme: str) -> float:
+        # The bar the key is working toward. All six Stage 0 keys are held to
+        # the anchor bar, not only the two ADR-027 maintains for life: the rung
+        # needs all six at it, and after the rung the cost is r u v m practised
+        # to 95% rather than 90%, which is a handful of presses.
+        return (
+            config.ANCHOR_MIN_ACCURACY
+            if grapheme in self._anchor_six
+            else config.KNOWN_MIN_ACCURACY
+        )
 
-    # ---- the re-exposure slot ------------------------------------------
+    def _carrier(self, grapheme: str, pool: dict[str, float], active: AbstractSet[str]) -> Unit:
+        carriers = {bigram: weight for bigram, weight in pool.items() if grapheme in bigram}
+        if carriers:
+            bigram = self._choose(carriers)
+            return (bigram[0], bigram[1])
+        # No corpus bigram carries this letter over the Active set -- true early
+        # in the curriculum, where the child has a handful of letters that never
+        # co-occur. Pair it with the heaviest other Active letter instead.
+        # Name in the sort key, like every other selection here: zero-weight
+        # graphemes exist by construction (`rank_graphemes`), so ties are
+        # guaranteed, and without it they would resolve by set iteration order
+        # and break reproducibility from the seed.
+        others = sorted(active - {grapheme}, key=lambda name: (-self._weight(name), name))
+        return (grapheme, others[0] if others else grapheme)
 
-    def _reexpose(self, units: list[Unit], pool: dict[str, float]) -> list[Unit]:
-        """ADR-024's spaced re-exposure slot, with ADR-027's accuracy trigger.
+    def _spread(self, groups: list[list[Unit]]) -> list[Unit]:
+        # Each group's units evenly through the block, from a random phase, so
+        # a key with five units meets the child five times across the block
+        # rather than five times running.
+        placed: list[tuple[float, int, int, Unit]] = []
+        for index, group in enumerate(groups):
+            phase = self._rng.random()
+            placed += [((i + phase) / len(group), index, i, unit) for i, unit in enumerate(group)]
+        return [unit for *_, unit in sorted(placed)]
 
-        One mechanism, two triggers, and they are ordered rather than merged:
-        a slipping anchor degrades every key position described against it, so
-        it is served before a stale rare key. Each trigger replaces exactly one
-        unit -- the most frequent ones, which the child meets again anyway --
-        so block length is unchanged whether one fires, both, or neither.
+    # ---- anchor maintenance --------------------------------------------
 
-        Ramp-up blocks are left alone. Their content is deliberately isolated
-        (ADR-024 § New-key ramp-up), and a ramp-up is at most a few tens of
-        prompts, so nothing waits long for its slot.
-        """
-        claims = self._claims(pool)
-        if not claims:
-            return units
-        order = sorted(range(len(units)), key=lambda i: (-pool.get("".join(units[i]), 0.0), i))
-        replaced = list(units)
-        for claim, index in zip(claims, order, strict=False):
-            replaced[index] = claim
-        return replaced
-
-    def _claims(self, pool: dict[str, float]) -> list[Unit]:
-        claims: list[Unit] = []
-        served: set[str] = set()
+    def _anchor_drills(self) -> list[Unit]:
+        """ADR-027 § The Anchor Gate's maintenance path: return-drills for a slipping anchor."""
+        # Kept beside the need-based plan rather than folded into it: the plan
+        # decides which key is practised, not in what form. A slipping `f` would
+        # be planned by need anyway, but carried by `ff` or `fu`, and only a
+        # reach followed by the anchor measures the return. Each drill takes one
+        # of the block's slots, so block length is unchanged.
+        drills: list[Unit] = []
         for anchor in home_anchor_keys(self._layout):
             if not self._anchor_slipping(anchor):
                 continue
             reach = self._reach(anchor)
             if reach is None:
                 continue
-            # A return-drill, not a repetition: the anchor prompt follows a
-            # keystroke that took the finger off home, so the press measures
-            # return-to-anchor accuracy (ADR-027 § The Anchor Gate).
-            claims.append((reach, anchor))
-            served.add(anchor)
-        stale = self._stalest(served)
-        if stale is not None:
-            claims.append(self._stale_unit(stale, pool))
-        return claims
+            drills.append((reach, anchor))
+        return drills
 
     def _anchor_slipping(self, anchor: str) -> bool:
         stats = self._states.window_stats(anchor)
@@ -658,34 +757,6 @@ class DrillGenerator:
             and other.row != key.row
         )
         return self._rng.choice(reaches) if reaches else None
-
-    def _stalest(self, served: AbstractSet[str]) -> str | None:
-        now = self._clock.monotonic()
-        stale = [
-            name
-            for name in self._active() - set(served)
-            if now - self._last_practised.get(name, float("-inf")) > config.REEXPOSURE_STALE_SECONDS
-        ]
-
-        # Least recently practised first; among letters not practised at all
-        # this session, the rarest, since those are the ones frequency-weighted
-        # selection will not surface on its own.
-        def staleness(name: str) -> tuple[float, float, str]:
-            return (self._last_practised.get(name, float("-inf")), self._weight(name), name)
-
-        return min(stale, key=staleness, default=None)
-
-    def _stale_unit(self, grapheme: str, pool: dict[str, float]) -> Unit:
-        carriers = {bigram: weight for bigram, weight in pool.items() if grapheme in bigram}
-        if carriers:
-            bigram = self._choose(carriers)
-            return (bigram[0], bigram[1])
-        others = sorted(self._active() - {grapheme}, key=lambda name: (-self._weight(name), name))
-        # Name in the sort key, like every other selection here: zero-weight
-        # graphemes exist by construction (`rank_graphemes`), so ties are
-        # guaranteed, and without it they would resolve by set iteration order
-        # and break reproducibility from the seed.
-        return (grapheme, others[0] if others else grapheme)
 
     # ---- pace ----------------------------------------------------------
 

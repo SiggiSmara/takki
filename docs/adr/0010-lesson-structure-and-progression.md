@@ -35,7 +35,7 @@ Progression is adaptive and continuous, not fixed-step:
 |---|---|---|
 | New key at > 90% over ≥ 50 presses | `INTRODUCE_MIN_PRESSES`, `INTRODUCE_MIN_ACCURACY` | `ready_for_new_key()` — **aggregate over the current set**, not per key |
 | Layer 2 at ≥ 8 keys | `LAYER_2_MIN_KEYS` | `layer_two_unlocked()` — counted **Active** ([ADR-028](0028-composite-input-and-keyboard-ownership.md) § Layer-2 unlock) |
-| Per-key-per-session ceiling ~90 (§ Session Pacing) | `SESSION_KEY_CEILING` | **no consumer yet** — the floor is `SESSION_KEY_FLOOR`, read by session 9's block generator; the ceiling lands there too ([ADR-024](0024-drill-content-and-lesson-granularity.md)) |
+| Per-key-per-session ceiling ~90 (§ Session Pacing) | `SESSION_KEY_CEILING` | read by ADR-024's steady-state block plan since 2026-09-30 (alpha-plan #12e): a key at the ceiling is no longer planned as a target that session. *Previously:* **no consumer yet** — the floor is `SESSION_KEY_FLOOR`, read by session 9's block generator; the ceiling lands there too ([ADR-024](0024-drill-content-and-lesson-granularity.md)) |
 
 Three readings this section did not pin, taken here rather than left for the session loop to invent:
 
@@ -110,7 +110,7 @@ Session length is therefore adaptive and inversely related to the number of acti
 
 The individual **drill block** (~90–120 seconds, per ADR-024) is the natural stopping unit within a session. "Individual lesson units must be short enough that a stopping point is always close" means the block, not the session: a child can stop after any block without losing progress, and blocks complete in under two minutes. A full session spanning enough blocks to hit the 45-per-key floor is the expected engagement; shorter practice still contributes to the rolling window but does not achieve the per-day dose the research supports.
 
-The per-key ceiling (~90) is `config.SESSION_KEY_CEILING` as of alpha session 10, and has no consumer yet — [ADR-024](0024-drill-content-and-lesson-granularity.md)'s block generator, which already reads the 45 floor, is where it lands. It is a soft engine cap, not a hard interrupt. Explicit session time enforcement remains rejected: it is patronising for motivated children and adds complexity with no evidence of benefit over well-granulated lesson design combined with the per-key ceiling.
+The per-key ceiling (~90) is `config.SESSION_KEY_CEILING` as of alpha session 10. *(Since 2026-09-30, alpha-plan #12e, [ADR-024](0024-drill-content-and-lesson-granularity.md)'s steady-state block plan reads it: a key at the ceiling is not planned as a target for the rest of the session, though it still appears inside other keys' bigrams. What follows was written before that.)* It had no consumer — [ADR-024](0024-drill-content-and-lesson-granularity.md)'s block generator, which already reads the 45 floor, is where it lands. It is a soft engine cap, not a hard interrupt. Explicit session time enforcement remains rejected: it is patronising for motivated children and adds complexity with no evidence of benefit over well-granulated lesson design combined with the per-key ceiling.
 
 ### Why Lessons Are Not Authored Per Language
 
