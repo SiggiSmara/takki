@@ -86,7 +86,7 @@ def phase2_steps(layout: Layout, words: dict[str, float] = EN_WORDS) -> list[Int
 def stocked(store: Store, profile_id: int, *chars: str) -> None:
     """Make each grapheme Active: one counted keystroke creates the row (ADR-027)."""
     for char in chars:
-        store.upsert_key_stat(profile_id, char, True, "2026-01-01T10:00:00")
+        store.upsert_key_stat(profile_id, char, True, "2026-01-01T10:00:00+00:00")
 
 
 def introducer(

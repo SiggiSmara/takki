@@ -1,6 +1,22 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from typing import Protocol
+
+
+def utc_stamp(value: str) -> str:
+    """`value` unchanged if it is a UTC instant as the store writes it; ValueError otherwise."""
+    # The store's data contract, enforced on the way in and on the way out. A
+    # bare stamp is not rejected by SQLite: `date(x, 'localtime')` reads it as
+    # UTC, so a local time written by mistake would move a practice day
+    # silently.
+    parsed = datetime.fromisoformat(value)
+    # One spelling only -- whole seconds and `+00:00`, what `_now()` writes --
+    # because `milestones` is ordered by this text, and `Z` or a fraction of a
+    # second sorts differently from the same instant written the other way.
+    if parsed.utcoffset() != timedelta(0) or value != parsed.isoformat(timespec="seconds"):
+        raise ValueError(f"timestamp is not UTC in the stored form: {value!r}")
+    return value
 
 
 @dataclass(frozen=True)

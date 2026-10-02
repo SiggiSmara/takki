@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from typing import Any, cast
 
 from takki import config
-from takki.persistence import Attempt, Introduction, KeyStat, Profile, WindowStats
+from takki.persistence import Attempt, Introduction, KeyStat, Profile, WindowStats, utc_stamp
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS profiles (
@@ -84,12 +84,16 @@ def _now() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds")
 
 
+def _stamp(given: str | None) -> str:
+    return _now() if given is None else utc_stamp(given)
+
+
 def _row_to_profile(row: tuple[Any, ...]) -> Profile:
     return Profile(
         id=cast(int, row[0]),
         name=cast(str, row[1]),
         language=cast(str, row[2]),
-        created_at=cast(str, row[3]),
+        created_at=utc_stamp(cast(str, row[3])),
         tts_voice=cast(str | None, row[4]),
         tts_rate=cast(float | None, row[5]),
         talk_key=cast(str | None, row[6]),
@@ -147,7 +151,7 @@ class SqliteStore:
         ptt_mode: str | None = None,
         created_at: str | None = None,
     ) -> Profile:
-        ts = created_at or _now()
+        ts = _stamp(created_at)
         cur = self.conn.execute(
             """
             INSERT INTO profiles
@@ -183,7 +187,7 @@ class SqliteStore:
         return [_row_to_profile(r) for r in rows]
 
     def start_session(self, profile_id: int, started_at: str | None = None) -> int:
-        ts = started_at or _now()
+        ts = _stamp(started_at)
         cur = self.conn.execute(
             "INSERT INTO sessions (profile_id, started_at) VALUES (?, ?)",
             (profile_id, ts),
@@ -192,7 +196,7 @@ class SqliteStore:
         return cast(int, cur.lastrowid)
 
     def end_session(self, session_id: int, ended_at: str | None = None) -> None:
-        ts = ended_at or _now()
+        ts = _stamp(ended_at)
         self.conn.execute(
             "UPDATE sessions SET ended_at = ? WHERE id = ?",
             (ts, session_id),
@@ -206,7 +210,7 @@ class SqliteStore:
         correct: bool,
         practised_at: str | None = None,
     ) -> None:
-        ts = practised_at or _now()
+        ts = _stamp(practised_at)
         self.conn.execute(
             """
             INSERT INTO key_stats
@@ -227,7 +231,7 @@ class SqliteStore:
         key_char: str,
         practised_at: str | None = None,
     ) -> None:
-        ts = practised_at or _now()
+        ts = _stamp(practised_at)
         self.conn.execute(
             "UPDATE key_stats SET last_practised_at = ? WHERE profile_id = ? AND key_char = ?",
             (ts, profile_id, key_char),
@@ -244,7 +248,7 @@ class SqliteStore:
         # which no longer carries identity (ADR-011 § The step ordinal). A member
         # already introduced keeps the step it had: re-introducing is not a
         # thing, and moving a key's step would move it under a resumed ramp-up.
-        ts = introduced_at or _now()
+        ts = _stamp(introduced_at)
         row = self.conn.execute(
             "SELECT MAX(step) FROM introductions WHERE profile_id = ?", (profile_id,)
         ).fetchone()
@@ -273,7 +277,7 @@ class SqliteStore:
         # completion is an event). `attempts_at` is the key's lifetime attempt
         # count at that moment, which is what bounds the next phase's evidence
         # without depending on rows the rolling window may since have evicted.
-        ts = completed_at or _now()
+        ts = _stamp(completed_at)
         self.conn.execute(
             """
             INSERT OR IGNORE INTO ramp_up_phases
@@ -303,7 +307,7 @@ class SqliteStore:
         latency_ms: int | None = None,
         prev_char: str | None = None,
     ) -> None:
-        ts = attempted_at or _now()
+        ts = _stamp(attempted_at)
         self.conn.execute(
             """
             INSERT INTO key_attempts
@@ -344,7 +348,7 @@ class SqliteStore:
             cast(str, r[0]): KeyStat(
                 attempt_count=cast(int, r[1]),
                 correct_count=cast(int, r[2]),
-                last_practised_at=cast(str | None, r[3]),
+                last_practised_at=None if r[3] is None else utc_stamp(cast(str, r[3])),
             )
             for r in rows
         }
@@ -363,7 +367,7 @@ class SqliteStore:
                 key_char=cast(str, r[0]),
                 step=cast(int, r[1]),
                 position=cast(int, r[2]),
-                introduced_at=cast(str, r[3]),
+                introduced_at=utc_stamp(cast(str, r[3])),
             )
             for r in rows
         ]
@@ -416,7 +420,7 @@ class SqliteStore:
         return [
             Attempt(
                 correct=bool(r[0]),
-                attempted_at=cast(str, r[1]),
+                attempted_at=utc_stamp(cast(str, r[1])),
                 latency_ms=cast(int | None, r[2]),
                 prev_char=cast(str | None, r[3]),
             )
@@ -429,7 +433,7 @@ class SqliteStore:
         level: str,
         achieved_at: str | None = None,
     ) -> None:
-        ts = achieved_at or _now()
+        ts = _stamp(achieved_at)
         self.conn.execute(
             "INSERT OR IGNORE INTO milestones (profile_id, level, achieved_at) VALUES (?, ?, ?)",
             (profile_id, level, ts),

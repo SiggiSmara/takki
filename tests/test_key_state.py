@@ -3,8 +3,8 @@ from takki.lesson.key_state import KeyState, KeyStates, KnownCriterion, is_known
 from takki.persistence import Store, WindowStats
 from tests.fakes.fake_store import FakeStore
 
-DAY1 = "2026-01-01T10:00:00"
-DAY2 = "2026-01-02T10:00:00"
+DAY1 = "2026-01-01T10:00:00+00:00"
+DAY2 = "2026-01-02T10:00:00+00:00"
 
 
 def stocked(store: Store, profile_id: int, key_char: str, *, correct: int, wrong: int) -> None:

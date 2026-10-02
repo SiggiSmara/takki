@@ -102,6 +102,16 @@ Two things forced it. Naive local strings are not an ordering — an hour repeat
 
 Rows written before this rule are naive local. They are not migrated: Alpha data is disposable, and a converted timestamp would be a guess at the offset in force when it was written.
 
+**The rule is enforced, not only followed** *(added 2026-10-02, alpha-plan #12i).* Takki creates every timestamp and is their only reader, so a timestamp without UTC is always a mistake and never data.
+
+- **On the way in.** Every `Store` method that takes a timestamp passes it through `takki.persistence.utc_stamp`, which raises `ValueError` unless the value is a UTC instant in the one form the store writes: ISO-8601, whole seconds, offset `+00:00`. A bare time, a time with another offset, a date alone, a non-date and an empty string are all refused, and nothing is written. So are the other spellings of UTC, `Z` and fractional seconds, because `milestones` is ordered by this text and two spellings of the same instant sort differently.
+- **On the way out.** `SqliteStore` runs the same check on every timestamp it returns (`Profile.created_at`, `KeyStat.last_practised_at`, `Attempt.attempted_at`, `Introduction.introduced_at`). A database that holds a bare timestamp therefore fails at its first read, which at startup is the profile list. That includes any database written before 2026-09-30: it is deleted, not opened.
+- **The fake does the same.** `FakeStore` checks on write with the same function and counts practice days by converting from UTC to the local day, with no second path for bare values. The branch it used to have for them is what let the fake and the real store disagree: SQLite reads a bare value as UTC and converts it, and the fake took it as written.
+
+Why it has to be checked and cannot be left to SQLite: `date(x, 'localtime')` accepts a bare value without complaint and reads it as UTC, so a local time written by mistake would move a practice day silently. The limit is the system clock. UTC is only as right as the clock it is read from, and an offline app cannot tell that the clock is wrong.
+
+The tests follow the same rule. Every timestamp in the suite carries the UTC offset. Tests that count days use instants a minute apart or 24 hours apart, which give the same answer in every timezone, and one test sets the process timezone to show that the same two instants are one day at Greenwich and two in Auckland. The default suite passes under UTC, `Pacific/Auckland`, `Pacific/Kiritimati`, `Pacific/Pago_Pago` and `America/Los_Angeles`.
+
 The `key_attempts` table is a rolling window: at most 200 rows per (profile_id, key_char). The persistence layer deletes the oldest row on each INSERT when the cap is exceeded. This table is authoritative for the Known criterion — see ADR-027.
 
 **`latency_ms`, `prev_char` and the `introductions` table** *(added 2026-09-29, alpha-plan #12d, for [ADR-024 § Ramp-up variability, derived exit bars, and the "I know this one" probe](0024-drill-content-and-lesson-granularity.md).)* Two columns and one table, all for one reason: the ramp-up's exit bars stop being session-local state and become queries over what is already stored, which is what makes a ramp-up survive the app closing. What each buys, since none is speculative:

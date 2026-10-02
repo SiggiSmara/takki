@@ -2,7 +2,14 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 
 from takki import config
-from takki.persistence import Attempt, Introduction, KeyStat, Profile, WindowStats
+from takki.persistence import (
+    Attempt,
+    Introduction,
+    KeyStat,
+    Profile,
+    WindowStats,
+    utc_stamp,
+)
 
 
 def _now() -> str:
@@ -10,22 +17,15 @@ def _now() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds")
 
 
-def _local_day(stamp: str) -> str:
-    """The local calendar day of a UTC stamp — SQLite's `date(x, 'localtime')`.
+def _stamp(given: str | None) -> str:
+    return _now() if given is None else utc_stamp(given)
 
-    A practice day is the child's day, not UTC's: an evening session either side
-    of midnight UTC is one day at the keyboard (ADR-027 § Known). Parity with
-    the real store matters here, since `distinct_days` gates Known.
-    """
-    try:
-        parsed = datetime.fromisoformat(stamp)
-    except ValueError:
-        return stamp[:10]
-    if parsed.tzinfo is None:
-        # Written before ADR-011's UTC rule; taken at face value, as SQLite's
-        # date() does with a naive string.
-        return parsed.date().isoformat()
-    return parsed.astimezone().date().isoformat()
+
+def _local_day(stamp: str) -> str:
+    """The local calendar day of a UTC stamp — SQLite's `date(x, 'localtime')`."""
+    # A practice day is the child's day, not UTC's (ADR-027 § Known). Parity
+    # with the real store matters here, since `distinct_days` gates Known.
+    return datetime.fromisoformat(stamp).astimezone().date().isoformat()
 
 
 class FakeStore:
@@ -54,7 +54,7 @@ class FakeStore:
         ptt_mode: str | None = None,
         created_at: str | None = None,
     ) -> Profile:
-        ts = created_at or _now()
+        ts = _stamp(created_at)
         profile = Profile(
             id=self._next_profile_id,
             name=name,
@@ -78,14 +78,14 @@ class FakeStore:
         return list(self._profiles.values())
 
     def start_session(self, profile_id: int, started_at: str | None = None) -> int:
-        ts = started_at or _now()
+        ts = _stamp(started_at)
         session_id = self._next_session_id
         self._sessions[session_id] = (profile_id, ts, None)
         self._next_session_id += 1
         return session_id
 
     def end_session(self, session_id: int, ended_at: str | None = None) -> None:
-        ts = ended_at or _now()
+        ts = _stamp(ended_at)
         pid, started_at, _ = self._sessions[session_id]
         self._sessions[session_id] = (pid, started_at, ts)
 
@@ -101,7 +101,7 @@ class FakeStore:
         correct: bool,
         practised_at: str | None = None,
     ) -> None:
-        ts = practised_at or _now()
+        ts = _stamp(practised_at)
         key = (profile_id, key_char)
         if key in self._key_stats:
             ac, cc, _ = self._key_stats[key]
@@ -115,7 +115,7 @@ class FakeStore:
         key_char: str,
         practised_at: str | None = None,
     ) -> None:
-        ts = practised_at or _now()
+        ts = _stamp(practised_at)
         key = (profile_id, key_char)
         if key in self._key_stats:
             ac, cc, _ = self._key_stats[key]
@@ -127,10 +127,7 @@ class FakeStore:
         key_chars: Sequence[str],
         introduced_at: str | None = None,
     ) -> int:
-        # Microseconds, not seconds: this timestamp *identifies a step* -- both
-        # members share one value and equality is what recovers the pair -- so
-        # two steps sharing a second would read as one step of four members.
-        ts = introduced_at or datetime.now().isoformat()
+        ts = _stamp(introduced_at)
         steps = [i.step for (pid, _), i in self._introductions.items() if pid == profile_id]
         step = max(steps, default=0) + 1
         for position, key_char in enumerate(key_chars):
@@ -149,7 +146,7 @@ class FakeStore:
         attempts_at: int,
         completed_at: str | None = None,
     ) -> None:
-        del completed_at  # Write-once; the fake has no reader for the timestamp.
+        _stamp(completed_at)  # Checked as the real store checks it; the fake has no reader for it.
         self._phases.setdefault((profile_id, key_char, phase), attempts_at)
 
     def completed_phases(self, profile_id: int, key_char: str) -> dict[str, int]:
@@ -168,7 +165,7 @@ class FakeStore:
         latency_ms: int | None = None,
         prev_char: str | None = None,
     ) -> None:
-        ts = attempted_at or _now()
+        ts = _stamp(attempted_at)
         key = (profile_id, key_char)
         if key not in self._key_attempts:
             self._key_attempts[key] = []
@@ -218,7 +215,7 @@ class FakeStore:
         level: str,
         achieved_at: str | None = None,
     ) -> None:
-        ts = achieved_at or _now()
+        ts = _stamp(achieved_at)
         key = (profile_id, level)
         if key not in self._milestones:
             self._milestones[key] = ts

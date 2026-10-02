@@ -15,7 +15,7 @@ class Harness:
         self.counter = AttemptCounter(self.store, self.profile.id, self.stamp)
 
     def stamp(self) -> str:
-        ts = f"2026-01-01T10:{self.minute:02d}:00"
+        ts = f"2026-01-01T10:{self.minute:02d}:00+00:00"
         self.minute += 1
         return ts
 
@@ -31,14 +31,14 @@ class TestFirstPress:
         h = Harness()
         h.counter.start_prompt("f")
         assert h.counter.press("f") is PressOutcome.CORRECT
-        assert h.stat("f") == KeyStat(1, 1, "2026-01-01T10:00:00")
+        assert h.stat("f") == KeyStat(1, 1, "2026-01-01T10:00:00+00:00")
         assert h.window("f") == WindowStats(1, 1, 1)
 
     def test_wrong_first_press_counts_one_attempt_and_no_correct(self) -> None:
         h = Harness()
         h.counter.start_prompt("f")
         assert h.counter.press("j") is PressOutcome.WRONG
-        assert h.stat("f") == KeyStat(1, 0, "2026-01-01T10:00:00")
+        assert h.stat("f") == KeyStat(1, 0, "2026-01-01T10:00:00+00:00")
         assert h.window("f") == WindowStats(1, 0, 1)
 
     def test_the_attempt_is_recorded_against_the_target_not_the_key_pressed(self) -> None:
@@ -61,18 +61,18 @@ class TestRejectionLoop:
         h.counter.start_prompt("f")
         assert h.counter.press("j") is PressOutcome.WRONG
         assert h.counter.press("f") is PressOutcome.CORRECT
-        assert h.stat("f") == KeyStat(1, 0, "2026-01-01T10:01:00")
+        assert h.stat("f") == KeyStat(1, 0, "2026-01-01T10:01:00+00:00")
         assert h.window("f") == WindowStats(1, 0, 1)
 
     def test_every_press_in_the_loop_bumps_recency(self) -> None:
         h = Harness()
         h.counter.start_prompt("f")
         h.counter.press("j")
-        assert h.stat("f") == KeyStat(1, 0, "2026-01-01T10:00:00")
+        assert h.stat("f") == KeyStat(1, 0, "2026-01-01T10:00:00+00:00")
         h.counter.press("k")
-        assert h.stat("f") == KeyStat(1, 0, "2026-01-01T10:01:00")
+        assert h.stat("f") == KeyStat(1, 0, "2026-01-01T10:01:00+00:00")
         h.counter.press("f")
-        assert h.stat("f") == KeyStat(1, 0, "2026-01-01T10:02:00")
+        assert h.stat("f") == KeyStat(1, 0, "2026-01-01T10:02:00+00:00")
 
     def test_retries_cannot_inflate_accuracy(self) -> None:
         h = Harness()
@@ -80,7 +80,7 @@ class TestRejectionLoop:
             h.counter.start_prompt("f")
             h.counter.press("j")
             h.counter.press("f")
-        assert h.stat("f") == KeyStat(10, 0, "2026-01-01T10:19:00")
+        assert h.stat("f") == KeyStat(10, 0, "2026-01-01T10:19:00+00:00")
         assert h.window("f") == WindowStats(10, 0, 1)
 
     def test_a_press_after_the_prompt_is_resolved_writes_nothing(self) -> None:
@@ -88,7 +88,7 @@ class TestRejectionLoop:
         h.counter.start_prompt("f")
         h.counter.press("f")
         assert h.counter.press("f") is PressOutcome.IGNORED
-        assert h.stat("f") == KeyStat(1, 1, "2026-01-01T10:00:00")
+        assert h.stat("f") == KeyStat(1, 1, "2026-01-01T10:00:00+00:00")
         assert h.window("f") == WindowStats(1, 1, 1)
 
 
@@ -108,7 +108,7 @@ class TestTimeout:
         # ... timeout fires here, the same prompt is re-spoken ...
         assert h.counter.press("k") is PressOutcome.WRONG
         assert h.counter.press("f") is PressOutcome.CORRECT
-        assert h.stat("f") == KeyStat(1, 0, "2026-01-01T10:02:00")
+        assert h.stat("f") == KeyStat(1, 0, "2026-01-01T10:02:00+00:00")
         assert h.window("f") == WindowStats(1, 0, 1)
 
 
@@ -125,14 +125,14 @@ class TestHeldKeyRepeats:
         assert h.counter.press("f", repeat=True) is PressOutcome.IGNORED
         assert h.stat("j") is None
         assert h.window("j") == WindowStats(0, 0, 0)
-        assert h.stat("f") == KeyStat(1, 1, "2026-01-01T10:00:00")
+        assert h.stat("f") == KeyStat(1, 1, "2026-01-01T10:00:00+00:00")
 
     def test_the_prompt_is_still_open_after_the_repeats(self) -> None:
         h = Harness()
         h.counter.start_prompt("j")
         h.counter.press("f", repeat=True)
         assert h.counter.press("j") is PressOutcome.CORRECT
-        assert h.stat("j") == KeyStat(1, 1, "2026-01-01T10:00:00")
+        assert h.stat("j") == KeyStat(1, 1, "2026-01-01T10:00:00+00:00")
         assert h.window("j") == WindowStats(1, 1, 1)
 
     def test_a_repeat_does_not_even_bump_recency(self) -> None:
@@ -140,7 +140,7 @@ class TestHeldKeyRepeats:
         h.counter.start_prompt("f")
         h.counter.press("j")
         h.counter.press("j", repeat=True)
-        assert h.stat("f") == KeyStat(1, 0, "2026-01-01T10:00:00")
+        assert h.stat("f") == KeyStat(1, 0, "2026-01-01T10:00:00+00:00")
 
     def test_a_doubled_letter_typed_with_a_release_counts_twice(self) -> None:
         # 'll' in "hello": the child releases between presses, so neither press
@@ -150,7 +150,7 @@ class TestHeldKeyRepeats:
         assert h.counter.press("l") is PressOutcome.CORRECT
         h.counter.start_prompt("l")
         assert h.counter.press("l") is PressOutcome.CORRECT
-        assert h.stat("l") == KeyStat(2, 2, "2026-01-01T10:01:00")
+        assert h.stat("l") == KeyStat(2, 2, "2026-01-01T10:01:00+00:00")
         assert h.window("l") == WindowStats(2, 2, 1)
 
     def test_a_doubled_letter_produced_by_holding_counts_once(self) -> None:
@@ -162,9 +162,9 @@ class TestHeldKeyRepeats:
         assert h.counter.press("l") is PressOutcome.CORRECT
         h.counter.start_prompt("l")
         assert h.counter.press("l", repeat=True) is PressOutcome.IGNORED
-        assert h.stat("l") == KeyStat(1, 1, "2026-01-01T10:00:00")
+        assert h.stat("l") == KeyStat(1, 1, "2026-01-01T10:00:00+00:00")
         assert h.counter.press("l") is PressOutcome.CORRECT
-        assert h.stat("l") == KeyStat(2, 2, "2026-01-01T10:01:00")
+        assert h.stat("l") == KeyStat(2, 2, "2026-01-01T10:01:00+00:00")
         assert h.window("l") == WindowStats(2, 2, 1)
 
 
@@ -183,7 +183,7 @@ class TestStoreTimestamps:
     def test_attempts_land_on_the_day_they_were_typed(self) -> None:
         store = FakeStore()
         profile = store.create_profile("Alice")
-        days = iter(["2026-01-01T10:00:00", "2026-01-02T10:00:00"])
+        days = iter(["2026-01-01T10:00:00+00:00", "2026-01-02T10:00:00+00:00"])
         counter = AttemptCounter(store, profile.id, lambda: next(days))
         for _ in range(2):
             counter.start_prompt("f")

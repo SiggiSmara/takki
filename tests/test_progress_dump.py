@@ -10,20 +10,25 @@ from takki.persistence.sqlite_store import SqliteStore
 
 def _seed_db(path: Path) -> int:
     store = SqliteStore(str(path))
-    profile = store.create_profile("dev", "en", created_at="2026-09-19T09:00:00")
-    store.upsert_key_stat(profile.id, "f", True, practised_at="2026-09-19T09:01:00")
-    store.upsert_key_stat(profile.id, "f", False, practised_at="2026-09-19T09:02:00")
-    store.append_attempt(profile.id, "f", True, attempted_at="2026-09-19T09:01:00")
-    store.append_attempt(profile.id, "f", False, attempted_at="2026-09-19T09:02:00")
+    profile = store.create_profile("dev", "en", created_at="2026-09-19T09:00:00+00:00")
+    store.upsert_key_stat(profile.id, "f", True, practised_at="2026-09-19T09:01:00+00:00")
+    store.upsert_key_stat(profile.id, "f", False, practised_at="2026-09-19T09:02:00+00:00")
+    store.append_attempt(profile.id, "f", True, attempted_at="2026-09-19T09:01:00+00:00")
+    store.append_attempt(profile.id, "f", False, attempted_at="2026-09-19T09:02:00+00:00")
     store.append_attempt(
-        profile.id, "f", True, attempted_at="2026-09-20T10:00:00", latency_ms=420, prev_char="j"
+        profile.id,
+        "f",
+        True,
+        attempted_at="2026-09-20T10:00:00+00:00",
+        latency_ms=420,
+        prev_char="j",
     )
     store.mark_introduced(profile.id, ["f", "j"], introduced_at="2026-09-19T09:00:00+00:00")
     store.record_phase(profile.id, "f", "A", 10, completed_at="2026-09-19T09:05:00+00:00")
-    store.record_milestone(profile.id, "anchor", achieved_at="2026-09-20T11:00:00")
-    ended = store.start_session(profile.id, started_at="2026-09-19T09:00:00")
-    store.end_session(ended, ended_at="2026-09-19T09:20:00")
-    store.start_session(profile.id, started_at="2026-09-20T10:00:00")
+    store.record_milestone(profile.id, "anchor", achieved_at="2026-09-20T11:00:00+00:00")
+    ended = store.start_session(profile.id, started_at="2026-09-19T09:00:00+00:00")
+    store.end_session(ended, ended_at="2026-09-19T09:20:00+00:00")
+    store.start_session(profile.id, started_at="2026-09-20T10:00:00+00:00")
     store.conn.close()
     return profile.id
 

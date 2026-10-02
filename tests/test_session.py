@@ -46,8 +46,8 @@ EN_WORDS: dict[str, float] = {
 # Every slot taken (ADR-010): six keys Active and none Known, so a session
 # seeded with this introduces nothing and goes straight to steady state.
 FULL_SLOTS = dict.fromkeys("fjruvm", 10)
-DAY_ONE = "2026-01-01T10:00:00"
-DAY_TWO = "2026-01-02T10:00:00"
+DAY_ONE = "2026-01-01T10:00:00+00:00"
+DAY_TWO = "2026-01-02T10:00:00+00:00"
 
 # Seconds of session time each keystroke costs. Under PACE_IDLE_GAP_SECONDS so
 # the pace measure stays live, and under PROMPT_TIMEOUT_SECONDS so answering

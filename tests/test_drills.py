@@ -593,7 +593,7 @@ class TestSteadyPlan:
         # behind it, one press today makes it Known and frees its slot, so the
         # block carries exactly one -- in a block the other five would fill.
         fixture = Fixture(source=doubles(ANCHOR_SIX))
-        stamps = ["2026-01-01T10:00:00", "2026-01-02T10:00:00"][:days]
+        stamps = ["2026-01-01T10:00:00+00:00", "2026-01-02T10:00:00+00:00"][:days]
         for index in range(config.KNOWN_MIN_ATTEMPTS):
             stamp = stamps[index % len(stamps)]
             fixture.store.upsert_key_stat(fixture.profile, "f", True, stamp)

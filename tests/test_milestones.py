@@ -188,8 +188,8 @@ class TestAnchorKeys:
         assert anchor_reached(layout, anchored(layout))
 
 
-DAY1 = "2026-01-01T10:00:00"
-DAY2 = "2026-01-02T10:00:00"
+DAY1 = "2026-01-01T10:00:00+00:00"
+DAY2 = "2026-01-02T10:00:00+00:00"
 KNOWN = WindowStats(attempt_count=90, correct_count=90, distinct_days=2)
 # The order `introduction_sequence` emits for English: Stage 0's six, then the
 # home-row-fill strategy. Spelled out rather than derived, so a change to the

@@ -14,8 +14,8 @@ from takki.platform.layout import Layout, build_de, build_en, build_is
 from tests.fakes.fake_store import FakeStore
 from tests.fakes.fixed_list_source import FixedListSource
 
-DAY1 = "2026-01-01T10:00:00"
-DAY2 = "2026-01-02T10:00:00"
+DAY1 = "2026-01-01T10:00:00+00:00"
+DAY2 = "2026-01-02T10:00:00+00:00"
 
 # Enough English that every home-row key the strategy reaches has a frequency;
 # the unlock walk only cares about the order, not the weights.
