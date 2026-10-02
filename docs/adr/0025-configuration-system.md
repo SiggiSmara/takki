@@ -106,6 +106,9 @@ KNOWN_MIN_ATTEMPTS      = 90     # graphomotor retention floor
 KNOWN_MIN_ACCURACY      = 0.90   # first-attempt accuracy over the window
 KNOWN_MIN_DISTINCT_DAYS = 2      # calendar days — one night of consolidation
 
+# Introduction gate (ADR-010 § The introduction gate is slots)
+MAX_KEYS_IN_PROGRESS    = 6      # keys Active but not yet Known; raise per child
+
 # Voice
 TTS_RATE          = 1.0
 PUSH_TO_TALK_MODE = "press_release"   # "press_release" or "hold"
@@ -137,6 +140,10 @@ The binding is chosen against a constraint the other three do not have: this key
 `RESUME_HOLD_MS` is longer than `RESTART_HOLD_MS` for the same reason. `RESUME_REQUEST_TIMEOUT_MS` is not a preference but the deadline that stands in for a return value: `request_foreground()` cannot report success (ADR-028 § Re-acquire has no synchronous answer), so a `FocusGained` inside this window is the success signal and expiry is the failure signal that speaks the Alt+Tab hint.
 
 **`"escape"` is not a pynput key name.** These values are `pynput.keyboard.Key` member names — what `Key.<member>.name` returns, which is what the keyboard stream puts in `KeyEvent.name`. pynput's member is `Key.esc`, so `"escape"` matched nothing: Escape would have fallen through to the taxonomy's **System** row and re-read would silently never have worked. Corrected to `"esc"` above.
+
+**Amended 2026-10-01 (alpha-plan #12g). `MAX_KEYS_IN_PROGRESS` replaces `INTRODUCE_MIN_PRESSES` and `INTRODUCE_MIN_ACCURACY`.**
+
+The two `INTRODUCE_*` keys are removed with the aggregate gate they configured ([ADR-010 § The introduction gate is slots](0010-lesson-structure-and-progression.md#the-introduction-gate-is-slots)). Unlike ADR-027's floors, `MAX_KEYS_IN_PROGRESS` **is** a preference, and a per-child one: a keen child, or one who already knows the keyboard, can carry more unfinished keys and so meet new ones faster. It belongs in the per-profile tier once that tier exists. Until then it is a compiled default that `SessionLoop` takes as a constructor argument, the same shape as `KnownCriterion`, so the later tiers override it by construction and never by changing the `config` module.
 
 **Amended 2026-08-22 (alpha session 7). ADR-027's four numbers were configurable only on paper.**
 

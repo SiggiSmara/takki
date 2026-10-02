@@ -103,11 +103,16 @@ def plan_targets(needs: dict[str, int], slots: int, rng: random.Random) -> dict[
     if not counts or slots <= 0:
         return counts
     cap = max(1, math.floor(slots * MAX_KEY_SHARE), -(-slots // len(counts)))
-    for _ in range(slots):
-        # D'Hondt: the next slot goes to the most need per slot already given,
-        # so every key in need moves forward every block rather than waiting in
-        # a queue behind a needier one. `max` keeps the first of a tie, and
-        # `counts` is in name order.
+    # One slot each first, neediest first, so every key in need moves forward
+    # every block. D'Hondt alone does not promise that: a key one press from
+    # Known loses every slot to keys that need dozens, and that one press is
+    # what frees its slot for the next letter (ADR-010).
+    served = sorted((name for name in counts if needs[name] > 0), key=lambda n: -needs[n])[:slots]
+    for name in served:
+        counts[name] = 1
+    for _ in range(slots - len(served)):
+        # D'Hondt: the next slot goes to the most need per slot already given.
+        # `max` keeps the first of a tie, and `counts` is in name order.
         eligible = [name for name in counts if counts[name] < min(cap, needs[name])]
         if not eligible:
             break
@@ -670,10 +675,7 @@ class DrillGenerator:
             for name in active
             if self._session_attempts.get(name, 0) < config.SESSION_KEY_CEILING
         } or active
-        needs = {
-            name: presses_needed(self._states.window_stats(name), self._bar(name))
-            for name in targetable
-        }
+        needs = {name: self._need(name) for name in targetable}
         counts = plan_targets(needs, slots - len(drills), self._rng)
         pool = self._pool(active)
         groups = [[drill] for drill in drills]
@@ -682,6 +684,19 @@ class DrillGenerator:
             for name in sorted(counts)
         ]
         return self._spread([group for group in groups if group])
+
+    def _need(self, grapheme: str) -> int:
+        stats = self._states.window_stats(grapheme)
+        need = presses_needed(stats, self._bar(grapheme))
+        # A key that lacks only another day is one press from Known, and Known
+        # is what frees its slot for the next letter (ADR-010). Only until it
+        # has been pressed this session: after that today is one of its days,
+        # and a further press buys nothing.
+        waiting = (
+            stats.distinct_days < config.KNOWN_MIN_DISTINCT_DAYS
+            and grapheme not in self._session_attempts
+        )
+        return max(need, 1) if waiting else need
 
     def _bar(self, grapheme: str) -> float:
         # The bar the key is working toward. All six Stage 0 keys are held to

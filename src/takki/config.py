@@ -96,12 +96,12 @@ ANCHOR_MIN_ATTEMPTS = 25
 ANCHOR_MIN_ACCURACY = 0.95
 
 # ADR-010 § Progression Rules. The gate on *when* a new key is introduced, as
-# opposed to which one (ADR-023 § Where the phase boundary is, which leans on
-# this gate as the thing that paces progression). The 50 is a count over the
-# *current set* -- "first-attempt accuracy on the current keys over at least 50
-# presses" -- not a per-key floor, which is KNOWN_MIN_ATTEMPTS' job.
-INTRODUCE_MIN_PRESSES = 50
-INTRODUCE_MIN_ACCURACY = 0.90
+# opposed to which one: the most keys a child may have Active but not yet
+# Known. Every key that becomes Known frees a slot. Six is Stage 0's six keys,
+# so a first day can still cover all of Stage 0. Meant to be raised per child
+# -- a keen one, or one who already knows the keyboard -- once ADR-025's
+# per-profile tier exists.
+MAX_KEYS_IN_PROGRESS = 6
 
 # ADR-010 § The Two Practice Layers. Counted over *Active* graphemes, not Known
 # -- ADR-027 § Milestone Ladder and ADR-028 § Layer-2 unlock both read it that

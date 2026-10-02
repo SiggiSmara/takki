@@ -1,10 +1,13 @@
+import pytest
+
 from takki import config
 from takki.lesson.introducer import KeyIntroducer, introduction_sequence
 from takki.lesson.key_state import KeyStates
 from takki.lesson.progression import (
     active_graphemes,
+    keys_in_progress,
     layer_two_unlocked,
-    ready_for_new_key,
+    room_for_step,
 )
 from takki.persistence import Store
 from takki.platform.layout import Layout, build_de, build_en, build_is
@@ -12,6 +15,7 @@ from tests.fakes.fake_store import FakeStore
 from tests.fakes.fixed_list_source import FixedListSource
 
 DAY1 = "2026-01-01T10:00:00"
+DAY2 = "2026-01-02T10:00:00"
 
 # Enough English that every home-row key the strategy reaches has a frequency;
 # the unlock walk only cares about the order, not the weights.
@@ -35,12 +39,12 @@ EN_WORDS: dict[str, float] = {
 }
 
 
-def answer(store: Store, char: str, *, correct: int = 0, wrong: int = 0) -> None:
+def answer(store: Store, char: str, *, correct: int = 0, wrong: int = 0, day: str = DAY1) -> None:
     """Answer prompts for one key, as AttemptCounter would."""
     for i in range(correct + wrong):
         right = i < correct
-        store.upsert_key_stat(1, char, right, DAY1)
-        store.append_attempt(1, char, right, DAY1)
+        store.upsert_key_stat(1, char, right, day)
+        store.append_attempt(1, char, right, day)
 
 
 def states(store: Store) -> KeyStates:
@@ -133,86 +137,82 @@ class TestLayerTwoUnlock:
             assert layer_two_unlocked(layout, states(store))
 
 
-class TestReadyForNewKey:
-    """ADR-010: a new key arrives at >= 90% over >= 50 presses on the current set."""
+class TestRoomForStep:
+    """ADR-010: a step is introduced only if it leaves at most the cap of keys short of Known."""
 
-    def test_the_thresholds_are_the_configured_ones(self) -> None:
-        assert config.INTRODUCE_MIN_PRESSES == 50
-        assert config.INTRODUCE_MIN_ACCURACY == 0.90
+    def test_the_cap_is_the_configured_one(self) -> None:
+        assert config.MAX_KEYS_IN_PROGRESS == 6
 
-    def test_an_empty_active_set_is_ready(self) -> None:
-        # Otherwise the first key of a profile could never be introduced.
+    def test_nothing_in_progress_is_always_room(self) -> None:
+        # Otherwise a cap below the first step's size would never let it in.
         store = FakeStore()
-        assert active_graphemes(build_en(), states(store)) == set()
-        assert ready_for_new_key(build_en(), states(store))
+        assert room_for_step(build_en(), states(store), ["f", "j"])
+        assert room_for_step(build_en(), states(store), ["f", "j"], cap=1)
 
-    def test_below_the_press_floor_is_not_ready_however_accurate(self) -> None:
+    def test_a_key_in_progress_is_active_and_not_known(self) -> None:
         store = FakeStore()
-        answer(store, "f", correct=49)
-        assert not ready_for_new_key(build_en(), states(store))
+        answer(store, "f", correct=config.KNOWN_MIN_ATTEMPTS)
+        answer(store, "j", correct=1)
+        assert keys_in_progress(build_en(), states(store)) == {"f", "j"}
+        answer(store, "f", correct=1, day=DAY2)
+        assert states(store).known_keys() == {"f"}
+        assert keys_in_progress(build_en(), states(store)) == {"j"}
 
-    def test_exactly_at_the_press_floor_is_ready(self) -> None:
+    @pytest.mark.parametrize("in_progress", range(1, config.MAX_KEYS_IN_PROGRESS + 1))
+    def test_a_step_fits_only_if_the_total_stays_within_the_cap(self, in_progress: int) -> None:
         store = FakeStore()
-        answer(store, "f", correct=50)
-        assert ready_for_new_key(build_en(), states(store))
+        for char in "fjruvm"[:in_progress]:
+            answer(store, char, correct=1)
+        free = config.MAX_KEYS_IN_PROGRESS - in_progress
+        assert room_for_step(build_en(), states(store), ["d"]) is (free >= 1)
+        assert room_for_step(build_en(), states(store), ["d", "k"]) is (free >= 2)
 
-    def test_the_floor_is_the_current_set_summed_not_one_key(self) -> None:
-        # Two keys at 25 presses each clear a 50-press floor together; neither
-        # would alone. ADR-023 § Where the phase boundary is: "on the current
-        # set", and a per-key reading would be a second, stricter definition of
-        # Known.
+    def test_each_known_key_frees_exactly_one_slot(self) -> None:
         store = FakeStore()
-        answer(store, "f", correct=20)
-        answer(store, "j", correct=20)
-        assert not ready_for_new_key(build_en(), states(store))
-        answer(store, "f", correct=5)
-        answer(store, "j", correct=5)
-        assert ready_for_new_key(build_en(), states(store))
+        for char in "fjruvm":
+            answer(store, char, correct=config.KNOWN_MIN_ATTEMPTS)
+        assert not room_for_step(build_en(), states(store), ["d"])
+        answer(store, "f", correct=1, day=DAY2)
+        assert room_for_step(build_en(), states(store), ["d"])
+        assert not room_for_step(build_en(), states(store), ["d", "k"])
+        answer(store, "j", correct=1, day=DAY2)
+        assert room_for_step(build_en(), states(store), ["d", "k"])
 
-    def test_accuracy_is_the_sets_and_not_the_worst_keys(self) -> None:
-        # 'j' on its own is at 60%, well under the bar. The set is at 98%, and
-        # the gate is the set's -- a struggling key is the weighting engine's
-        # problem (ADR-027 § Key States), not the curriculum's pace.
+    def test_a_key_that_stops_being_known_takes_its_slot_back(self) -> None:
+        # A rolling query, unlike a milestone: Known is read off the window, so
+        # a key whose accuracy slips under the bar is in progress again.
         store = FakeStore()
-        answer(store, "f", correct=190)
-        answer(store, "j", correct=6, wrong=4)
-        assert states(store).window_stats("j").correct_count == 6
-        assert ready_for_new_key(build_en(), states(store))
+        for char in "fjruvm":
+            answer(store, char, correct=config.KNOWN_MIN_ATTEMPTS)
+        answer(store, "f", correct=1, day=DAY2)
+        assert room_for_step(build_en(), states(store), ["d"])
+        answer(store, "f", wrong=20, day=DAY2)
+        assert states(store).known_keys() == set()
+        assert not room_for_step(build_en(), states(store), ["d"])
 
-    def test_the_whole_set_slipping_does_close_it(self) -> None:
+    def test_a_member_that_is_already_active_is_not_counted_twice(self) -> None:
+        # A pair one member of which was answered and the other never was.
         store = FakeStore()
-        answer(store, "f", correct=45, wrong=5)
-        answer(store, "j", correct=45, wrong=5)
-        assert ready_for_new_key(build_en(), states(store))
-        answer(store, "f", wrong=20)
-        answer(store, "j", wrong=20)
-        assert not ready_for_new_key(build_en(), states(store))
+        for char in "fjruv":
+            answer(store, char, correct=1)
+        assert room_for_step(build_en(), states(store), ["v", "m"])
+        assert not room_for_step(build_en(), states(store), ["d", "k"])
 
-    def test_exactly_at_the_accuracy_floor_is_ready(self) -> None:
+    def test_a_cap_passed_in_is_honoured(self) -> None:
         store = FakeStore()
-        answer(store, "f", correct=90, wrong=10)
-        assert ready_for_new_key(build_en(), states(store))
+        for char in "fjruvm":
+            answer(store, char, correct=1)
+        assert not room_for_step(build_en(), states(store), ["d", "k"])
+        assert room_for_step(build_en(), states(store), ["d", "k"], cap=8)
+        assert not room_for_step(build_en(), states(store), ["d", "k"], cap=7)
 
-    def test_one_press_under_the_accuracy_floor_is_not(self) -> None:
+    def test_a_grapheme_the_current_layout_cannot_produce_holds_no_slot(self) -> None:
         store = FakeStore()
-        answer(store, "f", correct=89, wrong=11)
-        assert not ready_for_new_key(build_en(), states(store))
-
-    def test_it_is_a_rolling_query_that_can_close_again(self) -> None:
-        # Unlike a milestone. The child stops being ready for a new key when
-        # the set they already have slips.
-        store = FakeStore()
-        answer(store, "f", correct=60)
-        assert ready_for_new_key(build_en(), states(store))
-        answer(store, "f", wrong=20)
-        assert not ready_for_new_key(build_en(), states(store))
-
-    def test_a_grapheme_the_current_layout_cannot_produce_does_not_pace_it(self) -> None:
-        store = FakeStore()
-        answer(store, "f", correct=60)
-        answer(store, "ä", wrong=60)
-        assert ready_for_new_key(build_en(), states(store))
-        assert not ready_for_new_key(build_de(), states(store))
+        for char in "fjruv":
+            answer(store, char, correct=1)
+        answer(store, "ä", correct=1)
+        assert room_for_step(build_en(), states(store), ["m"])
+        assert not room_for_step(build_de(), states(store), ["m"])
 
 
 class TestProgressionIsNotAMilestone:
@@ -222,7 +222,7 @@ class TestProgressionIsNotAMilestone:
             answer(store, char, correct=10)
         before = store.achieved_milestones(1)
         assert layer_two_unlocked(layout, states(store))
-        assert ready_for_new_key(layout, states(store))
+        assert not room_for_step(layout, states(store), ["a"])
         assert store.achieved_milestones(1) == before == []
 
     def test_the_shipped_sequence_covers_the_whole_layout(self) -> None:

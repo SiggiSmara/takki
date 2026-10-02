@@ -22,7 +22,7 @@ Words from the filtered word list constrained to keys the child has already mast
 ### Progression Rules
 
 Progression is adaptive and continuous, not fixed-step:
-- A new key is introduced in Layer 1 when first-attempt accuracy on current keys exceeds 90% over a minimum of 50 presses (auto-rejections count as failed attempts — see ADR-012)
+- A new key is introduced in Layer 1 when the current step's ramp-up has ended and there is a free slot: at most 6 keys may be introduced but not yet known, and each key that becomes known frees a slot. *(Since 2026-10-01, alpha-plan #12g; see § The introduction gate is slots, below. The original rule was "when first-attempt accuracy on current keys exceeds 90% over a minimum of 50 presses".)*
 - A key is considered "known" when first-attempt accuracy ≥ 90% over ≥ 90 attempts and ≥ 2 distinct practice days, evaluated over a rolling window of 200 attempts (see ADR-027)
 - Layer 2 unlocks when ≥ 8 keys are known
 - Word length in Layer 2 advances when clean word rate exceeds 85% over 20 words
@@ -33,9 +33,11 @@ Progression is adaptive and continuous, not fixed-step:
 
 | Rule | Config | Reading taken |
 |---|---|---|
-| New key at > 90% over ≥ 50 presses | `INTRODUCE_MIN_PRESSES`, `INTRODUCE_MIN_ACCURACY` | `ready_for_new_key()` — **aggregate over the current set**, not per key |
+| New key when a slot is free | `MAX_KEYS_IN_PROGRESS` | `room_for_step()` — the step must leave at most that many keys **Active but not Known**. *Until 2026-10-01:* `INTRODUCE_MIN_PRESSES`, `INTRODUCE_MIN_ACCURACY` and `ready_for_new_key()`, an aggregate over the current set; all three are removed |
 | Layer 2 at ≥ 8 keys | `LAYER_2_MIN_KEYS` | `layer_two_unlocked()` — counted **Active** ([ADR-028](0028-composite-input-and-keyboard-ownership.md) § Layer-2 unlock) |
 | Per-key-per-session ceiling ~90 (§ Session Pacing) | `SESSION_KEY_CEILING` | read by ADR-024's steady-state block plan since 2026-09-30 (alpha-plan #12e): a key at the ceiling is no longer planned as a target that session. *Previously:* **no consumer yet** — the floor is `SESSION_KEY_FLOOR`, read by session 9's block generator; the ceiling lands there too ([ADR-024](0024-drill-content-and-lesson-granularity.md)) |
+
+*(The readings below describe the aggregate gate, which was retired on 2026-10-01. They are kept because they record why it was retired.)*
 
 Three readings this section did not pin, taken here rather than left for the session loop to invent:
 
@@ -43,6 +45,43 @@ Three readings this section did not pin, taken here rather than left for the ses
 - **The 50 presses are the *set's*, summed, not each key's.** [ADR-023](0023-key-introduction-protocol.md) § Where the phase boundary is restates the rule as "on the current set" and rejects the per-key reading by name: at 89% on one home-row key a per-key gate would lock the curriculum with nothing able to release it. The cost of the aggregate reading is that it goes slack as the set matures — see [roadmap § D](../roadmap.md#d-smaller-gaps-worth-a-line-in-the-relevant-adr).
 - **An empty Active set is ready.** There is nothing to be accurate on before the first key, and a gate needing 50 presses to open would never pass the first one.
 - **The ramp-up gate paces the curriculum; this one is a floor** *(added 2026-09-29, alpha-plan #12d.)* Two gates stand between a block boundary and a new key, and #12b-2's four-session run showed neither was pacing anything across sessions: [ADR-024](0024-drill-content-and-lesson-granularity.md)'s ramp-up lived in memory and was gone after a restart, and this one had gone slack exactly as the note above predicted, so every session introduced another key. ADR-024 § Ramp-up variability makes the ramp-up derivable from stored attempts, which makes it the same answer at a session's first block boundary as at any later one — and **that** is what paces introductions. This rule is deliberately left as it is, and is now explicitly *not* load-bearing: it is the floor that stops a new key arriving while the current set is falling apart, which is what ADR-010's sentence was for. The cross-key recent-N reading the roadmap files as the better reading of "50 presses" becomes *possible* with [ADR-011](0011-persistence-and-state.md)'s ordered window read, but it is not adopted here — a second pacing authority is how the original bug happened, and one gate should pace.
+
+#### The introduction gate is slots
+
+*(Amendment, 2026-10-01, alpha-plan #12g. Decided with the developer in session.)*
+
+**What was wrong.** The aggregate gate was open almost always, so a new step was introduced at the very block boundary where the previous ramp-up ended. No steady-state block ran between letters, ADR-024's need-planned practice was almost never heard, and nothing limited how many half-learned keys a child carried. #12d made the pace survive a restart. It did not make the next letter earned.
+
+**The rule.** Two gates stand between a block boundary and a new step:
+
+1. The current step's ramp-up has ended ([ADR-024](0024-drill-content-and-lesson-granularity.md), unchanged).
+2. **There is a free slot.** The step is introduced only if, once it is, at most `MAX_KEYS_IN_PROGRESS` keys are Active but not yet Known ([ADR-027](0027-key-and-accuracy-state-model.md)'s Known, unchanged: 90 presses, 90%, 2 distinct days). A pair needs two free slots and a single key one. Every key that becomes Known frees a slot.
+
+Three readings, pinned here:
+
+- **A member that is already Active is not counted twice.** It holds its slot already. This is the pair where one member was answered and the other never was.
+- **With nothing in progress there is always room**, whatever the cap. A cap below the first step's size would otherwise never let it in.
+- **It is a rolling query.** Known is read off the window, so a key whose accuracy slips below the bar is in progress again and takes its slot back. Nothing is recorded.
+
+**Why 6.** It is Stage 0's six keys. A child can still meet all of Stage 0 on the first day, which the developer wants to stay possible, and from then on new letters come as old ones are learned. It is a starting point to be tuned by ear in alpha-plan #12h.
+
+**Configurable per child.** `MAX_KEYS_IN_PROGRESS` is a compiled default that `SessionLoop` takes by construction ([ADR-025](0025-configuration-system.md)). The yaml and per-profile tiers do not exist yet; when they do, they raise it for a child who can carry more keys at once, such as a keen child or one who already knows the keyboard.
+
+**The curriculum waits for Known, not for the anchor rung.** This answers [roadmap § D](../roadmap.md#d-smaller-gaps-worth-a-line-in-the-relevant-adr) *Does the curriculum wait for the anchor gate?* After Stage 0 the next pair waits until two of the six keys are Known. The rung itself is still not a gate: a hard wait on it was never what the developer wanted, and it can still fire late.
+
+**Why this is not the per-key floor ADR-023 rejects.** [ADR-023](0023-key-introduction-protocol.md) § Where the phase boundary is rejects a per-key gate because one key stuck at 89% would lock the curriculum. Under slots one stuck key never blocks anything; only a full set of them does, and the gate reopens as soon as practice lifts one to Known. A child with that many keys below the bar should not be getting new letters.
+
+**Considered and dropped.**
+
+- **A "done" stage between the ramp-up and Known**: at least 20 presses after the ramp-up, at a confidence-bounded accuracy, gating the next letter. Slots cover both of its jobs. Once the slots are full no letter comes without mixed practice, and a key frees its slot only at Known, which is a stricter test. Done also had a defect at the anchor bar: with ADR-024's bound, one miss raised the cost from 20 presses to 52, which is past `SESSION_KEY_CEILING` once the ramp-up's ~60 presses are added.
+- **"Done needs a second day."** Known already carries the night of consolidation.
+
+**Consequences.**
+
+- **Bursts.** When several slots are free at once, steps follow each other with only their ramp-ups between them. This happens on day one, and at the start of a day when keys that were only waiting for their second day become Known together. A burst never leaves more than the cap unfinished. Whether bursts are too dense is judged by ear in #12h.
+- **A struggling child is held, and that can last days.** With several keys near 85%, the 200-press window keeps old misses for a while. It is a hold and not a lock.
+- **The gate inherits whatever alpha-plan #12f decides about Known.** If Known decays, a key can take its slot back, and the gate stays closed for longer.
+- **A key that lacks only its second day must be practised on that day**, or its slot stays closed. ADR-024 § Steady-state drill generation gives it a need of one press and guarantees every key in need a slot in each block.
 
 Milestone *detection* is not here — it is one-time and persisted, and lives in `takki.lesson.milestones` ([ADR-027](0027-key-and-accuracy-state-model.md) § Milestone Ladder). Layer 2's own thresholds (the 3→4→5→6 word-length ladder, the 85%-over-20-words gate, the session-composition mix table below) are deliberately **not** in `config.py` yet: they belong to the session that builds Layer 2, which is Beta.
 

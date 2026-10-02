@@ -50,7 +50,7 @@ from takki.lesson.introducer import (
 )
 from takki.lesson.key_state import KeyStates
 from takki.lesson.milestones import MilestoneDetector
-from takki.lesson.progression import layer_two_unlocked, ready_for_new_key
+from takki.lesson.progression import layer_two_unlocked, room_for_step
 from takki.lesson.rampup import RampUpProgress
 from takki.persistence import Store
 from takki.platform.layout import Layout
@@ -107,6 +107,7 @@ class SessionLoop:
         strategy: IntroductionStrategy = DEFAULT_STRATEGY,
         celebrant: Celebrant | None = None,
         now: Callable[[], str] | None = None,
+        max_keys_in_progress: int = config.MAX_KEYS_IN_PROGRESS,
     ) -> None:
         self._inbound = inbound
         self._layout = layout
@@ -123,6 +124,7 @@ class SessionLoop:
         self._strategy = strategy
         self._celebrant = celebrant
         self._now = now
+        self._max_keys_in_progress = max_keys_in_progress
         self._states = KeyStates(store, profile_id)
         self._attempts = AttemptCounter(store, profile_id, now, clock)
         self._speaker = Speaker(speech, letters)
@@ -455,21 +457,22 @@ class SessionLoop:
            and before the new letter changes the Active set underneath it.
         2. **Introduction.** Two gates, both required: ADR-024's ramp-up must
            have ended (`ramp_up is None`, the drill generator's call, not this
-           module's) *and* ADR-010's `ready_for_new_key` must hold. Nothing
-           gates it on the anchor rung -- see the note below.
+           module's) *and* ADR-010's `room_for_step` must hold: the step must
+           leave no more than the cap of keys short of Known. Nothing gates it
+           on the anchor rung -- see the note below.
         3. **Layer-2 unlock.** After the introduction, because the introduction
            is what changes the Active set it counts; reading it first would
            report a set one step stale.
         4. **The block.** Last, because its content depends on the ramp-up
            step 2 may just have started.
 
-        **The curriculum does not wait for the anchor gate** (roadmap § D,
-        "Does the curriculum wait for the anchor gate?"). Stage 0 is a strong
-        opening, not a barrier: the gate needs two calendar days
-        (`KNOWN_MIN_DISTINCT_DAYS`), so gating `introduce_next` on the rung
-        would mean no child can leave six keys on their first day. The price is
-        the one session 10 already priced -- a rung that can fire late and
-        after `third`.
+        **The curriculum does not wait for the anchor rung, but it does wait
+        for Known** (ADR-010 § Progression Rules, alpha-plan #12g). Stage 0 is
+        a strong opening, not a barrier: its six keys fill the default cap, so
+        all of it can be met on the first day, and the step after it needs two
+        of the six Known. The rung is still not a gate, and the price is the
+        one session 10 already priced -- a rung that can fire late and after
+        `third`.
         """
         assert self._drills is not None
         self._celebrate(self._milestones().check())
@@ -552,11 +555,18 @@ class SessionLoop:
         assert self._drills is not None and self._introducer is not None
         if self._drills.ramp_up is not None:
             return
-        if not ready_for_new_key(self._layout, self._states):
+        upcoming = self._introducer.upcoming()
+        if upcoming is None:
+            return
+        if not room_for_step(
+            self._layout,
+            self._states,
+            [intro.grapheme for intro in upcoming.keys],
+            self._max_keys_in_progress,
+        ):
             return
         step = self._introducer.introduce_next()
-        if step is None:
-            return
+        assert step is not None
         # Before the drill, and before the script: ADR-011's `introductions` is
         # what tells the next session which step is current, and one shared
         # timestamp for both members is what makes a pair recoverable by

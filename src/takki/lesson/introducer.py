@@ -239,11 +239,15 @@ class KeyIntroducer:
         self._introduced: set[str] = set()
         self._last_step: IntroductionStep | None = None
 
-    def introduce_next(self) -> IntroductionStep | None:
+    def upcoming(self) -> IntroductionStep | None:
+        """The step `introduce_next` would emit, without emitting it."""
         remaining = introduction_sequence(self._layout, self._source, self._had(), self._strategy)
-        if not remaining:
+        return remaining[0] if remaining else None
+
+    def introduce_next(self) -> IntroductionStep | None:
+        step = self.upcoming()
+        if step is None:
             return None
-        step = remaining[0]
         self._introduced.update(k.grapheme for k in step.keys)
         self._last_step = step
         return step

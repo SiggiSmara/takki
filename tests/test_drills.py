@@ -528,6 +528,19 @@ class TestPlanTargets:
         counts = plan_targets(needs, 12, random.Random(1))
         assert counts == {"a": 4, "b": 4, "c": 1, "d": 1, "e": 1, "f": 1}
 
+    def test_a_key_with_a_small_need_keeps_one_slot_in_a_crowded_block(self) -> None:
+        # Alpha-plan #12g. Four keys at the cap would take 20 of 15 slots, and
+        # by D'Hondt alone the key that needs one press would get none.
+        needs = {"a": 1} | dict.fromkeys("bcde", 10_000)
+        assert 4 * cap(FIRST_SLOTS, len(needs)) > FIRST_SLOTS
+        counts = plan_targets(needs, FIRST_SLOTS, random.Random(1))
+        assert counts["a"] == 1
+        assert sum(counts.values()) == FIRST_SLOTS
+
+    def test_more_keys_in_need_than_slots_serves_the_neediest(self) -> None:
+        needs = {"a": 1, "b": 9, "c": 5, "d": 7}
+        assert plan_targets(needs, 3, random.Random(1)) == {"a": 0, "b": 1, "c": 1, "d": 1}
+
     def test_slots_nobody_needs_go_round_evenly(self) -> None:
         counts = plan_targets(dict.fromkeys("fjruvm", 0), 12, random.Random(1))
         assert counts == dict.fromkeys("fjruvm", 2)
@@ -571,6 +584,39 @@ class TestSteadyPlan:
         rest = [counts[name] for name in "fjru"]
         assert sum(rest) == FIRST_SLOTS - 2 * limit
         assert max(rest) - min(rest) <= 1
+
+    @pytest.mark.parametrize(("days", "planned"), [(1, 1), (2, 0)])
+    def test_a_key_that_lacks_only_its_second_day_is_planned_once(
+        self, days: int, planned: int
+    ) -> None:
+        # Alpha-plan #12g: f is at Known's floor and perfect. With one day
+        # behind it, one press today makes it Known and frees its slot, so the
+        # block carries exactly one -- in a block the other five would fill.
+        fixture = Fixture(source=doubles(ANCHOR_SIX))
+        stamps = ["2026-01-01T10:00:00", "2026-01-02T10:00:00"][:days]
+        for index in range(config.KNOWN_MIN_ATTEMPTS):
+            stamp = stamps[index % len(stamps)]
+            fixture.store.upsert_key_stat(fixture.profile, "f", True, stamp)
+            fixture.store.append_attempt(fixture.profile, "f", True, stamp)
+        for name in "jruvm":
+            fixture.activate(name)
+        assert 5 * cap(FIRST_SLOTS, len(ANCHOR_SIX)) > FIRST_SLOTS
+        counts = Counter(unit[0] for unit in fixture.generator.next_block().units)
+        assert counts["f"] == planned
+        assert sum(counts.values()) == FIRST_SLOTS
+
+    def test_a_key_pressed_this_session_is_no_longer_waiting_for_a_day(self) -> None:
+        # Today is already one of its days, so another press cannot make it
+        # Known. This is a child's first day: every key at the floor, one day.
+        fixture = Fixture(source=doubles(ANCHOR_SIX))
+        fixture.activate("f", attempts=config.KNOWN_MIN_ATTEMPTS)
+        for name in "jruvm":
+            fixture.activate(name)
+        first = Counter(unit[0] for unit in fixture.generator.next_block().units)
+        assert first["f"] == 1
+        press(fixture, "f", 1)
+        second = Counter(unit[0] for unit in fixture.generator.next_block().units)
+        assert second["f"] == 0
 
     def test_a_key_at_the_session_ceiling_is_not_planned(self) -> None:
         fixture = Fixture(source=doubles("dk"))

@@ -16,7 +16,7 @@
 
 [ADR-010](0010-lesson-structure-and-progression.md) decided:
 - Layer 1 is always active; drills are weighted by letter and bigram frequency.
-- A new key is introduced when first-attempt accuracy on current keys exceeds 90% over at least 50 presses.
+- A new key is introduced when first-attempt accuracy on current keys exceeds 90% over at least 50 presses. *(Replaced 2026-10-01 by slots: a new step needs the current ramp-up ended and at most `MAX_KEYS_IN_PROGRESS` keys short of Known — [ADR-010 § The introduction gate is slots](0010-lesson-structure-and-progression.md#the-introduction-gate-is-slots).)*
 - Home row keys are introduced first, "one hand at a time."
 
 What ADR-010 did not specify:
@@ -86,7 +86,7 @@ After the home row is established, the engine departs from the symmetric-pair tr
 
 **"Established" means every Phase 1 step has been introduced and answered — Active, not Known** *(added 2026-08-23, alpha session 8; the original wording never defined it).* The three candidate readings — all home-row keys introduced, all Active, all Known — differ by days of practice, so this had to be pinned down.
 
-The decisive argument is that this boundary is not what paces progression. [ADR-010](0010-lesson-structure-and-progression.md)'s accuracy gate is: a new key is introduced only after first-attempt accuracy exceeds 90% over at least 50 presses on the current set. That gate already governs *when* a key arrives; the phase boundary only decides *which* key it is. Any definition stronger than the gate creates a state the engine has no behaviour for — the gate fires, "the child is ready for a new key", and the introducer answers "no key for you". Picking **Known** would make it worse than a stall: Known requires ≥ 90 attempts at ≥ 90% accuracy across ≥ 2 calendar days *per key* ([ADR-027](0027-key-and-accuracy-state-model.md)), so a child sitting at 89% on a single home-row key could never see a new letter again, with nothing in the curriculum able to release them.
+The decisive argument is that this boundary is not what paces progression. [ADR-010](0010-lesson-structure-and-progression.md)'s accuracy gate is: a new key is introduced only after first-attempt accuracy exceeds 90% over at least 50 presses on the current set. That gate already governs *when* a key arrives; the phase boundary only decides *which* key it is. Any definition stronger than the gate creates a state the engine has no behaviour for — the gate fires, "the child is ready for a new key", and the introducer answers "no key for you". Picking **Known** would make it worse than a stall: Known requires ≥ 90 attempts at ≥ 90% accuracy across ≥ 2 calendar days *per key* ([ADR-027](0027-key-and-accuracy-state-model.md)), so a child sitting at 89% on a single home-row key could never see a new letter again, with nothing in the curriculum able to release them. *(2026-10-01: ADR-010's gate is now slots, not the 90%-over-50 aggregate. The argument stands as written: the gate still decides when a key arrives and this boundary which one. Slots are not the per-key floor rejected here, because one stuck key blocks nothing — see [ADR-010 § The introduction gate is slots](0010-lesson-structure-and-progression.md#the-introduction-gate-is-slots).)*
 
 The boundary is therefore **positional**: Phase 1 and Phase 2 are consecutive segments of one sequence, and Phase 2 begins when the Phase 1 segment is exhausted. There is no separate "is the home row established" predicate to evaluate.
 
