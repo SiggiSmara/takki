@@ -65,11 +65,13 @@ CREATE TABLE introductions (
 );
 
 CREATE TABLE ramp_up_phases (
-    profile_id   INTEGER NOT NULL REFERENCES profiles(id),
-    key_char     TEXT    NOT NULL,
-    phase        TEXT    NOT NULL,   -- "A", "B", "C" (ADR-024's ramp-up)
-    attempts_at  INTEGER NOT NULL,   -- key_stats.attempt_count when it was passed
-    completed_at TEXT    NOT NULL,   -- UTC, ISO-8601
+    profile_id         INTEGER NOT NULL REFERENCES profiles(id),
+    key_char           TEXT    NOT NULL,
+    phase              TEXT    NOT NULL,   -- "A", "B", "C" (ADR-024's ramp-up)
+    started_attempts   INTEGER NOT NULL,   -- key_stats.attempt_count when the step reached the phase
+    started_at         TEXT    NOT NULL,   -- UTC, ISO-8601
+    completed_attempts INTEGER,            -- key_stats.attempt_count when it was passed; NULL = in the phase
+    completed_at       TEXT,               -- UTC, ISO-8601; NULL = in the phase
     PRIMARY KEY (profile_id, key_char, phase)
 );
 
@@ -120,9 +122,15 @@ The `key_attempts` table is a rolling window: at most 200 rows per (profile_id, 
 - **`prev_char`** makes "correct when the next prompt could not be predicted" derivable after a restart rather than only inside the session that generated it. It is also what lets a later reader check ADR-024's anchor invariant against the stored history instead of trusting the generator.
 - **`introductions`** answers *which step is current*, which nothing could answer before: Active is row presence in `key_stats`, and insertion order was recoverable only from an implicit `rowid`. The **`step` ordinal** is what groups a step's members and orders the steps — deliberately not the timestamp. A timestamp cannot do either job: two steps introduced inside one clock tick read as one step of four members, and `max()` over clock strings picks the wrong step for good whenever the clock has stepped backwards, at which point the genuinely current step can never be resumed again. **UTC removes the seasonal case and not the general one:** there is no fall-back hour in UTC, but `datetime.now(UTC)` reads the system clock, which is not monotonic — an NTP correction, a manual fix, or a boot with a dead CMOS battery all step it back. An ordinal is not a clock and needs none of this to be true. `position` keeps the member order ADR-023 defines, since the drill generator reads `members[0]` as the left-hand member.
 
-- **`ramp_up_phases`** records that a member has **passed** a phase of ADR-024's ramp-up, write-once. See ADR-024 § A phase completion is an event for why this is stored rather than re-derived; the short version is that `key_attempts` is a window built to forget, so a phase read off it un-passes itself when the window rolls, and the curriculum can lock. `attempts_at` is the key's lifetime `key_stats.attempt_count` at that moment, which is what bounds the next phase's evidence without depending on rows that may since have been evicted.
+- **`ramp_up_phases`** records that a member has **passed** a phase of ADR-024's ramp-up, write-once *(and, since 2026-10-04, where the phase began: see "`ramp_up_phases` records both ends of a phase" below)*. See ADR-024 § A phase completion is an event for why this is stored rather than re-derived; the short version is that `key_attempts` is a window built to forget, so a phase read off it un-passes itself when the window rolls, and the curriculum can lock. `completed_attempts` (named `attempts_at` until 2026-10-04) is the key's lifetime `key_stats.attempt_count` at that moment, a count no rolling window can evict.
 
   **It is its own table rather than an `introduced_at` column on `key_stats`, and that is not a filing preference.** A `key_stats` row *is* Active ([ADR-027](0027-key-and-accuracy-state-model.md) § Key States), so stamping the introduction there would make a key Active before the child had answered a single prompt on it. The introducer reads Active as "already had", so the step would never be offered again and its script — which [ADR-023](0023-key-introduction-protocol.md) § What the introducer remembers calls that letter's only teaching moment — would be silently spent on a child who heard it once and typed nothing. That case is not hypothetical: it is in the #12b-2 log, where `u` was introduced, never answered, and correctly introduced again next session. Keeping introductions separate leaves Active, the milestone denominators, the Layer-2 unlock and ADR-010's gate exactly as they were.
+
+**`ramp_up_phases` records both ends of a phase** *(amended 2026-10-04, alpha-plan #12j, finding O1.)* A row was written when a phase was passed, and the next phase's evidence was read from that count. For a pair that is the wrong starting point: the member that passes first keeps being prompted with the same phase's content while its partner catches up ([ADR-024](0024-drill-content-and-lesson-granularity.md) § A pair advances phase together), and those presses were read as evidence for a phase whose content it had not been given. The row is now **one record per key per phase**: `started_attempts` and `started_at` are written when the *step* reaches the phase, and `completed_attempts` and `completed_at` (the former `attempts_at`) stay NULL until the key passes it. The start has its own columns, not a marker row beside the completion, so that a later in-phase event is a column to add and not a new kind of row to tell apart. Each end is written once. A completion for a phase that was never begun is refused by the real store and the fake alike.
+
+**No migration for this change.** A database written before it has the old `ramp_up_phases` and is deleted, not opened (the store refuses it when it is opened, saying so), as with #12i's timestamps: only development machines have one, and #12h's run starts from a new database.
+
+**What NULL in `latency_ms` covers** *(amended 2026-10-04, alpha-plan #12j, finding O4.)* Still one meaning, the answer was not timed from a letter the child had just heard, and now applied in every case that has it: a press while the prompt is being spoken again (after a timeout, a re-read or a wrong press), a press after returning from PAUSED and before the prompt has been re-spoken, and a press after a letter that failed or was cancelled. Before this the first two were timed from the *earlier* version of the letter, which recorded the whole timeout or the whole time away as the child's reaction time. A press before the letter has finished is unmeasured as before; whether it should instead be a negative latency is #12f's question ([research/code-review-2026-10-01.md](../research/code-review-2026-10-01.md) § Decisions on O1 to O4).
 
 **This makes explicit what `key_attempts` already was:** an append-only event log with a windowed trim. What is added is a **read** that returns the window's rows in order; every query before this one wanted aggregates, and a streak or a run-with-a-budget cannot be computed from aggregates. That read takes an optional row limit, because a bar knows how many rows it can possibly need and pulling two hundred to decide a ten-long streak is work done on every keypress.
 

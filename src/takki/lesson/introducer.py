@@ -407,32 +407,19 @@ def _build_step(
     return IntroductionStep(slot.stage, tuple(introductions))
 
 
-def resume_step(layout: Layout, graphemes: Sequence[str]) -> IntroductionStep:
-    """Rebuild a step already introduced, so its ramp-up can be re-entered.
-
-    For [ADR-024](../../../docs/adr/0024-drill-content-and-lesson-granularity.md)
-    § Ramp-up variability's cross-session resume. **Never spoken.** The script's
-    clauses -- location, and a modifier's introduction -- are a teaching moment
-    the child already had, and re-deriving them here would invite a caller to
-    re-speak them; they are left empty so a resumed step carries only what the
-    drill generator reads: the stage, each member's grapheme, and its base key.
-    """
+def resume_step(
+    layout: Layout, graphemes: Sequence[str], had: AbstractSet[str]
+) -> IntroductionStep:
+    """Rebuild a step already introduced, as it was first emitted (ADR-024's cross-session resume)."""
+    # `had` is what the child had before the step: the location and modifier
+    # clauses are derived from it. The step's own members are taken out, so a
+    # caller handing over everything introduced gets no member located against
+    # its own pair.
     stage = STAGE_0 if set(graphemes) <= set(anchor_keys(layout)) else CURRICULUM
-    keys = tuple(
-        KeyIntroduction(
-            grapheme=name,
-            mechanism=layout.graphemes[name].mechanism,
-            keys=layout.graphemes[name].prereq_keys,
-            base=base_key(layout, name).name,
-            finger=base_key(layout, name).finger,
-            side=base_key(layout, name).side,
-            location=None,
-            modifier=None,
-        )
-        for name in graphemes
-        if name in layout.graphemes
-    )
-    return IntroductionStep(stage, keys)
+    members = tuple(name for name in graphemes if name in layout.graphemes)
+    introduced = {name for name in had if name in layout.graphemes} - set(members)
+    struck = _keys_behind(layout, introduced)
+    return _build_step(layout, IntroductionSlot(stage, members), introduced, struck)
 
 
 def _introduce(

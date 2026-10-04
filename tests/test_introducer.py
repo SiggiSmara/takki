@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from collections.abc import Set as AbstractSet
 from typing import ClassVar
 
@@ -18,6 +19,7 @@ from takki.lesson.introducer import (
     introduction_sequence,
     phase1_slots,
     phase2_slots,
+    resume_step,
 )
 from takki.lesson.key_state import KeyStates
 from takki.persistence import Store
@@ -914,3 +916,30 @@ class TestRemember:
         emitted = introducer.introduce_next()
         assert emitted is not None
         assert [k.grapheme for k in emitted.keys] == [k.grapheme for k in second.keys]
+
+
+class TestResumeStep:
+    """alpha-plan #12j, O2: a resumed step carries the script the child first heard."""
+
+    @pytest.mark.parametrize("build", [build_en, build_de, build_is])
+    def test_every_step_is_rebuilt_as_it_was_first_emitted(
+        self, build: Callable[[], Layout]
+    ) -> None:
+        # Location and modifier clauses included: they depend on what the child
+        # had when the step was introduced, so the rebuild is handed exactly that.
+        layout = build()
+        words = WordfreqSource()
+        had: set[str] = set()
+        steps = introduction_sequence(layout, words)
+        assert any(intro.modifier for intro in flat(steps)) == (build is build_is)
+        for step in steps:
+            members = [intro.grapheme for intro in step.keys]
+            assert resume_step(layout, members, had) == step
+            had.update(members)
+
+    def test_the_step_itself_is_not_among_what_the_child_had(self) -> None:
+        # A caller that hands over everything introduced, the step included,
+        # must not get a member located against its own pair.
+        layout = build_en()
+        first = sequence(layout)[0]
+        assert resume_step(layout, ["f", "j"], {"f", "j"}) == first

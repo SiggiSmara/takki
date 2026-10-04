@@ -266,14 +266,12 @@ class DrillGenerator:
         Returns False and starts nothing when the step has no attempts at all.
         That is not a resumable ramp-up but an introduction the child never
         answered, and ADR-023 § What the introducer remembers owes them the
-        script again -- the letter's only teaching moment -- rather than a
-        silent resume into drills for a key they were told about once.
+        whole script again, which the introducer's own path gives.
         """
-        if not all(self._progress.member(intro.grapheme).attempts for intro in step.keys):
-            # `all`, not `any`: the guarantee is per letter. A pair where one
-            # member was answered and the other never was is still a letter owed
-            # its script, and resuming would drill it having never introduced it.
+        if not any(self._progress.member(intro.grapheme).attempts for intro in step.keys):
             return False
+        # `any`, not `all`: a pair with one member answered stays a pair, and
+        # the caller speaks the script again for the other.
         return self.begin_step(step)
 
     def next_block(self) -> DrillBlock:
@@ -346,7 +344,9 @@ class DrillGenerator:
             progress = self._progress.member(member.grapheme)
             # The baseline is pooled over every Known key, which is a window read
             # each: only Phase C's bar consults it, so only Phase C pays for it.
-            baseline = self._baseline() if progress.phase is RampUpPhase.C else None
+            # A member waiting for its partner is not judged at all.
+            judged = progress.begun and progress.phase is RampUpPhase.C
+            baseline = self._baseline() if judged else None
             if self._progress.advance(progress, baseline):
                 progress = self._progress.member(member.grapheme)
             ramp.progress[member.grapheme] = progress
@@ -355,6 +355,13 @@ class DrillGenerator:
             return
         phases = [p.phase for p in ramp.progress.values() if p.phase is not None]
         ramp.phase = min(phases, key=PHASE_ORDER.index)
+        # Every member in the step's phase starts it here. One that got there
+        # first waited un-begun, which keeps its waiting presses out of this
+        # phase's evidence. Begun when found missing, so a session killed
+        # between a completion and this write loses nothing.
+        for grapheme, progress in ramp.progress.items():
+            if progress.phase is ramp.phase and not progress.begun:
+                ramp.progress[grapheme] = self._progress.begin(progress)
 
     def _baseline(self) -> float | None:
         """ADR-027: the child's own median latency over their Known keys.
@@ -372,9 +379,11 @@ class DrillGenerator:
 
     def _remaining(self, member: _Member, ramp: RampUp) -> int:
         progress = ramp.progress.get(member.grapheme)
-        if progress is None or progress.phase is None:
+        if progress is None or progress.phase is not ramp.phase:
+            # Finished, or ahead of its partner: it owes the step's phase
+            # nothing more, and the block is sized by the member still in it.
             return 0
-        return rampup.remaining(progress.phase, progress.evidence)
+        return rampup.remaining(ramp.phase, progress.evidence)
 
     def _anchor(self, intro: KeyIntroduction, step: IntroductionStep) -> str | None:
         if intro.is_composite:

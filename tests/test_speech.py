@@ -166,6 +166,36 @@ class TestInterrupt:
         speaker.interrupt()
         assert engine.stopped == 0
 
+    def test_a_completed_letter_is_reported_as_finished(self) -> None:
+        speaker, _, _, _, _ = build()
+        speaker.letter("f")
+        assert speaker.on_finished(SpeechFinished(1_000_000, "completed")) is False
+        assert speaker.letter_finished is True
+
+    def test_a_letter_that_failed_is_not_reported_as_finished(self) -> None:
+        # The child did not hear it, so nothing may be timed from it
+        # (alpha-plan #12j, O4). Through the real worker, which is what turns
+        # an engine that raises into a "failed" status.
+        engine = FakeTTSEngine(fail_on={"f"})
+        outbound: queue.Queue[SpeechFinished] = queue.Queue()
+        worker = TTSWorker(lambda: engine, outbound)
+        speaker = Speaker(worker, SyntheticLetterAudioSource(worker))
+        speaker.letter("f")
+        drain(worker)
+        event = outbound.get_nowait()
+        assert event.status == "failed"
+        assert speaker.on_finished(event) is False
+        assert speaker.letter_finished is False
+        # No longer outstanding either: there is nothing left to stop.
+        speaker.interrupt()
+        assert engine.stopped == 0
+
+    def test_a_cancelled_letter_is_not_reported_as_finished(self) -> None:
+        speaker, _, _, _, _ = build()
+        speaker.letter("f")
+        assert speaker.on_finished(SpeechFinished(1_000_000, "cancelled")) is False
+        assert speaker.letter_finished is False
+
     def test_a_second_letter_supersedes_an_outstanding_one(self) -> None:
         # The worker serialises utterances, so a letter queued behind an
         # unfinished one plays after it -- over the cue and the next prompt.

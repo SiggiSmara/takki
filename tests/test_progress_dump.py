@@ -24,7 +24,9 @@ def _seed_db(path: Path) -> int:
         prev_char="j",
     )
     store.mark_introduced(profile.id, ["f", "j"], introduced_at="2026-09-19T09:00:00+00:00")
+    store.begin_phase(profile.id, "f", "A", 0, started_at="2026-09-19T09:00:00+00:00")
     store.record_phase(profile.id, "f", "A", 10, completed_at="2026-09-19T09:05:00+00:00")
+    store.begin_phase(profile.id, "f", "B", 14, started_at="2026-09-19T09:06:00+00:00")
     store.record_milestone(profile.id, "anchor", achieved_at="2026-09-20T11:00:00+00:00")
     ended = store.start_session(profile.id, started_at="2026-09-19T09:00:00+00:00")
     store.end_session(ended, ended_at="2026-09-19T09:20:00+00:00")
@@ -102,7 +104,9 @@ class TestMain:
         assert "420" in out
         # Introductions and phases: the only place a resumed ramp-up is visible.
         assert "introductions and ramp-up phases" in out
-        assert "A@10" in out
+        # Where each phase began and was passed, in the key's lifetime attempts;
+        # the open end is the phase the key is in.
+        assert "A@0-10 B@14- " in out
         assert "milestones" in out
         assert "anchor" in out
         assert "sessions" in out

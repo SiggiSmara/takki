@@ -7,7 +7,7 @@ from typing import cast
 
 import pytest
 
-from takki.persistence import KeyStat, Store, WindowStats, utc_stamp
+from takki.persistence import KeyStat, PhaseRecord, Store, WindowStats, utc_stamp
 from takki.persistence.sqlite_store import SqliteStore
 from tests.fakes.fake_store import FakeStore
 
@@ -45,7 +45,11 @@ WRITES: dict[str, Callable[[Store, int, str], object]] = {
     "upsert_key_stat": lambda s, pid, at: s.upsert_key_stat(pid, "f", True, practised_at=at),
     "bump_key_recency": lambda s, pid, at: s.bump_key_recency(pid, "f", practised_at=at),
     "mark_introduced": lambda s, pid, at: s.mark_introduced(pid, ["f", "j"], at),
-    "record_phase": lambda s, pid, at: s.record_phase(pid, "f", "A", 10, completed_at=at),
+    "begin_phase": lambda s, pid, at: s.begin_phase(pid, "f", "A", 0, started_at=at),
+    "record_phase": lambda s, pid, at: (
+        s.begin_phase(pid, "f", "A", 0),
+        s.record_phase(pid, "f", "A", 10, completed_at=at),
+    ),
     "append_attempt": lambda s, pid, at: s.append_attempt(pid, "f", True, attempted_at=at),
     "record_milestone": lambda s, pid, at: s.record_milestone(pid, "anchor", achieved_at=at),
 }
@@ -611,6 +615,58 @@ class TestWindowAttempts:
         assert any_store.window_attempts(pid, "f") == []
 
 
+class TestPhaseRecords:
+    """ADR-011's `ramp_up_phases`: one record per key per phase, with both ends."""
+
+    def test_a_phase_is_begun_and_then_completed(self, any_store: Store) -> None:
+        p = any_store.create_profile("Alice")
+        any_store.begin_phase(p.id, "f", "A", 0)
+        assert any_store.phase_records(p.id, "f") == {"A": PhaseRecord(0)}
+        any_store.record_phase(p.id, "f", "A", 10)
+        any_store.begin_phase(p.id, "f", "B", 14)
+        assert any_store.phase_records(p.id, "f") == {
+            "A": PhaseRecord(0, 10),
+            "B": PhaseRecord(14),
+        }
+
+    def test_both_ends_are_written_once(self, any_store: Store) -> None:
+        # The start bounds the phase's evidence and the completion is a fact
+        # about the child: neither moves once written.
+        p = any_store.create_profile("Alice")
+        any_store.begin_phase(p.id, "f", "A", 0)
+        any_store.begin_phase(p.id, "f", "A", 5)
+        any_store.record_phase(p.id, "f", "A", 10)
+        any_store.record_phase(p.id, "f", "A", 25)
+        any_store.begin_phase(p.id, "f", "A", 30)
+        assert any_store.phase_records(p.id, "f") == {"A": PhaseRecord(0, 10)}
+
+    def test_a_completion_without_a_start_is_refused(self, any_store: Store) -> None:
+        p = any_store.create_profile("Alice")
+        with pytest.raises(ValueError, match="never begun"):
+            any_store.record_phase(p.id, "f", "A", 10)
+        assert any_store.phase_records(p.id, "f") == {}
+
+    def test_records_belong_to_one_profile_and_one_key(self, any_store: Store) -> None:
+        alice = any_store.create_profile("Alice")
+        bob = any_store.create_profile("Bob")
+        any_store.begin_phase(alice.id, "f", "A", 0)
+        any_store.begin_phase(alice.id, "j", "A", 3)
+        any_store.begin_phase(bob.id, "f", "A", 7)
+        assert any_store.phase_records(alice.id, "f") == {"A": PhaseRecord(0)}
+        assert any_store.phase_records(alice.id, "j") == {"A": PhaseRecord(3)}
+        assert any_store.phase_records(bob.id, "f") == {"A": PhaseRecord(7)}
+
+    def test_the_stored_stamps_are_utc(self, store: SqliteStore) -> None:
+        p = store.create_profile("Alice")
+        store.begin_phase(p.id, "f", "A", 0)
+        store.record_phase(p.id, "f", "A", 10)
+        (started_at, completed_at) = store.conn.execute(
+            "SELECT started_at, completed_at FROM ramp_up_phases"
+        ).fetchone()
+        assert utc_stamp(started_at) == started_at
+        assert utc_stamp(completed_at) == completed_at
+
+
 class TestMigration:
     def test_a_database_written_before_the_new_columns_still_opens(self, tmp_path: Path) -> None:
         # ADR-011, 2026-09-29: two nullable additions, so an existing profile
@@ -643,3 +699,20 @@ class TestMigration:
         assert store.window_attempts(1, "f")[-1].latency_ms == 300
         store.mark_introduced(1, ["f"])
         assert [i.key_char for i in store.introductions(1)] == ["f"]
+
+    def test_a_database_with_the_old_phase_table_is_refused_at_open(self, tmp_path: Path) -> None:
+        # ADR-011, 2026-10-04: `ramp_up_phases` changed shape with no migration.
+        # Refused when opened, in words, and not at the first phase read.
+        path = str(tmp_path / "takki.sqlite")
+        old = sqlite3.connect(path)
+        old.executescript("""
+            CREATE TABLE ramp_up_phases (
+                profile_id INTEGER NOT NULL, key_char TEXT NOT NULL, phase TEXT NOT NULL,
+                attempts_at INTEGER NOT NULL, completed_at TEXT NOT NULL,
+                PRIMARY KEY (profile_id, key_char, phase)
+            );
+        """)
+        old.commit()
+        old.close()
+        with pytest.raises(RuntimeError, match="delete it"):
+            SqliteStore(path)

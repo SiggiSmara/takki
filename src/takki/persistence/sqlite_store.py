@@ -4,7 +4,15 @@ from datetime import UTC, datetime
 from typing import Any, cast
 
 from takki import config
-from takki.persistence import Attempt, Introduction, KeyStat, Profile, WindowStats, utc_stamp
+from takki.persistence import (
+    Attempt,
+    Introduction,
+    KeyStat,
+    PhaseRecord,
+    Profile,
+    WindowStats,
+    utc_stamp,
+)
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS profiles (
@@ -37,11 +45,13 @@ CREATE TABLE IF NOT EXISTS introductions (
 );
 
 CREATE TABLE IF NOT EXISTS ramp_up_phases (
-    profile_id   INTEGER NOT NULL REFERENCES profiles(id),
-    key_char     TEXT    NOT NULL,
-    phase        TEXT    NOT NULL,
-    attempts_at  INTEGER NOT NULL,
-    completed_at TEXT    NOT NULL,
+    profile_id         INTEGER NOT NULL REFERENCES profiles(id),
+    key_char           TEXT    NOT NULL,
+    phase              TEXT    NOT NULL,
+    started_attempts   INTEGER NOT NULL,
+    started_at         TEXT    NOT NULL,
+    completed_attempts INTEGER,
+    completed_at       TEXT,
     PRIMARY KEY (profile_id, key_char, phase)
 );
 
@@ -123,6 +133,17 @@ class SqliteStore:
         self._cap = window_cap
 
     def _migrate(self) -> None:
+        phase_columns = {
+            cast(str, row[1])
+            for row in self.conn.execute("PRAGMA table_info(ramp_up_phases)").fetchall()
+        }
+        if "started_attempts" not in phase_columns:
+            # ADR-011, 2026-10-04: the table changed shape and old rows cannot
+            # say where a phase began. Said here, or it surfaces as a missing
+            # column at the first phase read, mid-session.
+            raise RuntimeError(
+                "this Takki database was written before 2026-10-04 and cannot be used; delete it"
+            )
         # ADR-011's two nullable columns, added 2026-09-29. A database created
         # before them keeps every row and simply has no latency or predecessor
         # history for what it already recorded, which is the truth.
@@ -265,6 +286,27 @@ class SqliteStore:
         self.conn.commit()
         return step
 
+    def begin_phase(
+        self,
+        profile_id: int,
+        key_char: str,
+        phase: str,
+        attempts_at: int,
+        started_at: str | None = None,
+    ) -> None:
+        # Write-once: the phase's evidence is the key's attempts after this
+        # count, and moving it would move the evidence under the child.
+        ts = _stamp(started_at)
+        self.conn.execute(
+            """
+            INSERT OR IGNORE INTO ramp_up_phases
+                (profile_id, key_char, phase, started_attempts, started_at)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (profile_id, key_char, phase, attempts_at, ts),
+        )
+        self.conn.commit()
+
     def record_phase(
         self,
         profile_id: int,
@@ -275,28 +317,33 @@ class SqliteStore:
     ) -> None:
         # Write-once: a phase a child has passed stays passed (ADR-024 § A phase
         # completion is an event). `attempts_at` is the key's lifetime attempt
-        # count at that moment, which is what bounds the next phase's evidence
-        # without depending on rows the rolling window may since have evicted.
+        # count at that moment, which no rolling window can evict.
         ts = _stamp(completed_at)
-        self.conn.execute(
+        cursor = self.conn.execute(
             """
-            INSERT OR IGNORE INTO ramp_up_phases
-                (profile_id, key_char, phase, attempts_at, completed_at)
-            VALUES (?, ?, ?, ?, ?)
+            UPDATE ramp_up_phases SET completed_attempts = ?, completed_at = ?
+            WHERE profile_id = ? AND key_char = ? AND phase = ?
+              AND completed_attempts IS NULL
             """,
-            (profile_id, key_char, phase, attempts_at, ts),
+            (attempts_at, ts, profile_id, key_char, phase),
         )
+        if cursor.rowcount == 0 and phase not in self.phase_records(profile_id, key_char):
+            # A completion with no start has no evidence it could have been
+            # read from, so it is a caller's mistake and not a row to invent.
+            raise ValueError(f"phase {phase!r} of {key_char!r} was never begun")
         self.conn.commit()
 
-    def completed_phases(self, profile_id: int, key_char: str) -> dict[str, int]:
+    def phase_records(self, profile_id: int, key_char: str) -> dict[str, PhaseRecord]:
         rows = self.conn.execute(
             """
-            SELECT phase, attempts_at FROM ramp_up_phases
+            SELECT phase, started_attempts, completed_attempts FROM ramp_up_phases
             WHERE profile_id = ? AND key_char = ?
             """,
             (profile_id, key_char),
         ).fetchall()
-        return {cast(str, r[0]): cast(int, r[1]) for r in rows}
+        return {
+            cast(str, r[0]): PhaseRecord(cast(int, r[1]), cast("int | None", r[2])) for r in rows
+        }
 
     def append_attempt(
         self,

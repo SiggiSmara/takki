@@ -1,6 +1,6 @@
 # Unverified findings from the code review of 2026-10-01
 
-> **Status:** Open list. Twelve candidate findings from a review that was cut off before it could verify them. Three are closed. O1 to O4 are confirmed and decided (2026-10-03). O5 and O6 are still unverified, and U1 to U3 stay filed. Verification and the agreed fixes are alpha-plan #12j.
+> **Status:** Closed for the behaviour claims. Twelve candidate findings from a review that was cut off before it could verify them. C1 to C3 were closed on 2026-10-02. O1 to O6 were all confirmed by repro and all fixed in alpha-plan #12j (2026-10-04), except the early-press part of O4, which is a design question handed to #12f. U1 to U3 stay filed for #12k.
 > **Date written:** 2026-10-02.
 > **Scope:** code from alpha sessions #12d and #12e, already committed. Nothing here is about #12g or #12i, which were reviewed separately and are closed.
 
@@ -38,7 +38,7 @@ Each needs a short repro before anything else is decided.
 
 ### Repro results for O1 to O4 (2026-10-02, alpha-plan #12j)
 
-All four are **confirmed**: the code does what the review said. None is fixed yet. What to do about each is decided with the developer, and the outcome is added here.
+All four are **confirmed**: the code does what the review said. What to do about each was decided with the developer on 2026-10-03, and all were fixed on 2026-10-04: see *Outcomes* below.
 
 **O1, confirmed.** A pair was driven with one member answered correctly every time and the other wrong every time, for eight blocks. The step stayed in Phase A throughout, and every block was single-letter Phase A content. The correct member recorded Phase A at 10 attempts, Phase B at 30 and Phase C at 60. Same result for Stage 0's `f j` and for the curriculum pair `d k`. The scenario is the extreme case. The general form is that a member that is ahead by *n* presses carries those *n* presses into the next phase's evidence, on the previous phase's content.
 
@@ -74,12 +74,39 @@ What #12f has to settle before it is built:
 - **A floor for anticipations.** A press before the letter could have been recognised, or before it started at all (a typed-ahead key), is not a reaction to it. Reaction-time research normally excludes presses within roughly 100 to 150 ms of onset. Those would stay unmeasured.
 - **The stored meaning of `latency_ms`.** A negative value changes what the column means, so it is an ADR-011 amendment, and Phase C's speed term and its baseline have to be re-read under the new meaning.
 
+### Repro results for O5 and O6 (2026-10-04, alpha-plan #12j)
+
+**O5, confirmed, in both directions.** Phase B's run was counted forward from the phase's first press and restarted on a second miss, so the misses were paired up from wherever the count began. Once a child has more than 90 Phase B presses the read begins later and pairs them differently. A search over random histories found both cases at press 91, given here as correct answers between misses:
+
+- `0, 4, 3, 10, 1, 4, 5, 2, 1, 16, 9, 9, 16`: the capped read passes the child at press 91; read from the first press, the bar is never met.
+- `0, 5, 4, 12, 0, 0, 2, 14, 10, 5, 3, 3, 7, 14`: read from the first press the bar is met at press 91; the capped read does not see it.
+
+The 200-row window would do the same at press 200, so the cap was not the cause, only where it first showed.
+
+**O6, confirmed.** The trace stamps its header in local time with no offset and `key_attempts.attempted_at` is UTC. On a machine set to UTC the script stops with `TypeError: can't compare offset-naive and offset-aware datetimes`. On a machine ahead of UTC (`Pacific/Auckland`) the text comparison in its query finds no rows, and it prints `C7: FAIL` for a run that matched.
+
+### Outcomes (2026-10-04, alpha-plan #12j)
+
+| # | Outcome |
+|---|---|
+| O1 | **Fixed.** A member is judged only for the phase its step is in, and its evidence for the next phase starts when the step reaches it. The developer asked for the start to have its own columns in `ramp_up_phases`, not a marker row, so a row is now one record per key per phase with both ends (`started_attempts`, `started_at`, `completed_attempts`, `completed_at`). No migration: an older database is deleted. ADR-011 and ADR-024 amended. The original scenario, run through the session loop on a real SQLite store for 160 answers, now records Phase A at 10 for the member that is right and nothing else |
+| O2 | **Fixed.** The resumed step is rebuilt from what the child had before it and equals the step as first emitted, for every step of the English, German and Icelandic orders. ADR-024 and ADR-023 amended |
+| O3 | **Fixed.** A step is resumed when any member has been answered; the script is spoken again, at session start, for a member never answered. The introducer on its own is unchanged and still offers that member alone, which `tests/test_introducer.py` pins; the session's resume is what keeps the pair. ADR-024 and ADR-023 amended |
+| O4, re-spoken prompt | **Fixed.** The start time is withdrawn when the prompt begins to be re-spoken, so a press during the re-spoken letter is unmeasured |
+| O4, failed letter | **Fixed.** Only a `completed` letter starts the timing |
+| O4, pause (found while fixing) | **Fixed.** A press after returning from PAUSED, over the resume announcement and before the prompt was re-spoken, was recorded as the whole time away (31,000 ms in the repro). The start time is now withdrawn on pause as well. ADR-011 amended for all three |
+| O4, early press | **Open, with #12f.** #12f should know that the two cases above are now unmeasured for the same reason as an early press, and that a signed latency would need a rule for them too |
+| O5 | **Fixed, as a rule change decided with the developer.** Phase B's run is counted back from the latest press: the correct presses since the second-most-recent miss. The answer no longer depends on where the read starts. A second miss does not wipe the count and grants no fresh allowance. ADR-024 amended, roadmap § D "Phase A vs Phase B counting" annotated |
+| O6 | **Fixed.** The script reads the trace header as local time and compares in UTC. Checked by hand under `UTC`, `Atlantic/Reykjavik`, `Pacific/Auckland` and `America/Los_Angeles`: `C7: PASS` in each. It has no automated test, like the other spike scripts |
+
+Part of U2 was settled on the way: the `SpeechFinished` → `letter_finished` → `mark_audible` wiring and the clock handed to `AttemptCounter` are now exercised through the session loop (`tests/test_session.py::TestLatency`), and the phase records are tested against the real store and the fake (`tests/test_persistence.py::TestPhaseRecords`). The rest of U2, and U1 and U3, are unchanged.
+
 ## Open: upkeep, no wrong behaviour claimed
 
 | # | Claim |
 |---|---|
 | U1 | **Performance at block boundaries and per keypress.** `window_stats`' local-time conversion is said to make each call about 8 times slower, adding about 50 ms per block boundary. The boundary re-reads the same windows several times. Phase C's baseline is computed for every block (about 33 ms). `_refresh_ramp` re-reads both pair members on each keypress. `RampUpProgress.member()` fetches the whole `key_stats` table. `window_attempts`' `LIMIT` does not bound the SQL work. `_carrier` is rebuilt for each slot. None of these figures has been measured by us |
-| U2 | **Untested wiring.** `SpeechFinished` → `letter_finished` → `mark_audible`; the `clock` passed to `AttemptCounter`; `_baseline` → `bar_met`. The real store's `record_phase`, `completed_phases` and `window_attempts(limit)` have no test that runs against both stores. `FakeStore.window_attempts(limit=0)` returns everything |
+| U2 | **Untested wiring.** `SpeechFinished` → `letter_finished` → `mark_audible`; the `clock` passed to `AttemptCounter`; `_baseline` → `bar_met`. The real store's `record_phase`, `completed_phases` (now `phase_records`) and `window_attempts(limit)` have no test that runs against both stores. `FakeStore.window_attempts(limit=0)` returns everything |
 | U3 | **Dead or stale code.** `RampUpProgress.step_phase` and `live_run`'s `max_rejections` parameter are unused. `record_attempt`'s `correct` parameter is unused. The `begin_step` returns-False branch in `SessionLoop._introduce` is said to be unreachable. Stale comments about local time and re-exposure. `prev_char` is carried across blocks although ADR-011 says NULL means the first of a block. Multi-paragraph docstrings against the project's one-line rule. Duplicated test helpers. The planner's `_need` and `_bar` are a second definition of Known beside `KnownCriterion` |
 
 One part of U1 was checked on 2026-10-02 for #12g: building the remaining introduction sequence costs about 0.5 ms and happens once per block boundary, so it was left as it is.

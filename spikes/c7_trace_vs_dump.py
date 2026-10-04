@@ -45,7 +45,7 @@ import ast
 import re
 import sys
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from takki import config
@@ -101,7 +101,12 @@ def read_sections(path: Path) -> list[tuple[datetime, list[Event]]]:
     for line in path.read_text(encoding="utf-8").splitlines():
         header = HEADER.match(line.strip())
         if header:
-            sections.append((datetime.fromisoformat(header.group(1)), []))
+            # The trace stamps its header in the machine's local time, with no
+            # offset; `key_attempts.attempted_at` is UTC since 2026-09-30
+            # (ADR-011). Read as local and moved to UTC here, so everything
+            # below compares instants. Run it on the machine that made the trace.
+            started = datetime.fromisoformat(header.group(1)).astimezone(UTC)
+            sections.append((started, []))
             continue
         event = EVENT.match(line.strip())
         if event and sections:
@@ -276,7 +281,9 @@ def main() -> int:
             WHERE profile_id = ? AND attempted_at >= ?
             ORDER BY rowid
             """,
-            (profile_id, window_start.isoformat()),
+            # The stored form exactly (`takki.persistence.utc_stamp`): the
+            # comparison is on text.
+            (profile_id, window_start.isoformat(timespec="seconds")),
         ).fetchall()
     finally:
         conn.close()
@@ -292,10 +299,11 @@ def main() -> int:
         f"Trace: {args.trace} section {number} of {len(sections)}, started {start:%Y-%m-%d %H:%M:%S.%f}"[
             :-3
         ]
+        + " UTC"
     )
     print(
         f"DB:    {db_path} profile {profile_id}; {len(rows)} key_attempts rows in "
-        f"[{window_start:%H:%M:%S}, {window_end:%H:%M:%S}]"
+        f"[{window_start:%H:%M:%S}, {window_end:%H:%M:%S}] UTC"
         + (f", {after} more after the trace ended (ignored)" if after else "")
     )
     print(

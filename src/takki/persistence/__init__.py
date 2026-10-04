@@ -65,6 +65,14 @@ class Attempt:
 
 
 @dataclass(frozen=True)
+class PhaseRecord:
+    """One phase of one key's ramp-up, as lifetime attempt counts at its start and its pass (ADR-011)."""
+
+    started_attempts: int
+    completed_attempts: int | None = None
+
+
+@dataclass(frozen=True)
 class Introduction:
     """One grapheme's introduction, and the step it belonged to (ADR-011).
 
@@ -135,6 +143,15 @@ class Store(Protocol):
         introduced_at: str | None = None,
     ) -> int: ...
 
+    def begin_phase(
+        self,
+        profile_id: int,
+        key_char: str,
+        phase: str,
+        attempts_at: int,
+        started_at: str | None = None,
+    ) -> None: ...
+
     def record_phase(
         self,
         profile_id: int,
@@ -144,7 +161,7 @@ class Store(Protocol):
         completed_at: str | None = None,
     ) -> None: ...
 
-    def completed_phases(self, profile_id: int, key_char: str) -> dict[str, int]: ...
+    def phase_records(self, profile_id: int, key_char: str) -> dict[str, PhaseRecord]: ...
 
     def introductions(self, profile_id: int) -> list[Introduction]: ...
 

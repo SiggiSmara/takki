@@ -14,11 +14,16 @@ not introduce while a ramp-up is in progress, the curriculum could lock with
 nothing able to release it. The mirror image was worse: a step could read as
 complete for a child who had never met the bar. So a passed phase is an event
 written once, and each phase's evidence is bounded by the *lifetime* attempt
-count at the previous completion, which no window can evict.
+count at its start, which no window can evict.
+
+**Why the start is recorded as well.** A pair advances together (ADR-024), so a
+member that passes first waits for its partner, and its next phase starts when
+the *step* gets there. Read from its own completion, the presses it made while
+waiting counted as evidence for a phase whose content it had not been given.
 """
 
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from statistics import median
 
@@ -58,23 +63,19 @@ def live_run(
     rows: Sequence[Attempt],
     max_rejections: int | None = None,
 ) -> int:
-    """Correct answers in the run in progress, which a second rejection restarts.
-
-    Phase B's counting model, not Phase A's (ADR-024, and roadmap D "Phase A vs
-    Phase B counting", which asks for the two models to be confirmed rather than
-    merged). The *live* run, not the best one ever seen: a child who spends the
-    budget twice is starting again, and a block sized off their old best run
-    would be sized for progress they no longer have.
-    """
+    """Phase B's count: correct answers since the miss that would overspend the budget."""
+    # Back from the latest press, not forward from the phase's first. A forward
+    # count pairs the misses up from wherever the read starts, so the capped
+    # read and the full one disagreed about the same child (ADR-024).
     budget = config.PHASE_B_MAX_REJECTIONS if max_rejections is None else max_rejections
     correct = rejections = 0
-    for row in rows:
+    for row in reversed(rows):
         if row.correct:
             correct += 1
             continue
         rejections += 1
         if rejections > budget:
-            correct = rejections = 0
+            break
     return correct
 
 
@@ -136,12 +137,15 @@ def remaining(phase: RampUpPhase, evidence: Sequence[Attempt]) -> int:
 
 @dataclass(frozen=True)
 class MemberProgress:
-    """One member's place in the ramp-up: the phase it is in, and that phase's evidence."""
+    """One member's place in the ramp-up: the phase it has not yet passed, and its evidence."""
 
     grapheme: str
     phase: RampUpPhase | None
     evidence: tuple[Attempt, ...]
     attempts: int
+    # False while the member waits for its partner: the step has not reached
+    # `phase`, so there is no evidence and nothing is judged.
+    begun: bool = True
 
 
 class RampUpProgress:
@@ -158,16 +162,26 @@ class RampUpProgress:
 
     def member(self, grapheme: str) -> MemberProgress:
         """Where this member stands, with only the rows its current phase can need."""
-        done = self._store.completed_phases(self._profile_id, grapheme)
-        phase = next((p for p in PHASE_ORDER if p.value not in done), None)
+        records = self._store.phase_records(self._profile_id, grapheme)
+        phase = next(
+            (
+                p
+                for p in PHASE_ORDER
+                if p.value not in records or records[p.value].completed_attempts is None
+            ),
+            None,
+        )
         attempts = self._lifetime_attempts(grapheme)
         if phase is None:
             return MemberProgress(grapheme, None, (), attempts)
-        # Evidence starts where the previous phase ended, counted in lifetime
+        record = records.get(phase.value)
+        if record is None:
+            return MemberProgress(grapheme, phase, (), attempts, begun=False)
+        # Evidence starts where the step reached the phase, counted in lifetime
         # attempts so that an evicted row cannot move the boundary. Capped,
         # because a member that has sat in one phase for hundreds of attempts
         # needs only the recent ones -- every bar is a recent-N reading.
-        since = attempts - done.get(self._previous(phase), 0)
+        since = attempts - record.started_attempts
         if since <= 0:
             # The phase has just begun and owns no attempts yet. Reading "the
             # last one row" here would hand the new phase the answer that
@@ -178,9 +192,21 @@ class RampUpProgress:
         )
         return MemberProgress(grapheme, phase, tuple(rows), attempts)
 
+    def begin(self, progress: MemberProgress) -> MemberProgress:
+        """The step has reached this member's phase: its evidence starts at this attempt."""
+        assert progress.phase is not None
+        self._store.begin_phase(
+            self._profile_id, progress.grapheme, progress.phase.value, progress.attempts
+        )
+        return replace(progress, begun=True)
+
     def advance(self, progress: MemberProgress, baseline: float | None = None) -> bool:
         """Record a completion if this member's bar is now met. True when one was written."""
-        if progress.phase is None or not bar_met(progress.phase, progress.evidence, baseline):
+        if (
+            progress.phase is None
+            or not progress.begun
+            or not bar_met(progress.phase, progress.evidence, baseline)
+        ):
             return False
         self._store.record_phase(
             self._profile_id, progress.grapheme, progress.phase.value, progress.attempts
@@ -197,10 +223,6 @@ class RampUpProgress:
         """
         reached = [p for p in (self.member(name).phase for name in graphemes) if p is not None]
         return min(reached, key=PHASE_ORDER.index) if reached else None
-
-    def _previous(self, phase: RampUpPhase) -> str:
-        index = PHASE_ORDER.index(phase)
-        return PHASE_ORDER[index - 1].value if index else ""
 
     def _lifetime_attempts(self, grapheme: str) -> int:
         # `key_stats` is the lifetime counter and never forgets, which is why the

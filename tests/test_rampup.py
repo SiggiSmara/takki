@@ -1,5 +1,6 @@
 """ADR-024 § Ramp-up variability — the recorded phases, the bars, the invariants."""
 
+import random
 from itertools import pairwise
 
 import pytest
@@ -8,7 +9,7 @@ from takki import config
 from takki.lesson import rampup
 from takki.lesson.introducer import HOME_ROW, base_key, introduction_sequence
 from takki.lesson.rampup import RampUpPhase, RampUpProgress
-from takki.persistence import Attempt
+from takki.persistence import Attempt, PhaseRecord
 from takki.platform.layout import Layout, build_en
 from tests.fakes.fake_store import FakeStore
 from tests.fakes.fixed_list_source import FixedListSource
@@ -40,11 +41,53 @@ class TestBars:
         assert not rampup.bar_met(RampUpPhase.B, rows("." * 10 + "xx" + "." * 10))
 
     def test_phase_b_counts_the_live_run_not_the_best_one(self) -> None:
-        # A child who overspends the budget is starting again, and a block sized
-        # off their old best run would be sized for progress they have lost.
+        # A child who overspends the budget has lost what came before it, and a
+        # block sized off their old best run would be sized for progress they
+        # no longer have.
         spent = rows("." * 19 + "xx" + "." * 5)
         assert rampup.live_run(spent) == 5
         assert rampup.remaining(RampUpPhase.B, spent) == config.PHASE_B_ATTEMPTS - 5
+
+    def test_phase_b_counts_back_from_the_latest_press(self) -> None:
+        # A second miss is not a restart from zero: what lies between the last
+        # two misses still counts, with the latest miss as the one allowed.
+        assert rampup.live_run(rows("." * 12 + "x" + "." * 3 + "x" + "." * 5)) == 8
+        # And it buys no fresh allowance: twenty correct holding two misses is
+        # not the bar, however the misses fall.
+        assert not rampup.bar_met(RampUpPhase.B, rows("." * 10 + "x" + "." * 5 + "x" + "." * 5))
+        assert rampup.bar_met(RampUpPhase.B, rows("xx" + "." * 10 + "x" + "." * 10))
+
+    @pytest.mark.parametrize(
+        "gaps",
+        [
+            # The two histories alpha-plan #12j's repro found, as correct answers
+            # between misses. Counted forward from the first press, the capped
+            # read passed the first child at press 91 and the full read never
+            # did; the second child was the reverse.
+            [0, 4, 3, 10, 1, 4, 5, 2, 1, 16, 9, 9, 16],
+            [0, 5, 4, 12, 0, 0, 2, 14, 10, 5, 3, 3, 7, 14],
+        ],
+    )
+    def test_phase_b_does_not_depend_on_where_the_read_starts(self, gaps: list[int]) -> None:
+        history = rows("x".join("." * gap for gap in gaps))
+        assert len(history) > rampup.EVIDENCE_ROWS
+        for presses in range(1, len(history) + 1):
+            seen = history[:presses]
+            assert rampup.bar_met(RampUpPhase.B, seen) == rampup.bar_met(
+                RampUpPhase.B, seen[-rampup.EVIDENCE_ROWS :]
+            )
+
+    @pytest.mark.parametrize("seed", range(20))
+    def test_phase_b_reads_the_same_through_the_cap_for_any_history(self, seed: int) -> None:
+        rng = random.Random(seed)
+        history = rows("".join(rng.choice("....x") for _ in range(3 * rampup.EVIDENCE_ROWS)))
+        for presses in range(1, len(history) + 1):
+            seen = history[:presses]
+            capped = seen[-rampup.EVIDENCE_ROWS :]
+            # Equal until the bar is met, which is all a bar or a block size reads.
+            assert min(rampup.live_run(seen), config.PHASE_B_ATTEMPTS) == min(
+                rampup.live_run(capped), config.PHASE_B_ATTEMPTS
+            )
 
     def test_phase_c_wants_thirty_at_the_accuracy_bar(self) -> None:
         assert rampup.bar_met(RampUpPhase.C, rows(THROUGH_C))
@@ -92,6 +135,12 @@ class TestRecordedPhases:
         return store, profile, RampUpProgress(store, profile)
 
     def answer(self, store: FakeStore, profile: int, name: str, pattern: str) -> None:
+        # A solo key: its step reaches a phase the moment it passes the one
+        # before, so the phase it is in is begun before it is answered.
+        progress = RampUpProgress(store, profile)
+        member = progress.member(name)
+        if member.phase is not None and not member.begun:
+            progress.begin(member)
         for mark in pattern:
             store.upsert_key_stat(profile, name, mark == ".")
             store.append_attempt(profile, name, mark == ".")
@@ -105,7 +154,7 @@ class TestRecordedPhases:
         store, profile, progress = self.progress()
         self.answer(store, profile, "d", THROUGH_A)
         assert progress.advance(progress.member("d")) is True
-        assert store.completed_phases(profile, "d") == {"A": config.PHASE_A_STREAK}
+        assert store.phase_records(profile, "d") == {"A": PhaseRecord(0, config.PHASE_A_STREAK)}
         # Nothing further to record until the next bar is met.
         assert progress.advance(progress.member("d")) is False
 
@@ -140,9 +189,11 @@ class TestRecordedPhases:
         self.answer(store, profile, "d", ("." * 4 + "x") * 60)
         assert len(store.window_attempts(profile, "d")) == config.ATTEMPT_WINDOW
         assert progress.member("d").phase is RampUpPhase.C
-        assert store.completed_phases(profile, "d") == {
-            "A": config.PHASE_A_STREAK,
-            "B": config.PHASE_A_STREAK + config.PHASE_B_ATTEMPTS,
+        through_b = config.PHASE_A_STREAK + config.PHASE_B_ATTEMPTS
+        assert store.phase_records(profile, "d") == {
+            "A": PhaseRecord(0, config.PHASE_A_STREAK),
+            "B": PhaseRecord(config.PHASE_A_STREAK, through_b),
+            "C": PhaseRecord(through_b),
         }
 
     def test_a_finished_member_stays_finished_after_a_bad_patch(self) -> None:
@@ -173,6 +224,26 @@ class TestRecordedPhases:
         progress.advance(progress.member("d"))
         self.answer(store, profile, "k", "..")
         assert progress.step_phase(["d", "k"]) is RampUpPhase.A
+
+    def test_a_member_whose_step_has_not_reached_its_phase_is_not_judged(self) -> None:
+        # alpha-plan #12j, O1. `d` passed Phase A and its partner has not, so
+        # Phase B has not begun for it: whatever it answers while it waits is
+        # evidence for nothing.
+        store, profile, progress = self.progress()
+        self.answer(store, profile, "d", THROUGH_A)
+        assert progress.advance(progress.member("d")) is True
+        for mark in THROUGH_B + THROUGH_C:
+            store.upsert_key_stat(profile, "d", mark == ".")
+            store.append_attempt(profile, "d", mark == ".")
+        waiting = progress.member("d")
+        assert (waiting.phase, waiting.begun, waiting.evidence) == (RampUpPhase.B, False, ())
+        assert progress.advance(waiting) is False
+        assert store.phase_records(profile, "d") == {"A": PhaseRecord(0, config.PHASE_A_STREAK)}
+        # When the step gets there, the phase starts at the attempts it has now.
+        begun = progress.begin(waiting)
+        assert (begun.begun, begun.evidence) == (True, ())
+        assert store.phase_records(profile, "d")["B"] == PhaseRecord(waiting.attempts)
+        assert progress.member("d").evidence == ()
 
     def test_evidence_reads_are_bounded(self) -> None:
         # A keypress must not pull the whole 200-row window back out of SQLite.

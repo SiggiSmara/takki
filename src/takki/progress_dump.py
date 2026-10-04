@@ -111,21 +111,24 @@ def _print_ramp_up(conn: sqlite3.Connection, profile_id: int) -> None:
     if not steps:
         print("  (none)")
         return
-    passed: dict[str, str] = {}
-    for key_char, phase, attempts_at in conn.execute(
+    phases: dict[str, str] = {}
+    for key_char, phase, started, completed in conn.execute(
         """
-        SELECT key_char, phase, attempts_at FROM ramp_up_phases
+        SELECT key_char, phase, started_attempts, completed_attempts FROM ramp_up_phases
         WHERE profile_id = ?
         ORDER BY key_char, phase
         """,
         (profile_id,),
     ).fetchall():
-        passed[key_char] = f"{passed.get(key_char, '')}{phase}@{attempts_at} "
-    print(f"  {'step':>4} {'key':<4} {'pos':>3}  {'phases passed':<24} introduced_at")
+        # The key's lifetime attempt count where the phase began and where it
+        # was passed; an open end is the phase the key is in.
+        span = f"{phase}@{started}-{'' if completed is None else completed}"
+        phases[key_char] = f"{phases.get(key_char, '')}{span} "
+    print(f"  {'step':>4} {'key':<4} {'pos':>3}  {'phases (began-passed)':<30} introduced_at")
     for step, key_char, position, introduced_at in steps:
         print(
             f"  {step:>4} {key_char:<4} {position:>3}  "
-            f"{passed.get(key_char, '(none)'):<24} {introduced_at}"
+            f"{phases.get(key_char, '(none)'):<30} {introduced_at}"
         )
 
 

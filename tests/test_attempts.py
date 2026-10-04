@@ -234,6 +234,18 @@ class TestLatencyAndPredecessor:
         h.counter.press("f")
         assert [row.latency_ms for row in self.rows(h, "f")] == [2000]
 
+    def test_a_press_while_the_prompt_is_being_re_spoken_is_unmeasured(self) -> None:
+        # The earlier version's stamp must not survive into the re-speak, or the
+        # answer is timed across the whole timeout (alpha-plan #12j, O4).
+        h, clock = self.harness()
+        h.counter.start_prompt("f")
+        h.counter.mark_audible()
+        clock.advance(config.PROMPT_TIMEOUT_SECONDS)
+        h.counter.mark_inaudible()
+        clock.advance(0.30)
+        h.counter.press("f")
+        assert [row.latency_ms for row in self.rows(h, "f")] == [None]
+
     def test_a_retry_does_not_move_the_recorded_latency(self) -> None:
         # The row is written on the first press and ADR-027 counts nothing after
         # it, so the number stays the time the child took to answer first.

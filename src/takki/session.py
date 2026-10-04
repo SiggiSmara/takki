@@ -17,7 +17,7 @@ things are called in, and the three lifetimes those calls have:
 
 import queue
 import random
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 from takki import config
@@ -42,9 +42,9 @@ from takki.lesson.attempts import AttemptCounter, PressOutcome
 from takki.lesson.drills import DrillBlock, DrillGenerator
 from takki.lesson.introducer import (
     DEFAULT_STRATEGY,
-    IntroductionStep,
     IntroductionStrategy,
     KeyIntroducer,
+    KeyIntroduction,
     describe,
     resume_step,
 )
@@ -150,12 +150,14 @@ class SessionLoop:
         self._reprompt_due = False
         self._prompt_deadline: float | None = None
         self._reprompts = 0
-        # True from the moment an introduction script starts speaking until the
-        # prompt it precedes opens. The one thing a resume needs to know that
-        # the prompt state cannot tell it: with no prompt open, "a script was
-        # cut" and "a celebration was playing" look identical, and only the
-        # first should be re-spoken (ADR-012 § Recovery).
-        self._script_in_flight = False
+        # The introduction script that is speaking, from the moment it starts
+        # until the prompt it precedes opens. The one thing a resume needs to
+        # know that the prompt state cannot tell it: with no prompt open, "a
+        # script was cut" and "a celebration was playing" look identical, and
+        # only the first should be re-spoken (ADR-012 § Recovery).
+        self._script_in_flight: Sequence[KeyIntroduction] = ()
+        # A script found owed at startup, spoken at the first block boundary.
+        self._script_owed: Sequence[KeyIntroduction] = ()
 
     @property
     def prompt(self) -> str | None:
@@ -286,7 +288,7 @@ class SessionLoop:
         # The script has served its purpose the moment its prompt is audible.
         # `_advance` holds the prompt until the speaker is idle, so this clears
         # exactly when the script finished rather than when it was queued.
-        self._script_in_flight = False
+        self._script_in_flight = ()
         target = self._block.prompts[self._index]
         self._prompt = target
         self._first_press = True
@@ -294,10 +296,10 @@ class SessionLoop:
         self._attempts.start_prompt(target)
         self._speak_prompt()
 
-    def _speak_introduction(self, step: IntroductionStep) -> None:
-        """Speak a step's script and mark it in flight until its prompt opens."""
-        self._script_in_flight = True
-        self._speaker.say(*(describe(intro) for intro in step.keys))
+    def _speak_introduction(self, keys: Sequence[KeyIntroduction]) -> None:
+        """Speak a script and mark it in flight until its prompt opens."""
+        self._script_in_flight = keys
+        self._speaker.say(*(describe(intro) for intro in keys))
 
     def _speak_prompt(self) -> None:
         """Re-speak the open prompt, without touching its identity.
@@ -309,6 +311,7 @@ class SessionLoop:
         here, so there is exactly one place for that to be got wrong.
         """
         assert self._prompt is not None
+        self._attempts.mark_inaudible()
         self._speaker.letter(self._prompt)
         self._prompt_deadline = self._clock.monotonic() + config.PROMPT_TIMEOUT_SECONDS
 
@@ -336,6 +339,9 @@ class SessionLoop:
         # in the past on the way back and would spend a re-prompt the child
         # never sat through. Re-armed by the resume's own re-prompt.
         self._prompt_deadline = None
+        # The same reasoning for the answer's latency: a press over the resume
+        # announcement would otherwise be timed across the whole time away.
+        self._attempts.mark_inaudible()
 
     def _on_resume(self) -> None:
         """Carry-forward "D resume re-read": returning from PAUSED re-issues the prompt.
@@ -350,7 +356,7 @@ class SessionLoop:
             # spent before leaving is not held against them.
             self._reprompts = 0
             self._reprompt_due = True
-        elif self._script_in_flight and self._introducer is not None:
+        elif self._script_in_flight:
             # An introduction script was cut by the focus loss. Re-speak it
             # **whole**, not from where it stopped: the child task-switched
             # away and lost the context, and a script resuming mid-sentence
@@ -358,9 +364,7 @@ class SessionLoop:
             # rule `_advance` applies to prompts. Without this the remainder is
             # unrecoverable: `_on_reread` only reaches the script while no
             # prompt is open, and the prompt opens moments later.
-            step = self._introducer.last_step
-            if step is not None:
-                self._speak_introduction(step)
+            self._speak_introduction(self._script_in_flight)
 
     # ---- commands ------------------------------------------------------
 
@@ -429,7 +433,7 @@ class SessionLoop:
         assert self._introducer is not None
         step = self._introducer.last_step
         if step is not None:
-            self._speak_introduction(step)
+            self._speak_introduction(step.keys)
 
     def _on_restart(self) -> None:
         """ADR-012 § Recovery, in Layer 1: re-present the current unit.
@@ -476,6 +480,9 @@ class SessionLoop:
         """
         assert self._drills is not None
         self._celebrate(self._milestones().check())
+        if self._script_owed:
+            self._speak_introduction(self._script_owed)
+            self._script_owed = ()
         self._introduce()
         self.layer_two_unlocked = layer_two_unlocked(self._layout, self._states)
         self._block = _to_block(self._drills.next_block())
@@ -523,33 +530,34 @@ class SessionLoop:
         rows, so what this does is name the step and let the generator read it.
         """
         assert self._drills is not None and self._introducer is not None
-        newest = self._newest_step()
-        if not newest:
-            return
-        step = resume_step(self._layout, newest)
-        if self._drills.resume_step(step):
-            # The introducer did not emit this step, so it has to be told: the
-            # re-read key reads the script off `last_step`, and a resumed session
-            # would otherwise answer a blind child's Escape with silence.
-            self._introducer.remember(step)
-
-    def _newest_step(self) -> list[str]:
-        """The newest step's graphemes, in the step's own order (ADR-011 § The step ordinal).
-
-        By step ordinal, never by timestamp: a clock that has gone backwards --
-        an NTP correction, a manual fix, a boot with a dead battery --
-        would otherwise make an older step the newest one for good. Order is the
-        step's stored `position`, because ADR-023 puts the left-hand member first
-        and the drill generator reads `members[0]` as that member.
-        """
         introduced = self._store.introductions(self._profile_id)
         if not introduced:
-            # A cold profile, or one whose rows predate the `introductions`
-            # table: nothing to resume, and the introducer opens the session as
-            # it always did.
-            return []
+            # A cold profile: nothing to resume, and the introducer opens the
+            # session as it always did.
+            return
+        # By step ordinal, never by timestamp (ADR-011 § The step ordinal): a
+        # clock that has gone backwards -- an NTP correction, a manual fix, a
+        # boot with a dead battery -- would otherwise make an older step the
+        # newest one for good. Member order is the step's stored `position`,
+        # because ADR-023 puts the left-hand member first and the drill
+        # generator reads `members[0]` as that member.
         newest = max(entry.step for entry in introduced)
-        return [entry.key_char for entry in introduced if entry.step == newest]
+        members = [entry.key_char for entry in introduced if entry.step == newest]
+        active = self._states.active_keys()
+        # What the introducer's own `had` was when it emitted the step: the
+        # rebuilt script is derived from it (alpha-plan #12j).
+        had = active | {entry.key_char for entry in introduced}
+        step = resume_step(self._layout, members, had)
+        if not self._drills.resume_step(step):
+            return
+        # The introducer did not emit this step, so it has to be told: the
+        # re-read key reads the script off `last_step`, and a resumed session
+        # would otherwise answer a blind child's Escape with silence.
+        self._introducer.remember(step)
+        # A member of a pair that was never answered is owed its script again
+        # (ADR-023 § What the introducer remembers). Spoken by `_begin_block`,
+        # which keeps a celebration ahead of it.
+        self._script_owed = [intro for intro in step.keys if intro.grapheme not in active]
 
     def _introduce(self) -> None:
         assert self._drills is not None and self._introducer is not None
@@ -583,4 +591,4 @@ class SessionLoop:
             # spend that letter's teaching moment on nothing, and leaving the
             # loop with no ramp-up is correct: the next boundary moves on.
             return
-        self._speak_introduction(step)
+        self._speak_introduction(step.keys)

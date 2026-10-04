@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from dataclasses import replace
 from datetime import UTC, datetime
 
 from takki import config
@@ -6,6 +7,7 @@ from takki.persistence import (
     Attempt,
     Introduction,
     KeyStat,
+    PhaseRecord,
     Profile,
     WindowStats,
     utc_stamp,
@@ -36,7 +38,7 @@ class FakeStore:
         self._next_session_id = 1
         self._key_stats: dict[tuple[int, str], tuple[int, int, str | None]] = {}
         self._introductions: dict[tuple[int, str], Introduction] = {}
-        self._phases: dict[tuple[int, str, str], int] = {}
+        self._phases: dict[tuple[int, str, str], PhaseRecord] = {}
         self._key_attempts: dict[tuple[int, str], list[Attempt]] = {}
         self._milestones: dict[tuple[int, str], str] = {}
         self._cap = window_cap
@@ -138,6 +140,17 @@ class FakeStore:
             )
         return step
 
+    def begin_phase(
+        self,
+        profile_id: int,
+        key_char: str,
+        phase: str,
+        attempts_at: int,
+        started_at: str | None = None,
+    ) -> None:
+        _stamp(started_at)  # Checked as the real store checks it; the fake has no reader for it.
+        self._phases.setdefault((profile_id, key_char, phase), PhaseRecord(attempts_at))
+
     def record_phase(
         self,
         profile_id: int,
@@ -146,13 +159,19 @@ class FakeStore:
         attempts_at: int,
         completed_at: str | None = None,
     ) -> None:
-        _stamp(completed_at)  # Checked as the real store checks it; the fake has no reader for it.
-        self._phases.setdefault((profile_id, key_char, phase), attempts_at)
+        _stamp(completed_at)
+        record = self._phases.get((profile_id, key_char, phase))
+        if record is None:
+            raise ValueError(f"phase {phase!r} of {key_char!r} was never begun")
+        if record.completed_attempts is None:
+            self._phases[(profile_id, key_char, phase)] = replace(
+                record, completed_attempts=attempts_at
+            )
 
-    def completed_phases(self, profile_id: int, key_char: str) -> dict[str, int]:
+    def phase_records(self, profile_id: int, key_char: str) -> dict[str, PhaseRecord]:
         return {
-            phase: attempts_at
-            for (pid, name, phase), attempts_at in self._phases.items()
+            phase: record
+            for (pid, name, phase), record in self._phases.items()
             if pid == profile_id and name == key_char
         }
 

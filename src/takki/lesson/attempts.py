@@ -67,6 +67,10 @@ class AttemptCounter:
         if self._clock is not None:
             self._prompted_at = self._clock.monotonic()
 
+    def mark_inaudible(self) -> None:
+        """The prompt is being re-spoken, or the child has left: time nothing from the old version."""
+        self._prompted_at = None
+
     def press(self, char: str, *, repeat: bool = False) -> PressOutcome:
         if self._target is None:
             return PressOutcome.IGNORED

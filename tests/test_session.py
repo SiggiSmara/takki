@@ -16,7 +16,7 @@ from takki.language import WordSource
 from takki.lesson.drills import DrillGenerator
 from takki.lesson.introducer import KeyIntroducer, describe, introduction_sequence
 from takki.lesson.rampup import RampUpProgress
-from takki.persistence import Profile
+from takki.persistence import PhaseRecord, Profile
 from takki.platform.layout import Layout, build_en
 from takki.session import Celebrant, InboundEvent, SessionLoop
 from tests.fakes.fake_clock import FakeClock
@@ -672,6 +672,87 @@ class TestPausedRoundTrip:
         assert harness.store.window_stats(harness.profile.id, "f").attempt_count == 0
 
 
+class TestLatency:
+    """ADR-011's `latency_ms` through the whole loop: letter, SpeechFinished, press.
+
+    Letters go through the worker here, as in production, because the stamp is
+    taken when the letter's own SpeechFinished arrives.
+    """
+
+    def heard(self, harness: Harness) -> str:
+        """Open a prompt and let its letter finish sounding."""
+        target = harness.opened()
+        harness.pump()
+        harness.loop.tick()
+        return target
+
+    def latencies(self, harness: Harness, target: str) -> list[int | None]:
+        rows = harness.store.window_attempts(harness.profile.id, target)
+        return [row.latency_ms for row in rows]
+
+    def test_an_answer_is_timed_from_the_end_of_the_letter(self) -> None:
+        harness = Harness(synthetic_letters=True)
+        harness.loop.start()
+        target = self.heard(harness)
+        harness.press(target)
+        harness.loop.tick()
+        assert self.latencies(harness, target) == [int(KEYSTROKE_SECONDS * 1000)]
+
+    def test_an_answer_after_a_re_spoken_letter_is_timed_from_that_letter(self) -> None:
+        harness = Harness(synthetic_letters=True)
+        harness.loop.start()
+        target = self.heard(harness)
+        harness.clock.advance(config.PROMPT_TIMEOUT_SECONDS)
+        harness.loop.tick()
+        harness.pump()
+        harness.loop.tick()
+        harness.press(target)
+        harness.loop.tick()
+        assert self.latencies(harness, target) == [int(KEYSTROKE_SECONDS * 1000)]
+
+    def test_an_answer_during_a_re_spoken_letter_is_unmeasured(self) -> None:
+        # alpha-plan #12j, O4: the first version's stamp was left standing, so
+        # this press was recorded as the timeout plus the keystroke.
+        harness = Harness(synthetic_letters=True)
+        harness.loop.start()
+        target = self.heard(harness)
+        harness.clock.advance(config.PROMPT_TIMEOUT_SECONDS)
+        harness.loop.tick()
+        # The re-spoken letter is queued at the worker and has not finished.
+        harness.press(target)
+        harness.loop.tick()
+        assert self.latencies(harness, target) == [None]
+
+    def test_an_answer_to_a_letter_that_failed_to_play_is_unmeasured(self) -> None:
+        # alpha-plan #12j, O4: a letter the child never heard is not the start
+        # of a reaction to it.
+        harness = Harness(synthetic_letters=True)
+        harness.engine.fail_on = {"f", "j"}
+        harness.loop.start()
+        target = self.heard(harness)
+        assert harness.engine.failed == [target]
+        harness.press(target)
+        harness.loop.tick()
+        assert self.latencies(harness, target) == [None]
+
+    def test_an_answer_over_the_resume_announcement_is_unmeasured(self) -> None:
+        # The letter heard before the pause is not what this press answers, and
+        # the time away is not reaction time.
+        harness = Harness(synthetic_letters=True)
+        harness.loop.start()
+        target = self.heard(harness)
+        harness.focus.lose_focus()
+        harness.loop.tick()
+        harness.pump()
+        harness.clock.advance(config.PROMPT_TIMEOUT_SECONDS * 3)
+        harness.focus.gain_focus()
+        harness.loop.tick()
+        # "Back in Takki." is still queued, so the prompt has not been re-spoken.
+        harness.press(target)
+        harness.loop.tick()
+        assert self.latencies(harness, target) == [None]
+
+
 class TestRecoveryKeys:
     def test_a_re_read_tap_re_speaks_the_open_prompt(self) -> None:
         harness = Harness()
@@ -947,6 +1028,7 @@ class TestIntroductionPacingAcrossSessions:
                 config.PHASE_B_ATTEMPTS,
                 config.PHASE_C_ATTEMPTS,
             ):
+                progress.begin(progress.member(name))
                 for _ in range(bar):
                     store.upsert_key_stat(profile.id, name, True)
                     store.append_attempt(profile.id, name, True)
@@ -970,15 +1052,21 @@ class TestIntroductionPacingAcrossSessions:
         first.loop.start()
         first.answer(2 * config.PHASE_A_STREAK)
         first.loop.stop()
-        assert store.completed_phases(profile.id, "f") == {"A": config.PHASE_A_STREAK}
-        assert store.completed_phases(profile.id, "j") == {"A": config.PHASE_A_STREAK}
+        # Both members passed Phase A on their tenth press, which is when the
+        # step reached Phase B for both.
+        in_b = {
+            "A": PhaseRecord(0, config.PHASE_A_STREAK),
+            "B": PhaseRecord(config.PHASE_A_STREAK),
+        }
+        assert store.phase_records(profile.id, "f") == in_b
+        assert store.phase_records(profile.id, "j") == in_b
 
         second = Harness(store=store, profile=profile)
         second.loop.start()
         second.answer(4)
         # Still the same step, and no new letter -- the ramp-up is in Phase B.
         assert {i.key_char for i in store.introductions(profile.id)} == {"f", "j"}
-        assert store.completed_phases(profile.id, "f") == {"A": config.PHASE_A_STREAK}
+        assert store.phase_records(profile.id, "f") == in_b
 
     def test_a_resumed_session_can_still_re_read_the_introduction(self) -> None:
         # The re-read key reads the script off the introducer's `last_step`, and a
@@ -1004,6 +1092,116 @@ class TestIntroductionPacingAcrossSessions:
         remembered = introducer.last_step
         assert remembered is not None
         assert [intro.grapheme for intro in remembered.keys] == ["f", "j"]
+        # And it is the script the child first heard, location clause included
+        # (alpha-plan #12j, O2): the resumed step used to be rebuilt without it.
+        assert [describe(intro) for intro in remembered.keys] == intro_lines(("f", "j"))
+
+    def test_a_resumed_later_step_keeps_its_location_clauses(self) -> None:
+        # Stage 0's second step is located against the first, so its rebuild
+        # depends on what the child had before it.
+        store = FakeStore()
+        profile = store.create_profile("kid")
+        finish(store, profile.id, [("f", "j")])
+        first = Harness(store=store, profile=profile)
+        first.loop.start()
+        first.answer(6)
+        first.loop.stop()
+        assert steps_of(store, profile.id) == [("f", "j"), ("r", "u")]
+
+        second = Harness(store=store, profile=profile)
+        second.loop.start()
+        second.settle()
+        introducer = second.loop._introducer  # pyright: ignore[reportPrivateUsage]
+        assert introducer is not None
+        remembered = introducer.last_step
+        assert remembered is not None
+        assert [describe(intro) for intro in remembered.keys] == intro_lines(("r", "u"))
+        assert all("Reach" in line for line in intro_lines(("r", "u")))
+        # Both members were answered, so nothing is spoken again.
+        assert second.engine.spoken == []
+
+    def test_a_half_answered_pair_is_resumed_as_a_pair(self) -> None:
+        # alpha-plan #12j, O3. The session used to refuse the resume, and the
+        # introducer then re-emitted the unanswered member alone: a different
+        # script, a solo ramp-up for it, and no ramp-up at all for the other.
+        store = FakeStore()
+        profile = store.create_profile("kid")
+        first = Harness(store=store, profile=profile)
+        first.loop.start()
+        (answered,) = first.answer(1)
+        first.loop.stop()
+        unanswered = first.partner(answered)
+
+        second = Harness(store=store, profile=profile)
+        second.loop.start()
+        second.settle()
+        # The script again for the member that was never answered, and only it,
+        # in the words the child first heard.
+        lines: dict[str, str] = dict(zip("fj", intro_lines(("f", "j")), strict=True))
+        assert second.engine.spoken == [lines[unanswered]]
+        drills = second.loop._drills  # pyright: ignore[reportPrivateUsage]
+        assert drills is not None and drills.ramp_up is not None
+        assert drills.ramp_up.graphemes == ("f", "j")
+        introducer = second.loop._introducer  # pyright: ignore[reportPrivateUsage]
+        assert introducer is not None and introducer.last_step is not None
+        assert [describe(i) for i in introducer.last_step.keys] == intro_lines(("f", "j"))
+        # Nothing new was introduced, and the pair is drilled as a pair.
+        assert steps_of(store, profile.id) == [("f", "j")]
+        asked = Counter(second.answer(2 * config.PHASE_A_STREAK))
+        assert asked == {"f": config.PHASE_A_STREAK, "j": config.PHASE_A_STREAK}
+
+    def half_answered(self) -> tuple[FakeStore, Profile, str]:
+        """One profile whose first pair was quit after one answer; returns the script still owed."""
+        store = FakeStore()
+        profile = store.create_profile("kid")
+        first = Harness(store=store, profile=profile)
+        first.loop.start()
+        (answered,) = first.answer(1)
+        first.loop.stop()
+        lines: dict[str, str] = dict(zip("fj", intro_lines(("f", "j")), strict=True))
+        return store, profile, lines[first.partner(answered)]
+
+    def test_a_cut_resume_script_is_respoken_as_it_was(self) -> None:
+        # The script owed to one member, cut by a focus loss, comes back as that
+        # script and not as the whole step's.
+        store, profile, owed = self.half_answered()
+        second = Harness(store=store, profile=profile)
+        second.loop.start()
+        second.loop.tick()  # the script is queued and has not been spoken
+        second.focus.lose_focus()
+        second.loop.tick()
+        second.pump()
+        second.focus.gain_focus()
+        second.settle()
+        assert second.engine.spoken == [
+            "Paused. Press Alt+Tab to come back to Takki.",
+            "Back in Takki.",
+            owed,
+        ]
+
+    def test_a_celebration_comes_before_the_script_owed_on_resume(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # `_begin_block`'s order holds at session start too: what the child
+        # finished is celebrated before they are told about a letter.
+        from takki.lesson.milestones import MilestoneDetector
+
+        store, profile, owed = self.half_answered()
+
+        class OneRung(MilestoneDetector):
+            fired = False
+
+            def check(self) -> tuple[str, ...]:
+                if OneRung.fired:
+                    return ()
+                OneRung.fired = True
+                return ("anchor",)
+
+        monkeypatch.setattr("takki.session.MilestoneDetector", OneRung)
+        second = Harness(store=store, profile=profile, celebrant=_rung_line)
+        second.loop.start()
+        second.settle()
+        assert second.engine.spoken == ["rung anchor", owed]
 
     def test_a_step_introduced_and_never_answered_is_introduced_again(self) -> None:
         # ADR-023 § What the introducer remembers: the script is that letter's
@@ -1057,8 +1255,11 @@ def finish(
             for _ in range(config.KNOWN_MIN_ATTEMPTS):
                 store.upsert_key_stat(profile_id, name, True, DAY_ONE)
                 store.append_attempt(profile_id, name, True, DAY_ONE)
+            began = 0
             for phase, attempts_at in marks.items():
+                store.begin_phase(profile_id, name, phase, began)
                 store.record_phase(profile_id, name, phase, attempts_at)
+                began = attempts_at
             if name in known:
                 store.upsert_key_stat(profile_id, name, True, DAY_TWO)
                 store.append_attempt(profile_id, name, True, DAY_TWO)

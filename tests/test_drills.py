@@ -29,7 +29,7 @@ from takki.lesson.introducer import (
 )
 from takki.lesson.key_state import KeyStates
 from takki.lesson.rampup import RampUpProgress
-from takki.persistence import WindowStats
+from takki.persistence import PhaseRecord, WindowStats
 from takki.platform.layout import Layout, build_en, build_is
 from tests.fakes.fake_clock import FakeClock
 from tests.fakes.fake_store import FakeStore
@@ -255,6 +255,112 @@ class TestPhaseB:
         assert fixture.generator.ramp_up.phase is RampUpPhase.B
         press(fixture, "d", 1)
         assert fixture.generator.ramp_up.phase is RampUpPhase.C
+
+
+class TestPairAdvancesTogether:
+    """alpha-plan #12j, O1: a member is judged only for the phase its step is in.
+
+    A member that met its bar first kept being judged for the *next* phase on
+    its own evidence, while the step was still drilling this one's content, and
+    could record the whole ramp-up without ever being given Phase B or C.
+    """
+
+    @pytest.mark.parametrize(
+        ("pair", "stage", "active"),
+        [(("d", "k"), CURRICULUM, ANCHOR_SIX), (("f", "j"), STAGE_0, "")],
+    )
+    def test_a_member_ahead_of_its_partner_records_nothing_while_it_waits(
+        self, pair: tuple[str, str], stage: int, active: str
+    ) -> None:
+        # The review's own scenario: one member right every time, the other
+        # wrong every time, for eight blocks.
+        fixture = Fixture(active=active)
+        ahead, behind = pair
+        fixture.generator.begin_step(make_step(fixture.layout, *pair, stage=stage))
+        began_at = fixture.store.key_stats(fixture.profile).get(ahead)
+        start = began_at.attempt_count if began_at is not None else 0
+        for _ in range(8):
+            block = fixture.generator.next_block()
+            assert {len(unit) for unit in block.units} == {1}
+            for grapheme in block.prompts:
+                fixture.attempt(grapheme, grapheme == ahead)
+            assert fixture.generator.ramp_up is not None
+            assert fixture.generator.ramp_up.phase is RampUpPhase.A
+        assert fixture.store.phase_records(fixture.profile, ahead) == {
+            "A": PhaseRecord(start, start + config.PHASE_A_STREAK)
+        }
+        assert fixture.store.phase_records(fixture.profile, behind) == {"A": PhaseRecord(start)}
+
+    def test_the_next_phase_starts_for_both_when_the_slower_member_arrives(self) -> None:
+        fixture = Fixture(active=ANCHOR_SIX)
+        fixture.generator.begin_step(make_step(fixture.layout, "d", "k"))
+        waited = 7
+        press(fixture, "d", config.PHASE_A_STREAK + waited)
+        press(fixture, "k", config.PHASE_A_STREAK)
+        ramp = fixture.generator.ramp_up
+        assert ramp is not None and ramp.phase is RampUpPhase.B
+        # `d` starts Phase B where the step did, not where it passed Phase A:
+        # the presses it made while waiting were on Phase A's content.
+        d_start = config.PHASE_A_STREAK + waited
+        assert fixture.store.phase_records(fixture.profile, "d") == {
+            "A": PhaseRecord(0, config.PHASE_A_STREAK),
+            "B": PhaseRecord(d_start),
+        }
+        assert fixture.store.phase_records(fixture.profile, "k") == {
+            "A": PhaseRecord(0, config.PHASE_A_STREAK),
+            "B": PhaseRecord(config.PHASE_A_STREAK),
+        }
+        assert ramp.progress["d"].evidence == ()
+        # So all of Phase B's twenty are still owed, and the twentieth passes it.
+        press(fixture, "d", config.PHASE_B_ATTEMPTS - 1)
+        assert fixture.store.phase_records(fixture.profile, "d")["B"] == PhaseRecord(d_start)
+        press(fixture, "d", 1)
+        assert fixture.store.phase_records(fixture.profile, "d")["B"] == PhaseRecord(
+            d_start, d_start + config.PHASE_B_ATTEMPTS
+        )
+        # And `d` now waits again: Phase C has not begun for it.
+        assert "C" not in fixture.store.phase_records(fixture.profile, "d")
+        assert ramp.phase is RampUpPhase.B
+
+    def test_a_block_is_sized_by_the_member_still_in_the_phase(self) -> None:
+        # The member that is ahead owes this phase nothing. It used to be sized
+        # as if it owed the whole of the next one.
+        fixture = Fixture(active=ANCHOR_SIX)
+        fixture.generator.begin_step(make_step(fixture.layout, "d", "k"))
+        owed = 3
+        press(fixture, "d", config.PHASE_A_STREAK)
+        press(fixture, "k", config.PHASE_A_STREAK - owed)
+        block = fixture.generator.next_block()
+        assert Counter(block.units) == {("d",): owed, ("k",): owed}
+
+    def test_a_start_that_was_never_written_is_written_on_the_next_read(self) -> None:
+        # A session killed after the last member's completion was recorded and
+        # before the next phase was begun. The next session begins it.
+        fixture = Fixture(active=ANCHOR_SIX)
+        step = make_step(fixture.layout, "d", "k")
+        fixture.generator.begin_step(step)
+        press(fixture, "d", config.PHASE_A_STREAK)
+        for _ in range(config.PHASE_A_STREAK):
+            fixture.store.upsert_key_stat(fixture.profile, "k", True)
+            fixture.store.append_attempt(fixture.profile, "k", True)
+        assert fixture.progress.advance(fixture.progress.member("k")) is True
+        assert "B" not in fixture.store.phase_records(fixture.profile, "k")
+
+        restarted = DrillGenerator(
+            fixture.layout,
+            fixture.source,
+            fixture.states,
+            fixture.clock,
+            random.Random(7),
+            RampUpProgress(fixture.store, fixture.profile),
+        )
+        assert restarted.resume_step(step) is True
+        assert restarted.ramp_up is not None and restarted.ramp_up.phase is RampUpPhase.B
+        for name in ("d", "k"):
+            assert fixture.store.phase_records(fixture.profile, name) == {
+                "A": PhaseRecord(0, config.PHASE_A_STREAK),
+                "B": PhaseRecord(config.PHASE_A_STREAK),
+            }
 
 
 class TestPhaseCAndD:
