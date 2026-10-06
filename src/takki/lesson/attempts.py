@@ -1,9 +1,9 @@
 from collections.abc import Callable
 from enum import Enum, auto
-from statistics import median
 
 from takki import config
 from takki.clock import Clock
+from takki.lesson.letter_lengths import LetterLengths
 from takki.persistence import Store
 
 
@@ -25,6 +25,7 @@ class AttemptCounter:
         now: Callable[[], str] | None = None,
         clock: Clock | None = None,
         heard_min_ms: int = config.HEARD_MIN_MS,
+        lengths: LetterLengths | None = None,
     ) -> None:
         self._store = store
         self._profile_id = profile_id
@@ -38,14 +39,11 @@ class AttemptCounter:
         self._sent_at: float | None = None
         # Whether the answer is still an answer to that first hearing.
         self._timed = False
-        # The letter now sounding and when it was sent, for its length.
-        self._playing: tuple[str, float] | None = None
-        # How long each letter took from being sent to finishing, over the
-        # playbacks that ran to the end in this session. A length belongs to a
-        # voice and a rate, so it is not carried between sessions.
-        self._lengths: dict[str, list[int]] = {}
-        # What the store's rows say each letter took, read once per letter.
-        self._stored: dict[str, int | None] = {}
+        # Whether a press cuts the letter now sounding (ADR-012).
+        self._cuttable = True
+        # Each letter's usual length, for ADR-011's `after_letter_ms`. None
+        # leaves that column NULL.
+        self._lengths = lengths
         self._timeouts = 0
         # The letter now out failed, or the child has left: it was not heard.
         self._unheard = False
@@ -74,50 +72,29 @@ class AttemptCounter:
         self._counted = False
         self._sent_at = None
         self._timed = False
-        self._playing = None
         self._timeouts = 0
         self._unheard = False
-        if self._clock is not None and target not in self._stored:
-            # Read here and not in `press`: the caller plays the cue right
-            # after a press, and a window read ahead of it is audible delay.
-            self._stored[target] = next(
-                (
-                    row.latency_ms - row.after_letter_ms
-                    for row in reversed(
-                        self._store.window_attempts(
-                            self._profile_id, target, limit=config.SPEED_SAMPLE
-                        )
-                    )
-                    if row.latency_ms is not None and row.after_letter_ms is not None
-                ),
-                None,
-            )
+        if self._lengths is not None:
+            # The letter's stored lengths are read on the first ask. Asked here
+            # and not only in `press`: the caller plays the cue right after a
+            # press, and a store read ahead of it is audible delay.
+            self._lengths.usual(target)
 
-    def letter_sent(self) -> None:
+    def letter_sent(self, *, cuttable: bool = True) -> None:
         """The open prompt's letter has been sent to be spoken, for the first time or again."""
         if self._clock is None or self._target is None:
             return
-        now = self._clock.monotonic()
-        self._playing = (self._target, now)
+        self._cuttable = cuttable
         self._unheard = False
         # Only the first hearing is timed: a child answering a re-spoken letter
         # has had the whole wait before it to find the key (ADR-011).
         self._timed = self._sent_at is None
         if self._sent_at is None:
-            self._sent_at = now
-
-    def letter_finished(self) -> None:
-        """The letter ran to its end: one more measurement of how long it takes."""
-        if self._clock is None or self._playing is None:
-            return
-        letter, sent_at = self._playing
-        self._playing = None
-        self._lengths.setdefault(letter, []).append(_ms(self._clock.monotonic() - sent_at))
+            self._sent_at = self._clock.monotonic()
 
     def mark_inaudible(self) -> None:
         """The letter failed, or the child has left: the answer is not timed from it."""
         self._timed = False
-        self._playing = None
         self._unheard = True
 
     def timed_out(self) -> None:
@@ -149,11 +126,13 @@ class AttemptCounter:
                 # The next row's predecessor is what the child was given,
                 # whether or not it left a row of its own.
                 self._previous = target
-            else:
+            elif self._cuttable:
                 # The press cut the letter before it could sound (ADR-012), so
                 # the child has heard nothing yet. The letter the caller sends
                 # next is the first one they can hear: the floor and the
-                # timing both start again from it.
+                # timing both start again from it. A letter that cannot be cut
+                # runs on and is heard, so the one sent after it is a letter
+                # spoken again, and the answer to that is not timed (ADR-011).
                 self._sent_at = None
             return PressOutcome.CORRECT if correct else PressOutcome.WRONG
         ts = self._now() if self._now is not None else None
@@ -164,7 +143,11 @@ class AttemptCounter:
         else:
             self._counted = True
             latency_ms = elapsed_ms if self._timed else None
-            length = None if latency_ms is None else self._usual_length(target)
+            # Read at the press and not when the prompt opened: a letter that
+            # ran to its end before this press has been measured since.
+            length = (
+                None if latency_ms is None or self._lengths is None else self._lengths.usual(target)
+            )
             self._store.upsert_key_stat(self._profile_id, target, correct, ts)
             self._store.append_attempt(
                 self._profile_id,
@@ -188,22 +171,6 @@ class AttemptCounter:
         if self._clock is None or self._sent_at is None:
             return None
         return _ms(self._clock.monotonic() - self._sent_at)
-
-    def _usual_length(self, letter: str) -> int | None:
-        """How long this letter takes to say, for ADR-011's `after_letter_ms`, or None if unknown."""
-        # Anything measured in this session comes first, because a length
-        # belongs to a voice and a rate: the letter's own playbacks, and for a
-        # letter that never runs to its end (a press cuts it, ADR-012) the
-        # median over the letters that did. What the letter's stored rows say
-        # is only for a session that has measured nothing yet. A stored length
-        # may be another voice's, or itself borrowed, and used ahead of today's
-        # measurements it would be written back and never corrected.
-        own = self._lengths.get(letter)
-        if own:
-            return round(median(own))
-        if self._lengths:
-            return round(median(median(lengths) for lengths in self._lengths.values()))
-        return self._stored.get(letter)
 
 
 def _ms(seconds: float) -> int:

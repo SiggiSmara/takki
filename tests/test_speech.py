@@ -2,7 +2,8 @@ import queue
 
 from takki.audio.synthetic_letters import SyntheticLetterAudioSource
 from takki.audio.tts_worker import SpeechFinished, TTSWorker
-from takki.speech import Speaker
+from takki.speech import FinishedLetter, Letter, Speaker
+from tests.fakes.fake_clock import FakeClock
 from tests.fakes.fake_letters import FakeLetterAudioSource
 from tests.fakes.fake_tts import FakeTTSEngine
 from tests.fakes.waiting_queue import WaitingCommandQueue, install
@@ -17,12 +18,34 @@ def build() -> Built:
     outbound: queue.Queue[SpeechFinished] = queue.Queue()
     worker = TTSWorker(lambda: engine, outbound)
     letters = FakeLetterAudioSource()
-    return Speaker(worker, letters), worker, engine, letters, outbound
+    return Speaker(worker, letters, FakeClock()), worker, engine, letters, outbound
 
 
 def drain(worker: TTSWorker) -> None:
     while not worker.idle:
         worker.run_one()
+
+
+Worked = tuple[Speaker, TTSWorker, FakeTTSEngine, FakeClock, "queue.Queue[SpeechFinished]"]
+
+
+def through_worker(fail_on: set[str] | None = None) -> Worked:
+    """Letters through the worker, as in production, so each one reports its finish."""
+    engine = FakeTTSEngine(fail_on)
+    outbound: queue.Queue[SpeechFinished] = queue.Queue()
+    worker = TTSWorker(lambda: engine, outbound)
+    clock = FakeClock()
+    return (
+        Speaker(worker, SyntheticLetterAudioSource(worker), clock),
+        worker,
+        engine,
+        clock,
+        outbound,
+    )
+
+
+SCRIPT = ("New letter:", Letter("f"), "Use your left index finger.")
+FIRST_LETTER_ID = 1_000_000
 
 
 class TestSequencing:
@@ -128,7 +151,7 @@ class TestInterrupt:
         outbound: queue.Queue[SpeechFinished] = queue.Queue()
         worker = TTSWorker(lambda: engine, outbound)
         letters = SyntheticLetterAudioSource(worker)
-        speaker = Speaker(worker, letters)
+        speaker = Speaker(worker, letters, FakeClock())
         speaker.say("rung one", "rung two", interruptible=False)
         speaker.letter("f")
         drain(worker)
@@ -159,7 +182,7 @@ class TestInterrupt:
         engine = FakeTTSEngine()
         outbound: queue.Queue[SpeechFinished] = queue.Queue()
         worker = TTSWorker(lambda: engine, outbound)
-        speaker = Speaker(worker, SyntheticLetterAudioSource(worker))
+        speaker = Speaker(worker, SyntheticLetterAudioSource(worker), FakeClock())
         speaker.letter("f")
         drain(worker)
         assert speaker.on_finished(outbound.get_nowait()) is False
@@ -169,8 +192,8 @@ class TestInterrupt:
     def test_a_completed_letter_is_reported_as_finished(self) -> None:
         speaker, _, _, _, _ = build()
         speaker.letter("f")
-        assert speaker.on_finished(SpeechFinished(1_000_000, "completed")) is False
-        assert speaker.letter_status == "completed"
+        assert speaker.on_finished(SpeechFinished(FIRST_LETTER_ID, "completed")) is False
+        assert speaker.take_finished_letter() == FinishedLetter("f", "completed", 0.0)
 
     def test_a_letter_that_failed_is_not_reported_as_finished(self) -> None:
         # The child did not hear it, so nothing may be timed from it
@@ -179,13 +202,13 @@ class TestInterrupt:
         engine = FakeTTSEngine(fail_on={"f"})
         outbound: queue.Queue[SpeechFinished] = queue.Queue()
         worker = TTSWorker(lambda: engine, outbound)
-        speaker = Speaker(worker, SyntheticLetterAudioSource(worker))
+        speaker = Speaker(worker, SyntheticLetterAudioSource(worker), FakeClock())
         speaker.letter("f")
         drain(worker)
         event = outbound.get_nowait()
         assert event.status == "failed"
         assert speaker.on_finished(event) is False
-        assert speaker.letter_status == "failed"
+        assert speaker.take_finished_letter() == FinishedLetter("f", "failed", 0.0)
         # No longer outstanding either: there is nothing left to stop.
         speaker.interrupt()
         assert engine.stopped == 0
@@ -193,8 +216,8 @@ class TestInterrupt:
     def test_a_cancelled_letter_is_not_reported_as_finished(self) -> None:
         speaker, _, _, _, _ = build()
         speaker.letter("f")
-        assert speaker.on_finished(SpeechFinished(1_000_000, "cancelled")) is False
-        assert speaker.letter_status == "cancelled"
+        assert speaker.on_finished(SpeechFinished(FIRST_LETTER_ID, "cancelled")) is False
+        assert speaker.take_finished_letter() == FinishedLetter("f", "cancelled", 0.0)
 
     def test_a_second_letter_supersedes_an_outstanding_one(self) -> None:
         # The worker serialises utterances, so a letter queued behind an
@@ -209,6 +232,147 @@ class TestInterrupt:
         speaker.interrupt()
         assert engine.stopped == 0
         assert letters.stopped == 0
+
+
+class TestLetterInASequence:
+    """ADR-012 § A letter inside a sequence (alpha-plan #12l)."""
+
+    def test_the_script_is_three_utterances_released_one_at_a_time(self) -> None:
+        speaker, worker, engine, _, outbound = through_worker()
+        speaker.say(*SCRIPT)
+        heard: list[list[str]] = []
+        while speaker.busy:
+            drain(worker)
+            heard.append(list(engine.spoken))
+            assert speaker.on_finished(outbound.get_nowait()) is True
+            assert outbound.empty()
+        assert heard == [
+            ["New letter:"],
+            ["New letter:", "f"],
+            ["New letter:", "f", "Use your left index finger."],
+        ]
+
+    def test_the_letter_goes_to_the_letter_source_and_the_rest_to_the_worker(self) -> None:
+        speaker, worker, engine, letters, outbound = build()
+        speaker.say(*SCRIPT)
+        drain(worker)
+        speaker.on_finished(outbound.get_nowait())
+        assert (engine.spoken, letters.played) == (["New letter:"], ["f"])
+        # Held on the letter: the rest is not spoken over it.
+        assert worker.idle
+        assert speaker.busy
+        assert speaker.on_finished(SpeechFinished(FIRST_LETTER_ID, "completed")) is True
+        drain(worker)
+        assert engine.spoken == ["New letter:", "Use your left index finger."]
+
+    def test_the_letter_is_timed_from_its_own_sending_to_its_finish(self) -> None:
+        speaker, worker, _, clock, outbound = through_worker()
+        speaker.say(*SCRIPT)
+        drain(worker)
+        clock.advance(2.0)
+        speaker.on_finished(outbound.get_nowait())
+        # The lead is not a letter, and its two seconds are not the letter's.
+        assert speaker.take_finished_letter() is None
+        drain(worker)
+        clock.advance(0.5)
+        speaker.on_finished(outbound.get_nowait())
+        assert speaker.take_finished_letter() == FinishedLetter("f", "completed", 0.5)
+
+    def test_the_rest_of_the_script_reports_no_letter(self) -> None:
+        speaker, worker, _, _, outbound = through_worker()
+        speaker.say(*SCRIPT)
+        for _ in range(2):
+            drain(worker)
+            speaker.on_finished(outbound.get_nowait())
+        speaker.take_finished_letter()
+        drain(worker)
+        assert speaker.on_finished(outbound.get_nowait()) is True
+        assert speaker.take_finished_letter() is None
+        assert speaker.busy is False
+
+    def test_an_interrupt_during_the_letter_stops_it_and_drops_the_rest(self) -> None:
+        speaker, worker, engine, letters, outbound = build()
+        speaker.say(*SCRIPT)
+        drain(worker)
+        speaker.on_finished(outbound.get_nowait())
+        speaker.interrupt()
+        # Stopped where it was played, once, and not through the worker.
+        assert (letters.stopped, engine.stopped) == (1, 0)
+        assert speaker.busy is False
+        # Its cancellation comes back late and is no length.
+        assert speaker.on_finished(SpeechFinished(FIRST_LETTER_ID, "cancelled")) is False
+        assert speaker.take_finished_letter() is None
+        drain(worker)
+        assert engine.spoken == ["New letter:"]
+
+    def test_a_letter_that_failed_releases_the_rest_and_is_no_length(self) -> None:
+        speaker, worker, engine, _, outbound = through_worker(fail_on={"f"})
+        speaker.say(*SCRIPT)
+        for _ in range(3):
+            drain(worker)
+            assert speaker.on_finished(outbound.get_nowait()) is True
+        assert engine.spoken == ["New letter:", "Use your left index finger."]
+        assert speaker.take_finished_letter() == FinishedLetter("f", "failed", 0.0)
+
+    def test_a_letter_that_must_be_heard_survives_an_interrupt(self) -> None:
+        # ADR-012 § A letter with no measured length: the prompt's letter,
+        # played so that the press which answers it cannot cut it.
+        speaker, _, engine, letters, _ = build()
+        speaker.say(Letter("f"), interruptible=False)
+        speaker.interrupt()
+        assert (letters.played, letters.stopped, engine.stopped) == (["f"], 0, 0)
+        assert speaker.busy
+        assert speaker.on_finished(SpeechFinished(FIRST_LETTER_ID, "completed")) is True
+        assert speaker.take_finished_letter() == FinishedLetter("f", "completed", 0.0)
+        assert speaker.busy is False
+
+    def test_a_prompts_letter_is_timed_the_same_way(self) -> None:
+        speaker, worker, _, clock, outbound = through_worker()
+        speaker.letter("f")
+        drain(worker)
+        clock.advance(0.5)
+        assert speaker.on_finished(outbound.get_nowait()) is False
+        assert speaker.take_finished_letter() == FinishedLetter("f", "completed", 0.5)
+
+
+class TestAnnouncementBehindSpeechThatIsLeftToFinish:
+    """ADR-012: an announcement replaces what it supersedes, also when it has to wait."""
+
+    def test_a_second_announcement_replaces_the_first_behind_a_letter_that_must_be_heard(
+        self,
+    ) -> None:
+        # Found by the review of 2026-10-06: focus lost and regained while the
+        # letter ran on. Both announcements queued, and the child was told
+        # they had left after they were back.
+        speaker, worker, engine, letters, _ = build()
+        speaker.say(Letter("f"), interruptible=False)
+        speaker.announce("Paused.")
+        speaker.announce("Back in Takki.")
+        assert letters.stopped == 0
+        assert speaker.on_finished(SpeechFinished(FIRST_LETTER_ID, "completed")) is True
+        drain(worker)
+        assert engine.spoken == ["Back in Takki."]
+
+    def test_a_script_queued_behind_a_celebration_is_dropped_by_an_announcement(self) -> None:
+        # Left queued it was spoken in full while Takki was in the background,
+        # and the announcement came after it.
+        speaker, worker, engine, _, outbound = build()
+        speaker.say("rung", interruptible=False)
+        speaker.say("New letter:", "Use your left index finger.")
+        speaker.announce("Paused.")
+        while speaker.busy:
+            drain(worker)
+            speaker.on_finished(outbound.get_nowait())
+        assert engine.spoken == ["rung", "Paused."]
+
+    def test_a_celebration_queued_behind_a_celebration_is_kept(self) -> None:
+        speaker, worker, engine, _, outbound = build()
+        speaker.say("rung one", "rung two", interruptible=False)
+        speaker.announce("Paused.")
+        while speaker.busy:
+            drain(worker)
+            speaker.on_finished(outbound.get_nowait())
+        assert engine.spoken == ["rung one", "rung two", "Paused."]
 
 
 class TestLateStop:
@@ -253,7 +417,7 @@ class TestLateStop:
         engine = FakeTTSEngine()
         worker = TTSWorker(lambda: engine, queue.Queue[SpeechFinished]())
         commands = install(worker)
-        speaker = Speaker(worker, SyntheticLetterAudioSource(worker))
+        speaker = Speaker(worker, SyntheticLetterAudioSource(worker), FakeClock())
         speaker.say("New letter: F.", "Use your left index finger.")
         worker.run_one()
         commands.while_waiting = lambda: speaker.announce("paused")
@@ -267,7 +431,7 @@ class TestLateStop:
         engine = FakeTTSEngine()
         worker = TTSWorker(lambda: engine, queue.Queue[SpeechFinished]())
         commands = install(worker)
-        speaker = Speaker(worker, SyntheticLetterAudioSource(worker))
+        speaker = Speaker(worker, SyntheticLetterAudioSource(worker), FakeClock())
         speaker.letter(char)
         worker.run_one()
         return speaker, engine, commands, worker

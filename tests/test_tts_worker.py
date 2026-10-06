@@ -85,7 +85,9 @@ class TestTTSWorkerRunOne:
         worker = TTSWorker(FakeTTSEngine, outbound)
         letters = SyntheticLetterAudioSource(worker)
         focus_events: queue.Queue[FocusEvent | Quit] = queue.Queue()
-        focus = FocusModel(FakeFocusSource(focus_events), Speaker(worker, letters), FakeClock())
+        focus = FocusModel(
+            FakeFocusSource(focus_events), Speaker(worker, letters, FakeClock()), FakeClock()
+        )
         letters.play("a")
         focus.handle(FocusLost())
         letters.play("b")

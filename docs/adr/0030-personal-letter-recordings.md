@@ -77,6 +77,7 @@ CREATE TABLE letter_recordings (
 - **New audio-menu surface** ("my letters") — walk-the-alphabet review, re-record, mute/reactivate, defer.
 - **Config knobs** ([ADR-025](0025-configuration-system.md)): `personal_letter_recording_enabled` (default on); re-offer policy (default: offer once at end of session, thereafter menu-only).
 - The **Personal** layer of [ADR-003](0003-text-to-speech.md) is now populated by a concrete workflow; Base and Synthetic are unchanged.
+- **The clip player must report each letter's finish** *(added 2026-10-06, alpha-plan #12l)*: an id from `play()` and a `SpeechFinished` for it when the clip ends. The introduction holds the rest of its script on that finish, and the letter's length is measured by it ([ADR-012](0012-audio-feedback-design.md), "A letter inside a sequence"). A recording replaces the synthetic letter under the same voice id, so its lengths must not be mixed with the synthetic ones: the player has to name what it plays as a different voice in `letter_lengths` ([ADR-011](0011-persistence-and-state.md)), or the median is taken over two different sounds.
 
 ### Open questions
 

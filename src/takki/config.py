@@ -43,6 +43,11 @@ RESUME_HOLD_MS = 1000
 # § Re-acquire), so expiry is the only failure signal there is.
 RESUME_REQUEST_TIMEOUT_MS = 1500
 
+# Speaking rate as ADR-003's `tts_rate`, a Piper length_scale: 1.0 is the
+# voice's own pace and higher is slower. Fixed in Alpha. A letter's measured
+# length is stored under it (ADR-011 § letter_lengths).
+TTS_RATE = 1.0
+
 # Sound cue asset paths (relative to bundle assets/sounds/). Alpha has no
 # bundled assets and no takki_config.yaml override chain -- these paths are
 # inert until the Beta config loader resolves them (ADR-012).
@@ -97,6 +102,10 @@ EVIDENCE_HALF_LIFE_DAYS = 30.0
 # can be an answer to it. Deliberately no higher: a blind listener may know the
 # letter from its first sound, and a press that early is judged by being right.
 HEARD_MIN_MS = 250
+# ADR-011 § letter_lengths. A letter's usual length is the median over this many
+# of its latest playbacks that ran to the end, under the voice and rate in use.
+# The store keeps no more than this per letter, voice and rate.
+LETTER_LENGTH_SAMPLE = 10
 # ADR-027 § Known has a speed term. A key is slow when its median answer takes
 # more than this many times the child's own baseline: the median over `f`, `j`
 # and every other key that meets the three floors above. A ratio, never

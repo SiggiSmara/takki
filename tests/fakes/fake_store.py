@@ -31,7 +31,12 @@ def _local_day(stamp: str) -> str:
 
 
 class FakeStore:
-    def __init__(self, *, window_cap: int = config.ATTEMPT_WINDOW) -> None:
+    def __init__(
+        self,
+        *,
+        window_cap: int = config.ATTEMPT_WINDOW,
+        length_cap: int = config.LETTER_LENGTH_SAMPLE,
+    ) -> None:
         self._profiles: dict[int, Profile] = {}
         self._next_profile_id = 1
         self._sessions: dict[int, tuple[int, str, str | None]] = {}
@@ -41,7 +46,9 @@ class FakeStore:
         self._phases: dict[tuple[int, str, str], PhaseRecord] = {}
         self._key_attempts: dict[tuple[int, str], list[Attempt]] = {}
         self._milestones: dict[tuple[int, str], str] = {}
+        self._letter_lengths: dict[tuple[int, str, str, float], list[int]] = {}
         self._cap = window_cap
+        self._length_cap = length_cap
 
     def create_profile(
         self,
@@ -236,6 +243,23 @@ class FakeStore:
         # made the fake agree with a real store that was itself wrong.
         attempts = self._key_attempts.get((profile_id, key_char), [])
         return list(attempts if limit is None else attempts[-limit:])
+
+    def append_letter_lengths(
+        self,
+        profile_id: int,
+        voice: str,
+        rate: float,
+        lengths: Sequence[tuple[str, int]],
+        recorded_at: str | None = None,
+    ) -> None:
+        _stamp(recorded_at)
+        for key_char, ms in lengths:
+            kept = self._letter_lengths.setdefault((profile_id, key_char, voice, rate), [])
+            kept.append(ms)
+            del kept[: -self._length_cap]
+
+    def letter_lengths(self, profile_id: int, key_char: str, voice: str, rate: float) -> list[int]:
+        return list(self._letter_lengths.get((profile_id, key_char, voice, rate), []))
 
     def record_milestone(
         self,

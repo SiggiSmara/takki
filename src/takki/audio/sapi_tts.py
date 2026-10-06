@@ -19,6 +19,7 @@ import threading
 import time
 from typing import Any
 
+from takki import config
 from takki.audio.tts import SpeechOutputError
 
 if sys.platform == "win32":
@@ -49,10 +50,11 @@ _SPF_PURGE_BEFORE_SPEAK = 2
 # It is the audio-stop latency and it is worker time, never the main thread's.
 _POLL_MS = 10
 
-# ADR-003 § SAPI fallback rate mapping: round((1.0 - length_scale) * 10) with
-# the default length_scale of 1.0. Pinned rather than inherited, because the
-# inherited value is whatever the machine's SAPI default happens to be.
-_RATE = 0
+# ADR-003 § SAPI fallback rate mapping, from the length_scale that a letter's
+# measured length is stored under (ADR-011 § letter_lengths). Pinned rather
+# than inherited, because the inherited value is whatever the machine's SAPI
+# default happens to be.
+_RATE = round((1.0 - config.TTS_RATE) * 10)
 
 # The longest an utterance may take before we stop waiting for SAPI to say it
 # finished. Not error handling for something that cannot happen: a GitHub

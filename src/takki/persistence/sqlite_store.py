@@ -84,6 +84,18 @@ CREATE TABLE IF NOT EXISTS key_attempts (
 
 CREATE INDEX IF NOT EXISTS idx_ka_profile_key
     ON key_attempts (profile_id, key_char, attempted_at, correct);
+
+CREATE TABLE IF NOT EXISTS letter_lengths (
+    profile_id  INTEGER NOT NULL REFERENCES profiles(id),
+    key_char    TEXT    NOT NULL,
+    voice       TEXT    NOT NULL,
+    rate        REAL    NOT NULL,
+    length_ms   INTEGER NOT NULL,
+    recorded_at TEXT    NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_ll_profile_key
+    ON letter_lengths (profile_id, key_char, voice, rate);
 """
 
 
@@ -123,7 +135,13 @@ _PROFILE_SELECT = """
 
 
 class SqliteStore:
-    def __init__(self, path: str, *, window_cap: int = config.ATTEMPT_WINDOW) -> None:
+    def __init__(
+        self,
+        path: str,
+        *,
+        window_cap: int = config.ATTEMPT_WINDOW,
+        length_cap: int = config.LETTER_LENGTH_SAMPLE,
+    ) -> None:
         self.conn = sqlite3.connect(path)
         # The engine writes key_attempts per keystroke mid-drill; WAL +
         # synchronous=NORMAL avoids an fsync stall on every keypress.
@@ -133,6 +151,7 @@ class SqliteStore:
         self.conn.executescript(_SCHEMA)
         self._migrate()
         self._cap = window_cap
+        self._length_cap = length_cap
 
     def _migrate(self) -> None:
         phase_columns = {
@@ -487,6 +506,49 @@ class SqliteStore:
             )
             for r in rows
         ]
+
+    def append_letter_lengths(
+        self,
+        profile_id: int,
+        voice: str,
+        rate: float,
+        lengths: Sequence[tuple[str, int]],
+        recorded_at: str | None = None,
+    ) -> None:
+        ts = _stamp(recorded_at)
+        self.conn.executemany(
+            """
+            INSERT INTO letter_lengths (profile_id, key_char, voice, rate, length_ms, recorded_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            [(profile_id, key_char, voice, rate, ms, ts) for key_char, ms in lengths],
+        )
+        for key_char in {key_char for key_char, _ in lengths}:
+            self.conn.execute(
+                """
+                DELETE FROM letter_lengths
+                WHERE profile_id = ? AND key_char = ? AND voice = ? AND rate = ?
+                  AND rowid NOT IN (
+                    SELECT rowid FROM letter_lengths
+                    WHERE profile_id = ? AND key_char = ? AND voice = ? AND rate = ?
+                    ORDER BY rowid DESC
+                    LIMIT ?
+                )
+                """,
+                (profile_id, key_char, voice, rate) * 2 + (self._length_cap,),
+            )
+        self.conn.commit()
+
+    def letter_lengths(self, profile_id: int, key_char: str, voice: str, rate: float) -> list[int]:
+        rows = self.conn.execute(
+            """
+            SELECT length_ms FROM letter_lengths
+            WHERE profile_id = ? AND key_char = ? AND voice = ? AND rate = ?
+            ORDER BY rowid ASC
+            """,
+            (profile_id, key_char, voice, rate),
+        ).fetchall()
+        return [cast(int, r[0]) for r in rows]
 
     def record_milestone(
         self,

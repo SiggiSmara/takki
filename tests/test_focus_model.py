@@ -44,8 +44,8 @@ class Harness:
         # stop() cancels a core sequence's utterance and the core, seeing a
         # SpeechFinished for the id it holds, advances the sequence it meant to
         # clear (alpha session 11).
-        self.speaker = Speaker(self.speech, self.letters)
         self.clock = FakeClock()
+        self.speaker = Speaker(self.speech, self.letters, self.clock)
         self.model = FocusModel(self.focus, self.speaker, self.clock, bindings)
         self.commands: list[LessonCommand] = []
 

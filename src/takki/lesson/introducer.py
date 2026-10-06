@@ -532,15 +532,15 @@ _COMPOSITE_SCRIPTS: dict[str, str] = {
 _NUMBER_WORDS: tuple[str, ...] = ("zero", "one", "two", "three", "four")
 
 
-def describe(introduction: KeyIntroduction) -> str:
-    parts = [f"New letter: {_spoken(introduction.grapheme)}."]
+def describe(introduction: KeyIntroduction) -> tuple[str, str]:
+    """The script on either side of the letter, which the caller speaks as itself (ADR-023)."""
     if introduction.is_composite:
-        parts.extend(_composite_clauses(introduction))
+        rest = _composite_clauses(introduction)
     else:
-        parts.append(f"Use your {FINGER_NAMES[introduction.finger]}.")
+        rest = [f"Use your {FINGER_NAMES[introduction.finger]}."]
         if introduction.location is not None:
-            parts.append(f"Reach {describe_location(introduction.location)}.")
-    return " ".join(parts)
+            rest.append(f"Reach {describe_location(introduction.location)}.")
+    return "New letter:", " ".join(rest)
 
 
 def _composite_clauses(introduction: KeyIntroduction) -> list[str]:

@@ -52,6 +52,9 @@ WRITES: dict[str, Callable[[Store, int, str], object]] = {
     ),
     "append_attempt": lambda s, pid, at: s.append_attempt(pid, "f", True, attempted_at=at),
     "record_milestone": lambda s, pid, at: s.record_milestone(pid, "anchor", achieved_at=at),
+    "append_letter_lengths": lambda s, pid, at: s.append_letter_lengths(
+        pid, "voice", 1.0, [("f", 450)], recorded_at=at
+    ),
 }
 
 
@@ -686,7 +689,62 @@ class TestPhaseRecords:
         assert utc_stamp(completed_at) == completed_at
 
 
+class TestLetterLengths:
+    """ADR-011 § letter_lengths: full playbacks, kept per letter, voice and rate."""
+
+    def test_lengths_come_back_oldest_first(self, any_store: Store) -> None:
+        p = any_store.create_profile("Alice", "en")
+        any_store.append_letter_lengths(p.id, "voice", 1.0, [("f", 450), ("j", 500)])
+        any_store.append_letter_lengths(p.id, "voice", 1.0, [("f", 470), ("f", 430)])
+        assert any_store.letter_lengths(p.id, "f", "voice", 1.0) == [450, 470, 430]
+        assert any_store.letter_lengths(p.id, "j", "voice", 1.0) == [500]
+
+    def test_a_letter_never_measured_has_none(self, any_store: Store) -> None:
+        p = any_store.create_profile("Alice", "en")
+        assert any_store.letter_lengths(p.id, "f", "voice", 1.0) == []
+
+    def test_a_length_belongs_to_one_voice_one_rate_and_one_profile(self, any_store: Store) -> None:
+        a = any_store.create_profile("Alice", "en")
+        b = any_store.create_profile("Bob", "en")
+        any_store.append_letter_lengths(a.id, "voice", 1.0, [("f", 450)])
+        assert any_store.letter_lengths(a.id, "f", "other", 1.0) == []
+        assert any_store.letter_lengths(a.id, "f", "voice", 1.2) == []
+        assert any_store.letter_lengths(b.id, "f", "voice", 1.0) == []
+
+    @pytest.mark.parametrize("kind", ["sqlite", "fake"])
+    def test_only_the_newest_are_kept_per_letter_voice_and_rate(self, kind: str) -> None:
+        store: Store = (
+            SqliteStore(":memory:", length_cap=3) if kind == "sqlite" else FakeStore(length_cap=3)
+        )
+        p = store.create_profile("Alice", "en")
+        store.append_letter_lengths(p.id, "other", 1.0, [("f", 900)])
+        store.append_letter_lengths(p.id, "voice", 1.2, [("f", 800)])
+        store.append_letter_lengths(p.id, "voice", 1.0, [("j", 700)])
+        store.append_letter_lengths(p.id, "voice", 1.0, [("f", ms) for ms in (1, 2, 3, 4)])
+        store.append_letter_lengths(p.id, "voice", 1.0, [("f", 5)])
+        assert store.letter_lengths(p.id, "f", "voice", 1.0) == [3, 4, 5]
+        # A voice the child may come back to keeps what was measured under it.
+        assert store.letter_lengths(p.id, "f", "other", 1.0) == [900]
+        assert store.letter_lengths(p.id, "f", "voice", 1.2) == [800]
+        assert store.letter_lengths(p.id, "j", "voice", 1.0) == [700]
+
+
 class TestMigration:
+    def test_a_database_from_before_letter_lengths_needs_no_migration(self, tmp_path: Path) -> None:
+        # alpha-plan #12l adds a table and changes no other. A letter with no
+        # stored length is played to its end once (ADR-012), so the table
+        # fills by itself and nothing is refused.
+        path = str(tmp_path / "takki.sqlite")
+        SqliteStore(path).conn.close()
+        old = sqlite3.connect(path)
+        old.executescript("DROP TABLE letter_lengths;")
+        old.commit()
+        old.close()
+        store = SqliteStore(path)
+        p = store.create_profile("Alice", "en")
+        store.append_letter_lengths(p.id, "voice", 1.0, [("f", 450)])
+        assert store.letter_lengths(p.id, "f", "voice", 1.0) == [450]
+
     def test_a_database_whose_latency_has_the_old_meaning_is_refused_at_open(
         self, tmp_path: Path
     ) -> None:

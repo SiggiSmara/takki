@@ -50,12 +50,13 @@ from takki.lesson.introducer import (
     resume_step,
 )
 from takki.lesson.key_state import KeyStates
+from takki.lesson.letter_lengths import LetterLengths
 from takki.lesson.milestones import MilestoneDetector
 from takki.lesson.progression import layer_two_unlocked, room_for_step
 from takki.lesson.rampup import RampUpProgress
 from takki.persistence import Store
 from takki.platform.layout import Layout
-from takki.speech import Speaker
+from takki.speech import Letter, Speaker
 
 InboundEvent = KeyEvent | FocusEvent | SpeechFinished | Quit
 
@@ -102,8 +103,10 @@ class SessionLoop:
         keys: KeyEventStream,
         speech: TTSWorker,
         letters: LetterAudioSource,
+        voice: str,
         cues: SoundCuePlayer,
         rng: random.Random,
+        rate: float = config.TTS_RATE,
         bindings: KeyBindings | None = None,
         strategy: IntroductionStrategy = DEFAULT_STRATEGY,
         celebrant: Celebrant | None = None,
@@ -127,8 +130,9 @@ class SessionLoop:
         self._now = now
         self._max_keys_in_progress = max_keys_in_progress
         self._states = KeyStates(store, profile_id, now=now, bump_keys=home_anchor_keys(layout))
-        self._attempts = AttemptCounter(store, profile_id, now, clock)
-        self._speaker = Speaker(speech, letters)
+        self._lengths = LetterLengths(store, profile_id, voice, rate)
+        self._attempts = AttemptCounter(store, profile_id, now, clock, lengths=self._lengths)
+        self._speaker = Speaker(speech, letters, clock)
         # The gate speaks through the same Speaker the loop does: one object
         # knows what is audible, so the loop can hold a prompt behind a pause
         # or resume announcement instead of speaking over it.
@@ -200,6 +204,7 @@ class SessionLoop:
         self.running = False
 
     def shutdown(self) -> None:
+        self._lengths.flush()
         if self._session_id is not None:
             self._store.end_session(self._session_id)
             self._session_id = None
@@ -233,11 +238,14 @@ class SessionLoop:
             return
         if isinstance(event, SpeechFinished):
             self._speaker.on_finished(event)
-            status = self._speaker.letter_status
-            self._speaker.letter_status = None
-            if status == "completed":
-                self._attempts.letter_finished()
-            elif status is not None:
+            letter = self._speaker.take_finished_letter()
+            if letter is None:
+                pass
+            elif letter.status == "completed":
+                # Heard to its end, in a script or a prompt: one more
+                # measurement of how long this letter takes.
+                self._lengths.record(letter.char, round(letter.seconds * 1000))
+            else:
                 # The child did not hear it, so their answer is not timed.
                 self._attempts.mark_inaudible()
         else:
@@ -302,7 +310,15 @@ class SessionLoop:
     def _speak_introduction(self, keys: Sequence[KeyIntroduction]) -> None:
         """Speak a script and mark it in flight until its prompt opens."""
         self._script_in_flight = keys
-        self._speaker.say(*(describe(intro) for intro in keys))
+        parts: list[str | Letter] = []
+        for intro in keys:
+            # The letter is its own utterance, through the source a prompt
+            # uses: the child hears the sound they are then asked for, and it
+            # is the one place every letter runs to its end and can be timed
+            # (ADR-023 § The key introduction script).
+            lead, rest = describe(intro)
+            parts += [lead, Letter(intro.grapheme), rest]
+        self._speaker.say(*parts)
 
     def _speak_prompt(self) -> None:
         """Re-speak the open prompt, without touching its identity.
@@ -314,8 +330,17 @@ class SessionLoop:
         here, so there is exactly one place for that to be got wrong.
         """
         assert self._prompt is not None
-        self._speaker.letter(self._prompt)
-        self._attempts.letter_sent()
+        cuttable = self._lengths.usual(self._prompt) is not None
+        if cuttable:
+            self._speaker.letter(self._prompt)
+        else:
+            # No length under this voice and rate: the introduction's letter
+            # was cut, or the voice has changed since. Played so that a press
+            # cannot cut it, once, which measures it. The press still counts
+            # and gets its cue; `_advance` holds the next prompt until the
+            # letter ends (ADR-012 § A letter with no measured length).
+            self._speaker.say(Letter(self._prompt), interruptible=False)
+        self._attempts.letter_sent(cuttable=cuttable)
         self._prompt_deadline = self._clock.monotonic() + config.PROMPT_TIMEOUT_SECONDS
 
     def _on_timeout(self) -> None:
@@ -433,9 +458,14 @@ class SessionLoop:
         if self._prompt is not None:
             self._reprompt_due = True
             return
-        # Nothing open -- between blocks, or an introduction script is still
-        # speaking. ADR-023 § What an introduction step is: the re-read key is
-        # how the child re-hears that script.
+        if not self._script_in_flight:
+            # Nothing open and no script speaking: a celebration, or the next
+            # prompt held behind a letter that cannot be cut. That prompt is
+            # spoken the moment the letter ends, and an old introduction said
+            # in the middle of a block is not what the key was pressed for.
+            return
+        # ADR-023 § What an introduction step is: the re-read key is how the
+        # child re-hears a script that is still speaking.
         assert self._introducer is not None
         step = self._introducer.last_step
         if step is not None:
@@ -485,6 +515,7 @@ class SessionLoop:
         `third`.
         """
         assert self._drills is not None
+        self._lengths.flush()
         # Held: each of these asks about every Active key, and nothing here
         # writes an attempt, so one read of each window serves them all.
         with self._states.held():

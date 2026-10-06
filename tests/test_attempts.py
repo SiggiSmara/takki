@@ -1,5 +1,6 @@
 from takki import config
 from takki.lesson.attempts import AttemptCounter, PressOutcome
+from takki.lesson.letter_lengths import LetterLengths
 from takki.persistence import Attempt, KeyStat, WindowStats
 from tests.fakes.fake_clock import FakeClock
 from tests.fakes.fake_store import FakeStore
@@ -201,7 +202,10 @@ class TimedHarness(Harness):
     def __init__(self) -> None:
         super().__init__()
         self.clock = FakeClock()
-        self.counter = AttemptCounter(self.store, self.profile.id, self.stamp, self.clock)
+        self.lengths = LetterLengths(self.store, self.profile.id, "voice", config.TTS_RATE)
+        self.counter = AttemptCounter(
+            self.store, self.profile.id, self.stamp, self.clock, lengths=self.lengths
+        )
 
     def rows(self, key_char: str) -> list[Attempt]:
         return self.store.window_attempts(self.profile.id, key_char)
@@ -214,7 +218,7 @@ class TimedHarness(Harness):
         self.counter.start_prompt(target)
         self.counter.letter_sent()
         self.clock.advance(seconds)
-        self.counter.letter_finished()
+        self.lengths.record(target, round(seconds * 1000))
 
     def answer(self, target: str, after: float) -> PressOutcome:
         """Open a prompt and answer it correctly `after` seconds from the sending."""
@@ -261,56 +265,41 @@ class TestLatency:
             h.answer("f", after)
         assert h.timing("f") == [(400, None, 0), (900, None, 0), (3000, None, 0)]
 
-    def test_a_length_from_an_earlier_session_is_used_until_this_one_has_its_own(self) -> None:
-        # The store's rows carry it: a row's two timings differ by the length
-        # its letter had. A new counter is a new session.
+    def test_a_letter_that_ended_before_the_press_is_counted_from_that_end(self) -> None:
+        # alpha-plan #12l: the length is read at the press, so the playback
+        # this very prompt ran to its end is already part of it.
         h = TimedHarness()
-        h.hear("f")
+        h.counter.start_prompt("f")
+        h.counter.letter_sent()
+        h.clock.advance(1.5)
+        h.lengths.record("f", 1200)
         h.counter.press("f")
-        later = AttemptCounter(h.store, h.profile.id, h.stamp, h.clock)
-        later.start_prompt("f")
-        later.letter_sent()
-        h.clock.advance(0.5)
-        later.press("f")
-        assert h.timing("f")[-1] == (500, 500 - LETTER_MS, 0)
-        # The voice is slower today, and today's measurement is what counts.
-        later.start_prompt("f")
-        later.letter_sent()
-        h.clock.advance(2.0)
-        later.letter_finished()
-        later.press("f")
-        assert h.timing("f")[-1] == (2000, 0, 0)
-
-    def test_this_sessions_measurement_of_another_letter_beats_a_stored_length(self) -> None:
-        # Found by the review of 2026-10-04. `r` is always answered early, so
-        # its stored length was borrowed, under a slower voice. Used ahead of
-        # what today's voice measured, it would be written back on every row
-        # and never corrected.
-        h = TimedHarness()
-        stamp = "2026-01-01T09:00:00+00:00"
-        h.store.append_attempt(h.profile.id, "r", True, stamp, 900, None, after_letter_ms=-400)
-        h.hear("f", 0.8)
-        h.counter.press("f")
-        h.answer("r", 0.5)
-        assert h.timing("r")[-1] == (500, 500 - 800, 0)
+        assert h.timing("f") == [(1500, 300, 0)]
 
     def test_a_press_reads_nothing_back_from_the_store(self) -> None:
-        # The caller plays the cue straight after a press, and a window read
-        # ahead of it is audible delay. The stored length is read when the
+        # The caller plays the cue straight after a press, and a store read
+        # ahead of it is audible delay. The stored lengths are read when the
         # prompt opens, once per letter per session.
-        reads: list[tuple[str, int | None]] = []
+        reads: list[str] = []
 
         class CountingStore(FakeStore):
+            def letter_lengths(
+                self, profile_id: int, key_char: str, voice: str, rate: float
+            ) -> list[int]:
+                reads.append(key_char)
+                return super().letter_lengths(profile_id, key_char, voice, rate)
+
             def window_attempts(
                 self, profile_id: int, key_char: str, limit: int | None = None
             ) -> list[Attempt]:
-                reads.append((key_char, limit))
+                reads.append(key_char)
                 return super().window_attempts(profile_id, key_char, limit)
 
         store = CountingStore()
         profile = store.create_profile("Alice")
         clock = FakeClock()
-        counter = AttemptCounter(store, profile.id, None, clock)
+        lengths = LetterLengths(store, profile.id, "voice", config.TTS_RATE)
+        counter = AttemptCounter(store, profile.id, None, clock, lengths=lengths)
         for target in ("f", "j", "f"):
             counter.start_prompt(target)
             counter.letter_sent()
@@ -318,16 +307,17 @@ class TestLatency:
             clock.advance(1.0)
             counter.press(target)
             assert reads == before
-        assert reads == [("f", config.SPEED_SAMPLE), ("j", config.SPEED_SAMPLE)]
+        assert reads == ["f", "j"]
 
-    def test_a_stored_length_is_the_letters_latest(self) -> None:
+    def test_no_length_is_read_back_out_of_older_attempt_rows(self) -> None:
+        # Before alpha-plan #12l a row's two timings were subtracted to recover
+        # the length it was written with, which could be another voice's or
+        # another letter's. Only a measured playback is a length now.
         h = TimedHarness()
         stamp = "2026-01-01T09:00:00+00:00"
-        h.store.append_attempt(h.profile.id, "f", True, stamp, 900, None, after_letter_ms=-100)
         h.store.append_attempt(h.profile.id, "f", True, stamp, 900, None, after_letter_ms=-300)
-        h.store.append_attempt(h.profile.id, "f", True, stamp, 900, None)
         h.answer("f", 0.5)
-        assert h.timing("f")[-1] == (500, 500 - 1200, 0)
+        assert h.timing("f")[-1] == (500, None, 0)
 
     def test_the_usual_length_is_the_median_over_the_letters_finished_playbacks(self) -> None:
         h = TimedHarness()
@@ -337,29 +327,16 @@ class TestLatency:
         h.answer("f", 0.5)
         assert h.timing("f")[-1] == (500, 500 - 1200, 0)
 
-    def test_a_letter_never_heard_to_the_end_borrows_the_median_over_the_others(self) -> None:
-        # A press cuts the letter (ADR-012), so a key the child always answers
-        # early has no length of its own. Each other letter counts once, however
-        # often it was played.
+    def test_a_letter_never_heard_to_the_end_borrows_no_other_letters_length(self) -> None:
+        # Until alpha-plan #12l it took the median over the letters that had
+        # one, and the row could not say the length was borrowed.
         h = TimedHarness()
-        for seconds in (1.1, 1.1, 1.1):
-            h.hear("f", seconds)
-            h.counter.press("f")
+        h.hear("f", 1.1)
+        h.counter.press("f")
         h.hear("j", 1.5)
         h.counter.press("j")
         h.answer("r", 0.5)
-        assert h.timing("r") == [(500, 500 - 1300, 0)]
-
-    def test_a_re_spoken_letter_is_one_more_measurement_of_its_length(self) -> None:
-        h = TimedHarness()
-        h.hear("f", 1.2)
-        h.clock.advance(config.PROMPT_TIMEOUT_SECONDS)
-        h.counter.letter_sent()
-        h.clock.advance(1.0)
-        h.counter.letter_finished()
-        h.counter.press("f")
-        h.answer("f", 0.5)
-        assert h.timing("f")[-1] == (500, 500 - 1100, 0)
+        assert h.timing("r") == [(500, None, 0)]
 
     def test_an_answer_to_a_re_spoken_letter_is_unmeasured(self) -> None:
         # alpha-plan #12j, O4: the whole wait before the re-speak is not the
@@ -383,21 +360,6 @@ class TestLatency:
         h.clock.advance(0.5)
         h.counter.press("f")
         assert h.timing("f")[-1] == (None, None, 0)
-
-    def test_a_failed_letter_is_not_a_measurement_of_its_length(self) -> None:
-        h = TimedHarness()
-        h.hear("f")
-        h.counter.press("f")
-        h.counter.start_prompt("f")
-        h.counter.letter_sent()
-        h.clock.advance(0.1)
-        h.counter.mark_inaudible()
-        h.clock.advance(5.0)
-        # A stale finish for the failed letter must not be read as a length.
-        h.counter.letter_finished()
-        h.counter.press("f")
-        h.answer("f", 0.5)
-        assert h.timing("f")[-1] == (500, 500 - LETTER_MS, 0)
 
     def test_timeouts_before_the_first_press_are_counted_on_the_row(self) -> None:
         # The slowest answers are the ones a re-spoken prompt leaves untimed,
@@ -461,7 +423,6 @@ class TestLatency:
         h = Harness()
         h.counter.start_prompt("f")
         h.counter.letter_sent()
-        h.counter.letter_finished()
         h.counter.press("f")
         row = h.store.window_attempts(h.profile.id, "f")[0]
         assert (row.latency_ms, row.after_letter_ms) == (None, None)
@@ -532,6 +493,21 @@ class TestTooEarlyToHaveHeard:
         assert h.counter.press("k") is PressOutcome.WRONG
         assert h.counter.counted is False
         assert h.store.key_stats(h.profile.id) == {}
+
+    def test_an_early_wrong_press_on_a_letter_that_cannot_be_cut_restarts_nothing(self) -> None:
+        # Found by the review of 2026-10-06. The letter runs on and the child
+        # hears all of it, so the one sent after it is a letter spoken again:
+        # the answer is an attempt, counted from the first sending, and untimed.
+        h = TimedHarness()
+        h.counter.start_prompt("f")
+        h.counter.letter_sent(cuttable=False)
+        h.clock.advance(0.10)
+        assert h.counter.press("j") is PressOutcome.WRONG
+        h.clock.advance(1.0)
+        h.counter.letter_sent()
+        h.clock.advance(0.10)
+        assert h.counter.press("f") is PressOutcome.CORRECT
+        assert h.timing("f") == [(None, None, 0)]
 
     def test_the_floor_runs_from_the_first_sending_whatever_is_re_spoken(self) -> None:
         # A re-read does not give the child a second chance to be too early,

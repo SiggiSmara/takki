@@ -434,11 +434,14 @@ class TestScript:
 
     def test_adr_023s_worked_example_verbatim(self) -> None:
         e = next(k for k in flat(sequence(build_en())) if k.grapheme == "e")
-        assert describe(e) == "New letter: E. Use your left middle finger. Reach one row up from D."
+        assert describe(e) == (
+            "New letter:",
+            "Use your left middle finger. Reach one row up from D.",
+        )
 
     def test_the_first_key_drops_the_location_clause(self) -> None:
         f = flat(sequence(build_en()))[0]
-        assert describe(f) == "New letter: F. Use your left index finger."
+        assert describe(f) == ("New letter:", "Use your left index finger.")
 
     def test_the_first_composite_of_a_class_explains_the_mechanism(self) -> None:
         first = next(
@@ -447,36 +450,42 @@ class TestScript:
             if k.is_composite
         )
         assert describe(first) == (
-            "New letter: Á. Press the accent key first, then A. "
+            "New letter:",
+            "Press the accent key first, then A. "
             "The accent key is one position to the right from Æ. "
-            "It will not make a sound on its own — it changes the next letter you press."
+            "It will not make a sound on its own — it changes the next letter you press.",
         )
 
-    def test_a_later_composite_of_the_same_class_is_two_sentences(self) -> None:
+    def test_a_later_composite_of_the_same_class_names_only_its_keys(self) -> None:
         later = [
             k
             for k in flat(sequence(build_is(), TestCompositeIntroduction.IS_WORDS))
             if k.is_composite
         ][1]
-        assert describe(later) == "New letter: É. Press the accent key first, then E."
+        assert describe(later) == ("New letter:", "Press the accent key first, then E.")
 
     def test_plural_and_diagonal_reaches_read_correctly(self) -> None:
         j = next(k for k in flat(sequence(build_en())) if k.grapheme == "j")
         assert describe(j) == (
-            "New letter: J. Use your right index finger. Reach three positions to the right from F."
+            "New letter:",
+            "Use your right index finger. Reach three positions to the right from F.",
         )
 
-    def test_sharp_s_is_not_upper_cased_into_two_letters(self) -> None:
-        # "ß".upper() is "SS", which would be spoken as two letters.
-        sharp_s = next(k for k in flat(sequence(build_de())) if k.grapheme == "ß")
-        assert describe(sharp_s).startswith("New letter: ß.")
+    def test_the_letter_itself_is_not_in_the_script(self) -> None:
+        # alpha-plan #12l: the caller speaks it between the two parts, through
+        # the letter source, so the child hears the sound a prompt will make.
+        # The script used to name it as a capital.
+        e = next(k for k in flat(sequence(build_en())) if k.grapheme == "e")
+        assert "E" not in "".join(describe(e))
 
     def test_every_generated_script_renders_as_a_letter(self) -> None:
         # Nothing is announced as anything but a letter now: the modifier has
         # no step of its own to be announced in (ADR-032 § Decision 1).
         for build in (build_en, build_de, build_is):
             for k in flat(sequence(build())):
-                assert describe(k).startswith("New letter: ")
+                lead, rest = describe(k)
+                assert lead == "New letter:"
+                assert rest != ""
 
 
 class TestIntroducerMemory:

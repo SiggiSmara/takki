@@ -181,6 +181,19 @@ class Store(Protocol):
         self, profile_id: int, key_char: str, limit: int | None = None
     ) -> list[Attempt]: ...
 
+    def append_letter_lengths(
+        self,
+        profile_id: int,
+        voice: str,
+        rate: float,
+        lengths: Sequence[tuple[str, int]],
+        recorded_at: str | None = None,
+    ) -> None: ...
+
+    def letter_lengths(self, profile_id: int, key_char: str, voice: str, rate: float) -> list[int]:
+        """This letter's stored lengths under one voice and rate, oldest first (ADR-011)."""
+        ...
+
     def record_milestone(
         self,
         profile_id: int,

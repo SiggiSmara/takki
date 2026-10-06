@@ -55,6 +55,11 @@ DAY_TWO = "2026-01-02T10:00:00+00:00"
 # never trips the auto-advance deadline.
 KEYSTROKE_SECONDS = 1.0
 LETTER_SECONDS = 1.2
+LETTER_MS = int(LETTER_SECONDS * 1000)
+SEED_VOICE = "voice"
+# The letters a cold profile's first script speaks, ahead of any prompt: the
+# fake letter source hears a script's letter and a prompt's alike.
+HOME = ["f", "j"]
 # Just inside ADR-027's floor: a press this soon after the letter was sent
 # cannot be an answer to it.
 TOO_EARLY_SECONDS = (config.HEARD_MIN_MS - 1) / 1000
@@ -78,6 +83,8 @@ class Harness:
         store: FakeStore | None = None,
         profile: Profile | None = None,
         max_keys_in_progress: int = config.MAX_KEYS_IN_PROGRESS,
+        voice: str = SEED_VOICE,
+        rate: float = config.TTS_RATE,
     ) -> None:
         self.layout = build_en()
         self.source = source or FixedListSource(words if words is not None else EN_WORDS)
@@ -85,7 +92,7 @@ class Harness:
         self.clock = FakeClock()
         self.engine = FakeTTSEngine()
         self.worker = TTSWorker(lambda: self.engine, self.inbound)
-        self.letters = FakeLetterAudioSource()
+        self.letters = FakeLetterAudioSource(self.inbound)
         self.cues = FakeSoundCues()
         self.focus = FakeFocusSource(self.inbound)
         self.stream = ScriptedKeyStream(key_events or [], self.inbound)
@@ -98,6 +105,11 @@ class Harness:
             for _ in range(count):
                 self.store.upsert_key_stat(self.profile.id, name, True)
                 self.store.append_attempt(self.profile.id, name, True)
+            # A key with a history was introduced under some voice, and that
+            # is where its length was measured (ADR-011 § letter_lengths).
+            self.store.append_letter_lengths(
+                self.profile.id, SEED_VOICE, config.TTS_RATE, [(name, LETTER_MS)]
+            )
         self.loop = SessionLoop(
             inbound=self.inbound,
             layout=self.layout,
@@ -113,6 +125,8 @@ class Harness:
             # keeps them off it, which is simpler to assert on but cannot show
             # a letter lost there (alpha-plan #12c (1)).
             letters=SyntheticLetterAudioSource(self.worker) if synthetic_letters else self.letters,
+            voice=voice,
+            rate=rate,
             cues=self.cues,
             rng=random.Random(1),
             celebrant=celebrant,
@@ -125,6 +139,7 @@ class Harness:
     def pump(self) -> None:
         while not self.worker.idle:
             self.worker.run_one()
+        self.letters.finish()
 
     def settle(self, limit: int = 60) -> None:
         """Tick until a prompt is open, letting queued speech finish first."""
@@ -173,13 +188,51 @@ class Harness:
         return asked
 
 
-def intro_lines(names: tuple[str, ...]) -> list[str]:
+def hear_out(harness: Harness) -> None:
+    """Let queued speech run to its end until a prompt opens, each letter taking LETTER_SECONDS.
+
+    For letters that go through the worker. `settle` finishes everything in no
+    time at all, so every letter it lets through measures as zero long.
+    """
+    for _ in range(60):
+        if harness.loop.prompt is not None:
+            return
+        if not harness.worker.idle:
+            spoken = len(harness.engine.spoken)
+            harness.worker.run_one()
+            if [len(text) for text in harness.engine.spoken[spoken:]] == [1]:
+                harness.clock.advance(LETTER_SECONDS)
+        harness.loop.tick()
+    raise AssertionError("no prompt after hearing everything out")
+
+
+def intro_script(names: tuple[str, ...]) -> list[tuple[str, str, str]]:
+    """A step's script as it is spoken: per member, the lead, the letter, the rest."""
     layout = build_en()
     source = FixedListSource(EN_WORDS)
     for step in introduction_sequence(layout, source):
         if tuple(k.grapheme for k in step.keys) == names:
-            return [describe(intro) for intro in step.keys]
+            return [
+                (lead, intro.grapheme, rest)
+                for intro in step.keys
+                for lead, rest in [describe(intro)]
+            ]
     raise AssertionError(f"no step for {names}")
+
+
+def intro_texts(names: tuple[str, ...]) -> list[tuple[str, str]]:
+    """`describe` for each member of a step: its script without the letter."""
+    return [(lead, rest) for lead, _, rest in intro_script(names)]
+
+
+def member_lines(names: tuple[str, ...]) -> dict[str, list[str]]:
+    """Per member, what the TTS engine speaks of that member's own script."""
+    return {letter: [lead, rest] for lead, letter, rest in intro_script(names)}
+
+
+def intro_lines(names: tuple[str, ...]) -> list[str]:
+    """What the TTS engine speaks of a step's script while the letters go to the fake source."""
+    return [text for lead, _, rest in intro_script(names) for text in (lead, rest)]
 
 
 class TestStartup:
@@ -444,7 +497,7 @@ class TestAttemptPairing:
         assert harness.store.window_attempts(harness.profile.id, target) == []
         # The next prompt is open and its letter has been spoken.
         assert harness.loop.prompt is not None
-        assert len(harness.letters.played) == 2
+        assert harness.letters.played == [*HOME, target, harness.loop.prompt]
 
     def test_a_wrong_press_too_early_to_have_heard_leaves_the_first_attempt_open(
         self, monkeypatch: pytest.MonkeyPatch
@@ -459,7 +512,7 @@ class TestAttemptPairing:
         assert recorded == []
         assert harness.store.key_stats(harness.profile.id) == {}
         assert harness.loop.prompt == target
-        assert harness.letters.played == [target, target]
+        assert harness.letters.played == [*HOME, target, target]
         # The press after it is the prompt's first attempt, with its own outcome.
         harness.press(target)
         harness.loop.tick()
@@ -543,8 +596,8 @@ class TestTypeAhead:
         # It lands, and it is not an attempt: its letter was sent in the same
         # drain, so the press cannot be an answer to it (ADR-027, alpha-plan
         # #12f). It answered a guess at what would come next.
-        assert harness.letters.played[:2] == [target, partner]
-        assert len(harness.letters.played) == 3
+        assert harness.letters.played[:4] == [*HOME, target, partner]
+        assert len(harness.letters.played) == 5
         counts = {
             name: harness.store.window_stats(harness.profile.id, name).attempt_count
             for name in (target, partner)
@@ -778,8 +831,15 @@ class TestLatency:
     length is learned when its own SpeechFinished arrives.
     """
 
-    LETTER_MS = int(LETTER_SECONDS * 1000)
+    LETTER_MS = LETTER_MS
     KEYSTROKE_MS = int(KEYSTROKE_SECONDS * 1000)
+
+    def started(self) -> Harness:
+        """A cold session whose introduction has been heard, each letter of it LETTER_SECONDS long."""
+        harness = Harness(synthetic_letters=True)
+        harness.loop.start()
+        hear_out(harness)
+        return harness
 
     def heard(self, harness: Harness) -> str:
         """Open a prompt and let its letter run to the end."""
@@ -794,8 +854,7 @@ class TestLatency:
         return [(row.latency_ms, row.after_letter_ms, row.timeouts) for row in rows]
 
     def test_an_answer_after_the_letter_is_timed_from_the_letters_end(self) -> None:
-        harness = Harness(synthetic_letters=True)
-        harness.loop.start()
+        harness = self.started()
         target = self.heard(harness)
         harness.press(target)
         harness.loop.tick()
@@ -806,8 +865,7 @@ class TestLatency:
     def test_an_answer_before_the_letter_ends_is_a_negative_latency(self) -> None:
         # alpha-plan #12f: unmeasured until now, and the ordinary answer of a
         # child who knows the key.
-        harness = Harness(synthetic_letters=True)
-        harness.loop.start()
+        harness = self.started()
         first = self.heard(harness)
         harness.press(first)
         harness.loop.tick()
@@ -821,15 +879,19 @@ class TestLatency:
             0,
         )
 
-    def test_before_any_letter_has_finished_the_answer_is_still_timed(self) -> None:
-        # Timed from the sending, which needs no letter length; only the
-        # signed column has to wait for one.
-        harness = Harness(synthetic_letters=True)
-        harness.loop.start()
+    def test_a_letter_introduced_this_session_is_counted_from_its_end_on_the_first_press(
+        self,
+    ) -> None:
+        # alpha-plan #12l. The press cuts the prompt's own letter, so the only
+        # playback that ran to its end is the one inside the introduction.
+        harness = self.started()
         target = harness.opened()
         harness.press(target)
         harness.loop.tick()
-        assert self.timing(harness, target) == [(self.KEYSTROKE_MS, None, 0)]
+        assert harness.engine.stopped == 1
+        assert self.timing(harness, target) == [
+            (self.KEYSTROKE_MS, self.KEYSTROKE_MS - self.LETTER_MS, 0)
+        ]
 
     def test_an_answer_after_a_timeout_is_unmeasured_and_says_so(self) -> None:
         # The slowest answers are untimed because the letter was spoken again,
@@ -907,9 +969,8 @@ class TestLatency:
     def test_a_timeout_after_a_letter_that_failed_is_not_the_childs(self) -> None:
         # Found by the review of 2026-10-04: counted, it put an answer the
         # child gave at once into the speed term as the slowest there is.
-        harness = Harness(synthetic_letters=True)
+        harness = self.started()
         harness.engine.fail_on = {"f", "j"}
-        harness.loop.start()
         target = self.heard(harness)
         assert harness.engine.failed == [target]
         harness.engine.fail_on = set()
@@ -937,7 +998,245 @@ class TestLatency:
         assert [row.timeouts for row in rows] == [config.PROMPT_MAX_REPROMPTS + 1]
 
 
+class TestLetterLengths:
+    """ADR-011 § letter_lengths and ADR-012 § A letter inside a sequence (alpha-plan #12l)."""
+
+    KEYSTROKE_MS = int(KEYSTROKE_SECONDS * 1000)
+
+    def timing(self, harness: Harness, target: str) -> list[tuple[int | None, int | None, int]]:
+        rows = harness.store.window_attempts(harness.profile.id, target)
+        return [(row.latency_ms, row.after_letter_ms, row.timeouts) for row in rows]
+
+    def stored(self, harness: Harness, letter: str, voice: str = SEED_VOICE) -> list[int]:
+        return harness.store.letter_lengths(harness.profile.id, letter, voice, config.TTS_RATE)
+
+    def test_the_script_is_spoken_as_three_utterances_around_the_letter(self) -> None:
+        # Through the worker, as in production: lead, the letter as a prompt
+        # says it, the rest; then the next member; then the first prompt.
+        harness = Harness(synthetic_letters=True)
+        harness.loop.start()
+        target = harness.opened()
+        harness.pump()
+        assert harness.engine.spoken == [
+            *(part for member in intro_script(("f", "j")) for part in member),
+            target,
+        ]
+
+    def test_the_scripts_letter_goes_to_the_source_a_prompt_uses(self) -> None:
+        harness = Harness()
+        harness.loop.start()
+        target = harness.opened()
+        assert harness.engine.spoken == intro_lines(("f", "j"))
+        assert harness.letters.played == [*HOME, target]
+
+    def test_what_the_script_measured_is_stored_at_the_block_boundary(self) -> None:
+        harness = Harness(synthetic_letters=True)
+        harness.loop.start()
+        hear_out(harness)
+        assert self.stored(harness, "f") == []
+        block = harness.loop._block  # pyright: ignore[reportPrivateUsage]
+        harness.answer(len(block.prompts))
+        assert (self.stored(harness, "f"), self.stored(harness, "j")) == ([LETTER_MS], [LETTER_MS])
+
+    def test_what_was_measured_is_stored_when_the_session_ends(self) -> None:
+        harness = Harness(synthetic_letters=True)
+        harness.loop.start()
+        hear_out(harness)
+        harness.loop.shutdown()
+        assert (self.stored(harness, "f"), self.stored(harness, "j")) == ([LETTER_MS], [LETTER_MS])
+
+    def test_a_script_cut_at_its_letter_measures_only_the_pass_that_ended(self) -> None:
+        # ADR-012 § Recovery re-speaks the script whole. The cut pass is no
+        # length: counted, it would make the first one shorter than the voice.
+        harness = Harness(synthetic_letters=True)
+        harness.loop.start()
+        harness.worker.run_one()
+        harness.loop.tick()
+        harness.clock.advance(LETTER_SECONDS / 4)
+        harness.focus.lose_focus()
+        harness.loop.tick()
+        harness.pump()
+        harness.loop.tick()
+        harness.focus.gain_focus()
+        hear_out(harness)
+        assert harness.engine.spoken == [
+            "New letter:",
+            "Paused. Press Alt+Tab to come back to Takki.",
+            "Back in Takki.",
+            *(part for member in intro_script(("f", "j")) for part in member),
+        ]
+        harness.loop.shutdown()
+        assert (self.stored(harness, "f"), self.stored(harness, "j")) == ([LETTER_MS], [LETTER_MS])
+
+    def test_a_letter_from_an_earlier_session_has_its_length_on_an_early_press(self) -> None:
+        # The case the stored lengths are for: nothing introduces these keys
+        # today, and a press that cuts the letter measures nothing. The seeded
+        # profile's lengths are in the store under this voice (`Harness`).
+        harness = Harness(seed=FULL_SLOTS, synthetic_letters=True)
+        harness.loop.start()
+        target = harness.opened()
+        harness.press(target)
+        harness.loop.tick()
+        assert self.timing(harness, target)[-1] == (
+            self.KEYSTROKE_MS,
+            self.KEYSTROKE_MS - LETTER_MS,
+            0,
+        )
+        # The press cut it at the worker, so only the next prompt is spoken.
+        following = harness.loop.prompt
+        harness.pump()
+        assert harness.engine.spoken == [following]
+
+    def test_under_another_voice_a_letters_first_prompt_cannot_be_cut(self) -> None:
+        # ADR-012 § A letter with no measured length. The answer counts, is
+        # timed and gets its cue; the letter runs on and the next prompt waits.
+        harness = Harness(seed=FULL_SLOTS, voice="another")
+        harness.loop.start()
+        first = harness.opened()
+        before = harness.store.window_stats(harness.profile.id, first).attempt_count
+        harness.press(first)
+        harness.loop.tick()
+        assert harness.cues.played == ["correct"]
+        assert harness.letters.stopped == 0
+        assert harness.store.window_stats(harness.profile.id, first).attempt_count == before + 1
+        # No length yet when the row was written: the letter had not ended.
+        assert self.timing(harness, first)[-1] == (self.KEYSTROKE_MS, None, 0)
+        assert harness.loop.prompt is None
+        assert harness.letters.played == [first]
+        # It ends a fifth of a second after the press, and the next prompt opens.
+        harness.clock.advance(LETTER_SECONDS - KEYSTROKE_SECONDS)
+        harness.pump()
+        harness.loop.tick()
+        assert harness.loop.prompt is not None
+        assert len(harness.letters.played) == 2
+        # From here the letter has a length, and a press cuts it as always.
+        while harness.opened() != first:
+            harness.answer(1)
+        stopped = harness.letters.stopped
+        harness.press(first)
+        harness.loop.tick()
+        assert harness.letters.stopped == stopped + 1
+        assert self.timing(harness, first)[-1] == (
+            self.KEYSTROKE_MS,
+            self.KEYSTROKE_MS - LETTER_MS,
+            0,
+        )
+        harness.loop.shutdown()
+        assert self.stored(harness, first, "another") == [LETTER_MS]
+        # What the first voice measured is kept for a return to it.
+        assert self.stored(harness, first) == [LETTER_MS]
+
+    def test_another_rate_is_another_voice(self) -> None:
+        harness = Harness(seed=FULL_SLOTS, rate=1.2)
+        harness.loop.start()
+        harness.press(harness.opened())
+        harness.loop.tick()
+        assert (harness.cues.played, harness.letters.stopped) == (["correct"], 0)
+        assert harness.loop.prompt is None
+
+    def test_a_wrong_press_does_not_cut_it_either_and_the_letter_is_then_said_again(self) -> None:
+        harness = Harness(seed=FULL_SLOTS, voice="another")
+        harness.loop.start()
+        first = harness.opened()
+        wrong = next(name for name in FULL_SLOTS if name != first)
+        harness.press(wrong)
+        harness.loop.tick()
+        assert (harness.cues.played, harness.letters.stopped) == (["error"], 0)
+        # Held behind the letter still sounding, not spoken over it.
+        assert harness.letters.played == [first]
+        harness.pump()
+        harness.loop.tick()
+        assert harness.letters.played == [first, first]
+        assert harness.loop.prompt == first
+
+    def test_a_wrong_press_too_early_to_have_heard_it_does_not_restart_the_timing(self) -> None:
+        # Found by the review of 2026-10-06. The counter restarted the floor
+        # and the timing as if the press had cut the letter. This one plays on,
+        # so the answer after it answers a letter spoken twice: an attempt,
+        # and not a timed one (ADR-011).
+        harness = Harness(seed=FULL_SLOTS, voice="another")
+        harness.loop.start()
+        first = harness.opened()
+        before = harness.store.window_stats(harness.profile.id, first).attempt_count
+        wrong = next(name for name in FULL_SLOTS if name != first)
+        harness.press(wrong, after=TOO_EARLY_SECONDS)
+        harness.loop.tick()
+        harness.pump()
+        harness.loop.tick()
+        assert harness.letters.played == [first, first]
+        harness.press(first, after=TOO_EARLY_SECONDS)
+        harness.loop.tick()
+        assert harness.store.window_stats(harness.profile.id, first).attempt_count == before + 1
+        assert self.timing(harness, first)[-1] == (None, None, 0)
+
+    def test_the_re_read_key_while_the_next_prompt_waits_replays_no_introduction(self) -> None:
+        # Found by the review of 2026-10-06. With the next prompt held behind
+        # a letter that cannot be cut, no prompt is open inside a block, and
+        # the key used to queue the whole script of the last step there.
+        harness = Harness(synthetic_letters=True)
+        harness.engine.fail_on = {"f", "j"}
+        harness.loop.start()
+        first = harness.opened()
+        harness.engine.fail_on = set()
+        harness.press(first)
+        harness.loop.tick()
+        assert harness.loop.prompt is None
+        harness.key(config.REREAD_KEY)
+        harness.loop.tick()
+        harness.key(config.REREAD_KEY, pressed=False)
+        harness.loop.tick()
+        following = harness.opened()
+        harness.pump()
+        assert harness.engine.spoken == [*intro_lines(("f", "j")), first, following]
+
+    def test_a_focus_steal_during_it_leaves_no_stale_announcement(self) -> None:
+        # Found by the review of 2026-10-06: both announcements waited behind
+        # the letter and both were spoken, the first after the child was back.
+        harness = Harness(seed=FULL_SLOTS, voice="another", synthetic_letters=True)
+        harness.loop.start()
+        target = harness.opened()
+        harness.focus.lose_focus()
+        harness.loop.tick()
+        harness.focus.gain_focus()
+        harness.loop.tick()
+        for _ in range(4):
+            harness.pump()
+            harness.loop.tick()
+        assert harness.engine.spoken == [target, "Back in Takki.", target]
+        assert harness.loop.prompt == target
+
+    def test_a_letter_the_script_failed_to_say_is_heard_out_at_its_first_prompt(self) -> None:
+        # The introduction measured nothing, so the rule that covers a new
+        # voice covers this too, and no letter stays without a length.
+        harness = Harness(synthetic_letters=True)
+        harness.engine.fail_on = {"f", "j"}
+        harness.loop.start()
+        target = harness.opened()
+        harness.engine.fail_on = set()
+        harness.press(target)
+        harness.loop.tick()
+        assert harness.cues.played == ["correct"]
+        assert harness.engine.stopped == 0
+        assert self.timing(harness, target) == [(self.KEYSTROKE_MS, None, 0)]
+        harness.pump()
+        harness.loop.tick()
+        harness.loop.shutdown()
+        assert self.stored(harness, target) == [self.KEYSTROKE_MS]
+
+
 class TestRecoveryKeys:
+    def test_a_re_read_tap_during_the_introduction_queues_the_script_again(self) -> None:
+        # ADR-023: the key is how the child re-hears a script, while it speaks.
+        harness = Harness()
+        harness.loop.start()
+        harness.key(config.REREAD_KEY)
+        harness.loop.tick()
+        harness.key(config.REREAD_KEY, pressed=False)
+        harness.loop.tick()
+        harness.settle()
+        assert harness.engine.spoken == intro_lines(("f", "j")) * 2
+        assert harness.letters.played[:4] == HOME * 2
+
     def test_a_re_read_tap_re_speaks_the_open_prompt(self) -> None:
         harness = Harness()
         harness.loop.start()
@@ -1278,7 +1577,7 @@ class TestIntroductionPacingAcrossSessions:
         assert [intro.grapheme for intro in remembered.keys] == ["f", "j"]
         # And it is the script the child first heard, location clause included
         # (alpha-plan #12j, O2): the resumed step used to be rebuilt without it.
-        assert [describe(intro) for intro in remembered.keys] == intro_lines(("f", "j"))
+        assert [describe(intro) for intro in remembered.keys] == intro_texts(("f", "j"))
 
     def test_a_resumed_later_step_keeps_its_location_clauses(self) -> None:
         # Stage 0's second step is located against the first, so its rebuild
@@ -1299,8 +1598,8 @@ class TestIntroductionPacingAcrossSessions:
         assert introducer is not None
         remembered = introducer.last_step
         assert remembered is not None
-        assert [describe(intro) for intro in remembered.keys] == intro_lines(("r", "u"))
-        assert all("Reach" in line for line in intro_lines(("r", "u")))
+        assert [describe(intro) for intro in remembered.keys] == intro_texts(("r", "u"))
+        assert all("Reach" in rest for _, rest in intro_texts(("r", "u")))
         # Both members were answered, so nothing is spoken again.
         assert second.engine.spoken == []
 
@@ -1321,20 +1620,20 @@ class TestIntroductionPacingAcrossSessions:
         second.settle()
         # The script again for the member that was never answered, and only it,
         # in the words the child first heard.
-        lines: dict[str, str] = dict(zip("fj", intro_lines(("f", "j")), strict=True))
-        assert second.engine.spoken == [lines[unanswered]]
+        assert second.engine.spoken == member_lines(("f", "j"))[unanswered]
+        assert second.letters.played[0] == unanswered
         drills = second.loop._drills  # pyright: ignore[reportPrivateUsage]
         assert drills is not None and drills.ramp_up is not None
         assert drills.ramp_up.graphemes == ("f", "j")
         introducer = second.loop._introducer  # pyright: ignore[reportPrivateUsage]
         assert introducer is not None and introducer.last_step is not None
-        assert [describe(i) for i in introducer.last_step.keys] == intro_lines(("f", "j"))
+        assert [describe(i) for i in introducer.last_step.keys] == intro_texts(("f", "j"))
         # Nothing new was introduced, and the pair is drilled as a pair.
         assert steps_of(store, profile.id) == [("f", "j")]
         asked = Counter(second.answer(2 * config.PHASE_A_STREAK))
         assert asked == {"f": config.PHASE_A_STREAK, "j": config.PHASE_A_STREAK}
 
-    def half_answered(self) -> tuple[FakeStore, Profile, str]:
+    def half_answered(self) -> tuple[FakeStore, Profile, list[str]]:
         """One profile whose first pair was quit after one answer; returns the script still owed."""
         store = FakeStore()
         profile = store.create_profile("kid")
@@ -1342,8 +1641,7 @@ class TestIntroductionPacingAcrossSessions:
         first.loop.start()
         (answered,) = first.answer(1)
         first.loop.stop()
-        lines: dict[str, str] = dict(zip("fj", intro_lines(("f", "j")), strict=True))
-        return store, profile, lines[first.partner(answered)]
+        return store, profile, member_lines(("f", "j"))[first.partner(answered)]
 
     def test_a_cut_resume_script_is_respoken_as_it_was(self) -> None:
         # The script owed to one member, cut by a focus loss, comes back as that
@@ -1360,7 +1658,7 @@ class TestIntroductionPacingAcrossSessions:
         assert second.engine.spoken == [
             "Paused. Press Alt+Tab to come back to Takki.",
             "Back in Takki.",
-            owed,
+            *owed,
         ]
 
     def test_a_celebration_comes_before_the_script_owed_on_resume(
@@ -1385,7 +1683,7 @@ class TestIntroductionPacingAcrossSessions:
         second = Harness(store=store, profile=profile, celebrant=_rung_line)
         second.loop.start()
         second.settle()
-        assert second.engine.spoken == ["rung anchor", owed]
+        assert second.engine.spoken == ["rung anchor", *owed]
 
     def test_a_step_introduced_and_never_answered_is_introduced_again(self) -> None:
         # ADR-023 § What the introducer remembers: the script is that letter's

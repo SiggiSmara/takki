@@ -168,6 +168,7 @@ def main() -> int:
         keys=keys,
         speech=speech,
         letters=letters,
+        voice=voice,
         cues=cues,
         rng=random.Random(),
     )

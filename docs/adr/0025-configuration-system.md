@@ -111,6 +111,7 @@ KNOWN_MAX_LATENCY_RATIO = 2.0    # a key slower than this many times the child's
 SPEED_SAMPLE            = 30     # timed correct first presses a key's speed is read over
 SPEED_MIN_SAMPLE        = 10     # below this a key has no speed, and no speed term
 SLOW_KEY_NEED           = 5      # presses a block plans for a key only speed keeps from Known (ADR-024)
+LETTER_LENGTH_SAMPLE    = 10     # full playbacks a letter's usual length is the median of (ADR-011)
 
 # Introduction gate (ADR-010 § The introduction gate is slots)
 MAX_KEYS_IN_PROGRESS    = 6      # keys Active but not yet Known; raise per child
@@ -150,6 +151,10 @@ The binding is chosen against a constraint the other three do not have: this key
 **Amended 2026-10-04 (alpha-plan #12f). The speed term's four keys, and `PHASE_C_MAX_LATENCY_RATIO`.**
 
 `KNOWN_MAX_LATENCY_RATIO`, `SPEED_SAMPLE`, `SPEED_MIN_SAMPLE` and `SLOW_KEY_NEED` belong to [ADR-027 § Known has a speed term](0027-key-and-accuracy-state-model.md#known-has-a-speed-term). The ratio and the half-life are constructor arguments of `KeyStates`, not fields of `KnownCriterion`: they say how evidence is read, and the same evidence is judged against both Known's criterion and the anchor rung's. The later tiers override them by construction, like the floors. None of the four comes from the literature; they are listed so that #12h and a pilot can move them without a code change. `PHASE_C_MAX_LATENCY_RATIO` goes from 1.5 to 2.0 with the change of what it is a ratio of ([ADR-024](0024-drill-content-and-lesson-granularity.md), "Latency, and only in the last bar"): the two ratios are separate keys with one default.
+
+**Amended 2026-10-06 (alpha-plan #12l). `LETTER_LENGTH_SAMPLE`, and `TTS_RATE` in the compiled defaults.**
+
+`LETTER_LENGTH_SAMPLE` belongs to [ADR-011](0011-persistence-and-state.md), "A letter's length is a stored measurement": it is both how many playbacks the median is taken over and how many the store keeps per letter, voice and rate. `TTS_RATE` was listed here from the start and is now in `config.py`, because a letter's length is stored under it; the SAPI rate is derived from it, so there is one value and not two.
 
 **Amended 2026-10-04 (alpha-plan #12f). `EVIDENCE_HALF_LIFE_DAYS` and `HEARD_MIN_MS`.**
 
