@@ -65,10 +65,12 @@ def _print_attempts_by_day(conn: sqlite3.Connection, profile_id: int) -> None:
     # date(attempted_at, 'localtime') -- the same grouping window_stats() uses
     # for distinct_days, so this dump agrees with what the engine counts. Stored
     # timestamps are UTC (ADR-011) and a practice day is the child's own day.
+    # `mean ms` is the time from the letter being sent, which is what the speed
+    # term reads (ADR-011).
     rows = conn.execute(
         """
         SELECT key_char, date(attempted_at, 'localtime') AS day, COUNT(*), SUM(correct),
-               AVG(latency_ms), COUNT(latency_ms)
+               AVG(latency_ms), COUNT(latency_ms), SUM(timeouts > 0)
         FROM key_attempts
         WHERE profile_id = ?
         GROUP BY key_char, day
@@ -81,14 +83,51 @@ def _print_attempts_by_day(conn: sqlite3.Connection, profile_id: int) -> None:
         print("  (none)")
         return
     header = f"  {'key':<4} {'day':<10} {'attempts':>8} {'correct':>8} {'accuracy':>9}"
-    print(f"{header} {'mean ms':>8} {'timed':>6}")
-    for key_char, day, attempts, correct, mean_latency, timed in rows:
+    print(f"{header} {'mean ms':>8} {'timed':>6} {'timed out':>9}")
+    for key_char, day, attempts, correct, mean_ms, timed, timed_out in rows:
         accuracy = correct / attempts if attempts else 0.0
-        latency = f"{mean_latency:>8.0f}" if mean_latency is not None else f"{'-':>8}"
+        latency = f"{mean_ms:>8.0f}" if mean_ms is not None else f"{'-':>8}"
         print(
             f"  {key_char:<4} {day:<10} {attempts:>8} {correct:>8} {accuracy:>8.1%}"
-            f" {latency} {timed:>6}"
+            f" {latency} {timed:>6} {timed_out:>9}"
         )
+
+
+def _print_accuracy_by_timing(conn: sqlite3.Connection, profile_id: int) -> None:
+    # ADR-027 keeps every press from HEARD_MIN_MS on, however early, and leaves
+    # it to correctness to show whether the early ones were heard or guessed.
+    # This is where that shows: a first band well under the others is a child
+    # following a pattern, and the drill content is what has failed.
+    rows = conn.execute(
+        """
+        SELECT CASE
+                   WHEN latency_ms IS NULL THEN 4
+                   WHEN after_letter_ms IS NULL THEN 3
+                   WHEN 2 * latency_ms < latency_ms - after_letter_ms THEN 0
+                   WHEN after_letter_ms < 0 THEN 1
+                   ELSE 2
+               END AS band, COUNT(*), SUM(correct)
+        FROM key_attempts
+        WHERE profile_id = ?
+        GROUP BY band
+        ORDER BY band
+        """,
+        (profile_id,),
+    ).fetchall()
+    print("\nfirst-press accuracy by when the answer came")
+    if not rows:
+        print("  (none)")
+        return
+    names = (
+        "in the letter's first half",
+        "in the letter's second half",
+        "after the letter",
+        "letter length not known",
+        "not timed",
+    )
+    print(f"  {'answer':<28} {'attempts':>8} {'correct':>8} {'accuracy':>9}")
+    for band, attempts, correct in rows:
+        print(f"  {names[band]:<28} {attempts:>8} {correct:>8} {correct / attempts:>9.1%}")
 
 
 def _print_ramp_up(conn: sqlite3.Connection, profile_id: int) -> None:
@@ -180,6 +219,7 @@ def main() -> None:
             return
         _print_key_stats(conn, profile_id)
         _print_attempts_by_day(conn, profile_id)
+        _print_accuracy_by_timing(conn, profile_id)
         _print_ramp_up(conn, profile_id)
         _print_milestones(conn, profile_id)
         _print_sessions(conn, profile_id)

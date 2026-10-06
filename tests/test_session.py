@@ -15,8 +15,9 @@ from takki.input import KeyEvent
 from takki.language import WordSource
 from takki.lesson.drills import DrillGenerator
 from takki.lesson.introducer import KeyIntroducer, describe, introduction_sequence
+from takki.lesson.key_state import KeyStates
 from takki.lesson.rampup import RampUpProgress
-from takki.persistence import PhaseRecord, Profile
+from takki.persistence import Attempt, PhaseRecord, Profile
 from takki.platform.layout import Layout, build_en
 from takki.session import Celebrant, InboundEvent, SessionLoop
 from tests.fakes.fake_clock import FakeClock
@@ -53,6 +54,10 @@ DAY_TWO = "2026-01-02T10:00:00+00:00"
 # the pace measure stays live, and under PROMPT_TIMEOUT_SECONDS so answering
 # never trips the auto-advance deadline.
 KEYSTROKE_SECONDS = 1.0
+LETTER_SECONDS = 1.2
+# Just inside ADR-027's floor: a press this soon after the letter was sent
+# cannot be an answer to it.
+TOO_EARLY_SECONDS = (config.HEARD_MIN_MS - 1) / 1000
 
 
 def _rung_line(rung: str) -> str:
@@ -130,8 +135,8 @@ class Harness:
             self.loop.tick()
         raise AssertionError("no prompt after settling")
 
-    def press(self, char: str, *, release: bool = True) -> None:
-        self.clock.advance(KEYSTROKE_SECONDS)
+    def press(self, char: str, *, release: bool = True, after: float = KEYSTROKE_SECONDS) -> None:
+        self.clock.advance(after)
         self.inbound.put(KeyEvent(pressed=True, char=char, name=None))
         if release:
             self.inbound.put(KeyEvent(pressed=False, char=char, name=None))
@@ -293,6 +298,41 @@ class TestLifetimes:
         harness.answer(2 * (config.PHASE_A_STREAK + config.PHASE_B_ATTEMPTS))
         assert built == {"introducer": 1, "drills": 1}
 
+    def test_the_key_states_are_told_which_keys_have_the_bump(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # ADR-027 § Known has a speed term: `f` and `j` root the speed
+        # baseline and have no speed term of their own. Left out, they would
+        # be judged like any key and join the pool only once they met the floors.
+        seen: list[tuple[str, ...]] = []
+
+        class RecordingStates(KeyStates):
+            def __init__(self, *args: Any, **kwargs: Any) -> None:
+                seen.append(tuple(kwargs["bump_keys"]))
+                super().__init__(*args, **kwargs)
+
+        monkeypatch.setattr("takki.session.KeyStates", RecordingStates)
+        Harness()
+        assert seen == [("f", "j")]
+
+    def test_a_block_boundary_reads_each_keys_window_once(self) -> None:
+        # The boundary asks for the Known set (twice), the slow keys and every
+        # key's need, and each is a pass over every Active key's window: about
+        # 95 ms a pass on a full profile, between the last press and the next
+        # letter (review of 2026-10-04).
+        reads: Counter[str] = Counter()
+
+        class CountingStore(FakeStore):
+            def window_attempts(
+                self, profile_id: int, key_char: str, limit: int | None = None
+            ) -> list[Attempt]:
+                reads[key_char] += 1
+                return super().window_attempts(profile_id, key_char, limit)
+
+        harness = Harness(seed=FULL_SLOTS, store=CountingStore())
+        harness.loop.start()
+        assert reads == dict.fromkeys(FULL_SLOTS, 1)
+
     def test_a_fresh_milestone_detector_is_built_per_check(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -386,6 +426,56 @@ class TestAttemptPairing:
         assert recorded == [(target, True)]
         assert harness.cues.played == ["correct"]
 
+    def test_a_correct_press_too_early_to_have_heard_moves_on_and_counts_nothing(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # ADR-027 § A press before the letter could be heard is not an attempt.
+        # To the child it is an ordinary press; to every calculation it never
+        # happened.
+        recorded = self.spy(monkeypatch)
+        harness = Harness()
+        harness.loop.start()
+        target = harness.opened()
+        harness.press(target, after=TOO_EARLY_SECONDS)
+        harness.loop.tick()
+        assert harness.cues.played == ["correct"]
+        assert recorded == []
+        assert harness.store.key_stats(harness.profile.id) == {}
+        assert harness.store.window_attempts(harness.profile.id, target) == []
+        # The next prompt is open and its letter has been spoken.
+        assert harness.loop.prompt is not None
+        assert len(harness.letters.played) == 2
+
+    def test_a_wrong_press_too_early_to_have_heard_leaves_the_first_attempt_open(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        recorded = self.spy(monkeypatch)
+        harness = Harness()
+        harness.loop.start()
+        target = harness.opened()
+        harness.press(harness.partner(target), after=TOO_EARLY_SECONDS)
+        harness.loop.tick()
+        assert harness.cues.played == ["error"]
+        assert recorded == []
+        assert harness.store.key_stats(harness.profile.id) == {}
+        assert harness.loop.prompt == target
+        assert harness.letters.played == [target, target]
+        # The press after it is the prompt's first attempt, with its own outcome.
+        harness.press(target)
+        harness.loop.tick()
+        assert recorded == [(target, True)]
+        window = harness.store.window_stats(harness.profile.id, target)
+        assert (window.attempt_count, window.correct_count) == (1, 1)
+
+    def test_a_press_at_the_floor_is_counted(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        recorded = self.spy(monkeypatch)
+        harness = Harness()
+        harness.loop.start()
+        target = harness.opened()
+        harness.press(target, after=config.HEARD_MIN_MS / 1000)
+        harness.loop.tick()
+        assert recorded == [(target, True)]
+
 
 class TestAutoReject:
     def test_a_wrong_press_re_prompts_the_same_character(self) -> None:
@@ -445,12 +535,21 @@ class TestTypeAhead:
         harness = Harness()
         harness.loop.start()
         target = harness.opened()
+        partner = harness.partner(target)
         harness.press(target)
-        harness.press(harness.partner(target))
+        harness.press(partner)
         harness.loop.tick()
         assert harness.cues.played == ["correct", "correct"]
-        for name in ("f", "j"):
-            assert harness.store.window_stats(harness.profile.id, name).attempt_count == 1
+        # It lands, and it is not an attempt: its letter was sent in the same
+        # drain, so the press cannot be an answer to it (ADR-027, alpha-plan
+        # #12f). It answered a guess at what would come next.
+        assert harness.letters.played[:2] == [target, partner]
+        assert len(harness.letters.played) == 3
+        counts = {
+            name: harness.store.window_stats(harness.profile.id, name).attempt_count
+            for name in (target, partner)
+        }
+        assert counts == {target: 1, partner: 0}
 
 
 class TestInterruptedIntroductionScript:
@@ -673,42 +772,79 @@ class TestPausedRoundTrip:
 
 
 class TestLatency:
-    """ADR-011's `latency_ms` through the whole loop: letter, SpeechFinished, press.
+    """ADR-011's `latency_ms`, `after_letter_ms` and `timeouts` through the whole loop.
 
-    Letters go through the worker here, as in production, because the stamp is
-    taken when the letter's own SpeechFinished arrives.
+    Letters go through the worker here, as in production, because a letter's
+    length is learned when its own SpeechFinished arrives.
     """
 
+    LETTER_MS = int(LETTER_SECONDS * 1000)
+    KEYSTROKE_MS = int(KEYSTROKE_SECONDS * 1000)
+
     def heard(self, harness: Harness) -> str:
-        """Open a prompt and let its letter finish sounding."""
+        """Open a prompt and let its letter run to the end."""
         target = harness.opened()
+        harness.clock.advance(LETTER_SECONDS)
         harness.pump()
         harness.loop.tick()
         return target
 
-    def latencies(self, harness: Harness, target: str) -> list[int | None]:
+    def timing(self, harness: Harness, target: str) -> list[tuple[int | None, int | None, int]]:
         rows = harness.store.window_attempts(harness.profile.id, target)
-        return [row.latency_ms for row in rows]
+        return [(row.latency_ms, row.after_letter_ms, row.timeouts) for row in rows]
 
-    def test_an_answer_is_timed_from_the_end_of_the_letter(self) -> None:
+    def test_an_answer_after_the_letter_is_timed_from_the_letters_end(self) -> None:
         harness = Harness(synthetic_letters=True)
         harness.loop.start()
         target = self.heard(harness)
         harness.press(target)
         harness.loop.tick()
-        assert self.latencies(harness, target) == [int(KEYSTROKE_SECONDS * 1000)]
+        assert self.timing(harness, target) == [
+            (self.LETTER_MS + self.KEYSTROKE_MS, self.KEYSTROKE_MS, 0)
+        ]
 
-    def test_an_answer_after_a_re_spoken_letter_is_timed_from_that_letter(self) -> None:
+    def test_an_answer_before_the_letter_ends_is_a_negative_latency(self) -> None:
+        # alpha-plan #12f: unmeasured until now, and the ordinary answer of a
+        # child who knows the key.
+        harness = Harness(synthetic_letters=True)
+        harness.loop.start()
+        first = self.heard(harness)
+        harness.press(first)
+        harness.loop.tick()
+        # The next letter is queued at the worker and is cut by the press.
+        second = harness.opened()
+        harness.press(second)
+        harness.loop.tick()
+        assert self.timing(harness, second)[-1] == (
+            self.KEYSTROKE_MS,
+            self.KEYSTROKE_MS - self.LETTER_MS,
+            0,
+        )
+
+    def test_before_any_letter_has_finished_the_answer_is_still_timed(self) -> None:
+        # Timed from the sending, which needs no letter length; only the
+        # signed column has to wait for one.
+        harness = Harness(synthetic_letters=True)
+        harness.loop.start()
+        target = harness.opened()
+        harness.press(target)
+        harness.loop.tick()
+        assert self.timing(harness, target) == [(self.KEYSTROKE_MS, None, 0)]
+
+    def test_an_answer_after_a_timeout_is_unmeasured_and_says_so(self) -> None:
+        # The slowest answers are untimed because the letter was spoken again,
+        # so the row carries how often that happened.
         harness = Harness(synthetic_letters=True)
         harness.loop.start()
         target = self.heard(harness)
         harness.clock.advance(config.PROMPT_TIMEOUT_SECONDS)
         harness.loop.tick()
+        harness.clock.advance(LETTER_SECONDS)
         harness.pump()
         harness.loop.tick()
         harness.press(target)
         harness.loop.tick()
-        assert self.latencies(harness, target) == [int(KEYSTROKE_SECONDS * 1000)]
+        assert self.timing(harness, target) == [(None, None, 1)]
 
     def test_an_answer_during_a_re_spoken_letter_is_unmeasured(self) -> None:
         # alpha-plan #12j, O4: the first version's stamp was left standing, so
@@ -721,19 +857,35 @@ class TestLatency:
         # The re-spoken letter is queued at the worker and has not finished.
         harness.press(target)
         harness.loop.tick()
-        assert self.latencies(harness, target) == [None]
+        assert self.timing(harness, target) == [(None, None, 1)]
+
+    def test_an_answer_after_a_re_read_is_unmeasured_with_no_timeout(self) -> None:
+        harness = Harness(synthetic_letters=True)
+        harness.loop.start()
+        target = self.heard(harness)
+        harness.key(config.REREAD_KEY)
+        harness.loop.tick()
+        harness.key(config.REREAD_KEY, pressed=False)
+        harness.loop.tick()
+        harness.press(target)
+        harness.loop.tick()
+        assert self.timing(harness, target) == [(None, None, 0)]
 
     def test_an_answer_to_a_letter_that_failed_to_play_is_unmeasured(self) -> None:
         # alpha-plan #12j, O4: a letter the child never heard is not the start
-        # of a reaction to it.
+        # of a reaction to it. A length is known here, from the first prompt,
+        # so only the failure can be what leaves this one unmeasured.
         harness = Harness(synthetic_letters=True)
-        harness.engine.fail_on = {"f", "j"}
         harness.loop.start()
-        target = self.heard(harness)
-        assert harness.engine.failed == [target]
-        harness.press(target)
+        first = self.heard(harness)
+        harness.press(first)
         harness.loop.tick()
-        assert self.latencies(harness, target) == [None]
+        harness.engine.fail_on = {"f", "j"}
+        second = self.heard(harness)
+        assert harness.engine.failed == [second]
+        harness.press(second)
+        harness.loop.tick()
+        assert self.timing(harness, second)[-1] == (None, None, 0)
 
     def test_an_answer_over_the_resume_announcement_is_unmeasured(self) -> None:
         # The letter heard before the pause is not what this press answers, and
@@ -750,7 +902,39 @@ class TestLatency:
         # "Back in Takki." is still queued, so the prompt has not been re-spoken.
         harness.press(target)
         harness.loop.tick()
-        assert self.latencies(harness, target) == [None]
+        assert self.timing(harness, target) == [(None, None, 0)]
+
+    def test_a_timeout_after_a_letter_that_failed_is_not_the_childs(self) -> None:
+        # Found by the review of 2026-10-04: counted, it put an answer the
+        # child gave at once into the speed term as the slowest there is.
+        harness = Harness(synthetic_letters=True)
+        harness.engine.fail_on = {"f", "j"}
+        harness.loop.start()
+        target = self.heard(harness)
+        assert harness.engine.failed == [target]
+        harness.engine.fail_on = set()
+        harness.clock.advance(config.PROMPT_TIMEOUT_SECONDS)
+        harness.loop.tick()
+        harness.clock.advance(LETTER_SECONDS)
+        harness.pump()
+        harness.loop.tick()
+        harness.press(target)
+        harness.loop.tick()
+        assert self.timing(harness, target) == [(None, None, 0)]
+
+    def test_the_timeout_count_stops_when_the_re_prompts_do(self) -> None:
+        # The prompt goes quiet after PROMPT_MAX_REPROMPTS, and the last
+        # re-prompt's own deadline is the last timeout there is to count.
+        harness = Harness()
+        harness.loop.start()
+        target = harness.opened()
+        for _ in range(config.PROMPT_MAX_REPROMPTS + 3):
+            harness.clock.advance(config.PROMPT_TIMEOUT_SECONDS)
+            harness.loop.tick()
+        harness.press(target)
+        harness.loop.tick()
+        rows = harness.store.window_attempts(harness.profile.id, target)
+        assert [row.timeouts for row in rows] == [config.PROMPT_MAX_REPROMPTS + 1]
 
 
 class TestRecoveryKeys:

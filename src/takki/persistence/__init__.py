@@ -60,8 +60,14 @@ class Attempt:
 
     correct: bool
     attempted_at: str
+    # `latency_ms` runs from the letter being sent. `after_letter_ms` is the
+    # same press counted from the letter's usual end, so it is negative for an
+    # answer given while the letter was still sounding, and NULL while no
+    # length is known for the letter. Their difference is that length.
     latency_ms: int | None = None
     prev_char: str | None = None
+    after_letter_ms: int | None = None
+    timeouts: int = 0
 
 
 @dataclass(frozen=True)
@@ -134,6 +140,8 @@ class Store(Protocol):
         attempted_at: str | None = None,
         latency_ms: int | None = None,
         prev_char: str | None = None,
+        after_letter_ms: int | None = None,
+        timeouts: int = 0,
     ) -> None: ...
 
     def mark_introduced(

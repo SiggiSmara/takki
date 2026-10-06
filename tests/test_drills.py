@@ -1,6 +1,7 @@
 import math
 import random
 from collections import Counter
+from datetime import datetime, timedelta
 from itertools import pairwise
 from typing import ClassVar
 
@@ -9,12 +10,10 @@ import pytest
 from takki import config
 from takki.language import WordSource
 from takki.lesson.drills import (
-    CONFIDENCE_Z,
     MAX_KEY_SHARE,
     DrillBlock,
     DrillGenerator,
     RampUpPhase,
-    accuracy_bound,
     plan_targets,
     presses_needed,
 )
@@ -27,9 +26,9 @@ from takki.lesson.introducer import (
     home_anchor_keys,
     introduction_sequence,
 )
-from takki.lesson.key_state import KeyStates
+from takki.lesson.key_state import CONFIDENCE_Z, Evidence, KeyStates, accuracy_bound
 from takki.lesson.rampup import RampUpProgress
-from takki.persistence import PhaseRecord, WindowStats
+from takki.persistence import PhaseRecord
 from takki.platform.layout import Layout, build_en, build_is
 from tests.fakes.fake_clock import FakeClock
 from tests.fakes.fake_store import FakeStore
@@ -84,12 +83,20 @@ class Fixture:
         *,
         active: str = "",
         seed: int = 7,
+        now: str | None = None,
     ) -> None:
         self.layout = layout or build_en()
         self.source = source or FixedListSource(EN_WORDS)
         self.store = FakeStore()
         self.profile = self.store.create_profile("child").id
-        self.states = KeyStates(self.store, self.profile)
+        # `now` is the wall clock evidence ages against (ADR-027); None is the
+        # system's, which suits rows the fake store stamps itself.
+        self.states = KeyStates(
+            self.store,
+            self.profile,
+            now=None if now is None else lambda: now,
+            bump_keys=home_anchor_keys(self.layout),
+        )
         self.clock = FakeClock()
         for name in active:
             self.activate(name)
@@ -131,9 +138,16 @@ class Fixture:
             self.attempt(grapheme, True)
 
 
-def press(fixture: Fixture, grapheme: str, count: int, *, correct: bool = True) -> None:
+def press(
+    fixture: Fixture,
+    grapheme: str,
+    count: int,
+    *,
+    correct: bool = True,
+    latency_ms: int | None = None,
+) -> None:
     for _ in range(count):
-        fixture.attempt(grapheme, correct)
+        fixture.attempt(grapheme, correct, latency_ms=latency_ms)
 
 
 class TestPhaseA:
@@ -391,6 +405,32 @@ class TestPhaseCAndD:
         press(fixture, "d", 30)
         assert fixture.generator.ramp_up is None
 
+    def test_a_new_letter_past_twice_the_bump_keys_speed_stays_in_phase_c(self) -> None:
+        # alpha-plan #12f: `f` and `j` are the baseline from the first step on,
+        # so the term is no longer skipped until something is Known.
+        fixture = Fixture(active=ANCHOR_SIX)
+        for name in home_anchor_keys(fixture.layout):
+            press(fixture, name, config.SPEED_MIN_SAMPLE, latency_ms=1000)
+        self._into_phase_c(fixture, "d")
+        slow = round(1000 * config.PHASE_C_MAX_LATENCY_RATIO) + 1
+        press(fixture, "d", config.PHASE_C_ATTEMPTS, latency_ms=slow)
+        assert fixture.generator.ramp_up is not None
+        assert fixture.generator.ramp_up.phase is RampUpPhase.C
+        # The bar reads the median of the latest thirty, so it clears when
+        # more than half of them are within the ratio.
+        press(fixture, "d", config.PHASE_C_ATTEMPTS // 2, latency_ms=slow - 1)
+        assert fixture.generator.ramp_up is not None
+        press(fixture, "d", 1, latency_ms=slow - 1)
+        assert fixture.generator.ramp_up is None
+
+    def test_the_bump_keys_own_ramp_up_has_no_speed_term(self) -> None:
+        # Stage 0's first step: `f` nine times slower than `j` and through.
+        fixture = Fixture()
+        self._into_phase_c(fixture, "f", "j")
+        press(fixture, "j", config.PHASE_C_ATTEMPTS, latency_ms=1000)
+        press(fixture, "f", config.PHASE_C_ATTEMPTS, latency_ms=9000)
+        assert fixture.generator.ramp_up is None
+
     def test_every_phase_c_unit_carries_a_new_letter(self) -> None:
         fixture = Fixture(active=ANCHOR_SIX)
         self._into_phase_c(fixture, "d", "k")
@@ -553,8 +593,10 @@ def cap(slots: int, keys: int) -> int:
     return max(1, math.floor(slots * MAX_KEY_SHARE), math.ceil(slots / keys))
 
 
-def stats(attempts: int, correct: int) -> WindowStats:
-    return WindowStats(attempt_count=attempts, correct_count=correct, distinct_days=1)
+def stats(attempts: int, correct: int, *, kept: float = 1.0) -> Evidence:
+    # `kept` is the share of its weight each press still has: 1.0 is a window
+    # practised just now, 0.5 one that is a half-life old.
+    return Evidence(attempts, distinct_days=1, weight=attempts * kept, correct=correct * kept)
 
 
 class TestAccuracyBound:
@@ -606,6 +648,80 @@ class TestPressesNeeded:
         assert accuracy_bound(correct + need, attempts + need) >= bar
         if need > gap:
             assert accuracy_bound(correct + need - 1, attempts + need - 1) < bar
+
+    # Alpha-plan #12f: the same windows after time away. The grid is the case
+    # decay is for -- a key at or past Known's floor, clean or nearly so, that
+    # had no need when it was last practised.
+    @pytest.mark.parametrize(
+        ("attempts", "wrong"), [(90, 0), (90, 5), (150, 6), (200, 0), (200, 4)]
+    )
+    @pytest.mark.parametrize("half_lives", [0.0, 0.1, 1.0, 2.0, 4.0, 6.0, 12.0])
+    @pytest.mark.parametrize("bar", [config.KNOWN_MIN_ACCURACY, config.ANCHOR_MIN_ACCURACY])
+    def test_need_after_time_away_is_exactly_enough_to_restore_the_bound(
+        self, attempts: int, wrong: int, half_lives: float, bar: float
+    ) -> None:
+        aged = stats(attempts, attempts - wrong, kept=0.5**half_lives)
+        need = presses_needed(aged, bar)
+        # The dose is counted as it happened: time away never reopens the gap.
+        assert aged.attempts >= config.KNOWN_MIN_ATTEMPTS
+        assert accuracy_bound(aged.correct + need, aged.weight + need) >= bar
+        if need:
+            assert accuracy_bound(aged.correct + need - 1, aged.weight + need - 1) < bar
+
+    @pytest.mark.parametrize(("attempts", "wrong"), [(90, 0), (150, 6), (200, 4)])
+    def test_need_only_grows_with_time_away_and_is_bounded_by_a_key_with_no_history(
+        self, attempts: int, wrong: int
+    ) -> None:
+        bar = config.KNOWN_MIN_ACCURACY
+        needs = [
+            presses_needed(stats(attempts, attempts - wrong, kept=0.5**half_lives), bar)
+            for half_lives in (0.0, 1.0, 2.0, 4.0, 8.0, 16.0, 40.0)
+        ]
+        assert needs[0] == 0
+        assert needs == sorted(needs)
+        # However long the absence, coming back costs no more than confirming a
+        # key from nothing: old misses fade with the old hits.
+        from_nothing = presses_needed(Evidence(attempts, 1, 0.0, 0.0), bar)
+        assert 0 < needs[-1] <= from_nothing
+
+
+class TestNeedFromTheStore:
+    """Alpha-plan #12f, through `KeyStates`: the need is read off stored presses and the clock."""
+
+    DAY1 = "2026-01-01T10:00:00+00:00"
+    DAY2 = "2026-01-02T10:00:00+00:00"
+
+    def practised(self, now: str, *, days: int = 2) -> Fixture:
+        fixture = Fixture(now=now)
+        stamps = [self.DAY1, self.DAY2][:days]
+        for index in range(config.KNOWN_MIN_ATTEMPTS):
+            stamp = stamps[index % len(stamps)]
+            fixture.store.upsert_key_stat(fixture.profile, "f", True, stamp)
+            fixture.store.append_attempt(fixture.profile, "f", True, stamp)
+        return fixture
+
+    def need(self, fixture: Fixture) -> int:
+        return presses_needed(fixture.states.evidence("f"), config.ANCHOR_MIN_ACCURACY)
+
+    def test_a_key_at_its_bar_has_no_need_after_a_long_weekend(self) -> None:
+        assert self.need(self.practised("2026-01-05T10:00:00+00:00")) == 0
+
+    def test_the_same_key_has_need_again_after_half_a_year_away(self) -> None:
+        need = self.need(self.practised("2026-07-01T10:00:00+00:00"))
+        # More than nothing, and less than confirming a key never seen: the old
+        # presses still count for something.
+        from_nothing = presses_needed(
+            Evidence(config.KNOWN_MIN_ATTEMPTS, 2, 0.0, 0.0), config.ANCHOR_MIN_ACCURACY
+        )
+        assert 0 < need < from_nothing
+
+    def test_decay_does_not_give_a_one_day_key_need_the_next_morning(self) -> None:
+        # Why ADR-024's second-day rule stays: a clean first day keeps its
+        # bound for months, so decay never asks for the press that would make
+        # the key Known.
+        fixture = self.practised(self.DAY2, days=1)
+        assert fixture.states.evidence("f").distinct_days == 1
+        assert self.need(fixture) == 0
 
 
 class TestPlanTargets:
@@ -698,8 +814,8 @@ class TestSteadyPlan:
         # Alpha-plan #12g: f is at Known's floor and perfect. With one day
         # behind it, one press today makes it Known and frees its slot, so the
         # block carries exactly one -- in a block the other five would fill.
-        fixture = Fixture(source=doubles(ANCHOR_SIX))
         stamps = ["2026-01-01T10:00:00+00:00", "2026-01-02T10:00:00+00:00"][:days]
+        fixture = Fixture(source=doubles(ANCHOR_SIX), now="2026-01-02T10:00:00+00:00")
         for index in range(config.KNOWN_MIN_ATTEMPTS):
             stamp = stamps[index % len(stamps)]
             fixture.store.upsert_key_stat(fixture.profile, "f", True, stamp)
@@ -710,6 +826,36 @@ class TestSteadyPlan:
         counts = Counter(unit[0] for unit in fixture.generator.next_block().units)
         assert counts["f"] == planned
         assert sum(counts.values()) == FIRST_SLOTS
+
+    @pytest.mark.parametrize(("latency_ms", "slow"), [(2500, True), (1900, False)])
+    def test_a_key_only_speed_keeps_from_known_is_planned(
+        self, latency_ms: int, slow: bool
+    ) -> None:
+        # alpha-plan #12f: every key is past its accuracy bar, so accuracy asks
+        # for nothing. `d` answers 2.5 times slower than the rest, is not Known
+        # and holds a slot, and without a need of its own would be practised no
+        # more than the keys that are done.
+        letters = ANCHOR_SIX + "dk"
+        stamps = ["2026-01-01T10:00:00+00:00", "2026-01-02T10:00:00+00:00"]
+        fixture = Fixture(source=doubles(letters), now=stamps[1])
+        for name in letters:
+            ms = latency_ms if name == "d" else 1000
+            for index in range(config.KNOWN_MIN_ATTEMPTS):
+                stamp = stamps[index % 2]
+                fixture.store.upsert_key_stat(fixture.profile, name, True, stamp)
+                fixture.store.append_attempt(fixture.profile, name, True, stamp, ms)
+        assert fixture.states.slow_keys() == ({"d"} if slow else set())
+        counts = Counter(unit[0] for unit in fixture.generator.next_block().units)
+        assert sum(counts.values()) == FIRST_SLOTS
+        even_share = math.ceil(FIRST_SLOTS / len(letters))
+        planned = min(cap(FIRST_SLOTS, len(letters)), config.SLOW_KEY_NEED)
+        assert planned > even_share
+        if slow:
+            assert counts["d"] == planned
+        else:
+            assert counts["d"] <= even_share
+        rest = [counts[name] for name in letters if name != "d"]
+        assert max(rest) - min(rest) <= 1
 
     def test_a_key_pressed_this_session_is_no_longer_waiting_for_a_day(self) -> None:
         # Today is already one of its days, so another press cannot make it
@@ -847,16 +993,47 @@ class TestAnchorMaintenance:
     def test_an_anchor_above_the_bar_gets_nothing(self) -> None:
         fixture = self.fixture()
         press(fixture, "f", 1, correct=False)
-        stats_f = fixture.states.window_stats("f")
-        assert stats_f.correct_count / stats_f.attempt_count >= config.ANCHOR_MIN_ACCURACY
+        evidence = fixture.states.evidence("f")
+        assert accuracy_bound(evidence.correct, evidence.weight) >= config.ANCHOR_MIN_ACCURACY
         assert self.return_drills(fixture.generator.next_block().units) == []
+
+    def test_slipping_is_read_off_the_bound_and_not_the_raw_share(self) -> None:
+        # alpha-plan #12f, raised by both of its reviews: 90 of 93 is 96.8%,
+        # over the bar as a share, and its bound is under it. The rung and the
+        # block plan read the bound, and the return-drill did not.
+        fixture = self.fixture()
+        press(fixture, "f", 3, correct=False)
+        stats_f = fixture.store.window_stats(fixture.profile, "f")
+        assert stats_f.correct_count / stats_f.attempt_count >= config.ANCHOR_MIN_ACCURACY
+        evidence = fixture.states.evidence("f")
+        assert accuracy_bound(evidence.correct, evidence.weight) < config.ANCHOR_MIN_ACCURACY
+        units = fixture.generator.next_block().units
+        assert [unit[1] for unit in self.return_drills(units)] == ["f"]
+
+    @pytest.mark.parametrize(("days_away", "drilled"), [(3, []), (200, ["f", "j"])])
+    def test_an_anchor_not_practised_for_months_is_slipping(
+        self, days_away: int, drilled: list[str]
+    ) -> None:
+        # The case decay was added for. Every press was right, so the raw
+        # share never moves; what goes is how much the old presses still say.
+        stamps = ["2026-01-01T10:00:00+00:00", "2026-01-02T10:00:00+00:00"]
+        now = (datetime.fromisoformat(stamps[1]) + timedelta(days=days_away)).isoformat()
+        fixture = Fixture(source=doubles(ANCHOR_SIX + "dk"), seed=5, now=now)
+        for name in ANCHOR_SIX + "dk":
+            for index in range(config.KNOWN_MIN_ATTEMPTS):
+                stamp = stamps[index % 2]
+                fixture.store.upsert_key_stat(fixture.profile, name, True, stamp)
+                fixture.store.append_attempt(fixture.profile, name, True, stamp)
+        units = fixture.generator.next_block().units
+        assert sorted(unit[1] for unit in self.return_drills(units)) == drilled
 
     def test_too_few_attempts_is_not_a_slipping_anchor(self) -> None:
         fixture = Fixture(source=doubles(ANCHOR_SIX), seed=5)
         for name in ANCHOR_SIX:
             fixture.activate(name)
         press(fixture, "f", config.ANCHOR_MIN_ATTEMPTS - 2, correct=False)
-        assert fixture.states.window_stats("f").attempt_count == config.ANCHOR_MIN_ATTEMPTS - 1
+        attempts = fixture.store.window_stats(fixture.profile, "f").attempt_count
+        assert attempts == config.ANCHOR_MIN_ATTEMPTS - 1
         assert self.return_drills(fixture.generator.next_block().units) == []
 
 

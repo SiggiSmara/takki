@@ -77,7 +77,9 @@ CREATE TABLE IF NOT EXISTS key_attempts (
     attempted_at TEXT    NOT NULL,
     correct      INTEGER NOT NULL,
     latency_ms   INTEGER,
-    prev_char    TEXT
+    prev_char    TEXT,
+    after_letter_ms    INTEGER,
+    timeouts     INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_ka_profile_key
@@ -144,20 +146,18 @@ class SqliteStore:
             raise RuntimeError(
                 "this Takki database was written before 2026-10-04 and cannot be used; delete it"
             )
-        # ADR-011's two nullable columns, added 2026-09-29. A database created
-        # before them keeps every row and simply has no latency or predecessor
-        # history for what it already recorded, which is the truth.
-        for table, column, decl in (
-            ("key_attempts", "latency_ms", "INTEGER"),
-            ("key_attempts", "prev_char", "TEXT"),
-        ):
-            existing = {
-                cast(str, row[1])
-                for row in self.conn.execute(f"PRAGMA table_info({table})").fetchall()
-            }
-            if column not in existing:
-                self.conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {decl}")
-        self.conn.commit()
+        attempt_columns = {
+            cast(str, row[1])
+            for row in self.conn.execute("PRAGMA table_info(key_attempts)").fetchall()
+        }
+        if "after_letter_ms" not in attempt_columns:
+            # ADR-011, alpha-plan #12f: `latency_ms` changed meaning (it now
+            # runs from the letter being sent, not from its end) and an old
+            # row cannot say which meaning its value has.
+            raise RuntimeError(
+                "this Takki database was written before alpha-plan #12f and cannot be used; "
+                "delete it"
+            )
 
     def create_profile(
         self,
@@ -353,15 +353,27 @@ class SqliteStore:
         attempted_at: str | None = None,
         latency_ms: int | None = None,
         prev_char: str | None = None,
+        after_letter_ms: int | None = None,
+        timeouts: int = 0,
     ) -> None:
         ts = _stamp(attempted_at)
         self.conn.execute(
             """
             INSERT INTO key_attempts
-                (profile_id, key_char, correct, attempted_at, latency_ms, prev_char)
-            VALUES (?, ?, ?, ?, ?, ?)
+                (profile_id, key_char, correct, attempted_at, latency_ms, prev_char,
+                 after_letter_ms, timeouts)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (profile_id, key_char, int(correct), ts, latency_ms, prev_char),
+            (
+                profile_id,
+                key_char,
+                int(correct),
+                ts,
+                latency_ms,
+                prev_char,
+                after_letter_ms,
+                timeouts,
+            ),
         )
         row = self.conn.execute(
             "SELECT COUNT(*) FROM key_attempts WHERE profile_id = ? AND key_char = ?",
@@ -454,8 +466,8 @@ class SqliteStore:
         """
         rows = self.conn.execute(
             """
-            SELECT correct, attempted_at, latency_ms, prev_char FROM (
-                SELECT rowid, correct, attempted_at, latency_ms, prev_char
+            SELECT correct, attempted_at, latency_ms, prev_char, after_letter_ms, timeouts FROM (
+                SELECT rowid, correct, attempted_at, latency_ms, prev_char, after_letter_ms, timeouts
                 FROM key_attempts
                 WHERE profile_id = ? AND key_char = ?
                 ORDER BY rowid DESC
@@ -470,6 +482,8 @@ class SqliteStore:
                 attempted_at=utc_stamp(cast(str, r[1])),
                 latency_ms=cast(int | None, r[2]),
                 prev_char=cast(str | None, r[3]),
+                after_letter_ms=cast(int | None, r[4]),
+                timeouts=cast(int, r[5]),
             )
             for r in rows
         ]

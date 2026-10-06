@@ -17,7 +17,7 @@ A key character has two computational states:
 | State | Meaning | Stored? |
 |---|---|---|
 | **Active** | Has been introduced as a Layer-1 drill target; a `key_stats` row exists | Implicit — row presence |
-| **Known** | Derived: `attempt_count ≥ 90 AND correct_count / attempt_count ≥ 0.90 AND distinct_practice_days ≥ 2` (evaluated over the rolling window — see below) | No — always computed |
+| **Known** | Derived: `attempt_count ≥ 90 AND correct_count / attempt_count ≥ 0.90 AND distinct_practice_days ≥ 2` (evaluated over the rolling window — see below). *Since 2026-10-04 the accuracy test is a lower confidence bound over decayed evidence ([§ Known reads decayed evidence against a confidence bound](#known-reads-decayed-evidence-against-a-confidence-bound)), and there is a fourth part, speed ([§ Known has a speed term](#known-has-a-speed-term)).* | No — always computed |
 
 All characters start **Unseen** (no `key_stats` row). A character becomes **Active** when the lesson engine introduces it and the child answers the first prompt for it — the first counted keystroke creates the row (see § First-Attempt Counting). A character is **Known** when the criterion above is satisfied at query time.
 
@@ -38,6 +38,8 @@ CREATE TABLE key_attempts (
 );
 ```
 
+*(The schema above is as first written. `attempted_at` is UTC since 2026-09-30, and the table has since gained `latency_ms`, `prev_char`, `after_letter_ms` and `timeouts`; [ADR-011](0011-persistence-and-state.md) holds the current schema. Noted 2026-10-04, alpha-plan #12f.)*
+
 **Window cap:** at most 200 rows per (profile_id, key_char). On every INSERT, delete the oldest row if the count exceeds 200. This is enforced by the persistence layer, not a SQL trigger. Default 200 is configurable: `config.ATTEMPT_WINDOW` (ADR-025).
 
 **Why 200:** the research floor for robust long-term retention in children is ~180 repetitions. A window smaller than 180 allows a single intensive session to fill it entirely, so the child could reach Known without any sleep-consolidation evidence. 200 requires roughly 3–5 typical practice days at the ADR-010 session target of 45–90 key-attempts per active key per session, matching the distributed-practice model. A window above ~300 makes regression detection sluggish — a child who has lost a key stays Known for too long. See [motor-learning-repetitions.md](../research/motor-learning-repetitions.md).
@@ -57,9 +59,112 @@ Known = `attempt_count ≥ 90 AND correct_count * 1.0 / attempt_count ≥ 0.90 A
 
 **Why ≥ 90 attempts:** 90 reps per key is the graphomotor research floor — below it, children in the 7–8 age band retain essentially nothing at 4–5 week follow-up. See [motor-learning-repetitions.md](../research/motor-learning-repetitions.md). Configurable: `config.KNOWN_MIN_ATTEMPTS`, with `config.KNOWN_MIN_ACCURACY` for the 0.90 accuracy floor (ADR-025).
 
-**Why ≥ 2 distinct practice days:** motor memory consolidates during sleep. A child who accumulates 90 attempts in one sitting has not yet had a sleep cycle to consolidate the skill. Two distinct calendar days guarantees at least one night between first and most recent practice. This is the minimum bar, not a high one — a child practicing on consecutive mornings clears it easily. The ≥ 2 floor is configurable: `config.KNOWN_MIN_DISTINCT_DAYS` (ADR-025).
+**Why ≥ 2 distinct practice days:** motor memory consolidates during sleep. A child who accumulates 90 attempts in one sitting has not yet had a sleep cycle to consolidate the skill. Two distinct calendar days guarantees at least one night between first and most recent practice. This is the minimum bar, not a high one — a child practicing on consecutive mornings clears it easily. The ≥ 2 floor is configurable: `config.KNOWN_MIN_DISTINCT_DAYS` (ADR-025). *(Noted 2026-10-04, alpha-plan #12f: the floor stands, and its reason is weaker than this paragraph says. The research read for #12f supports practice spread over days, and finds that in children the gain between sessions does not clearly depend on sleep: [known-decay-accuracy-speed.md](../research/known-decay-accuracy-speed.md) § 1b. Read "two days of practice", not "one night of sleep".)*
+
+### Known reads decayed evidence against a confidence bound
+
+*(Amended 2026-10-04, alpha-plan #12f, decided with the developer. The evidence is in [known-decay-accuracy-speed.md](../research/known-decay-accuracy-speed.md).)*
+
+Known's three parts are three different kinds of thing, and only one of them was being read wrongly.
+
+| Part | What it is | Since 2026-10-04 |
+|---|---|---|
+| `attempt_count ≥ KNOWN_MIN_ATTEMPTS` | A **dose**: the child has pressed the key that many times | Unchanged. Counted as rows in the window. Time does not undo a press |
+| `distinct_practice_days ≥ KNOWN_MIN_DISTINCT_DAYS` | A fact about the calendar | Unchanged |
+| accuracy `≥ KNOWN_MIN_ACCURACY` | An **estimate** | The lower confidence bound on the accuracy, over evidence that ages |
+
+**The bound.** The accuracy test was a raw proportion, and 81 correct of 90 passed it. The lower confidence bound on that (Wilson, `CONFIDENCE_Z` = 1, the measure [ADR-024](0024-drill-content-and-lesson-granularity.md)'s need has used since #12e) is 0.864: Known certified "probably above 86%" while the planner worked toward "surely above 90%". Known now asks the planner's question. The bars keep their values, and the test is stricter exactly where the evidence is thin:
+
+| Presses in the window | Correct needed at 0.90 | At 0.95 |
+|---|---|---|
+| 25 | 25 | 25 |
+| 50 | 48 | 50 |
+| 90 | 84 (93.3%) | 88 (97.8%) |
+| 200 | 185 (92.5%) | 194 (97.0%) |
+
+The 90-press floor does not give way to the bound, which #12e left open. They no longer answer one question two ways: the floor is the dose, the bound is the accuracy.
+
+**Why not a higher bar instead.** The published accuracy figures for typists (1–2% errors) are measured after backspacing. Takki has no backspace and counts the first press, and the comparable figure before correction is roughly 2–7% of keystrokes for practised adults. So 0.90 and 0.95 sit inside real first-press performance, and nothing found supports moving them to another particular number. The mastery-criterion studies agree on a direction only: what is kept later sits at or just below what was demanded, so the criterion should sit above the level wanted. The bound does that, by about three points at 90 presses.
+
+**The decay.** Each press in the window counts for `2^(−age / EVIDENCE_HALF_LIFE_DAYS)`, where age is the time since `attempted_at`. Thirty days by default, configurable ([ADR-025](0025-configuration-system.md)). The bound is taken over the weighted presses and the weighted correct ones. Time does not say the child got worse; it says Takki knows less, so the bound widens and the estimate under it stays where it was. A key therefore stops being Known after long enough away and returns after a few correct presses, because its history still partly counts.
+
+How long "long enough" is follows from the arithmetic, since a bound over n all-correct presses is `n / (n + 1)`:
+
+| Key's window | Bar | Idle time before the bound falls under the bar |
+|---|---|---|
+| 90 presses, 94.4% (only just Known) | 0.90 | about a month |
+| 150 presses, 96% | 0.90 | about 11 weeks |
+| 200 presses, 98% | 0.90 | about 16 weeks |
+| 200 presses, 100% | 0.95 | about 14 weeks |
+
+A long weekend costs nothing (each press keeps 93% of its weight after three days). Coming back, a key that has just dropped under its bar needs one or two correct presses; one whose evidence has gone completely needs about 10 in a row at 0.90 and 19 at 0.95.
+
+**Why one half-life, and why a month.** Forgetting of a motor skill runs on months and shows first in accuracy: the current meta-analysis (adults) puts half of training's gain lost at about 6.5 months for accuracy and 13 for speed, and the one typing study with retention data found most of the loss within three months. A per-key half-life that started at a day and grew with practice was proposed first and withdrawn: four studies of children find that what one session teaches is kept for two to six weeks, so there is no evidence that a young key is forgotten in days. What a young key lacks is more days of practice, which is **learning**, a different process on a different clock, and Takki expresses it directly through the dose, the practice days and the speed term ([§ Known has a speed term](#known-has-a-speed-term)). Decay models retention and nothing else.
+
+**What decay does not replace.** [ADR-024 § A key waiting for its second day](0024-drill-content-and-lesson-granularity.md) expected decay to make its rule unnecessary. It cannot: 90 correct presses on a key's first day keep their bound above the bar for more than three half-lives, so the next morning that key still has no need. The rule stays.
+
+**What follows elsewhere.**
+
+- **Slots** ([ADR-010](0010-lesson-structure-and-progression.md)): a key that stops being Known takes its slot back, so after a long break no new letter comes until old ones are confirmed again. This is the consequence ADR-010 recorded in advance.
+- **Milestones** are still one-time events and are never revoked. A rung not yet earned counts the keys Known today.
+- **The anchor rung** reads the same bound at `ANCHOR_MIN_ACCURACY`: see [§ The Anchor Gate](#the-anchor-gate).
+- **The time is the system clock's**, read as UTC like every other timestamp ([ADR-011](0011-persistence-and-state.md)). A press stamped in the future, after a clock correction, has an age of zero.
 
 **Relationship to `key_stats`:** `key_stats` retains its lifetime aggregate counters (`attempt_count`, `correct_count`, `last_practised_at`). Those are used for gamification displays (total attempts, milestone history) and are never the source of truth for Known. `key_attempts` is authoritative for Known.
+
+### Known has a speed term
+
+*(Added 2026-10-04, alpha-plan #12f, decided with the developer. The evidence, and the spike that chose the baseline, are in [known-decay-accuracy-speed.md](../research/known-decay-accuracy-speed.md).)*
+
+A key the child answers correctly and still has to hunt for is not Known. Accuracy cannot see the difference: with no backspace and no time limit, a slow search ends on the right key. The research on how children learn a motor skill says the same from the other side: accuracy levels off early and the learning that continues over days shows in speed. So Known gets a fourth part.
+
+| Part | What it is |
+|---|---|
+| The dose, the practice days, the accuracy bound | The **floors**, as above. A key that meets all three **meets the floors** |
+| Speed | The key's own speed is at most `KNOWN_MAX_LATENCY_RATIO` (2.0) times the child's baseline |
+
+**A key's speed** is the median time from the letter being sent to the first press (`latency_ms`, [ADR-011](0011-persistence-and-state.md)), over its latest `SPEED_SAMPLE` (30) timed **correct** first presses. Three rules sit inside that sentence:
+
+- **Correct presses only.** A press made without listening is fast and usually wrong, and must not make a key look fast (see "A press before the letter could be heard is not an attempt").
+- **An answer that sat through a timeout counts as the slowest there is.** It has no latency, because the letter was spoken again, and it is exactly the answer a speed term exists to notice. `key_attempts.timeouts` is what makes it visible.
+- **Below `SPEED_MIN_SAMPLE` (10) timed presses a key has no speed.** A median of a handful is noise.
+
+**The baseline** for a key is the median of the speeds of **`f`, `j` and every other key that meets the floors**, each counted once by its own median. The key being judged is never in its own baseline. Whether the other keys pass their own speed test is not asked.
+
+**A ratio, never milliseconds.** An absolute figure would encode a sighted adult's reaction time into a blind child's curriculum, and nothing has been measured on a blind child. Two is wide on purpose. On the hands-on run of 2026-09-26 the median answer came 1,125 ms after the letter was sent, so the bar would have been 2,250 ms: a second of room, where the differences found between fingers are tens of milliseconds. The term is meant to catch a key the child searches for and nothing finer.
+
+**No baseline or no speed, no term.** A key with too few timed answers, or a profile where nothing else has a speed yet, is judged on the floors alone. A measurement that cannot be made must not hold a key back.
+
+**`f` and `j` are the root.** They are in every baseline from their first `SPEED_MIN_SAMPLE` timed presses, before they meet the floors, and they have no speed term themselves. Something has to be the root of a comparison, and these are the two keys the fingers rest on.
+
+**Why this pool.** "The median over the child's Known keys", which is what Phase C's term used, is circular once Known itself has a speed term: whether a key is Known would depend on the baseline, and the baseline on which keys are Known. Three ways out were compared in a spike on 2026-10-04:
+
+| Pool for the key being judged | Behaviour |
+|---|---|
+| **A.** `f`, `j` and every other key that meets the floors | No circle, no ordering. Measures a key against the child's typical key |
+| B. `f`, `j` and the Known keys introduced before it | No circle. `f` and `j` stay the yardstick: the first keys after them are judged against the two index fingers alone, for good |
+| C. `f`, `j` and every other Known key (the developer's first wording) | Circular. It has two consistent answers; solved from "nobody Known" it gives B's, from "everybody Known" A's |
+
+A and B agree on an even child, on a gradient between fingers, on keys that get slower the later they were introduced, on one hunted key wherever it was introduced, and on a child who is slow on everything. They differ in one situation, a group of keys more than twice as slow as `f` and `j`. Under B a child who is twice as fast on the two home keys as anywhere else has nothing become Known, and with six slots the curriculum stops at the first six keys. Under A those keys outvote `f` and `j` once three of them meet the floors. **A is the decision**: the term is for finding the key that stands out from the child's own typing, and holding a child who is evenly slower away from home would put speed before accuracy.
+
+**What this costs, stated plainly.**
+
+- **The baseline moves with the child.** If everything slows down, nothing is called slow. That is what a ratio against one's own baseline means, and it is the same under B.
+- **A slower group passes once it is the majority.** If a consistent sub-group of keys is more than twice as slow as the rest, its keys are held back while they are the minority of the pool and all pass when they become the majority. The split that matters is one hand against the other. The slot gate limits it, since at most `MAX_KEYS_IN_PROGRESS` keys can be short of Known at once, so a slower group can only become the majority while few keys meet the floors. The developer has asked for this to be looked at again for Beta ([roadmap § D](../roadmap.md#d-smaller-gaps-worth-a-line-in-the-relevant-adr), "A consistently slower group of keys").
+- **A key's state can change because of other keys.** The pool is the other keys, so a key near the bar can gain or lose Known when another key joins the pool or gets faster.
+- **A key near the bar flickers.** With 30 presses a key and a spread of a third between presses, a key truly at 1.8 times its baseline is called slow on about one evaluation in ten, whatever the size of the pool. Known is recomputed on every query, so such a key moves in and out. Milestones are one-time and unaffected; slots and the block plan follow the flicker. Left to #12h and the pilot to say whether it is noticeable.
+- **It is lenient by construction.** The time runs from the sending, so it includes the letter's own length (1.1 to 1.3 s on SAPI). A child has to take about a second longer than their usual answer before a key is slow, and a letter with a long name is measured some 150 ms slower than one with a short name. The alternative, timing from the letter's end, gives a signed number that no ratio can be taken on, and needs a letter length that is not always known (ADR-011).
+
+**What follows elsewhere.**
+
+- **Slots** ([ADR-010](0010-lesson-structure-and-progression.md)): a key that only speed keeps from Known is in progress and holds its slot.
+- **The block plan** ([ADR-024](0024-drill-content-and-lesson-granularity.md) § Need and Known read one measure) gives such a key a need of `SLOW_KEY_NEED`, since accuracy asks nothing more of it and speed comes from practice.
+- **Phase C** of the ramp-up reads the same baseline at the same ratio.
+- **Milestones** count Known, speed included, and are still never revoked.
+- **An answer after a re-read is not in a key's speed**, and this is a known gap, accepted by the developer on 2026-10-04. A prompt that timed out counts as the slowest answer; one the child asked to hear again is untimed and left out, because a re-read can mean "I did not hear it" as easily as "I cannot find it", and nothing yet says which is commoner. So a child who presses re-read on most prompts for a key they hunt for has too few timed answers for the term to apply, and the key can become Known on the floors alone. The pilot's data is where to see how often re-reads happen. The developer's note: the re-read matters more once words are practised, where it is the ordinary way to hear a word again ([roadmap § D](../roadmap.md#d-smaller-gaps-worth-a-line-in-the-relevant-adr), "Typing ahead is not counted").
+- **The anchor rung has no speed term.** It asks whether the child finds home, and its criterion stays the bound and the days ([§ The Anchor Gate](#the-anchor-gate)).
+
+Every number here is a starting value. None comes from the literature, and none has been heard by a child.
 
 ### First-Attempt Counting Semantics
 
@@ -73,6 +178,21 @@ The **first** keystroke response to a prompt determines the outcome for that pro
 - First press wrong → `attempt_count + 1`, `correct_count + 0`; auto-rejection fires; engine stays on the same character. All subsequent keypresses until the correct character is entered are ignored for `key_stats` — they do not increment either counter.
 
 `key_stats.last_practised_at` is updated on every keystroke that answers a prompt — the counted first press, and every subsequent press until the correct character arrives — so it tracks recency of any engagement, not just successful ones. *(Clarified 2026-08-22, alpha session 7: this section previously said "on every prompt", which contradicts the timeout rule below — an unanswered prompt writes nothing, and the only write path that could create the row on prompt issue is `upsert_key_stat`, which would count an attempt nobody made. Recency is therefore written by keystrokes only, and a character becomes Active on its first counted keystroke rather than at prompt issue.)*
+
+**A press before the letter could be heard is not an attempt** *(added 2026-10-04, alpha-plan #12f, decided with the developer).* A child can answer a prompt without hearing it, by following a pattern in the drill or by typing ahead of it. Such a press says nothing about whether the child knows the key, so it is never evidence.
+
+**Rule: a press earlier than `HEARD_MIN_MS` (250 ms) after the letter was first sent to be spoken is not an attempt.** It creates no `key_stats` row, moves neither counter, appends no `key_attempts` row, and is not reported to the ramp-up or the block plan. Unlike a held key it still answers the prompt as far as the child can tell: the cue plays, a correct press moves on and a wrong one re-speaks the letter. After a wrong one the prompt is still open and its next press is the first attempt. The time runs from the *first* sending, so a re-read does not move it, and it needs no measured letter length, so it holds on a session's first prompt. One exception: a wrong press under the floor cuts the letter before it has sounded, so the letter re-spoken after it is the first the child can hear, and both the floor and the timing start again from that one. Without this a child hitting keys every 150 ms had every second press counted (found by the review of 2026-10-04). A keystroke typed ahead of a prompt lands on it the moment it opens and falls under this rule. That is right for a single spoken letter, which cannot be known before it is heard. It is wrong for a word, where the child hears the whole word once and typing ahead is the skill; Layer 2 needs its own rule before it uses this counter ([roadmap § D](../roadmap.md#d-smaller-gaps-worth-a-line-in-the-relevant-adr)).
+
+**The 250 ms is physical, not statistical.** A voice needs 100 to 150 ms to start sounding after the letter is sent (measured on SAPI in #12b-2), and a reaction to any sound takes about 100 ms more (the usual cutoff for an anticipation in reaction-time work is 100 to 200 ms; Whelan 2008). Nothing earlier can be an answer to the letter, whoever is listening. On the hands-on run of 2026-09-26, 15 of 262 first presses were under it.
+
+**Every later press is an attempt and is timed, however early.** A floor at half the letter's usual length was proposed first, from that run: 64 of its 262 first presses came between 170 and 454 ms after the letter was sent, the rest at 719 ms or later, none in between, and the letters took 1.1 to 1.3 seconds. The early group was typed from the fixed cycle #12d has since replaced. It was withdrawn the same day, on the developer's point that the gap is a sighted adult's gap. Blind listeners follow speech far faster than sighted ones (reported: about 22 syllables a second against about 8, Dietrich, Hertrich & Ackermann 2013; and a simple reaction to a sound of 0.21 s against 0.32 s in congenitally blind adults; both from search summaries, neither read in full). A listener like that can know a letter from its first sound and answer 350 to 450 ms after it was sent, which is inside the band the run called pattern presses. A floor there would discard the real answers of the children Takki is for.
+
+**What removes a pattern press is that it is wrong.** The drill content is built so that the next prompt cannot be predicted ([ADR-024 § Ramp-up variability](0024-drill-content-and-lesson-granularity.md), property 1), so a press made without listening is a guess, and a guess is counted as the miss it usually is. Two things follow:
+
+- **The speed term reads correct first presses only** ([§ Known has a speed term](#known-has-a-speed-term)). A wrong guess is fast and must not make a key look fast.
+- **Whether early answers are heard or guessed has to be visible.** The progress dump prints first-press accuracy by when the answer came: in the letter's first half, in its second half, after it. A first band well under the others means children are following a pattern and the content has failed.
+
+This is accepted until there is more to go on. Nothing has been measured on a blind child, and #12h's run and the pilot are where the 250 ms and the reading above are checked. One thing they cannot check from the data: a press under the floor leaves no row, so nothing counts how often the floor removes one.
 
 **Timeouts:** a configurable auto-advance timeout (Layer-1, see ADR-012) that fires when the child has not responded does not affect `key_stats`. The prompt is silently re-issued. Only a keystroke response triggers counting.
 
@@ -155,17 +275,19 @@ Diamond and Speed remain accuracy/fluency gates, not key-count gates, and are un
 
 The first rung certifies that the child can **find home by touch** — the F and J tactile bumps, the one orientation landmark present on essentially every physical keyboard, and the foundation every later key position is described against ([ADR-023](0023-key-introduction-protocol.md) § Location).
 
+*(Since 2026-10-04, alpha-plan #12f: the accuracy in this criterion is the lower confidence bound over decayed evidence, as for Known. 24 correct of 25 no longer passes; it takes 19 presses with no miss, 52 with one, or 79 with two. [ADR-024](0024-drill-content-and-lesson-granularity.md)'s plan has held these six keys to that bound since #12e, so the rung follows what is already practised. Whether it is too strict is for #12h to hear.)*
+
 **Criterion.** The six index home-column keys — positions (2,4) (3,4) (4,4) and (2,7) (3,7) (4,7), which are `r f v` / `u j m` on every QWERTY-derived layout in the target set — are each Known at the **anchor bar**: `attempt_count ≥ ANCHOR_MIN_ATTEMPTS AND accuracy ≥ ANCHOR_MIN_ACCURACY AND distinct_practice_days ≥ KNOWN_MIN_DISTINCT_DAYS`. Defaults: 25 attempts, 0.95 accuracy, 2 days. Fewer repetitions than the general Known floor of 90, at a higher accuracy bar — this is a shorter, stricter gate, because a child who is only 90% sure where home is has not got an anchor.
 
 **Why plain accuracy is valid here, when it was not for Bronze.** The gate is evaluated over the Stage 0 drill, whose content is confined to one finger's home column and alternates the anchor with its own reaches (`f ↔ r`, `f ↔ v`). Every anchor prompt is therefore preceded by a keystroke that took the finger off home, so first-press accuracy on F *is* return-to-anchor accuracy. The measurement problem that sank the old Bronze was a property of home-row-only drill content, not of the metric — fix the content and the metric becomes sound. This is why the gate needs no new column in `key_attempts`, and it fires once on stage completion rather than as a rolling query, so ordinary drilling afterwards cannot dilute it.
 
 **What the gate's validity actually rests on, stated as an invariant** *(added 2026-09-29, alpha-plan #12d.)* The paragraph above argues from Stage 0's *content* — a fixed `f ↔ r` cycle, in which every anchor prompt happens to follow a reach. [ADR-024 § Ramp-up variability](0024-drill-content-and-lesson-granularity.md) shuffles that order to stop the cycle teaching pattern-following, which means the property can no longer be read off the content by inspection. It is therefore promoted to an invariant the drill generator owes this gate, holding over the ramp-up's **cycle** blocks (Phases A and B, which is where Stage 0's own content lives) **for every hand those blocks contain a home key for** — which Stage 0's always do: **between two reach prompts of the same hand there is always an anchor prompt of that hand.** Phase C and steady state keep the statistical reading described below, since their content is sampled from the language rather than cycled. Under it, first-press accuracy on `f` remains return-to-anchor accuracy whatever order the units come in — and allowing the reversed unit direction (`r → f`) makes the return explicit rather than incidental. The gate still needs no new column and still fires once on stage completion. Nothing downstream can detect this being got wrong, which is why it is a property test over generated blocks rather than a comment.
 
-**The latency baseline is the child's own** *(added 2026-09-29, alpha-plan #12d.)* [ADR-011](0011-persistence-and-state.md)'s `key_attempts.latency_ms` gives ADR-024's Phase C a speed term. It is measured from **the end of the spoken prompt**, not from the moment the prompt was issued: a blind child cannot answer a letter they have not finished hearing, and letter names differ in length, so timing from the issue would fold a per-letter offset into a per-key bar — measured, a child genuinely 2.25 times slower than their own baseline came out at exactly the 1.5 ratio and passed. It is expressed as a ratio against the **median latency over this child's Known keys**, which makes this section's vocabulary load-bearing in a new place: Known is the only set with enough attempts across enough days to be a stable reference, and a profile with no Known keys has no baseline, so the term is skipped rather than failed. Absolute millisecond thresholds are rejected outright — they would encode a sighted adult's reaction time into a blind child's curriculum, and the spread between children on this measure is the thing nobody has measured yet.
+**The latency baseline is the child's own** *(added 2026-09-29, alpha-plan #12d. Since 2026-10-04 `latency_ms` is counted from when the letter was sent, not from its end: [ADR-011](0011-persistence-and-state.md), "`latency_ms` runs from the letter being sent". The baseline is no longer the median over Known keys, the ratio is 2.0, and the term is part of Known as well as of Phase C: [§ Known has a speed term](#known-has-a-speed-term). The paragraph below is kept as written, for its reasoning against absolute thresholds.)* [ADR-011](0011-persistence-and-state.md)'s `key_attempts.latency_ms` gives ADR-024's Phase C a speed term. It is measured from **the end of the spoken prompt**, not from the moment the prompt was issued: a blind child cannot answer a letter they have not finished hearing, and letter names differ in length, so timing from the issue would fold a per-letter offset into a per-key bar — measured, a child genuinely 2.25 times slower than their own baseline came out at exactly the 1.5 ratio and passed. It is expressed as a ratio against the **median latency over this child's Known keys**, which makes this section's vocabulary load-bearing in a new place: Known is the only set with enough attempts across enough days to be a stable reference, and a profile with no Known keys has no baseline, so the term is skipped rather than failed. Absolute millisecond thresholds are rejected outright — they would encode a sighted adult's reaction time into a blind child's curriculum, and the spread between children on this measure is the thing nobody has measured yet.
 
 **The stretch columns are excluded on purpose.** `t g b` / `y h n` (columns 5 and 6) train lateral displacement, a different skill from leaving home vertically and returning to the bump. Mixing them into the anchor stage blurs the one thing it exists to establish. They belong to the curriculum proper.
 
-**Anchor accuracy is maintained, not just earned.** Losing the anchor degrades every key position that is described relative to it, so `f` and `j` are held to `ANCHOR_MIN_ACCURACY` for the life of the profile: when either falls below it in the rolling window, the drill generator re-injects anchor return-drills into the next block. This reuses [ADR-024](0024-drill-content-and-lesson-granularity.md)'s spaced re-exposure slot with an accuracy trigger in place of the staleness trigger, and needs no extra data — once drills mix keys, virtually every `f` press already follows a different key, so ordinary rolling accuracy is return accuracy from that point on.
+**Anchor accuracy is maintained, not just earned.** Losing the anchor degrades every key position that is described relative to it, so `f` and `j` are held to `ANCHOR_MIN_ACCURACY` for the life of the profile: when either falls below it in the rolling window, the drill generator re-injects anchor return-drills into the next block. This reuses [ADR-024](0024-drill-content-and-lesson-granularity.md)'s spaced re-exposure slot with an accuracy trigger in place of the staleness trigger, and needs no extra data — once drills mix keys, virtually every `f` press already follows a different key, so ordinary rolling accuracy is return accuracy from that point on. *(Since 2026-10-04, alpha-plan #12f, decided with the developer after both of that session's reviews raised it: "below it in the rolling window" means the same measure the anchor rung, Known and the block plan read, the lower confidence bound over decayed evidence, and no longer the raw share of correct presses. On the raw share `f` at 24 of 25 failed the rung and was not slipping, and an anchor left for months never was, because every one of its old presses was right. The cost is a return-drill more often: at most one slot per anchor per block.)*
 
 **The milestone itself is never revoked.** Milestones are one-time events (§ Key States); a dropped anchor triggers remediation, not the withdrawal of something the child earned. The two mechanisms are deliberately separate.
 

@@ -170,7 +170,7 @@ class TestInterrupt:
         speaker, _, _, _, _ = build()
         speaker.letter("f")
         assert speaker.on_finished(SpeechFinished(1_000_000, "completed")) is False
-        assert speaker.letter_finished is True
+        assert speaker.letter_status == "completed"
 
     def test_a_letter_that_failed_is_not_reported_as_finished(self) -> None:
         # The child did not hear it, so nothing may be timed from it
@@ -185,7 +185,7 @@ class TestInterrupt:
         event = outbound.get_nowait()
         assert event.status == "failed"
         assert speaker.on_finished(event) is False
-        assert speaker.letter_finished is False
+        assert speaker.letter_status == "failed"
         # No longer outstanding either: there is nothing left to stop.
         speaker.interrupt()
         assert engine.stopped == 0
@@ -194,7 +194,7 @@ class TestInterrupt:
         speaker, _, _, _, _ = build()
         speaker.letter("f")
         assert speaker.on_finished(SpeechFinished(1_000_000, "cancelled")) is False
-        assert speaker.letter_finished is False
+        assert speaker.letter_status == "cancelled"
 
     def test_a_second_letter_supersedes_an_outstanding_one(self) -> None:
         # The worker serialises utterances, so a letter queued behind an

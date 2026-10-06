@@ -85,6 +85,34 @@ ATTEMPT_WINDOW = 200
 KNOWN_MIN_ATTEMPTS = 90
 KNOWN_MIN_ACCURACY = 0.90
 KNOWN_MIN_DISTINCT_DAYS = 2
+# How fast a press stops counting toward Known's accuracy: its weight halves
+# every this many days (ADR-027 § Known reads decayed evidence). Forgetting of
+# a motor skill runs on months, and a well-practised key keeps its bound for
+# three to four half-lives, so this asks for a key again after one to four
+# months away. Shorter means more review after a break, and nothing else.
+EVIDENCE_HALF_LIFE_DAYS = 30.0
+# ADR-027 § A press before the letter could be heard is not an attempt. Counted
+# from the moment the letter is sent to be spoken: a voice needs 100 to 150 ms
+# to start and a reaction to any sound about 100 ms more, so nothing earlier
+# can be an answer to it. Deliberately no higher: a blind listener may know the
+# letter from its first sound, and a press that early is judged by being right.
+HEARD_MIN_MS = 250
+# ADR-027 § Known has a speed term. A key is slow when its median answer takes
+# more than this many times the child's own baseline: the median over `f`, `j`
+# and every other key that meets the three floors above. A ratio, never
+# milliseconds, which would encode a sighted adult's reaction time. Two is
+# wide on purpose: it is meant to catch a key the child still hunts for, and
+# the differences between fingers are tens of milliseconds.
+KNOWN_MAX_LATENCY_RATIO = 2.0
+# The speed of a key is read over its latest SPEED_SAMPLE timed correct first
+# presses, so every key is compared over a sample of the same size, and not at
+# all below SPEED_MIN_SAMPLE: a median of a handful is noise.
+SPEED_SAMPLE = 30
+SPEED_MIN_SAMPLE = 10
+# ADR-024 § Need and Known read one measure: what a block plans for a key that
+# only speed keeps from Known. Accuracy asks nothing more of it, and unplanned
+# it would hold its slot (ADR-010) without ever being practised.
+SLOW_KEY_NEED = 5
 
 # ADR-027 § The Anchor Gate. The first milestone rung's bar for the six index
 # home-column keys: shorter than the general Known floor and stricter on
@@ -120,11 +148,10 @@ PHASE_B_ATTEMPTS = 20
 PHASE_B_MAX_REJECTIONS = 1
 PHASE_C_ATTEMPTS = 30
 PHASE_C_MIN_ACCURACY = 0.85
-# ADR-024 § Ramp-up variability: Phase C's speed term, a ratio against the
-# child's own median latency over their Known keys -- never an absolute
-# millisecond figure, which would encode a sighted adult's reaction time. With
-# no Known keys there is no baseline and the term is skipped.
-PHASE_C_MAX_LATENCY_RATIO = 1.5
+# ADR-024 § Ramp-up variability: Phase C's speed term, against the same
+# baseline Known's speed term reads and at the same ratio (ADR-027). With no
+# baseline the term is skipped.
+PHASE_C_MAX_LATENCY_RATIO = 2.0
 
 # How many previously-active graphemes Phase C mixes the new one with, and how
 # often a sampled bigram is grown into ADR-024's "3-letter sequence".

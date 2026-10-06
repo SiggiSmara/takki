@@ -22,12 +22,12 @@ the *step* gets there. Read from its own completion, the presses it made while
 waiting counted as evidence for a phase whose content it had not been given.
 """
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from enum import Enum
-from statistics import median
 
 from takki import config
+from takki.lesson.key_state import key_speed
 from takki.persistence import Attempt, Store
 
 
@@ -79,17 +79,6 @@ def live_run(
     return correct
 
 
-def median_latency(rows: Iterable[Attempt]) -> float | None:
-    """Median measured latency, or None when nothing in the window was measured."""
-    measured = [row.latency_ms for row in rows if row.latency_ms is not None]
-    return median(measured) if measured else None
-
-
-def baseline_latency(windows: Iterable[Sequence[Attempt]]) -> float | None:
-    """ADR-027: the child's own reference, pooled over their Known keys' windows."""
-    return median_latency(row for window in windows for row in window)
-
-
 def bar_met(
     phase: RampUpPhase,
     evidence: Sequence[Attempt],
@@ -105,12 +94,12 @@ def bar_met(
         return False
     if sum(row.correct for row in recent) / len(recent) < config.PHASE_C_MIN_ACCURACY:
         return False
-    # Speed, against the child's own baseline. No baseline, no bar -- by design:
-    # every profile's first days have no Known key, Stage 0 included, so a term
-    # that failed closed would hold the whole curriculum behind a measurement
-    # that cannot yet be made (ADR-027 § The latency baseline). An unmeasured
-    # stretch is the same: ADR-011 gives NULL exactly one meaning.
-    observed = median_latency(recent)
+    # Speed, read the way Known reads it and against the same baseline
+    # (ADR-027 § Known has a speed term). No baseline, no bar -- by design: the
+    # bump keys have none, and a term that failed closed would hold Stage 0
+    # behind a measurement that cannot be made. A stretch with too few timed
+    # answers is the same.
+    observed = key_speed(recent)
     if baseline is None or observed is None:
         return True
     return observed <= baseline * config.PHASE_C_MAX_LATENCY_RATIO

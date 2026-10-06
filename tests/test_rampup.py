@@ -121,9 +121,46 @@ class TestLatency:
     def test_unmeasured_rows_never_fail_a_bar(self) -> None:
         assert rampup.bar_met(RampUpPhase.C, rows(THROUGH_C, None), 800.0)
 
-    def test_the_baseline_pools_the_known_windows(self) -> None:
-        assert rampup.baseline_latency([rows("..", 100), rows("..", 300)]) == 200.0
-        assert rampup.baseline_latency([rows(".."), rows("..")]) is None
+    def test_the_ratio_is_known_s_own(self) -> None:
+        # alpha-plan #12f: one baseline and one ratio for Phase C and for Known.
+        assert config.PHASE_C_MAX_LATENCY_RATIO == config.KNOWN_MAX_LATENCY_RATIO == 2.0
+        at_the_bar = round(800 * config.PHASE_C_MAX_LATENCY_RATIO)
+        assert rampup.bar_met(RampUpPhase.C, rows(THROUGH_C, at_the_bar), 800.0)
+        assert not rampup.bar_met(RampUpPhase.C, rows(THROUGH_C, at_the_bar + 1), 800.0)
+
+    def test_the_term_reads_the_time_from_the_sending_and_no_letter_length(self) -> None:
+        # alpha-plan #12f: most answers come before the letter has ended, and a
+        # child who never lets one end has no letter length at all. Such a
+        # stretch used to read as unmeasured and pass whatever its speed.
+        answered_early = [
+            Attempt(
+                correct=True,
+                attempted_at="2026-09-29T10:00:00+00:00",
+                latency_ms=1000,
+                after_letter_ms=after,
+            )
+            for after in [-200, None] * (config.PHASE_C_ATTEMPTS // 2)
+        ]
+        assert rampup.bar_met(RampUpPhase.C, answered_early, 800.0)
+        assert not rampup.bar_met(
+            RampUpPhase.C, answered_early, 1000.0 / config.PHASE_C_MAX_LATENCY_RATIO - 1
+        )
+
+    def test_answers_that_sat_through_a_timeout_fail_the_term(self) -> None:
+        # Untimed, because the letter was spoken again, and the slowest answers
+        # there are. Before #12f a stretch like this read as unmeasured and passed.
+        waited = [
+            Attempt(correct=True, attempted_at="2026-09-29T10:00:00+00:00", timeouts=1)
+            for _ in THROUGH_C
+        ]
+        assert not rampup.bar_met(RampUpPhase.C, waited, 800.0)
+        assert rampup.bar_met(RampUpPhase.C, waited, None)
+
+    def test_a_fast_wrong_press_does_not_make_the_stretch_fast(self) -> None:
+        # Accuracy passes at 27 of 30, and the three misses were quick guesses.
+        # The speed is the correct answers', which are past the ratio.
+        stretch = rows("." * 27, 2000) + rows("xxx", 300)
+        assert not rampup.bar_met(RampUpPhase.C, stretch, 800.0)
 
 
 class TestRecordedPhases:

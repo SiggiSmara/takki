@@ -20,9 +20,19 @@ def _seed_db(path: Path) -> int:
         "f",
         True,
         attempted_at="2026-09-20T10:00:00+00:00",
-        latency_ms=420,
+        latency_ms=1620,
         prev_char="j",
+        after_letter_ms=420,
     )
+    # ADR-011, alpha-plan #12f. Against a 1200 ms letter: two answers in its
+    # first half (300 and 400 ms after it was sent), one in its second half,
+    # and one that sat through two timeouts and so was not timed.
+    day = "2026-09-20T10:01:00+00:00"
+    store.append_attempt(profile.id, "j", False, day, latency_ms=300, after_letter_ms=-900)
+    store.append_attempt(profile.id, "j", True, day, latency_ms=400, after_letter_ms=-800)
+    store.append_attempt(profile.id, "j", True, day, latency_ms=1100, after_letter_ms=-100)
+    store.append_attempt(profile.id, "j", True, day, latency_ms=700)
+    store.append_attempt(profile.id, "j", True, day, timeouts=2)
     store.mark_introduced(profile.id, ["f", "j"], introduced_at="2026-09-19T09:00:00+00:00")
     store.begin_phase(profile.id, "f", "A", 0, started_at="2026-09-19T09:00:00+00:00")
     store.record_phase(profile.id, "f", "A", 10, completed_at="2026-09-19T09:05:00+00:00")
@@ -100,8 +110,22 @@ class TestMain:
         # date(attempted_at, 'localtime') grouping — must agree with window_stats().
         assert "2026-09-19" in out
         assert "2026-09-20" in out
-        # The mean latency of the one timed attempt, and how many were timed.
-        assert "420" in out
+        # The mean time from the letter being sent, how many answers were
+        # timed, and how many sat through a timeout: `f`'s one timed attempt
+        # at 420 ms after a 1200 ms letter, and `j`'s three at 300, 400 and 1100.
+        lines = out.splitlines()
+        assert "  f    2026-09-20        1        1   100.0%     1620      1         0" in lines
+        assert "  j    2026-09-20        5        4    80.0%      625      4         1" in lines
+        # ADR-027: every press from the floor on is kept, so whether the early
+        # ones were heard or guessed has to be readable somewhere.
+        table = lines[lines.index("first-press accuracy by when the answer came") + 2 :][:5]
+        assert table == [
+            "  in the letter's first half          2        1     50.0%",
+            "  in the letter's second half         1        1    100.0%",
+            "  after the letter                    1        1    100.0%",
+            "  letter length not known             1        1    100.0%",
+            "  not timed                           3        2     66.7%",
+        ]
         # Introductions and phases: the only place a resumed ramp-up is visible.
         assert "introductions and ramp-up phases" in out
         # Where each phase began and was passed, in the key's lifetime attempts;

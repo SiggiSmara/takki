@@ -597,6 +597,25 @@ class TestWindowAttempts:
             (False, None, "j"),
         ]
 
+    def test_a_signed_latency_its_letter_length_and_the_timeouts_come_back(
+        self, any_store: Store
+    ) -> None:
+        # ADR-011, alpha-plan #12f: a press before the letter's usual end is a
+        # negative latency, beside the length it was timed against.
+        pid = any_store.create_profile("Alice").id
+        stamp = "2026-10-04T10:00:00+00:00"
+        any_store.append_attempt(pid, "f", True, stamp, 1020, "j", after_letter_ms=-180)
+        any_store.append_attempt(pid, "f", True, stamp, 400)
+        any_store.append_attempt(pid, "f", True, stamp, timeouts=2)
+        any_store.append_attempt(pid, "f", False, stamp)
+        rows = any_store.window_attempts(pid, "f")
+        assert [(r.latency_ms, r.after_letter_ms, r.timeouts) for r in rows] == [
+            (1020, -180, 0),
+            (400, None, 0),
+            (None, None, 2),
+            (None, None, 0),
+        ]
+
     def test_equal_timestamps_keep_insertion_order(self, any_store: Store) -> None:
         # A drill puts several attempts inside one second, and a streak read in
         # the wrong order is a different streak.
@@ -668,37 +687,27 @@ class TestPhaseRecords:
 
 
 class TestMigration:
-    def test_a_database_written_before_the_new_columns_still_opens(self, tmp_path: Path) -> None:
-        # ADR-011, 2026-09-29: two nullable additions, so an existing profile
-        # keeps every row and simply has no latency or predecessor history for
-        # what it already recorded.
+    def test_a_database_whose_latency_has_the_old_meaning_is_refused_at_open(
+        self, tmp_path: Path
+    ) -> None:
+        # ADR-011, alpha-plan #12f: `latency_ms` used to run from the end of
+        # the letter, floored at zero, and a row cannot say which meaning its
+        # value has. This is the database as #12j left it.
         path = str(tmp_path / "takki.sqlite")
+        SqliteStore(path).conn.close()
         old = sqlite3.connect(path)
         old.executescript("""
-            CREATE TABLE profiles (
-                id INTEGER PRIMARY KEY, name TEXT NOT NULL, language TEXT NOT NULL,
-                tts_voice TEXT, tts_rate REAL, talk_key TEXT, reread_key TEXT,
-                restart_key TEXT, ptt_mode TEXT, created_at TEXT NOT NULL
-            );
+            DROP TABLE key_attempts;
             CREATE TABLE key_attempts (
                 profile_id INTEGER NOT NULL, key_char TEXT NOT NULL,
-                attempted_at TEXT NOT NULL, correct INTEGER NOT NULL
+                attempted_at TEXT NOT NULL, correct INTEGER NOT NULL,
+                latency_ms INTEGER, prev_char TEXT
             );
-            INSERT INTO profiles (name, language, created_at)
-                VALUES ('Alice', 'en', '2026-09-01T10:00:00+00:00');
-            INSERT INTO key_attempts VALUES (1, 'f', '2026-09-01T10:00:00+00:00', 1);
         """)
         old.commit()
         old.close()
-
-        store = SqliteStore(path)
-        rows = store.window_attempts(1, "f")
-        assert [(r.correct, r.latency_ms, r.prev_char) for r in rows] == [(True, None, None)]
-        # And the new writes work on the migrated table.
-        store.append_attempt(1, "f", True, "2026-09-29T10:00:00+00:00", 300, "j")
-        assert store.window_attempts(1, "f")[-1].latency_ms == 300
-        store.mark_introduced(1, ["f"])
-        assert [i.key_char for i in store.introductions(1)] == ["f"]
+        with pytest.raises(RuntimeError, match=r"#12f.*delete it"):
+            SqliteStore(path)
 
     def test_a_database_with_the_old_phase_table_is_refused_at_open(self, tmp_path: Path) -> None:
         # ADR-011, 2026-10-04: `ramp_up_phases` changed shape with no migration.

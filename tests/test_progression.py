@@ -48,7 +48,8 @@ def answer(store: Store, char: str, *, correct: int = 0, wrong: int = 0, day: st
 
 
 def states(store: Store) -> KeyStates:
-    return KeyStates(store, 1)
+    # Read on the second practice day, so nothing has had time to age.
+    return KeyStates(store, 1, now=lambda: DAY2)
 
 
 def introducer(layout: Layout, store: Store) -> KeyIntroducer:
@@ -189,6 +190,22 @@ class TestRoomForStep:
         answer(store, "f", wrong=20, day=DAY2)
         assert states(store).known_keys() == set()
         assert not room_for_step(build_en(), states(store), ["d"])
+
+    def test_a_key_only_speed_keeps_from_known_holds_its_slot(self) -> None:
+        # alpha-plan #12f: Known has a speed term, so a key at every floor
+        # that the child still hunts for is in progress like any other.
+        store = FakeStore()
+        for char, ms in (("r", 1000), ("u", 1000), ("v", 1000), ("m", 1000), ("d", 2500)):
+            for i in range(config.KNOWN_MIN_ATTEMPTS):
+                day = DAY1 if i % 2 == 0 else DAY2
+                store.upsert_key_stat(1, char, True, day)
+                store.append_attempt(1, char, True, day, ms)
+        assert states(store).known_keys() == set("ruvm")
+        assert keys_in_progress(build_en(), states(store)) == {"d"}
+        # Once its latest answers are within the ratio the slot is free again.
+        for _ in range(config.SPEED_SAMPLE):
+            store.append_attempt(1, "d", True, DAY2, 1900)
+        assert keys_in_progress(build_en(), states(store)) == set()
 
     def test_a_member_that_is_already_active_is_not_counted_twice(self) -> None:
         # A pair one member of which was answered and the other never was.

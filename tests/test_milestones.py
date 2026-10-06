@@ -1,6 +1,6 @@
 from takki import config
 from takki.lesson.introducer import anchor_keys
-from takki.lesson.key_state import DEFAULT_CRITERION, KeyStates, is_known
+from takki.lesson.key_state import DEFAULT_CRITERION, Evidence, KeyStates, qualifies
 from takki.lesson.milestones import (
     ANCHOR,
     ANCHOR_CRITERION,
@@ -14,11 +14,23 @@ from takki.persistence import Store, WindowStats
 from takki.platform.layout import Layout, build_de, build_en, build_is
 from tests.fakes.fake_store import FakeStore
 
-AT_THE_BAR = WindowStats(attempt_count=25, correct_count=24, distinct_days=2)
+# The shortest window that reaches the anchor bar: 25 presses, and at 25 the
+# lower bound on 0.95 allows no miss (ADR-027 § The Anchor Gate).
+AT_THE_BAR = WindowStats(attempt_count=25, correct_count=25, distinct_days=2)
 
 
-def anchored(layout: Layout, stats: WindowStats = AT_THE_BAR) -> dict[str, WindowStats]:
-    return dict.fromkeys(anchor_keys(layout), stats)
+def fresh(stats: WindowStats) -> Evidence:
+    """A window practised just now: nothing in it has aged."""
+    return Evidence(
+        stats.attempt_count,
+        stats.distinct_days,
+        float(stats.attempt_count),
+        float(stats.correct_count),
+    )
+
+
+def anchored(layout: Layout, stats: WindowStats = AT_THE_BAR) -> dict[str, Evidence]:
+    return dict.fromkeys(anchor_keys(layout), fresh(stats))
 
 
 def known(layout: Layout, count: int) -> set[str]:
@@ -147,25 +159,33 @@ class TestAnchorCriterion:
         assert ANCHOR_CRITERION.min_accuracy > DEFAULT_CRITERION.min_accuracy
 
     def test_exactly_at_every_floor_is_reached(self) -> None:
-        assert anchor_reached(build_en(), anchored(build_en(), WindowStats(25, 24, 2)))
-        assert anchor_reached(build_en(), anchored(build_en(), WindowStats(60, 57, 2)))
+        assert anchor_reached(build_en(), anchored(build_en(), WindowStats(25, 25, 2)))
+        # One miss is carried by 52 presses, two by 79 (ADR-027).
+        assert anchor_reached(build_en(), anchored(build_en(), WindowStats(52, 51, 2)))
+        assert anchor_reached(build_en(), anchored(build_en(), WindowStats(79, 77, 2)))
+
+    def test_twenty_four_of_twenty_five_no_longer_reaches_it(self) -> None:
+        # The case the bound is for: 96% raw met the old test.
+        assert 24 / 25 >= config.ANCHOR_MIN_ACCURACY
+        assert not anchor_reached(build_en(), anchored(build_en(), WindowStats(25, 24, 2)))
 
     def test_one_attempt_short_is_not(self) -> None:
         assert not anchor_reached(build_en(), anchored(build_en(), WindowStats(24, 24, 2)))
 
     def test_accuracy_below_the_bar_is_not(self) -> None:
-        assert not anchor_reached(build_en(), anchored(build_en(), WindowStats(60, 56, 2)))
+        assert not anchor_reached(build_en(), anchored(build_en(), WindowStats(51, 50, 2)))
+        assert not anchor_reached(build_en(), anchored(build_en(), WindowStats(78, 76, 2)))
 
     def test_one_practice_day_is_not(self) -> None:
         assert not anchor_reached(build_en(), anchored(build_en(), WindowStats(25, 25, 1)))
 
     def test_a_key_known_at_the_general_bar_can_still_miss_the_anchor_bar(self) -> None:
         ninety_three_percent = WindowStats(attempt_count=90, correct_count=84, distinct_days=2)
-        assert is_known(ninety_three_percent)
+        assert qualifies(fresh(ninety_three_percent))
         assert not anchor_reached(build_en(), anchored(build_en(), ninety_three_percent))
 
     def test_the_anchor_is_reachable_long_before_a_key_is_known(self) -> None:
-        assert not is_known(AT_THE_BAR)
+        assert not qualifies(fresh(AT_THE_BAR))
         assert anchor_reached(build_en(), anchored(build_en()))
 
 
@@ -173,7 +193,7 @@ class TestAnchorKeys:
     def test_all_six_must_clear_the_bar(self) -> None:
         for missed in anchor_keys(build_en()):
             stats = anchored(build_en())
-            stats[missed] = WindowStats(24, 24, 2)
+            stats[missed] = fresh(WindowStats(24, 24, 2))
             assert not anchor_reached(build_en(), stats)
 
     def test_a_key_with_no_attempts_at_all_blocks_the_gate(self) -> None:
@@ -230,8 +250,13 @@ def practise(store: Store, profile_id: int, char: str, window: WindowStats = KNO
         store.append_attempt(profile_id, char, correct, day)
 
 
+def states(store: Store, profile_id: int = 1) -> KeyStates:
+    # Read on the second practice day, so nothing has had time to age.
+    return KeyStates(store, profile_id, now=lambda: DAY2)
+
+
 def detector(store: Store, layout: Layout, profile_id: int = 1) -> MilestoneDetector:
-    return MilestoneDetector(store, profile_id, layout, KeyStates(store, profile_id))
+    return MilestoneDetector(store, profile_id, layout, states(store, profile_id))
 
 
 def make_known(store: Store, profile_id: int, layout: Layout, count: int) -> None:
@@ -256,6 +281,23 @@ class TestFiringOnce:
         assert store.writes == ["third"]
         assert store.achieved_milestones(1) == ["third"]
 
+    def test_a_key_only_speed_keeps_from_known_does_not_count_towards_a_rung(self) -> None:
+        # alpha-plan #12f: the rungs count Known, and Known has a speed term.
+        store, layout = RecordingStore(), build_en()
+        eight = sorted(layout.graphemes)[:8]
+        for char in eight:
+            ms = 2500 if char == eight[0] else 1000
+            for i in range(config.KNOWN_MIN_ATTEMPTS):
+                day = DAY1 if i % 2 == 0 else DAY2
+                store.upsert_key_stat(1, char, True, day)
+                store.append_attempt(1, char, True, day, ms)
+        found = detector(store, layout)
+        assert states(store).slow_keys() == {eight[0]}
+        assert found.check() == ()
+        for _ in range(config.SPEED_SAMPLE):
+            store.append_attempt(1, eight[0], True, DAY2, 1000)
+        assert found.check() == ("third",)
+
     def test_the_rung_sequence_of_a_full_english_walk(self) -> None:
         """Zero to the full alphabet, in the order the introducer emits keys.
 
@@ -271,7 +313,7 @@ class TestFiringOnce:
         assert found.check() == ()
         for char in anchor_keys(layout):
             practise(store, 1, char, AT_THE_BAR)
-        assert KeyStates(store, 1).known_keys() == set()
+        assert states(store).known_keys() == set()
         fired.append(("stage 0 done at the anchor bar", found.check()))
 
         for position, char in enumerate(EN_INTRODUCTION_ORDER, start=1):
@@ -327,7 +369,7 @@ class TestNeverRevoked:
         # `half` -- ADR-027 § Key States: milestones are never reverted.
         for _ in range(20):
             store.append_attempt(1, "a", False, DAY2)
-        assert satisfied_rungs(layout, KeyStates(store, 1).known_keys()) == ("third",)
+        assert satisfied_rungs(layout, states(store).known_keys()) == ("third",)
         assert found.check() == ()
         assert store.achieved_milestones(1) == ["third", "half"]
         assert store.writes == ["third", "half"]
@@ -342,7 +384,7 @@ class TestNeverRevoked:
         assert found.check() == (ANCHOR,)
         for _ in range(40):
             store.append_attempt(1, "f", False, DAY2)
-        assert not anchor_reached(layout, {"f": store.window_stats(1, "f")})
+        assert not anchor_reached(layout, {"f": states(store).evidence("f")})
         assert found.check() == ()
         assert store.writes == [ANCHOR]
 
@@ -372,21 +414,34 @@ class TestAnchorRungDetection:
         store, layout = RecordingStore(), build_en()
         for char in anchor_keys(layout):
             practise(store, 1, char, AT_THE_BAR)
-        assert KeyStates(store, 1).known_keys() == set()
+        assert states(store).known_keys() == set()
+        assert detector(store, layout).check() == (ANCHOR,)
+
+    def test_it_does_not_ask_how_fast_the_six_keys_are(self) -> None:
+        # alpha-plan #12f: Known has a speed term and this rung does not. It
+        # asks whether the child finds home, and `r` nine times slower than the
+        # other five still has.
+        store, layout = RecordingStore(), build_en()
+        for char in anchor_keys(layout):
+            ms = 9000 if char == "r" else 1000
+            for i in range(AT_THE_BAR.attempt_count):
+                day = DAY1 if i % 2 == 0 else DAY2
+                store.upsert_key_stat(1, char, True, day)
+                store.append_attempt(1, char, True, day, ms)
         assert detector(store, layout).check() == (ANCHOR,)
 
     def test_six_known_letters_that_are_not_the_anchor_keys_do_not_fire_it(self) -> None:
         store, layout = RecordingStore(), build_en()
         for char in "abcdeg":
             practise(store, 1, char)
-        assert len(KeyStates(store, 1).known_keys()) == 6
+        assert len(states(store).known_keys()) == 6
         assert detector(store, layout).check() == ()
         assert store.writes == []
 
     def test_one_practice_day_at_the_bar_does_not_fire_it(self) -> None:
         store, layout = RecordingStore(), build_en()
         for char in anchor_keys(layout):
-            practise(store, 1, char, WindowStats(25, 24, 1))
+            practise(store, 1, char, WindowStats(25, 25, 1))
         found = detector(store, layout)
         assert found.check() == ()
         # The same six keys, practised again the next day, clear it.
@@ -422,9 +477,10 @@ class TestAnchorRungDetection:
         make_known(store, 1, layout, 13)
         assert found.check() == ("third",)
 
-        # Only now does m's rolling window come back over 95%.
-        for _ in range(100):
-            store.append_attempt(1, "m", True, DAY2)
+        # Only now does m's rolling window come back over the bar: the misses
+        # have to leave the window, not merely be outnumbered.
+        clean = WindowStats(config.ATTEMPT_WINDOW, config.ATTEMPT_WINDOW, distinct_days=2)
+        practise(store, 1, "m", clean)
         assert found.check() == (ANCHOR,)
         assert store.writes == ["third", ANCHOR]
 

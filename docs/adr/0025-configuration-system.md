@@ -103,8 +103,14 @@ RESUME_REQUEST_TIMEOUT_MS = 1500   # request_foreground() deadline; expiry speak
 # Key & accuracy state model (ADR-027)
 ATTEMPT_WINDOW          = 200    # rolling key_attempts window per (profile, key)
 KNOWN_MIN_ATTEMPTS      = 90     # graphomotor retention floor
-KNOWN_MIN_ACCURACY      = 0.90   # first-attempt accuracy over the window
+KNOWN_MIN_ACCURACY      = 0.90   # lower confidence bound on first-attempt accuracy
 KNOWN_MIN_DISTINCT_DAYS = 2      # calendar days — one night of consolidation
+EVIDENCE_HALF_LIFE_DAYS = 30.0   # how fast a press stops counting toward that bound
+HEARD_MIN_MS            = 250    # a press sooner than this after the letter is sent is not an attempt
+KNOWN_MAX_LATENCY_RATIO = 2.0    # a key slower than this many times the child's baseline is not Known
+SPEED_SAMPLE            = 30     # timed correct first presses a key's speed is read over
+SPEED_MIN_SAMPLE        = 10     # below this a key has no speed, and no speed term
+SLOW_KEY_NEED           = 5      # presses a block plans for a key only speed keeps from Known (ADR-024)
 
 # Introduction gate (ADR-010 § The introduction gate is slots)
 MAX_KEYS_IN_PROGRESS    = 6      # keys Active but not yet Known; raise per child
@@ -140,6 +146,14 @@ The binding is chosen against a constraint the other three do not have: this key
 `RESUME_HOLD_MS` is longer than `RESTART_HOLD_MS` for the same reason. `RESUME_REQUEST_TIMEOUT_MS` is not a preference but the deadline that stands in for a return value: `request_foreground()` cannot report success (ADR-028 § Re-acquire has no synchronous answer), so a `FocusGained` inside this window is the success signal and expiry is the failure signal that speaks the Alt+Tab hint.
 
 **`"escape"` is not a pynput key name.** These values are `pynput.keyboard.Key` member names — what `Key.<member>.name` returns, which is what the keyboard stream puts in `KeyEvent.name`. pynput's member is `Key.esc`, so `"escape"` matched nothing: Escape would have fallen through to the taxonomy's **System** row and re-read would silently never have worked. Corrected to `"esc"` above.
+
+**Amended 2026-10-04 (alpha-plan #12f). The speed term's four keys, and `PHASE_C_MAX_LATENCY_RATIO`.**
+
+`KNOWN_MAX_LATENCY_RATIO`, `SPEED_SAMPLE`, `SPEED_MIN_SAMPLE` and `SLOW_KEY_NEED` belong to [ADR-027 § Known has a speed term](0027-key-and-accuracy-state-model.md#known-has-a-speed-term). The ratio and the half-life are constructor arguments of `KeyStates`, not fields of `KnownCriterion`: they say how evidence is read, and the same evidence is judged against both Known's criterion and the anchor rung's. The later tiers override them by construction, like the floors. None of the four comes from the literature; they are listed so that #12h and a pilot can move them without a code change. `PHASE_C_MAX_LATENCY_RATIO` goes from 1.5 to 2.0 with the change of what it is a ratio of ([ADR-024](0024-drill-content-and-lesson-granularity.md), "Latency, and only in the last bar"): the two ratios are separate keys with one default.
+
+**Amended 2026-10-04 (alpha-plan #12f). `EVIDENCE_HALF_LIFE_DAYS` and `HEARD_MIN_MS`.**
+
+Both belong to [ADR-027](0027-key-and-accuracy-state-model.md). `EVIDENCE_HALF_LIFE_DAYS` is listed at the developer's request, so that it can be changed: it sets how long a key stays Known without practice, and whether a summer away should bring every key back for review is a judgment a teacher may make differently from the default. Shorter means more review after a break and nothing else. `HEARD_MIN_MS` is a physical constant, the time a voice needs to start plus the fastest reaction to a sound, and is not a preference. It is listed because the voice's share of it was measured on one engine (SAPI), and a pilot on another voice may need to correct it without a code change. `CONFIDENCE_Z` stays a constant in code, as [ADR-024](0024-drill-content-and-lesson-granularity.md) decided.
 
 **Amended 2026-10-01 (alpha-plan #12g). `MAX_KEYS_IN_PROGRESS` replaces `INTRODUCE_MIN_PRESSES` and `INTRODUCE_MIN_ACCURACY`.**
 

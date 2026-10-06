@@ -46,6 +46,7 @@ from takki.lesson.introducer import (
     KeyIntroducer,
     KeyIntroduction,
     describe,
+    home_anchor_keys,
     resume_step,
 )
 from takki.lesson.key_state import KeyStates
@@ -125,7 +126,7 @@ class SessionLoop:
         self._celebrant = celebrant
         self._now = now
         self._max_keys_in_progress = max_keys_in_progress
-        self._states = KeyStates(store, profile_id)
+        self._states = KeyStates(store, profile_id, now=now, bump_keys=home_anchor_keys(layout))
         self._attempts = AttemptCounter(store, profile_id, now, clock)
         self._speaker = Speaker(speech, letters)
         # The gate speaks through the same Speaker the loop does: one object
@@ -232,11 +233,13 @@ class SessionLoop:
             return
         if isinstance(event, SpeechFinished):
             self._speaker.on_finished(event)
-            if self._speaker.letter_finished:
-                # The prompt has finished sounding, so the child's answer is
-                # timed from here rather than from the enqueue (ADR-011).
-                self._speaker.letter_finished = False
-                self._attempts.mark_audible()
+            status = self._speaker.letter_status
+            self._speaker.letter_status = None
+            if status == "completed":
+                self._attempts.letter_finished()
+            elif status is not None:
+                # The child did not hear it, so their answer is not timed.
+                self._attempts.mark_inaudible()
         else:
             paused = self._focus_model.state is FocusState.PAUSED
             self._run(self._focus_model.handle(event))
@@ -311,8 +314,8 @@ class SessionLoop:
         here, so there is exactly one place for that to be got wrong.
         """
         assert self._prompt is not None
-        self._attempts.mark_inaudible()
         self._speaker.letter(self._prompt)
+        self._attempts.letter_sent()
         self._prompt_deadline = self._clock.monotonic() + config.PROMPT_TIMEOUT_SECONDS
 
     def _on_timeout(self) -> None:
@@ -328,6 +331,7 @@ class SessionLoop:
         first attempt.
         """
         self._prompt_deadline = None
+        self._attempts.timed_out()
         if self._reprompts >= config.PROMPT_MAX_REPROMPTS:
             return
         self._reprompts += 1
@@ -403,10 +407,12 @@ class SessionLoop:
         # see whether a bar was met. On the slowest hardware the project
         # supports, doing that first is audible delay on every keypress.
         self._cues.play("correct" if outcome is PressOutcome.CORRECT else "error")
-        if self._first_press:
+        if self._first_press and self._attempts.counted:
             # Once per prompt, with the first press's outcome, paired
             # one-for-one with the counter's own write. A retry press must not
-            # reach here or Phase C stops measuring first-attempt accuracy.
+            # reach here or Phase C stops measuring first-attempt accuracy, and
+            # neither must a press too early to count (ADR-027): the counter
+            # wrote nothing for it, and the prompt's next press is the first.
             self._first_press = False
             self._drills.record_attempt(target, outcome is PressOutcome.CORRECT)
         if outcome is PressOutcome.WRONG:
@@ -479,13 +485,16 @@ class SessionLoop:
         `third`.
         """
         assert self._drills is not None
-        self._celebrate(self._milestones().check())
-        if self._script_owed:
-            self._speak_introduction(self._script_owed)
-            self._script_owed = ()
-        self._introduce()
-        self.layer_two_unlocked = layer_two_unlocked(self._layout, self._states)
-        self._block = _to_block(self._drills.next_block())
+        # Held: each of these asks about every Active key, and nothing here
+        # writes an attempt, so one read of each window serves them all.
+        with self._states.held():
+            self._celebrate(self._milestones().check())
+            if self._script_owed:
+                self._speak_introduction(self._script_owed)
+                self._script_owed = ()
+            self._introduce()
+            self.layer_two_unlocked = layer_two_unlocked(self._layout, self._states)
+            self._block = _to_block(self._drills.next_block())
         self._index = 0
         self._prompt = None
         self._prompt_deadline = None

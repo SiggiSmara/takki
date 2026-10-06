@@ -27,9 +27,8 @@ from takki.lesson.introducer import (
     home_anchor_keys,
     key_distance,
 )
-from takki.lesson.key_state import KeyStates
+from takki.lesson.key_state import Evidence, KeyStates, accuracy_bound
 from takki.lesson.rampup import PHASE_ORDER, MemberProgress, RampUpPhase, RampUpProgress
-from takki.persistence import WindowStats
 from takki.platform.layout import Layout
 
 # A unit is one bigram or short sequence, and each of its members is one prompt
@@ -37,10 +36,6 @@ from takki.platform.layout import Layout
 # single prompt carrying two keystrokes, so a block's prompt count and its
 # keystroke count are not the same number -- see the ADR-024 amendment.
 Unit = tuple[str, ...]
-
-# A baseline of None is a real answer -- the child has no Known key yet -- so it
-# cannot double as "not computed".
-_UNSET: float = -1.0
 
 # ADR-024 § Steady-state drill generation (alpha-plan #12e). Constants in code
 # rather than config on the developer's call: they are tuning knobs for whoever
@@ -50,32 +45,18 @@ _UNSET: float = -1.0
 # cannot turn a block into a one-letter drill. A Fraction so that "a third of 15
 # slots" is 5 and not 4.999...
 MAX_KEY_SHARE = Fraction(1, 3)
-# How cautious the accuracy reading is: one standard error. Known's press floor
-# already demands the evidence, so the bound only has to stop a lucky short run
-# reading as a confirmed key. Revisited with decay in alpha-plan #12f.
-CONFIDENCE_Z = 1.0
 
 
-def accuracy_bound(correct: int, attempts: int) -> float:
-    """Wilson lower bound on first-press accuracy: how accurate the key surely is."""
-    if attempts == 0:
-        return 0.0
-    z2 = CONFIDENCE_Z**2
-    p = correct / attempts
-    centre = p + z2 / (2 * attempts)
-    spread = CONFIDENCE_Z * math.sqrt(p * (1 - p) / attempts + z2 / (4 * attempts**2))
-    return (centre - spread) / (1 + z2 / attempts)
-
-
-def presses_needed(stats: WindowStats, bar: float) -> int:
+def presses_needed(evidence: Evidence, bar: float) -> int:
     """A key's need in presses: the larger of its Known-floor gap and its accuracy shortfall."""
     # One number in the unit the plan hands out, so a key short on both is not
-    # queued behind either reason.
-    gap = max(0, config.KNOWN_MIN_ATTEMPTS - stats.attempt_count)
-    return max(gap, _presses_to_confirm(stats.correct_count, stats.attempt_count, bar))
+    # queued behind either reason. The floor is the dose and counts presses as
+    # they happened; the shortfall reads evidence that ages (ADR-027).
+    gap = max(0, config.KNOWN_MIN_ATTEMPTS - evidence.attempts)
+    return max(gap, _presses_to_confirm(evidence.correct, evidence.weight, bar))
 
 
-def _presses_to_confirm(correct: int, attempts: int, bar: float) -> int:
+def _presses_to_confirm(correct: float, attempts: float, bar: float) -> int:
     # The window's own forgetting is ignored -- old misses dropping out would
     # make it sooner -- so this over-estimates a struggling key's need, which
     # MAX_KEY_SHARE absorbs. The bound rises with every correct press and tends
@@ -206,7 +187,7 @@ class DrillGenerator:
         self._bigrams: dict[str, float] = dict(sorted(source.bigram_weights(layout).items()))
         self._pace: deque[tuple[int, float]] = deque(maxlen=config.PACE_BLOCKS)
         self._block_open = False
-        self._baseline_cache: float | None = _UNSET
+        self._baseline_cache: dict[str, float | None] = {}
         # Which hands are off home, carried *across* blocks: a block boundary is
         # not a reason for a finger to be somewhere else, and resetting here is
         # how the first prompt of a block used to be able to reach twice running
@@ -282,9 +263,16 @@ class DrillGenerator:
         self._paced_attempts = 0
         self._block_seconds = 0.0
         self._answered_at = now
-        self._baseline_cache = _UNSET
         target = self._target_prompts()
         ramp = self._ramp_up
+        # Read here, at the boundary, where the session holds the key states
+        # and the windows are being read anyway. Left to the first judged
+        # keystroke it is a pass over every Active key on the keypress path.
+        self._baseline_cache = (
+            {}
+            if ramp is None
+            else {name: self._states.speed_baseline(name) for name in ramp.graphemes}
+        )
         if ramp is None:
             units = self._steady_units(target)
         elif ramp.phase is RampUpPhase.C:
@@ -342,11 +330,12 @@ class DrillGenerator:
             return
         for member in ramp.members:
             progress = self._progress.member(member.grapheme)
-            # The baseline is pooled over every Known key, which is a window read
-            # each: only Phase C's bar consults it, so only Phase C pays for it.
+            # The baseline reads every Active key's window (ADR-027 § Known has
+            # a speed term): only Phase C's bar consults it, so only Phase C
+            # asks, and `next_block` has usually read it already.
             # A member waiting for its partner is not judged at all.
             judged = progress.begun and progress.phase is RampUpPhase.C
-            baseline = self._baseline() if judged else None
+            baseline = self._baseline(member.grapheme) if judged else None
             if self._progress.advance(progress, baseline):
                 progress = self._progress.member(member.grapheme)
             ramp.progress[member.grapheme] = progress
@@ -363,19 +352,17 @@ class DrillGenerator:
             if progress.phase is ramp.phase and not progress.begun:
                 ramp.progress[grapheme] = self._progress.begin(progress)
 
-    def _baseline(self) -> float | None:
-        """ADR-027: the child's own median latency over their Known keys.
+    def _baseline(self, grapheme: str) -> float | None:
+        """ADR-027: what this member's speed is judged against, the baseline Known reads.
 
-        Cached for the session and refreshed at a block boundary. Known moves on
-        the scale of days -- 90 attempts across two calendar days -- so pooling it
-        per keystroke would buy nothing and cost a window read per Known key.
+        Cached and refreshed at a block boundary. The pool moves on the scale
+        of days -- its keys have 90 presses across two calendar days -- so
+        reading it per keystroke would buy nothing and cost a window read per
+        Active key.
         """
-        if self._baseline_cache is _UNSET:
-            known = sorted(self._states.known_keys())
-            self._baseline_cache = rampup.baseline_latency(
-                [self._states.window_attempts(name) for name in known]
-            )
-        return self._baseline_cache
+        if grapheme not in self._baseline_cache:
+            self._baseline_cache[grapheme] = self._states.speed_baseline(grapheme)
+        return self._baseline_cache[grapheme]
 
     def _remaining(self, member: _Member, ramp: RampUp) -> int:
         progress = ramp.progress.get(member.grapheme)
@@ -684,7 +671,8 @@ class DrillGenerator:
             for name in active
             if self._session_attempts.get(name, 0) < config.SESSION_KEY_CEILING
         } or active
-        needs = {name: self._need(name) for name in targetable}
+        slow = self._states.slow_keys()
+        needs = {name: self._need(name, name in slow) for name in targetable}
         counts = plan_targets(needs, slots - len(drills), self._rng)
         pool = self._pool(active)
         groups = [[drill] for drill in drills]
@@ -694,15 +682,19 @@ class DrillGenerator:
         ]
         return self._spread([group for group in groups if group])
 
-    def _need(self, grapheme: str) -> int:
-        stats = self._states.window_stats(grapheme)
-        need = presses_needed(stats, self._bar(grapheme))
+    def _need(self, grapheme: str, slow: bool) -> int:
+        evidence = self._states.evidence(grapheme)
+        need = presses_needed(evidence, self._bar(grapheme))
+        if slow:
+            # Only speed keeps it from Known, and speed comes from practice.
+            # Without this it would be planned for nothing and hold its slot.
+            need = max(need, config.SLOW_KEY_NEED)
         # A key that lacks only another day is one press from Known, and Known
         # is what frees its slot for the next letter (ADR-010). Only until it
         # has been pressed this session: after that today is one of its days,
         # and a further press buys nothing.
         waiting = (
-            stats.distinct_days < config.KNOWN_MIN_DISTINCT_DAYS
+            evidence.distinct_days < config.KNOWN_MIN_DISTINCT_DAYS
             and grapheme not in self._session_attempts
         )
         return max(need, 1) if waiting else need
@@ -763,13 +755,16 @@ class DrillGenerator:
         return drills
 
     def _anchor_slipping(self, anchor: str) -> bool:
-        stats = self._states.window_stats(anchor)
+        evidence = self._states.evidence(anchor)
         # The same sample size the gate was measured over: below it a single
         # early slip would read as a lost anchor, and below it the child is
         # still inside Stage 0, where every block is anchor drill anyway.
-        if stats.attempt_count < config.ANCHOR_MIN_ATTEMPTS:
+        if evidence.attempts < config.ANCHOR_MIN_ATTEMPTS:
             return False
-        return stats.correct_count / stats.attempt_count < config.ANCHOR_MIN_ACCURACY
+        # The measure the rung and the block plan read (ADR-027): the bound
+        # over decayed evidence. On the raw share, an anchor the rung had just
+        # failed, or one not practised for months, was never slipping.
+        return accuracy_bound(evidence.correct, evidence.weight) < config.ANCHOR_MIN_ACCURACY
 
     def _reach(self, anchor: str) -> str | None:
         key = self._layout.keys[anchor]

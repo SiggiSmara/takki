@@ -81,6 +81,14 @@ noted per item so anyone can re-fetch them locally.
   <https://en.wikipedia.org/wiki/Power_law_of_practice>
   Status: fetched. Performance improves as log(repetitions); reaction time decreases linearly with log(trials). Justifies the rolling window being weighted toward recent performance (the oldest attempts are the lowest-value marginal evidence).
 
+## What Known means: decay, the accuracy bar, speed, early presses (alpha-plan #12f)
+
+The citations for [known-decay-accuracy-speed.md](known-decay-accuracy-speed.md) are listed at the
+end of that note, grouped by how each was read (in full, abstract only, wanted and not obtained).
+**Saved locally** (PDF): Settles & Meeder 2016, Tatel & Ackerman 2025, Arthur et al. 1998,
+Baddeley & Longman 1978, Dhakal et al. 2018, Whelan 2008, Marslen-Wilson 1987, Glickman's
+description of Glicko.
+
 ## Verification status of figures used in the notes
 
 - **Verified from primary/local sources:** F/J as the universal tactile anchor (NFB); "any consistent position is fine," 5–10 s resting-position readiness, and the home-row-can-cause-shutdown warning (Perkins); middle-finger length ↔ typing speed/accuracy r=0.43/0.366 in school-age students (AIJFR); touch-screen key-size > hand-size for typing performance (OhioLINK).

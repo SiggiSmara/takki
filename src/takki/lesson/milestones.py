@@ -12,8 +12,8 @@ from collections.abc import Set as AbstractSet
 
 from takki import config
 from takki.lesson.introducer import anchor_keys
-from takki.lesson.key_state import KeyStates, KnownCriterion, is_known
-from takki.persistence import Store, WindowStats
+from takki.lesson.key_state import Evidence, KeyStates, KnownCriterion, qualifies
+from takki.persistence import Store
 from takki.platform.layout import Layout
 
 ANCHOR = "anchor"
@@ -42,7 +42,7 @@ ANCHOR_CRITERION = KnownCriterion(
     min_distinct_days=config.KNOWN_MIN_DISTINCT_DAYS,
 )
 
-_NO_ATTEMPTS = WindowStats(attempt_count=0, correct_count=0, distinct_days=0)
+_NO_ATTEMPTS = Evidence(attempts=0, distinct_days=0, weight=0.0, correct=0.0)
 
 
 def grapheme_thresholds(layout: Layout) -> dict[str, int]:
@@ -79,7 +79,7 @@ def satisfied_rungs(
 
 def anchor_reached(
     layout: Layout,
-    stats: Mapping[str, WindowStats],
+    stats: Mapping[str, Evidence],
     criterion: KnownCriterion = ANCHOR_CRITERION,
 ) -> bool:
     """ADR-027 § The Anchor Gate — all six Stage 0 keys at the anchor bar.
@@ -92,7 +92,7 @@ def anchor_reached(
     owns that, and its `_anchor_reached` is where the ADR's "once on stage
     completion" is reconciled with a bar that needs two calendar days.
     """
-    return all(is_known(stats.get(name, _NO_ATTEMPTS), criterion) for name in anchor_keys(layout))
+    return all(qualifies(stats.get(name, _NO_ATTEMPTS), criterion) for name in anchor_keys(layout))
 
 
 class MilestoneDetector:
@@ -195,5 +195,5 @@ class MilestoneDetector:
         """
         return anchor_reached(
             self._layout,
-            {name: self._states.window_stats(name) for name in anchor_keys(self._layout)},
+            {name: self._states.evidence(name) for name in anchor_keys(self._layout)},
         )

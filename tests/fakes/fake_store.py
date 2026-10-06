@@ -183,6 +183,8 @@ class FakeStore:
         attempted_at: str | None = None,
         latency_ms: int | None = None,
         prev_char: str | None = None,
+        after_letter_ms: int | None = None,
+        timeouts: int = 0,
     ) -> None:
         ts = _stamp(attempted_at)
         key = (profile_id, key_char)
@@ -190,7 +192,14 @@ class FakeStore:
             self._key_attempts[key] = []
         attempts = self._key_attempts[key]
         attempts.append(
-            Attempt(correct=correct, attempted_at=ts, latency_ms=latency_ms, prev_char=prev_char)
+            Attempt(
+                correct=correct,
+                attempted_at=ts,
+                latency_ms=latency_ms,
+                prev_char=prev_char,
+                after_letter_ms=after_letter_ms,
+                timeouts=timeouts,
+            )
         )
         if len(attempts) > self._cap:
             # Insertion order, which is what SqliteStore's ORDER BY rowid ASC
