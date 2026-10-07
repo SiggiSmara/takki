@@ -166,10 +166,13 @@ class KeyStates:
     def evidence(self, key_char: str) -> Evidence:
         return self._read(key_char)[0]
 
-    def window_attempts(self, key_char: str) -> list[Attempt]:
-        # The window's rows in order, for ADR-024's derived ramp-up bars: a
-        # streak and a run-with-a-budget cannot be computed from aggregates.
-        return self._store.window_attempts(self._profile_id, key_char)
+    # Commented out 2026-10-07 (alpha-plan #12k, D4): no caller and no test.
+    # `RampUpProgress` reads the store's window itself.
+    #
+    # def window_attempts(self, key_char: str) -> list[Attempt]:
+    #     # The window's rows in order, for ADR-024's derived ramp-up bars: a
+    #     # streak and a run-with-a-budget cannot be computed from aggregates.
+    #     return self._store.window_attempts(self._profile_id, key_char)
 
     def known_keys(self) -> set[str]:
         survey = self._survey()

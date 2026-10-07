@@ -61,13 +61,15 @@ def trailing_streak(rows: Sequence[Attempt]) -> int:
 
 def live_run(
     rows: Sequence[Attempt],
-    max_rejections: int | None = None,
+    # Commented out 2026-10-07 (alpha-plan #12k, D2): no caller passed it.
+    # max_rejections: int | None = None,
 ) -> int:
     """Phase B's count: correct answers since the miss that would overspend the budget."""
     # Back from the latest press, not forward from the phase's first. A forward
     # count pairs the misses up from wherever the read starts, so the capped
     # read and the full one disagreed about the same child (ADR-024).
-    budget = config.PHASE_B_MAX_REJECTIONS if max_rejections is None else max_rejections
+    # budget = config.PHASE_B_MAX_REJECTIONS if max_rejections is None else max_rejections
+    budget = config.PHASE_B_MAX_REJECTIONS
     correct = rejections = 0
     for row in reversed(rows):
         if row.correct:
@@ -202,16 +204,19 @@ class RampUpProgress:
         )
         return True
 
-    def step_phase(self, graphemes: Sequence[str]) -> RampUpPhase | None:
-        """The step's phase: the least advanced member's, and None once all are done.
-
-        A pair advances together and every bar is per-member (ADR-024 § A pair
-        advances phase together), so the slower member sets the phase. Because a
-        completion is written once, a member that has finished stays finished --
-        the stickiness the old in-memory `done` flag had.
-        """
-        reached = [p for p in (self.member(name).phase for name in graphemes) if p is not None]
-        return min(reached, key=PHASE_ORDER.index) if reached else None
+    # Commented out 2026-10-07 (alpha-plan #12k, D1): no caller outside the
+    # tests. `DrillGenerator._refresh_ramp` works the step's phase out itself.
+    #
+    # def step_phase(self, graphemes: Sequence[str]) -> RampUpPhase | None:
+    #     """The step's phase: the least advanced member's, and None once all are done.
+    #
+    #     A pair advances together and every bar is per-member (ADR-024 § A pair
+    #     advances phase together), so the slower member sets the phase. Because a
+    #     completion is written once, a member that has finished stays finished --
+    #     the stickiness the old in-memory `done` flag had.
+    #     """
+    #     reached = [p for p in (self.member(name).phase for name in graphemes) if p is not None]
+    #     return min(reached, key=PHASE_ORDER.index) if reached else None
 
     def _lifetime_attempts(self, grapheme: str) -> int:
         # `key_stats` is the lifetime counter and never forgets, which is why the

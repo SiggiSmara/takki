@@ -228,9 +228,11 @@ class RecordingStore(FakeStore):
     def __init__(self) -> None:
         super().__init__()
         self.writes: list[str] = []
+        self.stamps: list[str | None] = []
 
     def record_milestone(self, profile_id: int, level: str, achieved_at: str | None = None) -> None:
         self.writes.append(level)
+        self.stamps.append(achieved_at)
         super().record_milestone(profile_id, level, achieved_at)
 
 
@@ -280,6 +282,14 @@ class TestFiringOnce:
         assert found.check() == ()
         assert store.writes == ["third"]
         assert store.achieved_milestones(1) == ["third"]
+
+    def test_a_rung_is_stamped_by_the_clock_the_detector_was_given(self) -> None:
+        store, layout = RecordingStore(), build_en()
+        stamp = "2026-03-04T05:06:07+00:00"
+        found = MilestoneDetector(store, 1, layout, states(store), lambda: stamp)
+        make_known(store, 1, layout, 8)
+        assert found.check() == ("third",)
+        assert store.stamps == [stamp]
 
     def test_a_key_only_speed_keeps_from_known_does_not_count_towards_a_rung(self) -> None:
         # alpha-plan #12f: the rungs count Known, and Known has a speed term.

@@ -243,6 +243,11 @@ class SqliteStore:
         )
         self.conn.commit()
 
+    def close(self) -> None:
+        # The last connection closing is what folds the WAL back into the one
+        # file ADR-011 calls the profile.
+        self.conn.close()
+
     def upsert_key_stat(
         self,
         profile_id: int,
@@ -250,7 +255,10 @@ class SqliteStore:
         correct: bool,
         practised_at: str | None = None,
     ) -> None:
-        ts = _stamp(practised_at)
+        self._upsert_key_stat(profile_id, key_char, correct, _stamp(practised_at))
+        self.conn.commit()
+
+    def _upsert_key_stat(self, profile_id: int, key_char: str, correct: bool, ts: str) -> None:
         self.conn.execute(
             """
             INSERT INTO key_stats
@@ -263,7 +271,6 @@ class SqliteStore:
             """,
             (profile_id, key_char, int(correct), ts),
         )
-        self.conn.commit()
 
     def bump_key_recency(
         self,
@@ -375,7 +382,48 @@ class SqliteStore:
         after_letter_ms: int | None = None,
         timeouts: int = 0,
     ) -> None:
+        self._append_attempt(
+            profile_id,
+            key_char,
+            correct,
+            _stamp(attempted_at),
+            latency_ms,
+            prev_char,
+            after_letter_ms,
+            timeouts,
+        )
+        self.conn.commit()
+
+    def count_attempt(
+        self,
+        profile_id: int,
+        key_char: str,
+        correct: bool,
+        attempted_at: str | None = None,
+        latency_ms: int | None = None,
+        prev_char: str | None = None,
+        after_letter_ms: int | None = None,
+        timeouts: int = 0,
+    ) -> None:
         ts = _stamp(attempted_at)
+        # One transaction: both are committed or neither is.
+        with self.conn:
+            self._upsert_key_stat(profile_id, key_char, correct, ts)
+            self._append_attempt(
+                profile_id, key_char, correct, ts, latency_ms, prev_char, after_letter_ms, timeouts
+            )
+
+    def _append_attempt(
+        self,
+        profile_id: int,
+        key_char: str,
+        correct: bool,
+        ts: str,
+        latency_ms: int | None,
+        prev_char: str | None,
+        after_letter_ms: int | None,
+        timeouts: int,
+    ) -> None:
         self.conn.execute(
             """
             INSERT INTO key_attempts
@@ -411,7 +459,6 @@ class SqliteStore:
                 """,
                 (profile_id, key_char, excess),
             )
-        self.conn.commit()
 
     def key_stats(self, profile_id: int) -> dict[str, KeyStat]:
         rows = self.conn.execute(

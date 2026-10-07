@@ -128,8 +128,8 @@ class MilestoneDetector:
         self._profile_id = profile_id
         self._layout = layout
         self._states = key_states
-        # As in AttemptCounter: wall-clock ISO-8601 local time (ADR-011), a
-        # separate concern from Clock, which is monotonic. None leaves it to
+        # As in AttemptCounter: wall-clock UTC in the store's form (ADR-011),
+        # a separate concern from Clock, which is monotonic. None leaves it to
         # the store.
         self._now = now
 

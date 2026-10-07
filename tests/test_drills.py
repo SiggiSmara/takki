@@ -449,6 +449,38 @@ class TestPhaseCAndD:
         assert block.units
         assert not any({"e", "o"} <= set(unit) for unit in block.units)
 
+    def test_the_partners_are_the_most_frequent_keys_the_child_has(self) -> None:
+        # u, r and m carry the weight and f, j and v none, and `d` meets only
+        # `u` in this corpus. Every weight is under 1, so a key missing from
+        # the table cannot outrank one that is in it.
+        source = FixedListSource({"dud": 0.5, "red": 0.3, "mud": 0.2})
+        fixture = Fixture(source=source, active=ANCHOR_SIX)
+        self._into_phase_c(fixture, "d")
+        block = fixture.generator.next_block()
+        assert block.units
+        assert all("u" in unit for unit in block.units)
+
+    def test_a_letter_no_bigram_carries_is_paired_with_the_heaviest_partner(self) -> None:
+        source = FixedListSource({"uuu": 0.5, "rrr": 0.3, "mmm": 0.2})
+        fixture = Fixture(source=source, active=ANCHOR_SIX)
+        self._into_phase_c(fixture, "d")
+        assert set(fixture.generator.next_block().units) == {("u", "d")}
+
+    def test_a_trigram_is_two_corpus_bigrams_drawn_by_weight(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(config, "PHASE_C_TRIGRAM_CHANCE", 1.0)
+        source = FixedListSource({"dud": 1000.0, "mud": 1.0})
+        fixture = Fixture(source=source, active=ANCHOR_SIX)
+        self._into_phase_c(fixture, "d")
+        bigrams = set(source.bigram_weights(fixture.layout))
+        units = [unit for _ in range(5) for unit in fixture.generator.next_block().units]
+        assert all(len(unit) == 3 for unit in units)
+        assert all(first + second in bigrams for unit in units for first, second in pairwise(unit))
+        # `mu` is one two-thousandth of what `ud` can grow from, and a third of
+        # it when the weights are ignored.
+        assert units.count(("m", "u", "d")) <= 1
+
 
 class TestComposites:
     def test_solo_composite_ramps_up_solo(self) -> None:
@@ -767,6 +799,20 @@ class TestPlanTargets:
         counts = plan_targets(dict.fromkeys("fjruvm", 0), 12, random.Random(1))
         assert counts == dict.fromkeys("fjruvm", 2)
 
+    def test_each_further_slot_goes_to_the_most_need_per_slot_held(self) -> None:
+        # D'Hondt by hand, 12 slots, cap max(4, 3) = 4. One each takes five,
+        # and e is then served. The other seven, by need over slots held plus
+        # one: a and b at 2.5, then both at 1.67, then c and d at 1.5, then a
+        # at 1.25, which wins the tie with b by name.
+        needs = {"a": 5, "b": 5, "c": 3, "d": 3, "e": 1}
+        assert cap(12, len(needs)) == 4
+        counts = plan_targets(needs, 12, random.Random(1))
+        assert counts == {"a": 4, "b": 3, "c": 2, "d": 2, "e": 1}
+
+    def test_no_keys_or_no_slots_plans_nothing(self) -> None:
+        assert plan_targets({}, 5, random.Random(1)) == {}
+        assert plan_targets({"f": 3}, 0, random.Random(1)) == {"f": 0}
+
     # Seeds and need shapes chosen to include a starved key beside a flooded
     # one, which is the case the plan exists for.
     @pytest.mark.parametrize("seed", range(5))
@@ -804,6 +850,29 @@ class TestSteadyPlan:
         counts = Counter(unit[0] for unit in fixture.generator.next_block().units)
         assert counts["v"] == counts["m"] == limit
         rest = [counts[name] for name in "fjru"]
+        assert sum(rest) == FIRST_SLOTS - 2 * limit
+        assert max(rest) - min(rest) <= 1
+
+    def test_a_stage_0_key_is_planned_against_the_anchor_bar(self) -> None:
+        # Alpha-plan #12f. Five early misses in ninety presses over two days
+        # is past Known's 90% and short of the anchor's 95%, so f and j still
+        # have need and d, k, s and l have none: the two take the cap and the
+        # rest share what is left.
+        letters = "fjdksl"
+        stamps = ["2026-01-01T10:00:00+00:00", "2026-01-02T10:00:00+00:00"]
+        fixture = Fixture(source=doubles(letters), now=stamps[1])
+        for name in letters:
+            for index in range(config.KNOWN_MIN_ATTEMPTS):
+                stamp = stamps[index % 2]
+                fixture.store.upsert_key_stat(fixture.profile, name, index >= 5, stamp)
+                fixture.store.append_attempt(fixture.profile, name, index >= 5, stamp)
+        evidence = fixture.states.evidence("f")
+        assert presses_needed(evidence, config.KNOWN_MIN_ACCURACY) == 0
+        assert presses_needed(evidence, config.ANCHOR_MIN_ACCURACY) > 0
+        limit = cap(FIRST_SLOTS, len(letters))
+        counts = Counter(unit[0] for unit in fixture.generator.next_block().units)
+        assert counts["f"] == counts["j"] == limit
+        rest = [counts[name] for name in "dksl"]
         assert sum(rest) == FIRST_SLOTS - 2 * limit
         assert max(rest) - min(rest) <= 1
 
@@ -987,6 +1056,22 @@ class TestAnchorMaintenance:
         assert sorted(unit[1] for unit in self.return_drills(units)) == ["f", "j"]
         assert len(units) == FIRST_SLOTS
 
+    def test_the_second_anchor_slipping_alone_gets_its_drill(self) -> None:
+        units = self.slipping("j").generator.next_block().units
+        assert [unit[1] for unit in self.return_drills(units)] == ["j"]
+
+    def test_an_anchor_with_no_reach_does_not_cost_the_other_its_drill(self) -> None:
+        # Neither r nor v is Active, so nothing in f's column can be drilled
+        # back to it. j still has u and m.
+        letters = "fjumdk"
+        fixture = Fixture(source=doubles(letters), seed=5)
+        for name in letters:
+            fixture.activate(name, attempts=config.KNOWN_MIN_ATTEMPTS)
+        for name in "fj":
+            press(fixture, name, 40, correct=False)
+        units = fixture.generator.next_block().units
+        assert [unit[1] for unit in self.return_drills(units)] == ["j"]
+
     def test_a_slipping_ordinary_key_gets_no_return_drill(self) -> None:
         assert self.return_drills(self.slipping("d").generator.next_block().units) == []
 
@@ -1027,6 +1112,16 @@ class TestAnchorMaintenance:
         units = fixture.generator.next_block().units
         assert sorted(unit[1] for unit in self.return_drills(units)) == drilled
 
+    def test_the_sample_floor_is_enough_to_be_slipping(self) -> None:
+        fixture = Fixture(source=doubles(ANCHOR_SIX), seed=5)
+        for name in ANCHOR_SIX:
+            fixture.activate(name)
+        press(fixture, "f", config.ANCHOR_MIN_ATTEMPTS - 1, correct=False)
+        attempts = fixture.store.window_stats(fixture.profile, "f").attempt_count
+        assert attempts == config.ANCHOR_MIN_ATTEMPTS
+        units = fixture.generator.next_block().units
+        assert [unit[1] for unit in self.return_drills(units)] == ["f"]
+
     def test_too_few_attempts_is_not_a_slipping_anchor(self) -> None:
         fixture = Fixture(source=doubles(ANCHOR_SIX), seed=5)
         for name in ANCHOR_SIX:
@@ -1035,6 +1130,41 @@ class TestAnchorMaintenance:
         attempts = fixture.store.window_stats(fixture.profile, "f").attempt_count
         assert attempts == config.ANCHOR_MIN_ATTEMPTS - 1
         assert self.return_drills(fixture.generator.next_block().units) == []
+
+
+class TestLanguageWeights:
+    """ADR-024: the learner's need picks the key, and the language picks what carries it."""
+
+    def test_a_keys_carrier_is_drawn_by_bigram_weight(self) -> None:
+        # `fj` is a thousand to one against either double, and one in two when
+        # the weights are ignored.
+        source = FixedListSource({"fj": 1000.0, "ff": 1.0, "jj": 1.0})
+        fixture = Fixture(source=source, active="fj")
+        units = [unit for _ in range(4) for unit in fixture.generator.next_block().units]
+        assert len(units) == 4 * FIRST_SLOTS
+        assert len([unit for unit in units if unit[0] == unit[1]]) <= 2
+
+    def test_a_key_no_bigram_carries_is_paired_with_the_heaviest_other_key(self) -> None:
+        # j is in both words and f in one, so j is the heavier; r is in neither.
+        source = FixedListSource({"fjj": 10.0, "jjj": 5.0})
+        fixture = Fixture(source=source, active="fjr")
+        units = fixture.generator.next_block().units
+        assert {unit for unit in units if "r" in unit} == {("r", "j")}
+
+    def test_a_lone_key_no_bigram_carries_is_doubled(self) -> None:
+        fixture = Fixture(source=FixedListSource({"jjj": 1.0}), active="f")
+        assert set(fixture.generator.next_block().units) == {("f", "f")}
+
+
+class TestAnchorChoice:
+    def test_a_new_key_alternates_with_its_own_fingers_home_key(self) -> None:
+        # ADR-024 Phase B. `r` is the nearer key to `t` and on the same hand,
+        # and `f` is the home key of the finger that types it.
+        fixture = Fixture(active=ANCHOR_SIX)
+        fixture.generator.begin_step(make_step(fixture.layout, "t"))
+        press(fixture, "t", config.PHASE_A_STREAK)
+        units = fixture.generator.next_block().units
+        assert {frozenset(unit) for unit in units if "t" in unit} == {frozenset("ft")}
 
 
 class TestBlockLength:
@@ -1085,6 +1215,40 @@ class TestBlockLength:
         # gets one prompt per three.
         assert Counter(block.prompts)["d"] == config.PHASE_B_ATTEMPTS
         assert len(block.prompts) == 3 * config.PHASE_B_ATTEMPTS
+
+    def test_a_phase_a_block_is_one_cycle_when_one_press_is_owed(self) -> None:
+        fixture = Fixture(active=ANCHOR_SIX)
+        fixture.generator.begin_step(make_step(fixture.layout, "d"))
+        press(fixture, "d", config.PHASE_A_STREAK - 1)
+        assert Counter(fixture.generator.next_block().prompts) == {"d": 1, "j": 1}
+
+    def test_a_phase_b_block_is_one_cycle_when_one_press_is_owed(self) -> None:
+        fixture = Fixture(active=ANCHOR_SIX)
+        fixture.generator.begin_step(make_step(fixture.layout, "d"))
+        press(fixture, "d", config.PHASE_A_STREAK)
+        press(fixture, "d", config.PHASE_B_ATTEMPTS - 1)
+        assert Counter(fixture.generator.next_block().prompts) == {"f": 1, "d": 1, "j": 1}
+
+    def test_a_phase_c_block_is_one_unit_when_one_press_is_owed(self) -> None:
+        fixture = Fixture(active=ANCHOR_SIX)
+        fixture.generator.begin_step(make_step(fixture.layout, "d"))
+        press(fixture, "d", config.PHASE_A_STREAK + config.PHASE_B_ATTEMPTS)
+        press(fixture, "d", config.PHASE_C_ATTEMPTS - 1)
+        (unit,) = fixture.generator.next_block().units
+        assert "d" in unit
+
+    def test_a_phase_c_block_is_filled_to_the_target_and_no_further(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Bigrams only, so the count is exact: the member owes thirty rounds
+        # and the block's thirty prompts are reached after fifteen.
+        monkeypatch.setattr(config, "PHASE_C_TRIGRAM_CHANCE", 0.0)
+        fixture = Fixture(active=ANCHOR_SIX)
+        fixture.generator.begin_step(make_step(fixture.layout, "d"))
+        press(fixture, "d", config.PHASE_A_STREAK + config.PHASE_B_ATTEMPTS)
+        block = fixture.generator.next_block()
+        assert all(len(unit) == 2 for unit in block.units)
+        assert len(block.prompts) == config.FIRST_BLOCK_PROMPTS
 
     def test_blocks_end_on_a_unit_boundary(self) -> None:
         fixture = Fixture(active=ANCHOR_SIX)
@@ -1141,6 +1305,15 @@ class TestSessionFloor:
         press(fixture, "f", config.SESSION_KEY_FLOOR)
         assert not fixture.generator.session_complete
         press(fixture, "j", config.SESSION_KEY_FLOOR)
+        assert fixture.generator.session_complete
+
+    def test_the_floor_is_reached_on_its_last_press_and_not_before(self) -> None:
+        fixture = Fixture(active="fj")
+        for name in "fj":
+            press(fixture, name, config.SESSION_KEY_FLOOR - 1)
+        press(fixture, "f", 1)
+        assert not fixture.generator.session_complete
+        press(fixture, "j", 1)
         assert fixture.generator.session_complete
 
     def test_a_profile_with_no_active_keys_is_not_complete(self) -> None:

@@ -3,11 +3,11 @@ import sqlite3
 import time
 from collections.abc import Callable, Iterator
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import pytest
 
-from takki.persistence import KeyStat, PhaseRecord, Store, WindowStats, utc_stamp
+from takki.persistence import Attempt, KeyStat, PhaseRecord, Store, WindowStats, utc_stamp
 from takki.persistence.sqlite_store import SqliteStore
 from tests.fakes.fake_store import FakeStore
 
@@ -51,6 +51,7 @@ WRITES: dict[str, Callable[[Store, int, str], object]] = {
         s.record_phase(pid, "f", "A", 10, completed_at=at),
     ),
     "append_attempt": lambda s, pid, at: s.append_attempt(pid, "f", True, attempted_at=at),
+    "count_attempt": lambda s, pid, at: s.count_attempt(pid, "f", True, attempted_at=at),
     "record_milestone": lambda s, pid, at: s.record_milestone(pid, "anchor", achieved_at=at),
     "append_letter_lengths": lambda s, pid, at: s.append_letter_lengths(
         pid, "voice", 1.0, [("f", 450)], recorded_at=at
@@ -635,6 +636,54 @@ class TestWindowAttempts:
     def test_an_untouched_key_has_no_rows(self, any_store: Store) -> None:
         pid = any_store.create_profile("Alice").id
         assert any_store.window_attempts(pid, "f") == []
+
+    def test_a_limit_keeps_the_latest_rows_and_zero_keeps_none(self, any_store: Store) -> None:
+        # How a ramp-up phase reads its evidence: the rows since it began
+        # (ADR-024 § Ramp-up variability), and none of the ones before.
+        pid = any_store.create_profile("Alice").id
+        for correct in (True, True, False, True, False):
+            any_store.append_attempt(pid, "f", correct, "2026-09-29T10:00:00+00:00")
+        assert [r.correct for r in any_store.window_attempts(pid, "f", limit=2)] == [True, False]
+        assert len(any_store.window_attempts(pid, "f", limit=9)) == 5
+        assert any_store.window_attempts(pid, "f", limit=0) == []
+
+
+class TestCountedAttempt:
+    """ADR-011: a counted attempt is one lifetime count and one window row, written together."""
+
+    STAMP = "2026-10-07T10:00:00+00:00"
+
+    def test_it_writes_the_count_and_the_row_with_one_stamp(self, any_store: Store) -> None:
+        pid = any_store.create_profile("Alice").id
+        any_store.count_attempt(pid, "f", True, self.STAMP, 400, "j", after_letter_ms=-50)
+        any_store.count_attempt(pid, "f", False, self.STAMP, timeouts=1)
+        assert any_store.key_stats(pid) == {"f": KeyStat(2, 1, self.STAMP)}
+        rows = any_store.window_attempts(pid, "f")
+        assert rows == [
+            Attempt(True, self.STAMP, latency_ms=400, prev_char="j", after_letter_ms=-50),
+            Attempt(False, self.STAMP, timeouts=1),
+        ]
+
+    def test_a_refused_stamp_leaves_neither(self, any_store: Store) -> None:
+        pid = any_store.create_profile("Alice").id
+        with pytest.raises(ValueError):
+            any_store.count_attempt(pid, "f", True, "2026-10-07T10:00:00")
+        assert any_store.key_stats(pid) == {}
+        assert any_store.window_attempts(pid, "f") == []
+
+    def test_a_failure_between_the_two_writes_leaves_neither(self) -> None:
+        # What a kill between two separate commits used to leave: the count
+        # one ahead of the rows for good (alpha-plan #12k, R1).
+        class Killed(SqliteStore):
+            def _append_attempt(self, *args: Any, **kwargs: Any) -> None:
+                raise RuntimeError("killed")
+
+        store = Killed(":memory:")
+        pid = store.create_profile("Alice").id
+        with pytest.raises(RuntimeError, match="killed"):
+            store.count_attempt(pid, "f", True, self.STAMP)
+        assert store.key_stats(pid) == {}
+        assert store.window_attempts(pid, "f") == []
 
 
 class TestPhaseRecords:

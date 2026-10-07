@@ -51,11 +51,13 @@ TTS_RATE = 1.0
 # Sound cue asset paths (relative to bundle assets/sounds/). Alpha has no
 # bundled assets and no takki_config.yaml override chain -- these paths are
 # inert until the Beta config loader resolves them (ADR-012).
-SOUND_CORRECT = "correct.wav"
-SOUND_ERROR = "error.wav"
-SOUND_BOUNDARY = "boundary.wav"
-SOUND_CHIRP_ON = "chirp_on.wav"
-SOUND_CHIRP_OFF = "chirp_off.wav"
+# Commented out 2026-10-07 (alpha-plan #12k, D6): nothing reads them, and
+# Alpha's cues are the synthesised tones below.
+# SOUND_CORRECT = "correct.wav"
+# SOUND_ERROR = "error.wav"
+# SOUND_BOUNDARY = "boundary.wav"
+# SOUND_CHIRP_ON = "chirp_on.wav"
+# SOUND_CHIRP_OFF = "chirp_off.wav"
 
 # Alpha placeholder tone parameters -- generated in-process (takki.audio.tone),
 # no binary assets committed to source.

@@ -235,6 +235,25 @@ class FakeStore:
             distinct_days=len({_local_day(a.attempted_at) for a in attempts}),
         )
 
+    def count_attempt(
+        self,
+        profile_id: int,
+        key_char: str,
+        correct: bool,
+        attempted_at: str | None = None,
+        latency_ms: int | None = None,
+        prev_char: str | None = None,
+        after_letter_ms: int | None = None,
+        timeouts: int = 0,
+    ) -> None:
+        # Stamped once and checked before either write, so a refused stamp
+        # leaves nothing behind, as SqliteStore's one transaction does.
+        ts = _stamp(attempted_at)
+        self.upsert_key_stat(profile_id, key_char, correct, ts)
+        self.append_attempt(
+            profile_id, key_char, correct, ts, latency_ms, prev_char, after_letter_ms, timeouts
+        )
+
     def window_attempts(
         self, profile_id: int, key_char: str, limit: int | None = None
     ) -> list[Attempt]:
@@ -242,7 +261,9 @@ class FakeStore:
         # list as appended *is* the answer. Sorting by timestamp here is what
         # made the fake agree with a real store that was itself wrong.
         attempts = self._key_attempts.get((profile_id, key_char), [])
-        return list(attempts if limit is None else attempts[-limit:])
+        # Not `attempts[-limit:]`: at zero that is the whole list, and the real
+        # store's `LIMIT 0` is no rows.
+        return list(attempts if limit is None else attempts[max(len(attempts) - limit, 0) :])
 
     def append_letter_lengths(
         self,

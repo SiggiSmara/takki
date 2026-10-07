@@ -181,14 +181,19 @@ def main() -> int:
     signal.signal(signal.SIGINT, _on_signal)
     signal.signal(signal.SIGTERM, _on_signal)
 
-    loop.start()
-    loop.run()
-    # Joining the listener is the only place a dead pynput hook becomes
-    # visible -- it re-raises a callback exception here. `join()` is not on the
-    # KeyEventStream Protocol, so the wiring holds the concrete stream to do it
-    # (concurrency-model.md § Shutdown). `stop()` already happened in
-    # SessionLoop.shutdown().
-    keys.join(config.WORKER_JOIN_SECONDS)
+    try:
+        loop.start()
+        loop.run()
+        # Joining the listener is the only place a dead pynput hook becomes
+        # visible -- it re-raises a callback exception here. `join()` is not on
+        # the KeyEventStream Protocol, so the wiring holds the concrete stream
+        # to do it (concurrency-model.md § Shutdown). `stop()` already happened
+        # in SessionLoop.shutdown().
+        keys.join(config.WORKER_JOIN_SECONDS)
+    finally:
+        # ADR-011 § Profile portability: until the store is closed, part of
+        # the profile is in the WAL beside the file a parent would copy.
+        store.close()
     return 0
 
 

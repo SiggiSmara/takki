@@ -148,8 +148,7 @@ class AttemptCounter:
             length = (
                 None if latency_ms is None or self._lengths is None else self._lengths.usual(target)
             )
-            self._store.upsert_key_stat(self._profile_id, target, correct, ts)
-            self._store.append_attempt(
+            self._store.count_attempt(
                 self._profile_id,
                 target,
                 correct,

@@ -245,22 +245,25 @@ class TestRecordedPhases:
         self.answer(store, profile, "d", "x" * 20)
         assert progress.member("d").phase is None
 
-    def test_a_step_ends_only_when_every_member_is_done(self) -> None:
-        store, profile, progress = self.progress()
-        for name in ("d", "k"):
-            for pattern in (THROUGH_A, THROUGH_B, THROUGH_C):
-                self.answer(store, profile, name, pattern)
-                progress.advance(progress.member(name))
-            if name == "d":
-                assert progress.step_phase(["d", "k"]) is RampUpPhase.A
-        assert progress.step_phase(["d", "k"]) is None
-
-    def test_the_least_advanced_member_sets_the_phase(self) -> None:
-        store, profile, progress = self.progress()
-        self.answer(store, profile, "d", THROUGH_A)
-        progress.advance(progress.member("d"))
-        self.answer(store, profile, "k", "..")
-        assert progress.step_phase(["d", "k"]) is RampUpPhase.A
+    # Commented out 2026-10-07 (alpha-plan #12k, D1) with `step_phase`, which
+    # they test and nothing else calls.
+    #
+    # def test_a_step_ends_only_when_every_member_is_done(self) -> None:
+    #     store, profile, progress = self.progress()
+    #     for name in ("d", "k"):
+    #         for pattern in (THROUGH_A, THROUGH_B, THROUGH_C):
+    #             self.answer(store, profile, name, pattern)
+    #             progress.advance(progress.member(name))
+    #         if name == "d":
+    #             assert progress.step_phase(["d", "k"]) is RampUpPhase.A
+    #     assert progress.step_phase(["d", "k"]) is None
+    #
+    # def test_the_least_advanced_member_sets_the_phase(self) -> None:
+    #     store, profile, progress = self.progress()
+    #     self.answer(store, profile, "d", THROUGH_A)
+    #     progress.advance(progress.member("d"))
+    #     self.answer(store, profile, "k", "..")
+    #     assert progress.step_phase(["d", "k"]) is RampUpPhase.A
 
     def test_a_member_whose_step_has_not_reached_its_phase_is_not_judged(self) -> None:
         # alpha-plan #12j, O1. `d` passed Phase A and its partner has not, so

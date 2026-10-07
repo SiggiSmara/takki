@@ -1,5 +1,10 @@
-from collections.abc import Callable
+import queue
+import signal
+import sqlite3
+import time
+from collections.abc import Callable, Iterator
 from dataclasses import replace
+from pathlib import Path
 
 import pytest
 
@@ -13,8 +18,13 @@ from takki.main import (
     resolve_language,
     verify_layout,
 )
+from takki.persistence.sqlite_store import SqliteStore
 from takki.platform.layout import build_de, build_en, build_is, describe_mismatch
+from takki.session import InboundEvent
+from tests.fakes.fake_focus_source import FakeFocusSource
 from tests.fakes.fake_platform import FakePlatformInterface
+from tests.fakes.fake_sound_cues import FakeSoundCues
+from tests.fakes.scripted_key_stream import ScriptedKeyStream
 
 
 class TestResolveLanguage:
@@ -155,3 +165,114 @@ class TestNoAudioOutput:
         assert capsys.readouterr().err == (
             "Takki cannot start: the voice cannot play any sound (no endpoint).\n" + self.REMEDY
         )
+
+
+class TestStartup:
+    """The wiring: `main()` from an empty data directory to its first words and out again."""
+
+    @pytest.fixture
+    def signals(self) -> Iterator[None]:
+        # main() installs its own handlers, and pytest's must come back.
+        kept = {number: signal.getsignal(number) for number in (signal.SIGINT, signal.SIGTERM)}
+        yield
+        for number, handler in kept.items():
+            signal.signal(number, handler)
+
+    def test_the_wrong_keyboard_stops_before_anything_is_built(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        monkeypatch.setattr("takki.main.config.LANGUAGE", "en")
+        monkeypatch.setattr(
+            "takki.main.select_platform_interface",
+            lambda: FakePlatformInterface(layout=build_de()),
+        )
+        assert main() == EXIT_LAYOUT_MISMATCH
+        assert capsys.readouterr().err.startswith("Takki cannot start: ")
+
+    def test_a_language_with_no_voice_stops_before_anything_is_built(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        monkeypatch.setattr("takki.main.config.LANGUAGE", None)
+        monkeypatch.setattr(
+            "takki.main.select_platform_interface",
+            lambda: FakePlatformInterface(system_language="is", layout=build_is()),
+        )
+        assert main() == EXIT_NO_VOICE
+        assert capsys.readouterr().err.startswith(
+            "Takki cannot start: no text-to-speech voice is installed for 'is'.\n"
+        )
+
+    def test_a_cold_start_introduces_the_first_keys_and_ends_cleanly(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, signals: None
+    ) -> None:
+        # Everything main() builds is real except the four things that need a
+        # machine: the window, the mixer, the voice and the keyboard hook.
+        platform = FakePlatformInterface()
+        engine = platform.get_fallback_tts("fake-en")()
+        platform.fallback_voice_ids.clear()
+        database = tmp_path / "data" / "takki.sqlite"
+
+        class Window(FakeFocusSource):
+            def __init__(self, inbound: queue.Queue[InboundEvent]) -> None:
+                super().__init__(inbound)
+                self.gain_focus()
+
+        class Keys(ScriptedKeyStream):
+            joined = False
+
+            def __init__(self, inbound: queue.Queue[InboundEvent]) -> None:
+                super().__init__([], inbound)
+
+            def join(self, timeout: float) -> None:
+                Keys.joined = True
+
+        class Frames:
+            waits = 0
+
+            def wait(self) -> None:
+                # The pair's two scripts are three utterances each. SIGINT is
+                # how a session ends, so the handler is under test as well.
+                Frames.waits += 1
+                time.sleep(0.001)
+                if len(engine.spoken) >= 6 or Frames.waits > 5000:
+                    signal.raise_signal(signal.SIGINT)
+
+        monkeypatch.setattr("takki.main.config.LANGUAGE", "en")
+        monkeypatch.setattr("takki.main.select_platform_interface", lambda: platform)
+        monkeypatch.setattr("takki.main.PygameFocusSource", Window)
+        monkeypatch.setattr("takki.main.PygameMixerCues", FakeSoundCues)
+        monkeypatch.setattr("takki.main.PynputKeyStream", Keys)
+        monkeypatch.setattr("takki.main.SleepFrameLimiter", Frames)
+        monkeypatch.setattr("takki.main.database_path", lambda: database)
+        closed: list[bool] = []
+        close = SqliteStore.close
+
+        def recording_close(store: SqliteStore) -> None:
+            closed.append(True)
+            close(store)
+
+        monkeypatch.setattr(SqliteStore, "close", recording_close)
+
+        assert main() == 0
+        assert engine.spoken[:6] == [
+            "New letter:",
+            "f",
+            "Use your left index finger.",
+            "New letter:",
+            "j",
+            "Use your right index finger. Reach three positions to the right from F.",
+        ]
+        assert platform.fallback_voice_ids == ["fake-en"]
+        assert Keys.joined
+        # Closed, so the one file is the whole profile (ADR-011): no WAL beside it.
+        assert closed == [True]
+        assert [path.name for path in database.parent.iterdir()] == ["takki.sqlite"]
+
+        store = SqliteStore(str(database))
+        (profile,) = store.list_profiles()
+        assert (profile.name, profile.language) == ("dev", "en")
+        introduced = [(row.key_char, row.step) for row in store.introductions(profile.id)]
+        assert introduced == [("f", 1), ("j", 1)]
+        with sqlite3.connect(database) as connection:
+            sessions = connection.execute("SELECT ended_at IS NOT NULL FROM sessions").fetchall()
+        assert sessions == [(1,)]

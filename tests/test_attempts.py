@@ -1,3 +1,5 @@
+from typing import Any
+
 from takki import config
 from takki.lesson.attempts import AttemptCounter, PressOutcome
 from takki.lesson.letter_lengths import LetterLengths
@@ -54,6 +56,38 @@ class TestFirstPress:
         h.counter.start_prompt("f")
         assert h.store.key_stats(h.profile.id) == {}
         assert h.window("f") == WindowStats(0, 0, 0)
+
+
+class TestOneWritePerAttempt:
+    def test_a_counted_press_is_one_store_call_and_a_retry_is_a_recency_bump(self) -> None:
+        # Alpha-plan #12k, R1: the count and the row went in as two commits,
+        # and a kill between them left a phase's evidence a row out for good.
+        calls: list[str] = []
+
+        class Spy(FakeStore):
+            def count_attempt(self, *args: Any, **kwargs: Any) -> None:
+                calls.append("count_attempt")
+                super().count_attempt(*args, **kwargs)
+
+            def upsert_key_stat(self, *args: Any, **kwargs: Any) -> None:
+                calls.append("upsert_key_stat")
+                super().upsert_key_stat(*args, **kwargs)
+
+            def append_attempt(self, *args: Any, **kwargs: Any) -> None:
+                calls.append("append_attempt")
+                super().append_attempt(*args, **kwargs)
+
+            def bump_key_recency(self, *args: Any, **kwargs: Any) -> None:
+                calls.append("bump_key_recency")
+                super().bump_key_recency(*args, **kwargs)
+
+        store = Spy()
+        counter = AttemptCounter(store, store.create_profile("Alice").id)
+        counter.start_prompt("f")
+        counter.press("j")
+        counter.press("f")
+        # The fake's `count_attempt` is built from its own two writes.
+        assert calls == ["count_attempt", "upsert_key_stat", "append_attempt", "bump_key_recency"]
 
 
 class TestRejectionLoop:

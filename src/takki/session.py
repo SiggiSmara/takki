@@ -139,6 +139,7 @@ class SessionLoop:
         self._focus_model = FocusModel(focus, self._speaker, clock, bindings)
 
         self.running = False
+        self._stop_requested = False
         # No consumer in Alpha -- Layer 2 does not exist. Evaluated and held
         # anyway because the block boundary is where ADR-010 says the check
         # belongs ("checked after each introduction step"), and a predicate
@@ -193,6 +194,11 @@ class SessionLoop:
         )
         self._resume_ramp_up()
         self._keys.start()
+        if self._stop_requested:
+            # A signal that arrived during the warm-up above. The handlers are
+            # installed before this is called, so without the check the flag
+            # was overwritten here and the first Ctrl+C was lost.
+            return
         self.running = True
         # The first spoken line of the session comes out of here: a cold
         # profile's first block boundary introduces Stage 0's first step, and
@@ -201,6 +207,7 @@ class SessionLoop:
 
     def stop(self) -> None:
         """Signal-handler entry point (concurrency-model.md § Shutdown)."""
+        self._stop_requested = True
         self.running = False
 
     def shutdown(self) -> None:
@@ -216,9 +223,13 @@ class SessionLoop:
     # ---- the loop ------------------------------------------------------
 
     def run(self) -> None:
-        while self.running:
-            self.tick()
-        self.shutdown()
+        # `finally`, so an exception out of a tick still ends the session row,
+        # writes the block's letter lengths and stops the two threads.
+        try:
+            while self.running:
+                self.tick()
+        finally:
+            self.shutdown()
 
     def tick(self) -> None:
         self._focus.poll()

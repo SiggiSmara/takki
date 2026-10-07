@@ -15,6 +15,7 @@ from takki.lesson.introducer import (
     Location,
     anchor_keys,
     describe,
+    describe_location,
     home_row_fill,
     introduction_sequence,
     phase1_slots,
@@ -438,6 +439,36 @@ class TestScript:
             "New letter:",
             "Use your left middle finger. Reach one row up from D.",
         )
+
+    def test_a_bottom_row_key_is_reached_down(self) -> None:
+        v = next(k for k in flat(sequence(build_en())) if k.grapheme == "v")
+        assert describe(v)[1] == "Use your left index finger. Reach one row down from F."
+
+    def test_a_key_nearer_the_little_finger_is_reached_to_the_left(self) -> None:
+        d = next(k for k in flat(sequence(build_en())) if k.grapheme == "d")
+        assert (
+            describe(d)[1] == "Use your left middle finger. Reach one position to the left from F."
+        )
+
+    def test_a_reach_on_both_axes_names_both_moves(self) -> None:
+        assert (
+            describe_location(Location(reference="j", row_delta=1, col_delta=-2))
+            == "one row down and two positions to the left from J"
+        )
+
+    def test_a_reach_past_the_number_words_is_spoken_in_digits(self) -> None:
+        assert (
+            describe_location(Location(reference="f", row_delta=0, col_delta=4))
+            == "four positions to the right from F"
+        )
+        assert (
+            describe_location(Location(reference="f", row_delta=0, col_delta=5))
+            == "5 positions to the right from F"
+        )
+
+    def test_a_reference_with_no_single_capital_is_spoken_as_it_is(self) -> None:
+        location = Location(reference="ß", row_delta=1, col_delta=0)
+        assert describe_location(location) == "one row down from ß"
 
     def test_the_first_key_drops_the_location_clause(self) -> None:
         f = flat(sequence(build_en()))[0]

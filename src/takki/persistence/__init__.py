@@ -144,6 +144,23 @@ class Store(Protocol):
         timeouts: int = 0,
     ) -> None: ...
 
+    def count_attempt(
+        self,
+        profile_id: int,
+        key_char: str,
+        correct: bool,
+        attempted_at: str | None = None,
+        latency_ms: int | None = None,
+        prev_char: str | None = None,
+        after_letter_ms: int | None = None,
+        timeouts: int = 0,
+    ) -> None:
+        """`upsert_key_stat` and `append_attempt` for one counted attempt, written together."""
+        # A ramp-up phase's evidence is the rows since the lifetime count at
+        # its start (ADR-011), so a count without its row shifts that evidence
+        # by one for good.
+        ...
+
     def mark_introduced(
         self,
         profile_id: int,

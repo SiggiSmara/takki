@@ -18,7 +18,7 @@ from takki.lesson.introducer import KeyIntroducer, describe, introduction_sequen
 from takki.lesson.key_state import KeyStates
 from takki.lesson.rampup import RampUpProgress
 from takki.persistence import Attempt, PhaseRecord, Profile
-from takki.platform.layout import Layout, build_en
+from takki.platform.layout import Grapheme, Layout, PhysicalKey, build_en
 from takki.session import Celebrant, InboundEvent, SessionLoop
 from tests.fakes.fake_clock import FakeClock
 from tests.fakes.fake_focus_source import FakeFocusSource
@@ -1381,6 +1381,43 @@ class TestShutdown:
         assert harness.stream.stopped is True
         assert harness.focus.closed is True
 
+    def test_a_stop_during_startup_is_not_lost(self) -> None:
+        # The signal handlers are installed before start(), and the corpus
+        # warm-up inside it is the slowest part of a launch.
+        class StopsWhileWarming(FixedListSource):
+            signalled = False
+
+            def grapheme_weights(self, layout: Layout) -> dict[str, float]:
+                if not self.signalled:
+                    self.signalled = True
+                    harness.loop.stop()
+                return super().grapheme_weights(layout)
+
+        harness = Harness(source=StopsWhileWarming(EN_WORDS))
+        harness.loop.start()
+        assert harness.loop.running is False
+        harness.loop.run()
+        harness.pump()
+        assert harness.engine.spoken == []
+        assert harness.store.introductions(harness.profile.id) == []
+        assert harness.stream.stopped is True
+        assert harness.store.sessions() == [(harness.profile.id, ANY_TS, ANY_TS)]
+
+    def test_an_exception_in_a_tick_still_shuts_down(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        harness = Harness()
+        harness.loop.start()
+        harness.settle()
+
+        def broken() -> None:
+            raise RuntimeError("tick")
+
+        monkeypatch.setattr(harness.loop, "tick", broken)
+        with pytest.raises(RuntimeError, match="tick"):
+            harness.loop.run()
+        assert harness.stream.stopped is True
+        assert harness.focus.closed is True
+        assert harness.store.sessions() == [(harness.profile.id, ANY_TS, ANY_TS)]
+
     def test_shutdown_ends_the_session_row_once(self) -> None:
         harness = Harness()
         harness.loop.start()
@@ -1833,3 +1870,52 @@ class TestSlots:
                 break
             harness.answer()
         assert steps_of(harness.store, harness.profile.id) == STEPS[:4]
+
+
+class TestEndOfTheCurriculum:
+    def test_a_layout_with_nothing_left_to_introduce_keeps_drilling(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def stage_0_only() -> Layout:
+            positions = {
+                "r": (2, 4),
+                "f": (3, 4),
+                "v": (4, 4),
+                "u": (2, 7),
+                "j": (3, 7),
+                "m": (4, 7),
+            }
+            keys = {char: PhysicalKey(char, row, col) for char, (row, col) in positions.items()}
+            graphemes = {char: Grapheme(char, "direct", (char,), 1) for char in keys}
+            return Layout(lang="en", keys=keys, graphemes=graphemes)
+
+        monkeypatch.setattr("tests.test_session.build_en", stage_0_only)
+        harness = Harness()
+        harness.loop.start()
+        profile = harness.profile.id
+
+        def all_six_through_their_ramp_up() -> bool:
+            done = [
+                harness.store.phase_records(profile, row.key_char).get("C")
+                for row in harness.store.introductions(profile)
+            ]
+            return len(done) == 6 and all(
+                record is not None and record.completed_attempts is not None for record in done
+            )
+
+        for _ in range(1000):
+            if all_six_through_their_ramp_up():
+                break
+            harness.answer()
+        assert all_six_through_their_ramp_up()
+
+        # Two more blocks' worth: each boundary asks the introducer, which has
+        # nothing further, and the session goes on with the keys it has.
+        asked = harness.answer(2 * config.FIRST_BLOCK_PROMPTS)
+        assert set(asked) <= set("fjruvm")
+        assert harness.loop.running
+        assert harness.engine.spoken == (
+            intro_lines(("f", "j")) + intro_lines(("r", "u")) + intro_lines(("v", "m"))
+        )
+        introduced = [row.key_char for row in harness.store.introductions(profile)]
+        assert introduced == ["f", "j", "r", "u", "v", "m"]
