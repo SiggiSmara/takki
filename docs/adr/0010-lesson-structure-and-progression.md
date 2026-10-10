@@ -63,7 +63,7 @@ Three readings, pinned here:
 - **With nothing in progress there is always room**, whatever the cap. A cap below the first step's size would otherwise never let it in.
 - **It is a rolling query.** Known is read off the window, so a key whose accuracy slips below the bar is in progress again and takes its slot back. Nothing is recorded.
 
-**Why 6.** It is Stage 0's six keys. A child can still meet all of Stage 0 on the first day, which the developer wants to stay possible, and from then on new letters come as old ones are learned. It is a starting point to be tuned by ear in alpha-plan #12h.
+**Why 6.** *(Stage 0 is superseded by [ADR-033](0033-rest-keys-and-keyboard-alignment.md), 2026-10-10, which keeps six on a new reason; not yet amended here.)* It is Stage 0's six keys. A child can still meet all of Stage 0 on the first day, which the developer wants to stay possible, and from then on new letters come as old ones are learned. It is a starting point to be tuned by ear in alpha-plan #12h.
 
 **Configurable per child.** `MAX_KEYS_IN_PROGRESS` is a compiled default that `SessionLoop` takes by construction ([ADR-025](0025-configuration-system.md)). The yaml and per-profile tiers do not exist yet; when they do, they raise it for a child who can carry more keys at once, such as a keen child or one who already knows the keyboard.
 

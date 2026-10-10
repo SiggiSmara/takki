@@ -3,6 +3,7 @@
 > **Status:** Findings and a proposal. Nothing is decided and no ADR has changed. The developer has settled two points in discussion (repeats are allowed; staying on a letter after a miss is wanted); they are marked where they appear.
 > **Date:** 2026-10-10 (follows the whole-repo review of 2026-10-06, alpha-plan #12k, findings E1 to E3)
 > **Feeds:** [ADR-024](../adr/0024-drill-content-and-lesson-granularity.md) § New-key ramp-up and § Ramp-up variability
+> **See also:** [ADR-033](../adr/0033-rest-keys-and-keyboard-alignment.md) (2026-10-10) removes Stage 0, so the `r u` and `v m` rows of § What the generator does today describe steps that go. Its ADR-024 amendment and this note's proposal are best decided together ([alpha-plan](../alpha-plan.md) #12m).
 > **Sources:** listed at the end with how each was read; PDFs are in the gitignored `docs/research/references/`
 
 **One-line summary:** Research on practice order supports starting a new key with a short

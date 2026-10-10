@@ -3,6 +3,7 @@
 > **Status:** Research / pre-decision (informs a future [ADR-023](../adr/0023-key-introduction-protocol.md) amendment — not itself a decision)
 > **Date:** 2026-06-07
 > **Updated:** 2026-06-14 — order-comparison spike results folded in (see "What the order-comparison spike showed").
+> **Decided 2026-10-10:** [ADR-033](../adr/0033-rest-keys-and-keyboard-alignment.md) decides the order and the per-child rest position ahead of the pilot, on fit and comfort and not on this note's agency argument. The pilot may still change it.
 > **Sources:** see [references.md](references.md)
 
 **One-line summary:** Frequency data, keyboard ergonomics, and actual VI teaching

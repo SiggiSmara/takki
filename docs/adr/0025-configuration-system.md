@@ -3,7 +3,8 @@
 **Status:** Accepted  
 **Date:** 2026-05-23
 
-> Part of the [Takki architecture](../architecture.md).
+> Part of the [Takki architecture](../architecture.md).  
+> **Amendment pending from [ADR-033](0033-rest-keys-and-keyboard-alignment.md) (2026-10-10):** the keyboard alignment's numbers, `ANCHOR_MIN_ATTEMPTS` and `ANCHOR_MIN_ACCURACY` removed, and rest keys as per-profile state. Not yet made here ([alpha-plan](../alpha-plan.md) #12m).
 
 ---
 

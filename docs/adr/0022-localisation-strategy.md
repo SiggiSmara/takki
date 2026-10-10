@@ -3,7 +3,8 @@
 **Status:** Accepted  
 **Date:** 2026-05-17
 
-> Part of the [Takki architecture](../architecture.md).
+> Part of the [Takki architecture](../architecture.md).  
+> **Amendment pending from [ADR-033](0033-rest-keys-and-keyboard-alignment.md) (2026-10-10):** the keyboard alignment's strings, and "rest" in place of "home" in child-facing text. Not yet made here ([alpha-plan](../alpha-plan.md) #12m).
 
 ---
 

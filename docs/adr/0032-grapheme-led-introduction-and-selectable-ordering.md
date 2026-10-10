@@ -6,6 +6,7 @@
 > Part of the [Takki architecture](../architecture.md).
 > **Supersedes** [ADR-023](0023-key-introduction-protocol.md) §§ Phase 1, Phase 2, and the modifier-placement rule in § Composite letters. **Amends** [ADR-028](0028-composite-input-and-keyboard-ownership.md) § Modifier introduction. **Closes** roadmap B8 and completes the structural half of roadmap B9.
 > Everything else in ADR-023 stands — Stage 0, the introduction script, the step semantics, the finger map, the composite data model, the Latvian resolution and the milestone denominators are unchanged and remain authoritative.
+> **See [ADR-033](0033-rest-keys-and-keyboard-alignment.md) (2026-10-10):** it removes Stage 0 and specifies the probe Ordering C was waiting for. Decision 2 is not yet amended.
 
 ---
 
@@ -134,7 +135,7 @@ This ADR was one day old and had had no implementation pressure on it. Four thin
 ### Open questions
 
 1. **Which ordering the pilot picks.** Unchanged and deliberate; this ADR exists to keep the question open rather than to answer it. Supersedes ADR-023 open question 6.
-2. **The calibration probe for Ordering C.** What it measures, how long it takes, and whether a blind child can complete it without sighted help. Beta.
+2. **The calibration probe for Ordering C.** *(Answered 2026-10-10 by [ADR-033](0033-rest-keys-and-keyboard-alignment.md): the probe is the keyboard alignment that opens a session.)* What it measures, how long it takes, and whether a blind child can complete it without sighted help. Beta.
 3. **Whether an eligible-but-not-yet-due composite should ever be pulled forward** to retire a modifier the child keeps meeting in text they cannot yet type. Not an Alpha question; revisit with the first dead-key language.
 4. **Ordering B and C are specified but not implemented.** They ship as strategies when the pilot needs them; writing them now would be building an experiment with no subjects. Whoever implements one must re-read [ADR-024](0024-drill-content-and-lesson-granularity.md) § Phase B, whose same-finger anchor is assumed to come from the home row: under Ordering A that assumption holds by construction, and under B or C it does not, so ADR-024's fallback — *nearest known key on the same hand* — stops being the rare path and becomes the common one. It is a fallback that already exists, not a gap; the point is that its frequency changes by an order of magnitude and it should be tested as a main path, not an edge case.
 5. **Whether composite ordering should ever consider stroke pattern.** Decided *no* above, with the cost accepted. The signal that would reopen it is a child stalling repeatedly on a composite whose base stroke shares a hand with the modifier — particularly the one carrying the mechanism explanation. Watch for it in the pilot; if it appears, the narrowest possible fix is to choose the *mechanism-bearing* composite for motor ease and leave the rest on frequency, which is one rule firing once per mechanism class per language rather than a general comfort weighting.

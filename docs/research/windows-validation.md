@@ -4,6 +4,7 @@
 > **Date written:** 2026-09-20. **Updated:** 2026-09-24 (#12b-1): brought up to date with 12a-1 and 12a-2; *Running order* added; scripts built. **Date run:** T0, A (automated) and G1's token half: 2026-09-24. Hands-on: _not yet run._
 > **Machine:** the Windows test laptop. The primary dev box is headless Linux with no audio device and a `win32`-pinned `pynput`, so nothing below can run there. That is the whole reason this tier exists.
 > **Scope:** the Alpha done-criterion and everything that would invalidate it. *Not* a Beta feature test: no voice, no Piper, no Layer 2, no multi-profile.
+> **Out of date since 2026-10-10:** [ADR-033](../adr/0033-rest-keys-and-keyboard-alignment.md) removes Stage 0, the anchor gate and the anchor rung, and it is built before the next run ([alpha-plan](../alpha-plan.md) #12m). Whatever below names Stage 0, `r f v u j m` or the anchor describes the old first session: running-order steps 22, 25, 37 and 38, rows B3, B4, D1 and D4, and tier D's title among them. It is rewritten when #12h's run sheet is generated, not before.
 
 Written for whoever sits at the laptop. Record results **as you go**, in the run's run sheet (below), not from memory afterwards. Several checks are about what you *heard*, and that does not survive an hour.
 

@@ -3,7 +3,8 @@
 **Status:** Accepted  
 **Date:** 2026-05-18
 
-> Part of the [Takki architecture](../architecture.md).
+> Part of the [Takki architecture](../architecture.md).  
+> **Amendment pending from [ADR-033](0033-rest-keys-and-keyboard-alignment.md) (2026-10-10):** the ramp-up's same-finger anchor becomes the finger's rest key, Stage 0's own content goes, no key is held to the anchor bar, and the keyboard alignment's time is outside pace and block length. Not yet made here ([alpha-plan](../alpha-plan.md) #12m).
 
 ---
 

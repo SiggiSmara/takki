@@ -273,6 +273,8 @@ Diamond and Speed remain accuracy/fluency gates, not key-count gates, and are un
 
 ### The Anchor Gate
 
+> **Stage 0 is superseded by [ADR-033](0033-rest-keys-and-keyboard-alignment.md) (2026-10-10)**, which makes the rest position the first rung and retires the anchor bar. This section is not yet amended and is what the code does.
+
 The first rung certifies that the child can **find home by touch** — the F and J tactile bumps, the one orientation landmark present on essentially every physical keyboard, and the foundation every later key position is described against ([ADR-023](0023-key-introduction-protocol.md) § Location).
 
 *(Since 2026-10-04, alpha-plan #12f: the accuracy in this criterion is the lower confidence bound over decayed evidence, as for Known. 24 correct of 25 no longer passes; it takes 19 presses with no miss, 52 with one, or 79 with two. [ADR-024](0024-drill-content-and-lesson-granularity.md)'s plan has held these six keys to that bound since #12e, so the rung follows what is already practised. Whether it is too strict is for #12h to hear.)*

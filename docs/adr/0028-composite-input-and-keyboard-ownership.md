@@ -7,6 +7,7 @@
 **Amended:** 2026-09-29 — § C8 (alpha #12c and the #12b-2 E2/E3 result): the focus source drains SDL's whole queue every tick; in Alpha the pause announcement names Alt+Tab, and the held-key raise is deferred to Beta.  
 
 > Part of the [Takki architecture](../architecture.md).  
+> **Amendment pending from [ADR-033](0033-rest-keys-and-keyboard-alignment.md) (2026-10-10):** what the keyboard alignment needs from key events; a dead key as a rest key waits on the key-capture decision. Not yet made here ([alpha-plan](../alpha-plan.md) #12m).
 > Closes roadmap issues B5, B7, and C8. Amends [ADR-024](0024-drill-content-and-lesson-granularity.md), and (per the 2026-06-21 revision) [ADR-016](0016-visual-display-design.md) and [ADR-026](0026-platform-interface-abstraction.md). Extends [ADR-005](0005-keyboard-handling.md) and adds the `FocusSource` Protocol to [ADR-019](0019-testing-strategy-and-io-isolation.md).
 
 ---
