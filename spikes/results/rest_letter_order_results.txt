@@ -1,0 +1,374 @@
+Rest-Letter Order Spike
+Python: 3.11.14   Platform: linux
+Languages: en, de, nl, is, sv, fi, nb, da, es, pt, it, fr, pl, cs, hu, tr, ru, el, he
+Orders: useful, alternating, floor 2%, floor 3%, rest first
+Word band: 3-6 letters from wordfreq's top 3000, unfiltered
+Layout tables: en, de, is match src/takki/platform/layout.py; the rest are from memory, unchecked
+
+====================================================================================================
+  Typeable words after day one (3 steps)
+====================================================================================================
+  language                    pool       useful  alternating     floor 2%     floor 3%   rest first
+  English, QWERTY             1713           30           38           38           38           21
+  German, QWERTZ              1554           62           53           53           53            9
+  Dutch, US-International     1591           43           56           56           56           23
+  Icelandic                   2044           57           38           38           38           15
+  Swedish                     1917           57           57           57           57           32
+  Finnish                     1492           65           61           61           61           17
+  Norwegian                   1829           64           59           59           59            8
+  Danish                      1841           63           63           63           63            9
+  Spanish                     1467           40           29           29           29            7
+  Portuguese, ABNT2           1581           46           34           34           42            7
+  Italian                     1449           48           37           37           37            6
+  French, AZERTY              1511           45           35           35           35            0
+  Polish, programmer's        1584            3            9            9            9           12
+  Czech, QWERTZ               1974           25           25           25           25            4
+  Hungarian, QWERTZ           1687           44           44           44           44           10
+  Turkish Q                   1796           32           32           32           32            8
+  Russian                     1603           43           32           32           32            5
+  Greek                       1496           13           13           13           13            7
+  Hebrew                      2716          152          152          152          152           12
+  mean ratio to useful                     1.00         1.04         1.04         1.05         0.45
+  languages ahead of useful                   0            3            3            3            1
+  languages level with useful                19            7            7            7            0
+  languages behind useful                     0            9            9            9           18
+
+====================================================================================================
+  Typeable words after 6 steps
+====================================================================================================
+  language                    pool       useful  alternating     floor 2%     floor 3%   rest first
+  English, QWERTY             1713          484          449          484          484          449
+  German, QWERTZ              1554          506          377          506          506          377
+  Dutch, US-International     1591          483          461          461          483          461
+  Icelandic                   2044          504          379          523          568          379
+  Swedish                     1917          493          518          553          493          518
+  Finnish                     1492          589          426          589          589          426
+  Norwegian                   1829          687          622          687          687          622
+  Danish                      1841          590          513          590          590          513
+  Spanish                     1467          454          277          454          454          277
+  Portuguese, ABNT2           1581          555          325          539          555          325
+  Italian                     1449          563          356          563          563          356
+  French, AZERTY              1511          510          236          512          510          236
+  Polish, programmer's        1584          201          241          241          191          241
+  Czech, QWERTZ               1974          190          149          190          190          149
+  Hungarian, QWERTZ           1687          243          250          250          281          250
+  Turkish Q                   1796          381          334          381          381          334
+  Russian                     1603          428          232          428          428          232
+  Greek                       1496          269          323          311          310          323
+  Hebrew                      2716          982          484          991          982          484
+  mean ratio to useful                     1.00         0.81         1.03         1.02         0.81
+  languages ahead of useful                   0            4            7            3            4
+  languages level with useful                19            0           10           15            0
+  languages behind useful                     0           15            2            1           15
+
+====================================================================================================
+  Step by which every strong rest key (>= 2% of key presses) is introduced
+====================================================================================================
+  language                   strong/rest       useful  alternating     floor 2%     floor 3%   rest first
+  English, QWERTY                    4/5            6            6            6            6            3
+  German, QWERTZ                     4/6            6            6            6            6            3
+  Dutch, US-International            5/5            7            6            6            7            3
+  Icelandic                          4/6            9            4            4            9            2
+  Swedish                            5/6            7            6            6            7            3
+  Finnish                            4/6            6            4            4            4            2
+  Norwegian                          5/6            6            6            6            6            3
+  Danish                             5/6            6            6            6            6            3
+  Spanish                            4/6            5            6            6            6            3
+  Portuguese, ABNT2                  4/6            7            6            6            7            3
+  Italian                            4/6            6            6            6            6            3
+  French, AZERTY                     4/6            7            4            4            7            2
+  Polish, programmer's               5/5            8            6            6            8            3
+  Czech, QWERTZ                      5/6            6            6            6            6            3
+  Hungarian, QWERTZ                  6/6            8            6            6            8            3
+  Turkish Q                          5/6            6            6            6            6            3
+  Russian                            3/6            5            4            4            4            2
+  Greek                              5/6           10            6            6           10            3
+  Hebrew                             3/6            8            4            4            8            2
+  mean                                            6.8          5.5          5.5          6.7          2.7
+
+====================================================================================================
+  English, QWERTY
+====================================================================================================
+  bump keys: f j
+  rest keys, by share of key presses: a 8.2%  s 5.8%  l 3.8%  d 3.6%  k 0.8%
+  useful       e+o  t+i  a+n  s+h  r+l  d+u
+               words after each step: [3, 8, 30, 106, 280, 484]
+               first words on day one: not one into too off often non fine
+  floor 2%     e+o  a+l  t+i  s+n  r+h  d+u
+               words after each step: [3, 9, 38, 139, 280, 484]
+               first words on day one: all too off life little feel left lot
+  alternating  e+o  a+l  t+i  s+k  r+n  d+h
+               words after each step: [3, 9, 38, 112, 241, 449]
+               first words on day one: all too off life little feel left lot
+
+====================================================================================================
+  German, QWERTZ
+====================================================================================================
+  bump keys: f j
+  rest keys, by share of key presses: s 6.8%  d 6.7%  a 6.0%  l 3.0%  k 1.0%  ö 0.2%
+  useful       e+n  s+i  d+h  r+u  a+m  t+l
+               words after each step: [3, 24, 62, 143, 271, 506]
+               first words on day one: die den ein sie eine des sind einen
+  floor 2%     e+n  s+l  r+i  d+h  t+u  a+m
+               words after each step: [3, 9, 53, 133, 259, 506]
+               first words on day one: ein sie eine einen einer sein seine eines
+  alternating  e+n  s+l  r+i  d+k  t+h  a+ö
+               words after each step: [3, 9, 53, 120, 229, 377]
+               first words on day one: ein sie eine einen einer sein seine eines
+
+====================================================================================================
+  Dutch, US-International
+====================================================================================================
+  bump keys: f j
+  rest keys, by share of key presses: a 8.0%  d 5.8%  l 3.4%  s 3.2%  k 2.4%
+  useful       e+n  a+i  t+o  d+l  r+h  s+m
+               words after each step: [4, 14, 43, 133, 251, 483]
+               first words on day one: een niet aan tot jij toen net nooit
+  floor 2%     e+n  a+l  t+i  d+k  r+o  s+h
+               words after each step: [4, 17, 56, 137, 277, 461]
+               first words on day one: een niet aan alleen jij alle laten net
+  alternating  e+n  a+l  t+i  d+k  r+o  s+h
+               words after each step: [4, 17, 56, 137, 277, 461]
+               first words on day one: een niet aan alleen jij alle laten net
+
+====================================================================================================
+  Icelandic
+====================================================================================================
+  bump keys: f j
+  rest keys, by share of key presses: a 11.1%  s 4.7%  l 3.6%  k 2.7%  d 1.1%  æ 0.6%
+  useful       a+i  r+dead-acute  e+n  s+u  t+m  g+ð
+               words after each step: [0, 11, 57, 112, 303, 504]
+               first words on day one: frá inn fara enn ára einn fer innan
+  floor 2%     r+i  a+l  e+dead-acute  s+k  t+n  g+u
+               words after each step: [0, 20, 38, 102, 298, 523]
+               first words on day one: frá fara ára fer allir alla fleiri ári
+  alternating  r+i  a+l  e+dead-acute  s+k  t+n  d+æ
+               words after each step: [0, 20, 38, 102, 298, 379]
+               first words on day one: frá fara ára fer allir alla fleiri ári
+
+====================================================================================================
+  Swedish
+====================================================================================================
+  bump keys: f j
+  rest keys, by share of key presses: a 9.6%  s 4.9%  l 4.9%  d 4.8%  k 2.8%  ö 1.5%
+  useful       a+n  e+i  t+l  r+m  s+o  d+ä
+               words after each step: [5, 15, 57, 135, 302, 493]
+               first words on day one: att inte till ett alla lite allt nej
+  floor 2%     e+n  a+l  t+i  s+k  r+m  d+o
+               words after each step: [1, 14, 57, 158, 332, 553]
+               first words on day one: att inte till ett alla lite allt nej
+  alternating  e+n  a+l  t+i  s+k  r+m  d+ö
+               words after each step: [1, 14, 57, 158, 332, 518]
+               first words on day one: att inte till ett alla lite allt nej
+
+====================================================================================================
+  Finnish
+====================================================================================================
+  bump keys: f j
+  rest keys, by share of key presses: a 11.9%  s 6.9%  l 5.3%  k 5.1%  d 0.8%  ö 0.4%
+  useful       a+i  t+n  e+o  s+ä  v+l  r+k
+               words after each step: [2, 13, 65, 204, 373, 589]
+               first words on day one: niin tai aina ennen noin jotain ettei joten
+  floor 2%     t+i  a+l  e+n  s+k  v+o  r+ä
+               words after each step: [0, 18, 61, 172, 405, 589]
+               first words on day one: niin tai aina ennen eli ettei ajan liian
+  alternating  t+i  a+l  e+n  s+k  v+o  d+ö
+               words after each step: [0, 18, 61, 172, 405, 426]
+               first words on day one: niin tai aina ennen eli ettei ajan liian
+
+====================================================================================================
+  Norwegian
+====================================================================================================
+  bump keys: f j
+  rest keys, by share of key presses: a 5.7%  s 5.1%  d 5.0%  l 5.0%  k 3.9%  ø 0.8%
+  useful       e+n  r+i  t+o  a+l  s+k  d+m
+               words after each step: [2, 21, 64, 157, 425, 687]
+               first words on day one: for noe noen etter inn enn tror rett
+  floor 2%     e+n  a+l  r+i  s+k  t+o  d+m
+               words after each step: [2, 15, 59, 163, 425, 687]
+               first words on day one: fra eller alle inn enn flere nei finne
+  alternating  e+n  a+l  r+i  s+k  t+o  d+ø
+               words after each step: [2, 15, 59, 163, 425, 622]
+               first words on day one: fra eller alle inn enn flere nei finne
+
+====================================================================================================
+  Danish
+====================================================================================================
+  bump keys: f j
+  rest keys, by share of key presses: d 7.0%  a 6.5%  s 4.8%  l 4.7%  k 3.3%  æ 0.8%
+  useful       e+n  r+i  d+l  t+o  a+m  s+k
+               words after each step: [2, 17, 63, 147, 303, 590]
+               first words on day one: den der eller din end denne ind flere
+  floor 2%     e+n  d+l  r+i  a+k  t+o  s+m
+               words after each step: [2, 17, 63, 127, 287, 590]
+               first words on day one: den der eller din end denne ind flere
+  alternating  e+n  d+l  r+i  a+k  t+o  s+æ
+               words after each step: [2, 17, 63, 127, 287, 513]
+               first words on day one: den der eller din end denne ind flere
+
+====================================================================================================
+  Spanish
+====================================================================================================
+  bump keys: f j
+  rest keys, by share of key presses: a 11.5%  s 7.5%  l 6.1%  d 5.3%  ñ 0.2%  k 0.0%
+  useful       e+o  a+n  s+l  r+i  d+u  t+m
+               words after each step: [2, 5, 40, 92, 211, 454]
+               first words on day one: los las son eso nos solo ese esa
+  floor 2%     e+o  a+l  r+n  s+i  t+u  d+m
+               words after each step: [2, 8, 29, 92, 237, 454]
+               first words on day one: era ella eran real ello enero jefe leer
+  alternating  e+o  a+l  r+n  s+ñ  t+i  d+k
+               words after each step: [2, 8, 29, 73, 194, 277]
+               first words on day one: era ella eran real ello enero jefe leer
+
+====================================================================================================
+  Portuguese, ABNT2
+====================================================================================================
+  bump keys: f j
+  rest keys, by share of key presses: a 13.4%  s 7.5%  d 5.5%  l 2.4%  ç 0.4%  k 0.0%
+  useful       e+o  a+i  s+m  r+u  d+n  t+p
+               words after each step: [0, 2, 46, 125, 258, 555]
+               first words on day one: mais mas foi isso mesmo sem assim esse
+  floor 2%     e+o  a+l  r+i  s+m  t+u  d+n
+               words after each step: [0, 7, 34, 132, 298, 539]
+               first words on day one: foi ele ela era falar rio for fora
+  alternating  e+o  a+l  r+i  s+ç  t+m  d+k
+               words after each step: [0, 7, 34, 76, 241, 325]
+               first words on day one: foi ele ela era falar rio for fora
+
+====================================================================================================
+  Italian
+====================================================================================================
+  bump keys: f j
+  rest keys, by share of key presses: a 10.5%  l 7.1%  s 5.0%  d 4.4%  ò 0.1%  k 0.0%
+  useful       e+i  a+o  t+n  r+l  s+u  d+p
+               words after each step: [0, 1, 48, 164, 342, 563]
+               first words on day one: non fatto anni nei noi tanto fine anno
+  floor 2%     e+i  a+l  t+o  s+n  r+u  d+p
+               words after each step: [0, 8, 37, 165, 342, 563]
+               first words on day one: alla fatto alle italia foto lei allo fai
+  alternating  e+i  a+l  t+o  s+ò  r+n  d+k
+               words after each step: [0, 8, 37, 96, 281, 356]
+               first words on day one: alla fatto alle italia foto lei allo fai
+
+====================================================================================================
+  French, AZERTY
+====================================================================================================
+  bump keys: f j
+  rest keys, by share of key presses: s 8.4%  l 6.0%  d 4.6%  m 2.7%  q 1.3%  k 0.0%
+  useful       e+u  s+n  a+i  t+l  r+o  d+p
+               words after each step: [2, 9, 45, 138, 327, 510]
+               first words on day one: une ses aussi suis sans ans ainsi fin
+  floor 2%     e+u  s+l  a+n  d+m  t+i  r+o
+               words after each step: [2, 10, 35, 57, 220, 512]
+               first words on day one: les une elle ses sans ans elles seul
+  alternating  e+u  s+l  a+n  d+m  t+i  q+k
+               words after each step: [2, 10, 35, 57, 220, 236]
+               first words on day one: les une elle ses sans ans elles seul
+
+====================================================================================================
+  Polish, programmer's
+====================================================================================================
+  bump keys: f j
+  rest keys, by share of key presses: a 8.5%  s 4.9%  d 3.5%  l 3.0%  k 2.9%
+  useful       e+i  a+o  z+altgr  s+n  t+y  w+l
+               words after each step: [1, 2, 3, 55, 81, 201]
+               first words on day one: jej azji jaja
+  floor 2%     e+i  a+l  z+o  s+k  t+altgr  d+n
+               words after each step: [1, 7, 9, 36, 104, 241]
+               first words on day one: ale jej ile azji lol all lee jaja
+  alternating  e+i  a+l  z+o  s+k  t+altgr  d+n
+               words after each step: [1, 7, 9, 36, 104, 241]
+               first words on day one: ale jej ile azji lol all lee jaja
+
+====================================================================================================
+  Czech, QWERTZ
+====================================================================================================
+  bump keys: f j
+  rest keys, by share of key presses: a 7.4%  s 5.2%  d 4.2%  k 3.6%  l 3.6%  ů 0.4%
+  useful       e+o  a+n  t+m  s+i  d+k  v+l
+               words after each step: [2, 11, 25, 62, 121, 190]
+               first words on day one: jen tam ten tom ano tento moje jenom
+  floor 2%     e+o  a+k  t+n  s+l  v+m  d+i
+               words after each step: [2, 5, 25, 52, 82, 190]
+               first words on day one: tak jako jak jen ten ano tento toto
+  alternating  e+o  a+k  t+n  s+l  v+m  d+ů
+               words after each step: [2, 5, 25, 52, 82, 149]
+               first words on day one: tak jako jak jen ten ano tento toto
+
+====================================================================================================
+  Hungarian, QWERTZ
+====================================================================================================
+  bump keys: f j
+  rest keys, by share of key presses: a 11.4%  s 5.6%  l 5.3%  k 4.1%  é 3.2%  d 2.1%
+  useful       a+n  e+l  t+m  s+i  g+z  r+k
+               words after each step: [3, 16, 44, 97, 142, 243]
+               first words on day one: nem fel lett alatt lenne ellen jelent ment
+  floor 2%     e+n  a+l  t+m  s+k  g+i  d+é
+               words after each step: [3, 16, 44, 73, 156, 250]
+               first words on day one: nem fel lett alatt lenne ellen jelent ment
+  alternating  e+n  a+l  t+m  s+k  g+i  d+é
+               words after each step: [3, 16, 44, 73, 156, 250]
+               first words on day one: nem fel lett alatt lenne ellen jelent ment
+
+====================================================================================================
+  Turkish Q
+====================================================================================================
+  bump keys: f j
+  rest keys, by share of key presses: a 11.5%  l 5.6%  k 4.9%  d 4.5%  s 3.2%  ş 1.4%
+  useful       a+i  e+n  r+l  d+k  b+ı  s+y
+               words after each step: [0, 6, 32, 130, 199, 381]
+               first words on day one: ile alan ali ana falan anne ele ara
+  floor 2%     e+i  a+l  r+n  d+k  b+ı  s+y
+               words after each step: [0, 6, 32, 130, 199, 381]
+               first words on day one: ile alan ali ana falan anne ele ara
+  alternating  e+i  a+l  r+n  d+k  b+ı  s+ş
+               words after each step: [0, 6, 32, 130, 199, 334]
+               first words on day one: ile alan ali ana falan anne ele ara
+
+====================================================================================================
+  Russian
+====================================================================================================
+  bump keys: а о
+  rest keys, by share of key presses: в 5.1%  л 3.7%  д 3.4%  ы 1.8%  ж 1.0%  ф 0.2%
+  useful       е+т  и+н  с+р  в+л  к+д  м+г
+               words after each step: [1, 11, 43, 114, 232, 428]
+               first words on day one: они она нет россии нас тот три ссср
+  floor 2%     е+т  в+л  и+н  с+д  к+р  м+г
+               words after each step: [1, 10, 32, 130, 232, 428]
+               first words on day one: или они она нет вот лет тот оно
+  alternating  е+т  в+л  и+н  ы+д  с+р  ф+ж
+               words after each step: [1, 10, 32, 85, 200, 232]
+               first words on day one: или они она нет вот лет тот оно
+
+====================================================================================================
+  Greek
+====================================================================================================
+  bump keys: ξ φ
+  rest keys, by share of key presses: α 11.6%  dead-tonos 10.1%  σ 6.8%  κ 3.1%  λ 2.2%  δ 1.4%
+  useful       α+dead-tonos  τ+ο  ε+ι  σ+ν  ρ+η  ω+υ
+               words after each step: [0, 1, 13, 95, 169, 269]
+               first words on day one: ότι τότε οτι είτε τέτοια έξι τέτοιο αξία
+  floor 2%     τ+ο  α+dead-tonos  ε+ι  σ+κ  ρ+ν  ω+λ
+               words after each step: [0, 1, 13, 73, 203, 311]
+               first words on day one: ότι τότε οτι είτε τέτοια έξι τέτοιο αξία
+  alternating  τ+ο  α+dead-tonos  ε+ι  σ+κ  ρ+ν  δ+λ
+               words after each step: [0, 1, 13, 73, 203, 323]
+               first words on day one: ότι τότε οτι είτε τέτοια έξι τέτοιο αξία
+
+====================================================================================================
+  Hebrew
+====================================================================================================
+  bump keys: ח כ
+  rest keys, by share of key presses: ל 9.0%  ש 5.6%  ד 2.7%  ג 1.0%  ך 0.9%  ף 0.2%
+  useful       ה+י  א+ו  ש+ל  ב+ת  ר+מ  ע+ם
+               words after each step: [7, 30, 152, 339, 700, 982]
+               first words on day one: הוא היה היא שלי שלא שהוא ולא שלו
+  floor 2%     ה+י  ש+ל  א+ו  ד+ת  ב+מ  ר+ם
+               words after each step: [7, 43, 152, 274, 565, 991]
+               first words on day one: הוא היה היא שלי שלא שהוא ולא שלו
+  alternating  ה+י  ש+ל  א+ו  ד+ך  ב+ת  ג+ף
+               words after each step: [7, 43, 152, 199, 430, 484]
+               first words on day one: הוא היה היא שלי שלא שהוא ולא שלו
+
+  Results written to /home/siggi/github/takki/spikes/results/rest_letter_order_results.txt

@@ -89,6 +89,25 @@ end of that note, grouped by how each was read (in full, abstract only, wanted a
 Baddeley & Longman 1978, Dhakal et al. 2018, Whelan 2008, Marslen-Wilson 1987, Glickman's
 description of Glicko.
 
+## Ramp-up phases and practice order (after the 2026-10-06 review)
+
+The citations for [rampup-phases-practice-schedule.md](rampup-phases-practice-schedule.md) are
+listed at the end of that note, grouped by how each was read (in full, abstract only, known only as
+cited, wanted and not obtained).
+**Saved locally** (PDF): Lee & Magill 1983 (`lee-magill-1983-locus-of-contextual-interference.pdf`),
+Porter 2008 (`porter-2008-increasing-contextual-interference-dissertation.pdf`), Saemi et al. 2012
+(`saemi-2012-contextual-interference-continuum.pdf`), Simon, Lee & Cullen 2008
+(`simon-lee-cullen-2008-win-shift-lose-stay.pdf`), Lee & Simon 2004
+(`lee-simon-2004-contextual-interference-chapter.pdf`), Abushanab & Bishara 2013
+(`abushanab-bishara-2013-piano-fixed-vs-random.pdf`), Snyder et al. 2014
+(`snyder-2014-qwerty-explicit-knowledge.pdf`), Notebaert & Soetens 2003
+(`notebaert-soetens-2003-irrelevant-stimulus-changes.pdf`), Crump & Logan 2010
+(`crump-logan-2010-episodic-sequential-control.pdf`), Brown et al. 2003
+(`brown-2003-limb-position-drift.pdf`), Capio et al. 2012
+(`capio-2012-reduced-errors-children-review.pdf`). The two Czyż et al. meta-analyses, Graser et al.
+2019, Pinet et al. 2022, Bangert & Altenmüller 2003 and Carter & Grahn 2016 are open access and
+were read online.
+
 ## Verification status of figures used in the notes
 
 - **Verified from primary/local sources:** F/J as the universal tactile anchor (NFB); "any consistent position is fine," 5–10 s resting-position readiness, and the home-row-can-cause-shutdown warning (Perkins); middle-finger length ↔ typing speed/accuracy r=0.43/0.366 in school-age students (AIJFR); touch-screen key-size > hand-size for typing performance (OhioLINK).
