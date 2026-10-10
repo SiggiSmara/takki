@@ -4,11 +4,13 @@
 **Date:** 2026-05-18
 
 > Part of the [Takki architecture](../architecture.md).  
-> **Amendment pending from [ADR-033](0033-rest-keys-and-keyboard-alignment.md) (2026-10-10):** the ramp-up's same-finger anchor becomes the finger's rest key, Stage 0's own content goes, no key is held to the anchor bar, and the keyboard alignment's time is outside pace and block length. Not yet made here ([alpha-plan](../alpha-plan.md) #12m).
+> **Amended 2026-10-10 for [ADR-033](0033-rest-keys-and-keyboard-alignment.md)** ([alpha-plan](../alpha-plan.md) #12m): the new-key ramp-up is restated as four objectives and a ladder of three levels ([§ The ramp-up restated](#the-ramp-up-restated-four-objectives-and-a-ladder-of-three-levels)), Stage 0's own content goes, no key is held to the anchor bar, and the keyboard alignment's time is outside pace and block length. **Not yet implemented:** the code still runs the four phases, Stage 0 and the anchor bar, and until #12m builds the change the sections marked superseded describe what the code does.
 
 ---
 
 **Decision:** When a new key is introduced (per [ADR-023](0023-key-introduction-protocol.md)), Layer 1 drill content for that key passes through four phases: pure repetition, alternation with a same-finger anchor key, short bigrams mixing the new key with 2–3 previously-known keys, and full frequency-weighted bigram drill. Steady-state drill content for the unlocked key set is bigram-frequency-weighted with no comfort-class adjustment — same-finger bigrams are practised, not avoided. Rare keys are kept fresh via a soft spaced re-exposure mechanism: at each drill block, the least-recently-practised key is given at least one appearance if its time-since-last-use exceeds a threshold. Lesson granularity is set by target wall-clock duration (~90–120 seconds per drill block), with keystroke count derived from the child's rolling pace; drill blocks always end on bigram or word boundaries.
+
+*(2026-10-10, alpha-plan #12m: the four phases named in this paragraph are superseded by a ladder of three levels, Reach, Choose and Travel, followed by general practice. See [§ The ramp-up restated](#the-ramp-up-restated-four-objectives-and-a-ladder-of-three-levels). Not yet implemented.)*
 
 ### What ADR-010 already decided, and what was missing
 
@@ -22,6 +24,8 @@ This ADR fills those gaps. The order in which new keys are introduced is the sub
 
 ### New-key ramp-up — four phases
 
+*(**Superseded 2026-10-10** by [§ The ramp-up restated](#the-ramp-up-restated-four-objectives-and-a-ladder-of-three-levels), alpha-plan #12m. The change is not yet implemented, so this section still describes the code. It is kept for that and for its reasoning.)*
+
 A newly-introduced key is not immediately dropped into the frequency-weighted bigram pool. Bigram selection that included a brand-new key would force the child to practise that key in combination with several known keys at once, which loses the isolation needed to build the new motor pattern. Instead, drill content for that key passes through four phases:
 
 **Phase A — pure repetition.** The child types the new key alone, repeatedly. The TTS prompts the letter, the child types it, the correct-keypress chime fires, the next prompt follows. Default threshold for advancing: 10 first-attempt-correct keypresses in succession. The threshold is configurable in the global lesson progression rules config (not per-language).
@@ -32,7 +36,7 @@ A newly-introduced key is not immediately dropped into the frequency-weighted bi
 
 **Phase D — full frequency-weighted mix.** The new key joins the steady-state pool. Bigram selection over the full known-key set, frequency-weighted, with no special treatment. *(Amended 2026-09-30, alpha-plan #12e: the steady-state pool is now planned by need — see § Steady-state drill generation. A key leaving its ramp-up is short of Known's press floor, so it keeps a large share of the next few blocks and the practice shifts from the new letter to everything gradually. Phase C is unchanged: its partners are still the most frequent Active keys, because every Phase C unit already contains the new letter and the partners' job is natural context.)*
 
-Phase thresholds are starting points. They are all configurable in the same global config that holds the ADR-010 thresholds. Empirical tuning during Alpha and Beta is expected. The phase boundaries themselves are *not* configurable — the four-phase structure is the design.
+Phase thresholds are starting points. They are all configurable in the same global config that holds the ADR-010 thresholds. Empirical tuning during Alpha and Beta is expected. The phase boundaries themselves are *not* configurable — the four-phase structure is the design. *(**Reversed 2026-10-10**, alpha-plan #12m. The four-phase structure is no longer the design. The design is four objectives and a ladder of three levels; the numbers are configurable, and the objectives and the order of the levels are not. [§ The ramp-up restated](#the-ramp-up-restated-four-objectives-and-a-ladder-of-three-levels).)*
 
 **Where the ramp-up phase lives, and what it costs** *(added 2026-08-23, alpha session 9; **superseded 2026-09-29** by § Ramp-up variability, derived exit bars, and the "I know this one" probe — the phase is now derived from stored attempts and survives a restart. Kept because its reasoning is why the replacement had to make the bars derivable rather than simply persist a column, and because the cost it predicted is the one #12b-2 heard.)* The phase is **session-local**, held by the drill generator for the life of one session and nowhere else — the same shape, and for the same reason, as the introducer's own record ([ADR-023](0023-key-introduction-protocol.md) § What the introducer remembers). It is not derived from the rolling window: Phase A counts a *streak* and Phase B a run with an error budget, and [ADR-011](0011-persistence-and-state.md)'s `key_attempts` is queried as aggregate counts, so deriving either would need a second definition of the same bar — the trap ADR-023 names — or a schema this ADR is not entitled to add.
 
@@ -40,7 +44,7 @@ The consequence is stated rather than hidden: **a child who closes the app halfw
 
 **A pair advances phase together** *(added 2026-08-23, alpha session 9.)* Every threshold above is per-member and never shared ([ADR-028](0028-composite-input-and-keyboard-ownership.md) § Pair ramp-up: "a slow right hand cannot mask a poor left hand"), and the **step** advances when *every* member has met the bar. Within a phase a member that has met its bar keeps its result and keeps being prompted while its partner catches up — the bar was met, and taking it back for a later slip would make a two-key step harder than two one-key steps for no pedagogical reason.
 
-**A member is judged only for the phase its step is in** *(added 2026-10-04, alpha-plan #12j, finding O1.)* "Keeps being prompted while its partner catches up" had a gap: the member that was ahead was still being *judged*, for the next phase, on the presses it made while waiting. Driven with one member right every time and the other wrong every time, a pair stayed in Phase A for eight blocks while the first member recorded Phase A at 10 presses, Phase B at 30 and Phase C at 60, on Phase A's single-letter content throughout. The rule is now: a member that has passed the step's phase waits. It is prompted, it is not judged, and it owes the block nothing, so the block is sized by the member still in the phase. **Its evidence for the next phase starts when the step reaches that phase**, which [ADR-011](0011-persistence-and-state.md) records per member as the phase's start. A member can therefore be at most one phase ahead of its partner, and every member is given each phase's content before it can pass it.
+**A member is judged only for the phase its step is in** *(added 2026-10-04, alpha-plan #12j, finding O1.)* "Keeps being prompted while its partner catches up" had a gap: the member that was ahead was still being *judged*, for the next phase, on the presses it made while waiting. Driven with one member right every time and the other wrong every time, a pair stayed in Phase A for eight blocks while the first member recorded Phase A at 10 presses, Phase B at 30 and Phase C at 60, on Phase A's single-letter content throughout. The rule is now: a member that has passed the step's phase waits. It is prompted, it is not judged, and it owes the block nothing, so the block is sized by the member still in the phase. **Its evidence for the next phase starts when the step reaches that phase**, which [ADR-011](0011-persistence-and-state.md) records per member as the phase's start. A member can therefore be at most one phase ahead of its partner, and every member is given each phase's content before it can pass it. *(**Retired 2026-10-10** with the phases, alpha-plan #12m: § The ramp-up restated, "Pairs", says why the rule is not carried to the levels. "A pair advances phase together", above, survives there as "the step climbs together".)*
 
 **"Previously-known keys" here means Active, not Known** *(clarified 2026-08-23, alpha session 9.)* [ADR-027](0027-key-and-accuracy-state-model.md) § Key States aligns the vocabulary: this ADR predates it and uses "known" for *introduced*. Read as Known — 90 attempts at 90% over 2 distinct days — Phase B would have no anchor and Phase C no partners for the first weeks of a profile, and the spaced re-exposure below would never fire at all. Every "known" in this ADR is Active.
 
@@ -49,6 +53,8 @@ The consequence is stated rather than hidden: **a child who closes the app halfw
 ### Ramp-up variability, derived exit bars, and the "I know this one" probe
 
 *(Amended 2026-09-29, alpha-plan #12d, from what the hands-on run of #12b-2 heard. This section supersedes § Where the ramp-up phase lives, and only that.)*
+
+*(**Superseded 2026-10-10** by [§ The ramp-up restated](#the-ramp-up-restated-four-objectives-and-a-ladder-of-three-levels), alpha-plan #12m, which says for each of the five properties below whether it survives, moves or goes. Not yet implemented, so this section still describes the code.)*
 
 The four phases above survive; three things about them do not.
 
@@ -70,7 +76,7 @@ The four phases above survive; three things about them do not.
 
 **What a phase still owes is read live, not at its best.** Phase B counts the run *in progress*: a child who has spent the rejection budget twice is starting again, and sizing a block off the best run they ever had sizes it for progress they no longer have. Phase C's bar reads the trailing thirty, so a child sitting below it is owed **another thirty**, not nothing — a plain countdown reaches zero and stays there, and every later block then collapses to one unit per member, handing the smallest blocks to the child who needs the most volume.
 
-**Phase B's run is counted back from the latest press** *(amended 2026-10-04, alpha-plan #12j, finding O5, decided with the developer.)* The bar is the one stated above, 20 first-attempt-correct with no more than one rejection, read as: among the child's most recent presses, the correct ones since the second-most-recent rejection. The first implementation counted forward from the phase's first press and restarted from zero on a second rejection. That pairs the rejections up from wherever the count begins, so the same child got a different answer when the read began later, which it does once a child has more than 90 presses in Phase B (the read is capped) and would again at 200 (the window). Two histories were found, one passed at press 91 by the capped read and never by the full one, the other the reverse. Counted back, the answer depends only on the recent presses. For the child this changes two things: a second rejection no longer wipes the count, because the correct presses since the rejection before it still stand, and it buys no fresh allowance, because that latest rejection is now the one the run is allowed. A child who is struggling stays in Phase B until 20 correct presses hold at most one rejection among them; it is read after every counted press, and the drill content changes at the next block boundary.
+**Phase B's run is counted back from the latest press** *(amended 2026-10-04, alpha-plan #12j, finding O5, decided with the developer.)* The bar is the one stated above, 20 first-attempt-correct with no more than one rejection, read as: among the child's most recent presses, the correct ones since the second-most-recent rejection. The first implementation counted forward from the phase's first press and restarted from zero on a second rejection. That pairs the rejections up from wherever the count begins, so the same child got a different answer when the read began later, which it does once a child has more than 90 presses in Phase B (the read is capped) and would again at 200 (the window). Two histories were found, one passed at press 91 by the capped read and never by the full one, the other the reverse. Counted back, the answer depends only on the recent presses. For the child this changes two things: a second rejection no longer wipes the count, because the correct presses since the rejection before it still stand, and it buys no fresh allowance, because that latest rejection is now the one the run is allowed. A child who is struggling stays in Phase B until 20 correct presses hold at most one rejection among them; it is read after every counted press, and the drill content changes at the next block boundary. *(**Retired 2026-10-10** with Phase B's bar, alpha-plan #12m. Its lesson is kept: the ladder's level rule is read back from the latest press. § The ramp-up restated, "Numbers".)*
 
 **A block is sized by what the bar still needs, not by how many units mention the member.** A cycle whose inventory names a member twice reaches the bar in half as many cycles, so what a block counts out is cycles owed rather than prompts owed. Without that, borrowing the other hand's anchor would have made a solo step's ramp-up between half again and twice as long — a change nobody asked for, arriving as a side effect of a change about variety.
 
@@ -78,9 +84,13 @@ The four phases above survive; three things about them do not.
 
 Two things about *how* they are read, both of which a careless derivation gets wrong and nothing downstream would notice. **The bars are read as best achieved in the window, not as trailing state** — a trailing reading would drop a child whose Phase C accuracy dipped back into Phase A's repetition, a regression the counters never had. And **the phases are measured over disjoint stretches of the window**: Phase A's evidence ends where its streak completed and Phase B's begins there. Read cumulatively, one run of twenty would satisfy Phase A's ten and Phase B's twenty at once, and the ramp-up would be a third shorter than this ADR specifies.
 
+*(Corrected 2026-10-10, alpha-plan #12m, review finding E7. "Read as best achieved in the window" has been stale since the next section was added on 2026-09-30. No bar is read as the best the window ever held. A passed phase is recorded when it is passed, and what a phase still owes is read live, as "What a phase still owes is read live, not at its best" says above.)*
+
 ### A phase completion is an event
 
 *(Added 2026-09-30, alpha-plan #12d, correcting this section as first written a day earlier.)*
+
+*(2026-10-10, alpha-plan #12m: this section's principle stands and is restated for levels in [§ The ramp-up restated](#the-ramp-up-restated-four-objectives-and-a-ladder-of-three-levels), "What survives a restart" and "What must be recorded". The latency term below moves from Phase C to the one bar, unchanged. Not yet implemented.)*
 
 The first version of the section above claimed the ramp-up needed **no** stored state: read every bar off `key_attempts` and the phase falls out, with no schema change and one definition of each bar. That was wrong, and how it was wrong is worth keeping, because it is the tidier-looking design.
 
@@ -111,11 +121,245 @@ It is a table rather than a column on `key_stats` for a reason worth repeating h
 
 The term is a **ratio against the child's own baseline** — their median latency over Known keys — never an absolute millisecond figure, which would encode a sighted adult's reaction time into a blind child's curriculum. `PHASE_C_MAX_LATENCY_RATIO` defaults to 1.5 *(2.0 since 2026-10-04, alpha-plan #12f, and the baseline is the one Known's own speed term reads: `f`, `j` and every other key that meets Known's floors, with the speed read over correct first presses and a timed-out answer counted as the slowest. Because `f` and `j` are in the baseline from their first timed presses, the term now applies from the second step on and is skipped only for `f` and `j` themselves and where too little was timed. In those first steps the baseline is `f` and `j` alone, which the developer accepted on 2026-10-04: the other four Stage 0 keys (`r u v m`) are index-finger keys too, so the comparison is like with like. The first keys on another finger are `d` and `k`, whose Phase C is judged against a baseline made only of index-finger keys; if fingers differ by more than the ratio allows, that is where it first shows. [ADR-027 § Known has a speed term](0027-key-and-accuracy-state-model.md#known-has-a-speed-term))*. **When the child has no Known keys the term is skipped**, which is not an edge case: it is every profile's first days, Stage 0 included, and a latency gate there would hold the whole curriculum behind a measurement that cannot yet be made.
 
-**The "I know this one" probe — specified here, not yet implemented.** *(Status added 2026-09-30.)* The engine side was written with the rest of this amendment and then taken out before it shipped: with no announced key it was unreachable in production, and unreachable code went unexercised — it could re-issue the same probe block forever, it read its answers back out of the store instead of using the outcome it was handed, and its block skipped the no-repeat rule. It returns with the "Takki key" work, which is what gives the child a way to ask for it. What follows is the specification.
+**The "I know this one" probe — specified here, not yet implemented.** *(Status added 2026-09-30. Read for the ladder since 2026-10-10: § The ramp-up restated, "What happens to what was here".)* The engine side was written with the rest of this amendment and then taken out before it shipped: with no announced key it was unreachable in production, and unreachable code went unexercised — it could re-issue the same probe block forever, it read its answers back out of the store instead of using the outcome it was handed, and its block skipped the no-repeat rule. It returns with the "Takki key" work, which is what gives the child a way to ask for it. What follows is the specification.
 
 A child who already types should not have to prove it sixty prompts at a time. On request, Takki administers *the same bar*, briefly and unpredictably: the key mixed among already-Active keys with no cycle to follow, `PROBE_PROMPTS` (8) prompts, requiring `PROBE_MIN_CORRECT` (8) first-press-correct with latency inside the same ratio. Pass, and the ramp-up is complete and the key joins the pool. Fail, and it drops into Phase A with neutral wording — no penalty, no retry limit, nothing said about failing. The bar is not lowered; it is measured more efficiently, which is only possible *because* of properties 1–4 and the latency column. Without them a short probe would be uninformative and this would be a hole in the gates.
 
 Two notes on what the probe is not. It is **not** justified as autonomy support: choice-over-practice effects have largely failed to replicate at adequate power, and the claim is deliberately absent from § Research grounding. It is justified on the child's time and dignity. And it needs an announced way in, which does not exist — roadmap § D records both that there is no "Takki key" and that the child is never told any recovery key exists. **Nothing of it ships until that item lands**, and the numbers above are the specification it should be built to.
+
+### The ramp-up restated: four objectives and a ladder of three levels
+
+*(Amended 2026-10-10, alpha-plan #12m. This is the ADR-024 amendment that [ADR-033](0033-rest-keys-and-keyboard-alignment.md) requires. It supersedes § New-key ramp-up — four phases and § Ramp-up variability, and restates § A phase completion is an event for levels.)*
+
+**Not yet implemented.** The code still runs the four phases, Stage 0's own content and the anchor bar. Until alpha-plan #12m builds this, the superseded sections describe what the code does. This amendment changes no code.
+
+Every decision carries one of two marks, as in ADR-033.
+
+- **[D]** Decided by the developer on 2026-10-10, before this amendment was written, and recorded in [rampup-phases-practice-schedule.md § What was decided](../research/rampup-phases-practice-schedule.md#what-was-decided).
+- **[S]** Settled with the developer in the session that wrote this amendment, the same day.
+
+A statement with no mark is this amendment working out a marked decision. Nothing unmarked was put to the developer as a question.
+
+#### Why it is restated
+
+Three things met.
+
+- **The ramp-up was predictable where it claimed not to be.** Measured on the generator ([rampup-phases-practice-schedule.md](../research/rampup-phases-practice-schedule.md), § What the generator does today), the new letter is told by the prompt before it through all of Phase A, and through all of Phase B as well for the first step and for every step that reaches off the home row. A reach unit is never reversed in a real session, and the first step's Phase C drills each letter against itself. These are findings E1, E2 and E3 of the [review of 2026-10-06](../research/code-review-2026-10-06.md). Property 1 of § Ramp-up variability was not delivered for most of a ramp-up.
+- **ADR-033 moved three of the ramp-up's jobs to the rest tier.** The place a finger returns to is its rest key, the anchor bar that the anchor invariant fed is retired, and a letter on a rest key has no location to find.
+- **The intent had become blurred.** The developer's reading is that the phases were always meant as a gradual increase in difficulty, as in traditional typing instruction. **[D]**
+
+**This reverses a sentence of this ADR.** § New-key ramp-up says "the phase boundaries themselves are *not* configurable — the four-phase structure is the design". The four-phase structure is no longer the design. The design is the four objectives and the ladder below. Their numbers are configurable; the objectives and the order of the levels are not.
+
+#### Four objectives, each with one owner
+
+**[D]**
+
+| Objective | Owner | Measure |
+|---|---|---|
+| 1. Introduce the location of the new letter | The introduction script, described from the finger's rest key, then guided presses ([ADR-023](0023-key-introduction-protocol.md), as ADR-033 amends it) | None; it is guidance |
+| 2. Give gradually increasing difficulty using that location | The ladder | A light rule to move up a level |
+| 3. Decide when the letter is stable enough for a new letter to be added | One bar | Read only on presses the child had to listen for |
+| 4. Decide when the letter is Known, after which its practice follows the general rules | [ADR-027](0027-key-and-accuracy-state-model.md)'s Known, as it stands | Known |
+
+Objectives 3 and 4 are the two halves of [ADR-010's introduction gate](0010-lesson-structure-and-progression.md#the-introduction-gate-is-slots): this step's ramp-up has ended, and a slot is free.
+
+**Differences between kinds of letter belong to objective 1 only.** **[D]** There is one ladder. A level whose difficulty a letter does not have is not taken: a letter on a rest key or on a bump has no reach, so it has nothing to do at the Reach level. That is a consequence of where the key is, and it is the only way a letter's kind shows in the ladder.
+
+**A rule belongs in the ramp-up only if it serves objective 2 or 3.** **[S]** Which keys most need practice, each key's share of a block, freeing slots and how the hands alternate are general practice's business (§ Steady-state drill generation) and are not used here.
+
+#### The ladder
+
+Each level adds one difficulty. **[D]**
+
+| Level | What is new | What stays easy |
+|---|---|---|
+| **Reach** | The finger leaves its rest key, finds the letter and comes back | Only this letter; the child knows what is coming |
+| **Choose** | The child must listen: the letter is drawn among a few letters | The other letters are the two bump letters, so no other finger travels |
+| **Travel** | The finger arrives after the hand has been somewhere else | A few partners only |
+| General practice | The full Active set, planned by need (§ Steady-state drill generation) | |
+
+**The third level is named Travel.** **[S]** The decision and the research note call it "Combine". That word was carrying two meanings: moving between keys, and letters given whole as a pair or a word. The ramp-up's level is the first. **The ramp-up has no word level.** **[S]** Whole words are Layer 2 ([ADR-010](0010-lesson-structure-and-progression.md)). The level names are terms of the ADRs and the code and are never spoken to the child.
+
+#### Two kinds of press
+
+- A **predictable press** is one where the child could know the letter without hearing it. There are two: the letter at Reach, and a letter asked again after a miss.
+- A **listened press** is a first press on a letter at Choose or Travel that is not such a re-ask. It is an attempt in [ADR-027](0027-key-and-accuracy-state-model.md)'s sense, right or wrong.
+
+**A predictable press contributes to one thing only: understanding whether the child reaches the key reliably.** **[S]** It is kept apart from `key_attempts`, as the alignment's landings are. So it cannot reach the bar, Known, the slots, the milestones, the session floor or the block plan's need. ADR-027 already has a press of this standing ("A press before the letter could be heard is not an attempt").
+
+Three things follow.
+
+- **A letter with a Reach level becomes Active at its first Choose press**, because the first counted keystroke is what creates its `key_stats` row (ADR-027 § Key States).
+- **No predictable press is among Known's presses.** Objective 4 needs no change to ADR-027 for this. The two terms sort the ladder's presses only. A press in general practice is an ordinary attempt, as it always was.
+- **A step that has not reached Choose is started again after a restart.** **[S]** Nothing it did is an attempt. The step is introduced again, script first, and Reach begins from nothing for every member, also for one that had already met Reach's rule. This is a rule of its own. It is not the rule in § A phase completion is an event for an introduction the child never answered: here the child did answer, and Reach is short enough to repeat.
+
+#### Reach
+
+**The return is forced by asking for the rest key.** **[D]** One cycle is the letter and then the **rest cue**: the finger that has just reached is asked to come back and press its rest key. The cue stays open until that key is pressed, and a block ends on a whole cycle, so every reach but a first one follows a press of the rest key. The first reach after the introduction, or after a pause, starts from wherever the script or the alignment left the hand. It is the same for every finger and every language, and it works whether or not the rest key carries a letter.
+
+**The letter comes first and the cue second.** **[S]** The research note gives the cue first. The order is turned round so that the cue always means the finger that has just reached, which lets a pair's two letters share one cue that names no finger, and so that a block ends with the hand at rest. With the cue first, a block's opening cue has no finger that has just reached, and in a pair it would have to name one.
+
+- **The cue asks by finger, never by character.** That is what [ADR-033 § The rest tier](0033-rest-keys-and-keyboard-alignment.md#the-rest-tier) requires of a rest key.
+- **The cue is spoken**: one short word from the language's strings ([ADR-022](0022-localisation-strategy.md)), "rest" in English and never "home". **[S]** A tone straight after the correct-key sound would be two sounds in a row with no speech between, and a word needs no teaching. Whether it is tedious eight times a letter is for #12h's ear.
+- **A wrong key after the cue is rejected**, with the ordinary wrong-key sound, and the cue stays open. After `REST_CUE_GUIDE_AFTER` (2) wrong presses Takki speaks guidance: find the bump, place the finger. A right press gets the ordinary correct-key sound. **[S]** This differs from the alignment, where there is no wrong answer; here the finger has a chosen key.
+- **A press after the cue is never counted.** Nothing is written to `key_attempts` or `key_stats`, also when the rest key carries an Active letter. It is not timed and it does not change the rest key. **[S]**
+- **A pair's cycles take turns**, left hand first. Reach is the one level that is predictable on purpose.
+
+**The rule to move up.** **[S]** A letter leaves Reach when `LEVEL_UP_CORRECT` (8) of its latest `LEVEL_UP_WINDOW` (10) letter presses at Reach were right at the first press. Only presses since the step last began Reach are read, so nothing from before a restart counts for or against the child. This is the one reading of predictable presses. The return is not measured: a child who cannot get back is guided, and the next reach starts from the rest key either way.
+
+**A rest letter and the two bump letters have no Reach level and start at Choose.** **[D]**
+
+This answers the first item ADR-033 lists for this ADR, "Phase B's same-finger anchor is the rest key, and what stands in when that key has no Active letter", differently from how it was asked. There is no Phase B. The return is a cue by finger, so nothing has to stand in for a rest key that has no letter.
+
+#### Choose
+
+Each prompt is drawn on its own from a small set: **the step's letters and the two bump letters**. **[S]** For the first step the set is the two bump letters themselves.
+
+The bump letters are positions ([ADR-033](0033-rest-keys-and-keyboard-alignment.md#the-rest-tier)), so the rule is the same in every language. They are Active from the first step and need no reach, so the new letter's finger is the only one that travels. The one new thing is that the child has to listen. Each letter of the set is equally likely, within the two rules of "The draw" below.
+
+A press on a bump letter drawn here is an ordinary attempt on that letter.
+
+**The rule to move up** is the same as Reach's, read on listened presses since the step reached Choose: 8 of the letter's latest 10. **[S]**
+
+#### Travel
+
+**Travel is the same draw as Choose, over a different set**: the step's letters and `TRAVEL_PARTNERS` (2) other Active letters, the ones the language uses most. **[S]** Once letters beyond the bumps are Active, the partners are mostly letters that need reaches of their own, so the new letter is found after the hand has been somewhere else. A press on a partner is an ordinary attempt on that letter.
+
+**The partners are ranked as Phase C ranks them today, by each letter's own frequency.** **[S]** It is the measure the engine already uses and the one general practice uses afterwards, so the build keeps the ranking and changes only the count, from three to two. Ranking by how often the language puts a letter next to the new one was considered in the session and not taken.
+
+**Pairs are not built.** **[S]** In Alpha a pair is two single prompts, so a built pair adds no difficulty and only puts a pattern into the order. With units of one new letter and one old one, the new letter follows an old one three times in four, and for `f j` every second press is certain. That is how Phase B's units became a fixed cycle (E1). Pairs and doubles come up in the draw by chance. Phase C's three-letter sequences go as well: they stood in for words, which are Layer 2's.
+
+**While the bump letters are the only other Active letters, Travel's set is Choose's set.** That is the first step and the one after it. The child gets one even draw for the whole of those steps and no rule is special to them. This resolves E3: `f` is no longer drawn from a pool of `ff` alone.
+
+Travel has no rule of its own to move up. A letter leaves it on the bar.
+
+#### The draw: repeats and misses
+
+These two rules hold at Choose and at Travel. Neither is extended to general practice, which is unchanged.
+
+- **A prompt may follow itself** **[D]**, at most `MAX_SAME_IN_A_ROW` (2) times in a row **[S]**. With a set of two letters the cap makes the prompt after a double certain, which is about one prompt in three in the first step. A cap of three would make it about one in seven. Two is kept and is for #12h's ear.
+- **A missed letter is asked again** **[D]**, until one first-press-correct answer or `MISS_REPEATS` (2) re-asks, whichever comes first. **[S]** The draw then moves to a different letter. A re-ask is a predictable press: nothing reads it.
+- **A re-ask is not a draw, so it is outside the cap.** In the worst case one letter is heard `MAX_SAME_IN_A_ROW` + `MISS_REPEATS` times running, four at the defaults: drawn twice, the second missed, and asked again twice.
+
+At Reach neither rule is needed. The cycle brings the same letter back by itself.
+
+#### The one bar
+
+**[S]** A letter is stable enough for a new letter to be added when, over its latest `STABLE_ATTEMPTS` (30) listened presses:
+
+- at least `STABLE_MIN_ACCURACY` (0.85) were right at the first press, which is 26 of 30, a plain share as Phase C's was and not the confidence bound; and
+- its speed is at most `STABLE_MAX_LATENCY_RATIO` (2.0) times the child's baseline.
+
+This is Phase C's bar, moved whole, with the speed term alpha-plan #12f gave it. The term is read as it is today: the same baseline Known reads ([ADR-027 § Known has a speed term](0027-key-and-accuracy-state-model.md#known-has-a-speed-term)), skipped for the two bump letters and wherever too little was timed.
+
+- **It is read on Choose and Travel presses together, and on nothing else.** **[D]**
+- **It is read once the step is at Travel.** **[S]**
+- **Meeting it is an event.** It is recorded when it happens and is never taken back. It ends the letter's ramp-up.
+- **A child below it is owed another thirty**, as § Ramp-up variability already says of Phase C, so that blocks do not shrink for the child who needs the most practice.
+
+**It asks for no less than before.** The three bars of Phases A, B and C asked for 60 presses, and E1 and E2 show that only Phase C's 30 were presses the child had to listen for.
+
+#### Pairs
+
+**[S]**
+
+- **The step climbs together.** A step is at one level. It moves up when every member that has that level has met its rule, and its ramp-up ends when every member has met the bar.
+- **A member that is ahead keeps being prompted** while its partner catches up. At Reach its further presses feed its own reach reading and nothing else. At Choose they are listened presses and count as any other.
+- **A member with no Reach level is not prompted until the step reaches Choose.** Under ADR-033's order a step can pair a rest letter with a letter that needs a reach, so this is an ordinary case.
+- **"A member is judged only for the phase its step is in" is retired** (alpha-plan #12j, finding O1). It existed because each phase had its own bar, and a member that was ahead was being judged for the next bar on the earlier phase's content. Reach presses can no longer count toward a later level, and Choose and Travel share one bar.
+
+#### What survives a restart
+
+Everything alpha-plan #12d and #12j built for this survives, with "level" read for "phase" and "the bar" for "Phase C's bar".
+
+- From Choose on, a level passed and the bar met are recorded when they happen, so a ramp-up is resumed at its level and a restart introduces nothing early. A step still at Reach is the exception stated under "Two kinds of press": it is started again, and what was recorded of its earlier Reach is history, not progress.
+- The current step is the newest `introductions` group whose members have not all met the bar.
+- A pair with one member answered is resumed as a pair, and a resumed step carries its full script (#12j, findings O3 and O2).
+
+#### What must be recorded
+
+The schema is [ADR-011](0011-persistence-and-state.md)'s amendment, in the #12m session that adds ADR-033's records, so that the schema changes once. The facts it must hold:
+
+- **For each letter and each level it takes:** when the step reached the level and when the letter met its rule. Each is an event with its own column, as `ramp_up_phases` has them now. Levels are stored by name, and a level not taken has no record.
+- **That the bar was met, and when.** It is its own event and is not stored as Travel's end.
+- **Reach presses**, apart from `key_attempts`. Storing them in a record of their own is preferred to keeping them for the session only, because they are what ADR-033's open question needs: whether a child with a non-conventional rest key is slower to learn that finger's other keys.
+- **What `prev_char` holds** for a listened press whose preceding prompt was a rest cue.
+
+There is no migration: #12h starts from a new database, as it already must.
+
+#### Numbers
+
+Every number is configurable ([ADR-025](0025-configuration-system.md)) and none is per language. The names are suggestions.
+
+| Name | Default | Replaces |
+|---|---|---|
+| `LEVEL_UP_CORRECT` | 8 | |
+| `LEVEL_UP_WINDOW` | 10 | |
+| `STABLE_ATTEMPTS` | 30 | `PHASE_C_ATTEMPTS` |
+| `STABLE_MIN_ACCURACY` | 0.85 | `PHASE_C_MIN_ACCURACY` |
+| `STABLE_MAX_LATENCY_RATIO` | 2.0 | `PHASE_C_MAX_LATENCY_RATIO` |
+| `TRAVEL_PARTNERS` | 2 | `PHASE_C_PARTNERS` (3) |
+| `MAX_SAME_IN_A_ROW` | 2 | |
+| `MISS_REPEATS` | 2 | |
+| `REST_CUE_GUIDE_AFTER` | 2 | |
+
+`PHASE_A_STREAK`, `PHASE_B_ATTEMPTS`, `PHASE_B_MAX_REJECTIONS` and `PHASE_C_TRIGRAM_CHANCE` are retired.
+
+**The level rule's numbers are a judgment.** Eight is near the nine blocked trials per task that the schedule studies used. Those were 27 blocked trials over three tasks, chosen as a third of 81 and not found to be best. The rule is read back over the latest presses for the reason #12j's finding O5 gave: the answer then depends only on recent presses. A plain count of correct presses was not taken, because it moves up a child who finds the key half the time.
+
+**What a step costs, by arithmetic and not by measurement**, for a child who answers everything correctly: about 150 prompts for a pair of letters that both need a reach, against about 250 today; about 120 for a pair of rest letters; and 60 for `f j`, against 140.
+
+#### What happens to what was here
+
+| Was | Now |
+|---|---|
+| Phase A, pure repetition, ten in a row | Becomes Reach for a letter that has a reach, with the return forced. No streak |
+| Phase B, alternation with a same-finger anchor, twenty with one rejection | Goes. Reach's return to the rest key does its work |
+| Phase C, built sequences with partners, thirty at 85% | Becomes Travel, as a draw. Its bar becomes the one bar |
+| Phase D | General practice, unchanged |
+| "the four-phase structure is the design" | Reversed |
+| Property 1, unpredictability | Survives at Choose and Travel, where it is now true by construction, and deliberately not at Reach. Resolves E1 |
+| Property 2, the anchor invariant | Goes. Nothing reads return-to-anchor accuracy since ADR-033 retired the Anchor Gate, and the return is forced at Reach. With no reach units there is no direction to reverse, which resolves E2 |
+| Property 3, both hands by a borrowed anchor | Goes, as decided: the borrowed anchor is not carried into the levels. **[D]** Most of ADR-033's steps are one letter per hand, and both bump letters are in every Choose set. A step of one letter is one-handed for the length of its Reach; see "Open" |
+| Property 4, a closed inventory | Survives: each level draws from a small stated set |
+| Property 5, no prompt follows itself | Goes. Replaced by the cap of two in a row |
+| "Property 2 binds only a hand the inventory can bring home"; "Properties 1, 2 and 5 are the cycle's" | Go with the properties they qualify |
+| "A pair advances phase together" | Survives as "the step climbs together" |
+| "A member is judged only for the phase its step is in" (#12j, O1) | Retired, in "Pairs" above |
+| "Phase B's run is counted back from the latest press" (#12j, O5) | Retired with Phase B's bar. Its lesson is kept in the level rule |
+| "What a phase still owes is read live"; "A block is sized by what the bar still needs" (#12d) | Survive, for levels and the bar |
+| A completion is an event; restart pacing (#12d); the resume rules (#12j, O2 and O3) | Survive, in "What survives a restart" above |
+| Phase C's latency term (#12d, #12f) | Moves to the bar, unchanged |
+| Stage 0's own content | Goes with Stage 0 (§ Lesson granularity) |
+
+**The "I know this one" probe** is still specified and still not built. Read for the ladder: a pass records the bar as met and the letter leaves the ladder; a fail starts the ladder at the letter's first level, with the same neutral wording. Its prompts are a draw among Active letters, so they are listened presses, and its numbers are unchanged.
+
+#### What this amendment requires elsewhere
+
+None of these is made here, except where the row says so.
+
+| Document | What changes |
+|---|---|
+| [ADR-011](0011-persistence-and-state.md) | The records in "What must be recorded" |
+| [ADR-027](0027-key-and-accuracy-state-model.md) | § First-Attempt Counting: a predictable press is not an attempt, and a letter with a Reach level becomes Active at its first Choose press. § Known has a speed term: "Phase C of the ramp-up" becomes the bar |
+| [ADR-010](0010-lesson-structure-and-progression.md) | The first of the two gates, "the current step's ramp-up has ended", means the bar. Review finding E7's two sentences giving Known as a raw 90% are still owed |
+| [ADR-023](0023-key-introduction-protocol.md) | Objective 1 is its own: what the guided presses are, and the script telling the child about the rest cue |
+| [ADR-028](0028-composite-input-and-keyboard-ownership.md) | § Pair ramp-up and § Composite ramp-up are written in phases, and what a composite's Reach is has to be said. English has no composite, so Alpha does not wait for it |
+| [ADR-025](0025-configuration-system.md) | The numbers above |
+| [ADR-012](0012-audio-feedback-design.md), [ADR-022](0022-localisation-strategy.md) | The rest cue as an utterance, the feedback for a press after it, its word and the guidance strings |
+| [concurrency-model.md](../concurrency-model.md) | The rest cue is a prompt that stays open: what a pause, a loss of focus, the re-read key and the restart key do while one is open |
+| [ADR-033](0033-rest-keys-and-keyboard-alignment.md) | Four dated notes, made with this amendment: a rest letter's ramp-up, a rest key asked for during practice, and the two places that still described Phase B |
+| [roadmap § D](../roadmap.md#d-smaller-gaps-worth-a-line-in-the-relevant-adr) | The entry on ADR-028's L-R interleave: a dated note, made with this amendment |
+| [alpha-plan](../alpha-plan.md) #12h | Its listening checks worded for phases (#12j's O1 and O5) are reworded when the run sheet is written: a dated note, made with this amendment |
+
+#### Open
+
+- **None of this has been heard.** The ear check owed since #12d applies to the ladder, and #12h is where it is made.
+- **The cap of two against three**, for the first step's two-letter set.
+- **Whether a hand comes back by itself after Reach.** Choose and Travel do not force the return, and nothing measures which children make it.
+- **The bar can be met in an easy set.** For the first two steps the only other letters in the draw are the bump letters. The harder test is Known's, with the slots.
+- **A step of one letter drills one hand at Reach**, about sixteen presses on one finger, and at Travel its two partners can be on the same hand. This is what property 3 was added against after #12b-2. Steps of one letter still happen: one hand runs out of letters before the other, and a finger that is not ready is passed over. For #12h's ear.
+- **How much the hands alternate** is open question 1 below, unchanged.
 
 ### Steady-state drill generation
 
@@ -139,8 +383,8 @@ At 1.6% the anchor rung's 25 presses on `v` take ~1,500 steady-state prompts. Th
 
 **The rule. Each steady-state block is planned before it is drilled:**
 
-1. **Need, per Active key, in presses** (`presses_needed`): the larger of (a) the presses its window is short of Known's floor, `KNOWN_MIN_ATTEMPTS`, and (b) the correct presses in a row it would take for the **lower confidence bound** on its first-press accuracy (Wilson, `CONFIDENCE_Z` = 1) to reach the key's bar. The bar is `ANCHOR_MIN_ACCURACY` for the six Stage 0 keys and `KNOWN_MIN_ACCURACY` for every other. *Since 2026-10-04 (alpha-plan #12f):* the bound is read over evidence that ages, the same reading Known now uses — see § Need and Known read one measure, below. *Since 2026-10-01 (alpha-plan #12g):* a key practised on fewer than `KNOWN_MIN_DISTINCT_DAYS` days, and not yet pressed this session, has a need of at least one press — see § A key waiting for its second day, below.
-2. **Anchor return-drills first.** A slipping `f` or `j` (ADR-027's maintenance path, unchanged) takes one slot each, as a reach followed by the anchor.
+1. **Need, per Active key, in presses** (`presses_needed`): the larger of (a) the presses its window is short of Known's floor, `KNOWN_MIN_ATTEMPTS`, and (b) the correct presses in a row it would take for the **lower confidence bound** on its first-press accuracy (Wilson, `CONFIDENCE_Z` = 1) to reach the key's bar. The bar is `ANCHOR_MIN_ACCURACY` for the six Stage 0 keys and `KNOWN_MIN_ACCURACY` for every other. *Since 2026-10-10 (alpha-plan #12m, for [ADR-033](0033-rest-keys-and-keyboard-alignment.md), not yet implemented):* the bar is `KNOWN_MIN_ACCURACY` for every key. The anchor bar is retired and the plan holds no key to it. *Since 2026-10-04 (alpha-plan #12f):* the bound is read over evidence that ages, the same reading Known now uses — see § Need and Known read one measure, below. *Since 2026-10-01 (alpha-plan #12g):* a key practised on fewer than `KNOWN_MIN_DISTINCT_DAYS` days, and not yet pressed this session, has a need of at least one press — see § A key waiting for its second day, below.
+2. **Anchor return-drills first.** A slipping `f` or `j` (ADR-027's maintenance path, unchanged) takes one slot each, as a reach followed by the anchor. *(**Retired 2026-10-10**, alpha-plan #12m, not yet implemented. [ADR-033](0033-rest-keys-and-keyboard-alignment.md) retires ADR-027's Anchor Gate whole, and this step is that gate's maintenance path. A slipping `f` or `j` is practised more through its need, as any key is.)*
 3. **The remaining slots are shared in proportion to need** (`plan_targets`). *Since 2026-10-01:* every key in need gets one slot first, neediest first. The rest are shared by D'Hondt apportionment: each slot goes to the key with the most need per slot already given; ties by name. No key is planned beyond its own need or beyond `MAX_KEY_SHARE` of the block (one third) — except that the cap never falls below an even share, or a two-key set could not fill its block. Slots nobody needs go round the keys evenly.
 4. **A key at `SESSION_KEY_CEILING` presses this session is not planned as a target** — ADR-010's soft cap, and its first consumer. It still appears inside other keys' bigrams. If every key is at the ceiling, none is excluded.
 5. **Each planned slot is carried by a real bigram** containing its key, drawn from the Active-set pool by corpus frequency — so content stays the language's. A key with no carrier over the Active set is paired with the heaviest other Active letter, as before.
@@ -175,13 +419,15 @@ Since #12g a new step needs a free slot, and a key frees its slot only when it i
 
 `CONFIDENCE_Z` and the bound itself now live in `takki/lesson/key_state.py`, beside Known, since Known reads them. `MAX_KEY_SHARE` stays in `drills.py`.
 
-**Why a confidence bound, and why z = 1.** Three correct presses out of three read as 100% and are not evidence of anything; the bound asks how accurate the key *surely* is. Steady-state practice confirms an already-practised key rather than measuring it from nothing — a key arrives with its ramp-up's presses (Phase A + B + C, 60 at the defaults) in its window — and Known's floor already demands the evidence, so the bound only has to stop a short lucky run reading as confirmed. One standard error does that: a perfect run clears 90% after 9 presses and 95% after 19.
+**Why a confidence bound, and why z = 1.** Three correct presses out of three read as 100% and are not evidence of anything; the bound asks how accurate the key *surely* is. Steady-state practice confirms an already-practised key rather than measuring it from nothing — a key arrives with its ramp-up's presses (Phase A + B + C, 60 at the defaults) in its window — and Known's floor already demands the evidence, so the bound only has to stop a short lucky run reading as confirmed. One standard error does that: a perfect run clears 90% after ~~9~~ 10 presses and 95% after 19. *(Corrected 2026-10-10, alpha-plan #12m, review finding E6. The bound over n correct presses is n / (n + 1). At 9 that is exactly 0.90 on paper and 0.8999999999999999 in floating point, so the code needs a tenth press; at 19 the same arithmetic rounds the other way and passes. [ADR-027](0027-key-and-accuracy-state-model.md) already says 10 and 19.)* *(Also 2026-10-10, not yet implemented: under the ladder a key arrives with at least 30 listened presses in its window, not 60. Its Reach presses are not in the window at all.)*
 
 **Why planned per block, not chosen unit by unit.** A just-in-time rule weighted by accuracy would let one struggling key take most of every block — a one-letter drill for a child who is already failing at it, and past ADR-010's ~180-repetition massed-practice penalty within a sitting. A plan can cap by construction. One block is the granularity because each block re-reads the stored windows, so the next plan reflects what the last block achieved. Sharing by need rather than working down a priority list means every key in need moves forward every block, instead of the lower keys waiting whole blocks — which would be the starvation again, at block scale.
 
-**Constants in code, not config** *(developer's call).* `MAX_KEY_SHARE` and `CONFIDENCE_Z` live in `takki/lesson/drills.py`. They are tuning knobs for whoever works on the engine, not parent-facing settings.
+**Constants in code, not config** *(developer's call).* `MAX_KEY_SHARE` and `CONFIDENCE_Z` live in `takki/lesson/drills.py`. They are tuning knobs for whoever works on the engine, not parent-facing settings. *(Corrected 2026-10-10, alpha-plan #12m, review finding E7: since #12f `CONFIDENCE_Z` lives in `takki/lesson/key_state.py`, as § Need and Known read one measure says. `MAX_KEY_SHARE` is still in `drills.py`.)*
 
 **What survives, checked:**
+
+*(2026-10-10, alpha-plan #12m, not yet implemented. The first bullet's cycle-block invariants are gone from the ramp-up; the ladder's own two draw rules are not extended to general practice either. The second bullet is moot: Stage 0 is removed and nothing reads return-to-anchor accuracy. The third is restated: Travel's partners are ranked the same way, and there are two of them, not three. See [§ The ramp-up restated](#the-ramp-up-restated-four-objectives-and-a-ladder-of-three-levels).)*
 
 - **Same-finger bigrams and double letters are still practised** — carriers are the language's bigrams, so `ff` is drilled as a word's own double letter. The ramp-up's cycle-block invariants (no prompt following itself, a hand returns home between reaches) are still deliberately **not** extended here: the content is still sampled, and spreading orders units, not the letters inside them.
 - **Stage 0's return-to-anchor property holds, and strengthens.** Real wordfreq English, the six Stage 0 keys fresh from their ramp-ups, 20 blocks × 5 seeds: `f` follows a different key 81% of the time (69% under the old rule) and `j` 100% (99%); `f` or `j` immediately after its own reach 33–38% under both. Shares moved from `j` 3.3 / `v` 1.8 to `j` 12.2 / `v` 11.8 / `f` 13.0 / `m` 12.8 / `r` 25.0 / `u` 25.2.
@@ -193,7 +439,7 @@ Since #12g a new step needs a free slot, and a key frees its slot only when it i
 - ~~**The bound and Known can disagree.** A key can be Known (90 presses at ≥ 90%) with its bound just under the bar, and keep a small need. Mild over-practice at 90–93%. Whether Known should adopt the same measure is alpha-plan #12f.~~ *Closed 2026-10-04: Known reads the bound (§ Need and Known read one measure).*
 - **Known's second-day floor is not in the need.** A key that met its presses in one sitting has no need the next day until something ages its evidence. ~~#12f's decay is the fix.~~ *It is not (2026-10-04); § A key waiting for its second day is, and stays.*
 - **The bound's search ignores the window's forgetting** (old misses dropping out would confirm sooner), so a struggling key's need is over-estimated. `MAX_KEY_SHARE` absorbs it.
-- **All six Stage 0 keys are held to the anchor bar for life**, not only the two ADR-027 maintains, so `r u v m` are practised to 95% rather than 90%. The rung needs all six at it; afterwards the cost is a handful of presses.
+- ~~**All six Stage 0 keys are held to the anchor bar for life**, not only the two ADR-027 maintains, so `r u v m` are practised to 95% rather than 90%. The rung needs all six at it; afterwards the cost is a handful of presses.~~ *Closed 2026-10-10 by [ADR-033](0033-rest-keys-and-keyboard-alignment.md): the anchor bar is retired and no key is held to it. Not yet implemented.*
 
 **Pinned by** `tests/test_drills.py` — `TestStarvationRegression` (fails under the old rule in all 20 of 20 blocks, 973 `f` to 7 `j`), `TestSteadyPlan`, `TestPlanTargets`, `TestPressesNeeded`, `TestAccuracyBound`, `TestAnchorMaintenance`.
 
@@ -211,6 +457,8 @@ This may change. If a future empirical study (a Takki Beta study, or external re
 ### Spaced re-exposure for rare keys
 
 *(**Staleness trigger retired 2026-09-30**, alpha-plan #12e. Within a session its job — keeping a rare key in rotation — is done by § Steady-state drill generation's plan, which targets every key with need every block and shares spare slots evenly. Across sessions, staleness becomes **decay of the evidence** the need is read from, which is alpha-plan #12f and needs research first; a 5-minute timer was never the right scale for forgetting. *(Done 2026-10-04: a 30-day half-life on the evidence, § Need and Known read one measure.)* The accuracy trigger survives as the plan's anchor return-drill. The text below is kept as the reasoning the replacement answers.)*
+
+*(2026-10-10, alpha-plan #12m, not yet implemented: the accuracy trigger no longer survives. [ADR-033](0033-rest-keys-and-keyboard-alignment.md) retires the Anchor Gate, and the anchor return-drill goes with it: § Steady-state drill generation, step 2. "One slot, two triggers" and "The accuracy trigger needs a sample" below are retired with it.)*
 
 Frequency-weighted bigram selection naturally re-exposes common letters. The problem it creates: rare keys (English Z, Q, X; Polish less-frequent letters; Icelandic less-common diacritic stems) appear so seldom in frequency-weighted drills that they decay between exposures. This is the part of the curriculum where general spaced-repetition principles for motor memory most clearly apply — and where the lack of regular practice is most likely to cause skill loss between sessions.
 
@@ -249,8 +497,12 @@ For the first block of any session (no rolling pace yet), the engine uses the la
 *(Added 2026-08-23, alpha session 9.)* Two consequences of that rule, in the ramp-up phases where the content is a fixed cycle rather than a sample:
 
 - **A ramp-up block ends on a whole cycle**, not merely a whole unit, so a pair's two members always leave a block with the same number of prompts. Ending mid-cycle would hand the left-hand member one extra prompt per block, forever.
-- **Pace is measured over the gaps between answers, not over the block's wall-clock span**, and a gap longer than `PACE_IDLE_GAP_SECONDS` (default 30 s) is not one of them — the child had stopped typing. A PAUSED interval ([ADR-028](0028-composite-input-and-keyboard-ownership.md) § C8), a walk-away and a conversation all pass through the monotonic clock the deadline model is built on ([concurrency-model.md](../concurrency-model.md) § Timers), and charging them to the child would read as a collapse in pace and shrink every block after the interruption. The answer that ends such a gap contributes neither time nor count, so an interruption leaves the measured pace exactly where it was; a block nobody answered contributes no sample at all. *(Added 2026-08-23, alpha session 9, from its code review.)* **The first answer of a block opens the measure and is not a gap** *(added 2026-10-10, alpha-plan #12k, review finding E5)*: it has no answer before it in the block. The measure used to start when the block was built, and the session builds a block right after it queues an introduction script or a celebration, so their length was charged to the child as the first gap: thirty answers at 2 s each gave a next block of 50 prompts, and of 36 when a 25 s script came first. A block of n answers therefore contributes n − 1 gaps. Whatever else the session puts between a block being built and its first answer is outside the measure by the same rule. That covers [ADR-033](0033-rest-keys-and-keyboard-alignment.md)'s keyboard alignment when it runs ahead of a block's first prompt. An alignment run after a block's first answer would not be covered by this, and where it runs is #12m's to decide.
+- **Pace is measured over the gaps between answers, not over the block's wall-clock span**, and a gap longer than `PACE_IDLE_GAP_SECONDS` (default 30 s) is not one of them — the child had stopped typing. A PAUSED interval ([ADR-028](0028-composite-input-and-keyboard-ownership.md) § C8), a walk-away and a conversation all pass through the monotonic clock the deadline model is built on ([concurrency-model.md](../concurrency-model.md) § Timers), and charging them to the child would read as a collapse in pace and shrink every block after the interruption. The answer that ends such a gap contributes neither time nor count, so an interruption leaves the measured pace exactly where it was; a block nobody answered contributes no sample at all. *(Added 2026-08-23, alpha session 9, from its code review.)* **The first answer of a block opens the measure and is not a gap** *(added 2026-10-10, alpha-plan #12k, review finding E5)*: it has no answer before it in the block. The measure used to start when the block was built, and the session builds a block right after it queues an introduction script or a celebration, so their length was charged to the child as the first gap: thirty answers at 2 s each gave a next block of 50 prompts, and of 36 when a 25 s script came first. A block of n answers therefore contributes n − 1 gaps. Whatever else the session puts between a block being built and its first answer is outside the measure by the same rule. That covers [ADR-033](0033-rest-keys-and-keyboard-alignment.md)'s keyboard alignment when it runs ahead of a block's first prompt. An alignment run after a block's first answer would not be covered by this, and where it runs is #12m's to decide. *(Decided 2026-10-10, alpha-plan #12m, as [ADR-033 § The alignment](0033-rest-keys-and-keyboard-alignment.md#the-alignment) requires: the alignment's time is charged to nothing, wherever it runs. An alignment press is not an answer, so it opens and closes no gap, and a gap between two answers that holds any part of an alignment is left out of the measure, as an idle gap is. Alignment presses are not prompts of a block: they are in no block's length and count toward no session floor.)*
 - **A ramp-up block is capped by the phase's own remaining requirement** as well as by the pace target — there is no point emitting 120 prompts of Phase A repetition when ten more correct in a row ends the phase. The cap is optimistic: an error simply means the next block carries the remainder.
+
+*(Restated 2026-10-10 for the ladder, alpha-plan #12m, not yet implemented.)* Only Reach is a cycle now. A Reach block ends on a whole cycle, the letter and its return, so it ends with the hand at rest. A Choose or Travel block is drawn prompt by prompt and may end after any prompt. A ladder block is still capped by what the step's level, or the bar, still needs, read live. For block length and for pace a rest cue is a prompt like any other, because answering it takes the child's time: the press that answers it is an answer, and the gaps on either side of it are measured. "Not timed" in § The ramp-up restated means only that no latency is recorded for it. A gap in which Takki spoke its guidance after wrong presses is left out of the measure, as an idle gap is, so the guidance is not charged to the child's pace. For every count of attempts a rest cue is nothing.
+
+*(**Superseded 2026-10-10**, alpha-plan #12m, not yet implemented: [ADR-033](0033-rest-keys-and-keyboard-alignment.md) removes Stage 0, so the paragraph below describes content that goes. The bump letters take the ordinary ladder, from Choose.)*
 
 **Stage 0's blocks are not ordinary ramp-up.** The stage's content is [ADR-023](0023-key-introduction-protocol.md) § Stage 0's and [ADR-027](0027-key-and-accuracy-state-model.md) § The Anchor Gate's: each anchor alternates with its own column reach (`f ↔ r`, `f ↔ v`), in Phase A as well as Phase B. Phase A's pure repetition is *replaced* there, not supplemented — a Phase A of `r r r r` never returns the finger to home, and first-press accuracy on `f` would then no longer be return-to-anchor accuracy, which is the entire argument for the gate's metric. The stage's home pair has no reach behind it yet, so its Phase A is the ordinary L-R interleave of `f` and `j`, which is alternation already. Nothing downstream can detect this being got wrong.
 
@@ -265,13 +517,21 @@ For the first block of any session (no rolling pace yet), the engine uses the la
 The decisions above lean on a set of empirical findings from the typing-acquisition and motor-learning literature, surveyed during May 2026. None of them are direct VI-specific findings (as a search of the literature confirmed, no formal efficacy studies exist for any VI typing tutor), so each is being applied by analogy from sighted-typist or general-motor-skill research.
 
 - **Distributed practice over massed practice.** Baddeley & Longman (1978), *The influence of length and frequency of training session on the rate of learning to type* (Ergonomics, 21(8)), trained 72 postal workers to type and found that 1 hour/day for 1 session outperformed 2 hours/day, 1 hour twice/day, and 2 hours twice/day. Strongest typing-specific evidence we have for short, frequent sessions. Drives the wall-clock-bounded drill block decision.
-- **Interleaved over blocked practice.** Multiple meta-analyses (e.g. Pan & Rickard, 2018; Brady et al. 2024) find interleaved practice improves long-term retention and transfer at the cost of slower acquisition. Layer 1/Layer 2 interleaving (per ADR-010) is consistent with this. The four-phase ramp-up is, technically, a small amount of *blocked* practice for a new key — this is intentional, as motor pattern acquisition appears to benefit from early isolation before interleaved drill. The shift from Phase A's blocked repetition to Phase D's full mixing reflects this gradient.
-- **…but the contextual-interference evidence is adult evidence, and the gradient is what survives in children** *(added 2026-09-29, surveyed for § Ramp-up variability.)* Pollock & Lee (1997, *Perceptual and Motor Skills* 84(3)) found *dissociated* effects: adults showed the classic pattern — blocked better during acquisition, random better on retention and transfer — and children did not. Jarus & Goverover (1999, *Perceptual and Motor Skills* 88(2)) tested 5-, 7- and 11-year-olds; only the 7-year-olds differed by schedule at all, and for them **blocked and combined practice acquired the task better**. A 2023 systematic review and meta-analysis (*Educational Research Review*) argues the contextual-interference learning benefit is overstated in real practice settings. Read together: the *blocked-then-random gradient* is the condition with the least evidence against it for this population, and a wholesale move to random practice has none for it. This is why the amendment keeps four phases and adds variability only inside each one's own inventory.
+- **Interleaved over blocked practice.** Multiple meta-analyses (e.g. Pan & Rickard, 2018; Brady et al. 2024) find interleaved practice improves long-term retention and transfer at the cost of slower acquisition. Layer 1/Layer 2 interleaving (per ADR-010) is consistent with this. The four-phase ramp-up is, technically, a small amount of *blocked* practice for a new key — this is intentional, as motor pattern acquisition appears to benefit from early isolation before interleaved drill. The shift from Phase A's blocked repetition to Phase D's full mixing reflects this gradient. *(2026-10-10: the gradient survives as the ladder. What supports it is restated at its real strength in "What the ladder rests on", below.)*
+- **…but the contextual-interference evidence is adult evidence, and the gradient is what survives in children** *(added 2026-09-29, surveyed for § Ramp-up variability.)* Pollock & Lee (1997, *Perceptual and Motor Skills* 84(3)) found *dissociated* effects: adults showed the classic pattern — blocked better during acquisition, random better on retention and transfer — and children did not. Jarus & Goverover (1999, *Perceptual and Motor Skills* 88(2)) tested 5-, 7- and 11-year-olds; only the 7-year-olds differed by schedule at all, and for them **blocked and combined practice acquired the task better**. A 2023 systematic review and meta-analysis (*Educational Research Review*) argues the contextual-interference learning benefit is overstated in real practice settings. Read together: the *blocked-then-random gradient* is the condition with the least evidence against it for this population, and a wholesale move to random practice has none for it. This is why the amendment keeps four phases and adds variability only inside each one's own inventory. *(Superseded 2026-10-10: the four phases are not kept. The reading of the evidence stands.)*
 - **Determinism, not repetition, is what produces autopilot** *(added 2026-09-29.)* In serial-reaction-time work, implicit sequence knowledge does not speed stimulus *processing* — it benefits response selection, and with deterministic material learners switch from stimulus-based to **plan-based** action control (Journal of Cognition, 2025; anticipation is measurable in eye movements before the stimulus appears, *Scientific Reports* 11, 2021). A fixed drill cycle therefore does not merely permit pattern-following, it reliably produces it — and the resulting rows are counted, so they land in each key's rolling window and in the anchor rung that reads it. This is the direct evidence for § Ramp-up variability property 1, and it is why the fix is unpredictability rather than lower thresholds.
 - **Hand alternation is an outcome, not a lever** *(added 2026-09-29.)* Bimanual pairs are typed faster than unimanual pairs, and hand alternation being faster than hand repetition is an *expert* pattern that is **absent in novices** (Acta Psychologica, 2016, touch-typing vs mobile-typing coordination). Engaging both hands during a solo step is therefore defended as variability and as a training target — not as a claim that it accelerates acquisition.
-- **A blind child has no visual-search route to the keyboard, which raises the price of losing the anchor** *(added 2026-09-29.)* The same work finds novices rely heavily on visual search of the keyboard, developing location memory only with familiarity. That route does not exist here, so anchor-relative location memory is the only one, and it is why § Ramp-up variability shuffles the *order* of anchor-bearing units rather than dissolving the units to obtain variety.
+- **A blind child has no visual-search route to the keyboard, which raises the price of losing the anchor** *(added 2026-09-29.)* The same work finds novices rely heavily on visual search of the keyboard, developing location memory only with familiarity. That route does not exist here, so anchor-relative location memory is the only one, and it is why § Ramp-up variability shuffles the *order* of anchor-bearing units rather than dissolving the units to obtain variety. *(2026-10-10: the units are dissolved after all. The landmark is kept another way: at Reach every reach is followed by a press of the finger's rest key, and every session opens from the bumps, [ADR-033](0033-rest-keys-and-keyboard-alignment.md).)*
 - **No autonomy-support claim is made for the probe** *(added 2026-09-29.)* Choice over practice has largely failed to replicate at adequate power (*Psychonomic Bulletin & Review*, 2022), the self-controlled motor-learning literature has been characterised as underpowered and biased with only a small residual effect (*Meta-Psychology*, 2022), OPTIMAL theory's motivational claims are argued to lack evidential support (*Psychology of Sport and Exercise*, 2024), and autonomy-supportive instructional *language* shows no acquisition advantage (*Psychological Research*, 2024). The "I know this one" probe is therefore justified on the child's time and dignity, and verifies rather than trusts. Recorded here so that no later reader mistakes it for a learning-effect claim.
 - **Learning and forgetting are two processes on two clocks** *(added 2026-10-04, alpha-plan #12f; sources and how each was read are in [known-decay-accuracy-speed.md](../research/known-decay-accuracy-speed.md).)* Learning a motor skill has a fast part within a session and a slow part over weeks of practice (Karni et al. 1998), shows mainly in speed while accuracy is high early and flat, and in the one study of children learning to type had not levelled off after 10,000 to 20,000 keystrokes (van den Bergh et al. 2015). What a child gains in one session is kept for two to six weeks without practice (Dorfberger et al. 2007; Julius & Adi-Japha 2015). Forgetting runs on months and takes accuracy before speed (Tatel & Ackerman 2025, adults: half the gain lost at about 6.5 months for accuracy and 13 for speed). This is why evidence decays with one half-life of a month, and why the practice a young key gets is decided by its dose and its days and not by decay.
+- **What the ladder rests on, at its real strength** *(added 2026-10-10, alpha-plan #12m, for § The ramp-up restated; the sources and how each was read are in [rampup-phases-practice-schedule.md](../research/rampup-phases-practice-schedule.md).)* No study was found of blind children, or of any children, learning to type under different practice orders, so all of this is by analogy.
+  - **A gentle start, then mixing.** Supported clearly in adults: a schedule that starts blocked and ends random beat both pure schedules on retention in two experiments (Porter & Magill). Supported weakly in children: in the one study of the same schedule, 36 boys of about ten, only the difference from blocked practice was significant, and its authors call the support "albeit weak" (Saemi et al.). Children who found a task hard gained from an order that kept errors rare (Capio et al., read as an abstract).
+  - **The draw is not claimed as a motor-learning benefit.** In under-18s the effect of random over blocked practice is about nothing: 0.12 standard deviations on transfer tests and 0.02 on retention, with intervals that include zero, against 0.54 and 0.63 for adults (Czyż et al.). For the movement itself a fixed rotation did about as well as a random order (Lee & Magill), so Reach's predictable cycle is not a weakness as motor practice. The reason to draw prompts is the one in "Determinism, not repetition" above: a child who can predict the letter does not need to listen to it, and listening is the skill.
+  - **A cap of two in a row** is the convention of every random schedule read. It is not a finding.
+  - **Asking a missed letter again** rests on one study of adults (Simon, Lee & Cullen 2008). Staying until one success cost nothing against random practice that the study could detect, and it was not better at learning. It is chosen for the child's sake.
+  - **Returning to a key the finger can feel.** With no touch landmark the position of the hand drifted while each movement stayed accurate (Brown, Rosenbaum & Sainburg, five sighted adults).
+  - **Travel.** Letters, letter pairs and words each carry their own gain in practised adult typists (Crump & Logan). Nothing was found on novices or children, nothing supports a size for this level, and nothing supports drilling a letter against itself.
+  - **No number comes from the literature.** Eight of ten and thirty at 85% are judgments.
 - **Spaced repetition for motor memory.** Mixed evidence: clear positive results for simple motor tasks, weaker results for complex ones (e.g. piano: Donovan & Radosevich 1999 meta-analysis; Krigolson et al. 2021). For our application — keeping a learned simple motor pattern (a single keypress) from decaying — the evidence base is most aligned with positive results. The rare-key re-exposure mechanism is the design's response.
 - **Same-finger bigrams.** Slower at steady state (Dhakal et al. 2018, CHI). No evidence of learning harm during acquisition. Drives the "do not avoid SFBs" decision.
 
@@ -279,8 +539,8 @@ The honest summary: motor-learning research supports short sessions, mixed pract
 
 ### Open questions and future work
 
-1. **How much should the hands alternate?** *(Raised 2026-09-30.)* [ADR-028](0028-composite-input-and-keyboard-ownership.md) § Pair ramp-up specifies Phase A as an L-R interleave, and § Ramp-up variability's property 1 removed the strict alternation because a strictly alternating cycle is the deterministic material that produces plan-based answering. Bounded interleaving replaced it, and the bound — no hand for more than two consecutive units — was not chosen against anything. Since bimanual alternation is a motor program the child is here to acquire and not a formatting detail, this is curriculum. Filed with the detail in [roadmap § D](../roadmap.md#d-smaller-gaps-worth-a-line-in-the-relevant-adr); decide before the pilot.
-2. **Empirical tuning of phase thresholds.** The Phase A/B/C/D thresholds (10, 20, 30 keypresses) are starting points, not derived from data. Alpha and Beta sessions should record per-phase keypress counts, error rates, and time-spent so the thresholds can be revisited. Likely outcome: per-phase thresholds become language-aware (English child progresses through Phase C faster than German child due to bigram complexity differences).
+1. **How much should the hands alternate?** *(Raised 2026-09-30.)* [ADR-028](0028-composite-input-and-keyboard-ownership.md) § Pair ramp-up specifies Phase A as an L-R interleave, and § Ramp-up variability's property 1 removed the strict alternation because a strictly alternating cycle is the deterministic material that produces plan-based answering. Bounded interleaving replaced it, and the bound — no hand for more than two consecutive units — was not chosen against anything. Since bimanual alternation is a motor program the child is here to acquire and not a formatting detail, this is curriculum. Filed with the detail in [roadmap § D](../roadmap.md#d-smaller-gaps-worth-a-line-in-the-relevant-adr); decide before the pilot. *(2026-10-10, alpha-plan #12m: under the ladder no rule sets how the hands alternate. Reach takes a pair's cycles in turn, and at Choose and Travel a draw over a set with letters on both hands swaps hands about half the time. Whether that is the right amount is still this question.)*
+2. **Empirical tuning of phase thresholds.** The Phase A/B/C/D thresholds (10, 20, 30 keypresses) are starting points, not derived from data. Alpha and Beta sessions should record per-phase keypress counts, error rates, and time-spent so the thresholds can be revisited. Likely outcome: per-phase thresholds become language-aware (English child progresses through Phase C faster than German child due to bigram complexity differences). *(2026-10-10, alpha-plan #12m: the thresholds to tune are now the ladder's, the level rule and the one bar, in § The ramp-up restated, "Numbers". None is per language.)*
 3. **Comfort weighting if SFB harm is shown.** If a future study demonstrates same-finger bigrams during acquisition cause measurable retention or speed problems, the steady-state bigram generator can be re-weighted. The decision is reversible — selection is a function inside the drill generator, not a deep architectural commitment.
 4. ~~**Rare-key threshold per-language.**~~ *Moot since 2026-09-30: the staleness trigger is retired (§ Spaced re-exposure); decay is alpha-plan #12f.* The 5-minute default for re-exposure is heuristic. In languages with very long tails (more rare letters), the threshold may need to scale with the alphabet size, otherwise rare keys never refresh fast enough.
 5. **Lesson-level granularity.** This ADR sets drill-block granularity. Whether multiple blocks should be grouped into a named "lesson" (with its own celebration / pause prompt) is a UX decision deferred to the implementation of the milestone celebration system (Beta-phase work per the roadmap).

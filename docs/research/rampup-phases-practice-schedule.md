@@ -1,6 +1,6 @@
 # Research note: the ramp-up phases — what practice-schedule research supports
 
-> **Status:** Findings, a first proposal, and the direction the developer chose on 2026-10-10 after [ADR-033](../adr/0033-rest-keys-and-keyboard-alignment.md), which differs from the proposal: see [§ What was decided](#what-was-decided). ADR-024 has not been amended yet; that is alpha-plan #12m.
+> **Status:** Findings, a first proposal, and the direction the developer chose on 2026-10-10 after [ADR-033](../adr/0033-rest-keys-and-keyboard-alignment.md), which differs from the proposal: see [§ What was decided](#what-was-decided). **ADR-024 was amended on 2026-10-10** ([§ The ramp-up restated](../adr/0024-drill-content-and-lesson-granularity.md#the-ramp-up-restated-four-objectives-and-a-ladder-of-three-levels), alpha-plan #12m), which settles the list at the end of that section; the ADR is now the design and this note is its evidence. It is not yet built.
 > **Date:** 2026-10-10 (follows the whole-repo review of 2026-10-06, alpha-plan #12k, findings E1 to E3)
 > **Feeds:** [ADR-024](../adr/0024-drill-content-and-lesson-granularity.md) § New-key ramp-up and § Ramp-up variability
 > **See also:** [ADR-033](../adr/0033-rest-keys-and-keyboard-alignment.md) (2026-10-10) removes Stage 0, so the `r u` and `v m` rows of § What the generator does today describe steps that go. Its ADR-024 amendment and this note's proposal are best decided together ([alpha-plan](../alpha-plan.md) #12m).
@@ -16,7 +16,7 @@ every step that reaches off the home row, through Phase B as well. The first pro
 as it is, draw Phase B prompt by prompt with repeats allowed up to two in a row, and shrink Phase C.
 After ADR-033 the developer chose a cleaner shape: the location is introduced once, then three
 levels each add one difficulty (Reach, Choose, Combine), and one bar decides when a new letter may
-come.
+come. ADR-024 names the third level Travel.
 
 ---
 
@@ -154,8 +154,8 @@ feels like slower progress, which may discourage a learner from continuing.
 
 - Nothing tests an increasing schedule on a discrete key-press task, on children younger than ten,
   or on blind learners.
-- Nothing gives a dose. Porter's nine blocked trials per task were chosen as a third of 81, not
-  found to be best.
+- Nothing gives a dose. Porter's 27 blocked trials, nine per task, were chosen as a third of 81,
+  not found to be best.
 - Bangert and Altenmüller **[full]** is sometimes quoted as showing that a key-to-sound map forms in
   20 minutes. What they measured after 20 minutes was a change in EEG activity in adults. Wrong-key
   errors fell from 0.72 to 0.54 per note over ten sessions, and a group whose key-to-sound map was
@@ -382,6 +382,8 @@ supports keeping reach-and-return in Phase A and keeping the reworded anchor inv
 Decided by the developer in discussion on 2026-10-10, after ADR-033 was accepted. Each item is
 marked **[D]** where the developer stated or accepted it, and **[P]** where it is this note's
 proposal that the developer has not yet answered. This is the input to the ADR-024 amendment.
+
+*(2026-10-10, after the amendment was written: every **[P]** and every item under "Still to settle" below is answered in [ADR-024 § The ramp-up restated](../adr/0024-drill-content-and-lesson-granularity.md#the-ramp-up-restated-four-objectives-and-a-ladder-of-three-levels). Three things differ from this section. The level called "Combine" here is named **Travel** there, and it has no words: whole words are Layer 2. At Reach the cycle is the letter and then the rest cue, not the cue first. A predictable press counts toward nothing except whether the child reaches the key, which also answers the question about Known.)*
 
 **Why the proposal above was set aside.** ADR-033 moved three of the ramp-up's jobs to the rest
 tier: the place a finger returns to is its rest key, the anchor bar that the "anchor between
