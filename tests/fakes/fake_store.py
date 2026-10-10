@@ -176,9 +176,10 @@ class FakeStore:
             )
 
     def phase_records(self, profile_id: int, key_char: str) -> dict[str, PhaseRecord]:
+        # By phase, and `key_stats` by key, as SqliteStore orders them.
         return {
             phase: record
-            for (pid, name, phase), record in self._phases.items()
+            for (pid, name, phase), record in sorted(self._phases.items())
             if pid == profile_id and name == key_char
         }
 
@@ -217,7 +218,7 @@ class FakeStore:
     def key_stats(self, profile_id: int) -> dict[str, KeyStat]:
         return {
             key_char: KeyStat(attempt_count=ac, correct_count=cc, last_practised_at=ts)
-            for (pid, key_char), (ac, cc, ts) in self._key_stats.items()
+            for (pid, key_char), (ac, cc, ts) in sorted(self._key_stats.items())
             if pid == profile_id
         }
 
@@ -296,6 +297,8 @@ class FakeStore:
     def achieved_milestones(self, profile_id: int) -> list[str]:
         return [
             level
+            # The sort is stable, so equal stamps stay in the order recorded,
+            # which is SqliteStore's `ORDER BY achieved_at, rowid`.
             for (pid, level), _ in sorted(self._milestones.items(), key=lambda x: x[1])
             if pid == profile_id
         ]

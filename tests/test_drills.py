@@ -1274,6 +1274,26 @@ class TestBlockLength:
         assert len(idle.generator.next_block().prompts) == 50
         assert len(paced.generator.next_block().prompts) == 50
 
+    @pytest.mark.parametrize("before_the_first_answer", [2.0, 12.0, 25.0])
+    def test_what_precedes_a_blocks_first_answer_is_not_charged_to_the_pace(
+        self, before_the_first_answer: float
+    ) -> None:
+        # Review of 2026-10-06, E5. The session builds a block right after it
+        # queues the introduction script, so the script's length was the first
+        # answer's gap. Every wait here is under the idle cap, which is why
+        # that rule did not cover it.
+        assert before_the_first_answer <= config.PACE_IDLE_GAP_SECONDS
+        seconds_each = 2.0
+        fixture = Fixture(active=ANCHOR_SIX)
+        fixture.practise_all()
+        prompts = fixture.generator.next_block().prompts
+        fixture.clock.advance(before_the_first_answer)
+        fixture.answer(prompts[:1])
+        fixture.answer(prompts[1:], seconds_each=seconds_each)
+        assert len(fixture.generator.next_block().prompts) == round(
+            config.BLOCK_TARGET_SECONDS / seconds_each
+        )
+
     def test_a_block_nobody_answered_contributes_no_pace_sample(self) -> None:
         fixture = Fixture(active=ANCHOR_SIX)
         fixture.practise_all()

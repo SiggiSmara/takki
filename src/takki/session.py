@@ -194,12 +194,15 @@ class SessionLoop:
         )
         self._resume_ramp_up()
         self._keys.start()
-        if self._stop_requested:
-            # A signal that arrived during the warm-up above. The handlers are
-            # installed before this is called, so without the check the flag
-            # was overwritten here and the first Ctrl+C was lost.
-            return
+        # Set first and the flag read after, in that order: the handlers are
+        # installed before this is called, and a signal that lands between a
+        # read of the flag and this assignment has its `running = False`
+        # overwritten. This way round a signal on either side of the
+        # assignment is seen, as is one from the warm-up above.
         self.running = True
+        if self._stop_requested:
+            self.running = False
+            return
         # The first spoken line of the session comes out of here: a cold
         # profile's first block boundary introduces Stage 0's first step, and
         # its script is what the child hears. Nothing before this point speaks.
@@ -211,14 +214,22 @@ class SessionLoop:
         self.running = False
 
     def shutdown(self) -> None:
-        self._lengths.flush()
-        if self._session_id is not None:
-            self._store.end_session(self._session_id)
-            self._session_id = None
-        self._speech.enqueue_shutdown()
-        self._keys.stop()
-        self._speech.join(config.WORKER_JOIN_SECONDS)
-        self._focus.close()
+        # `finally`, so a failure in the store's work does not leave the
+        # worker and the key listener running.
+        try:
+            self._lengths.flush()
+            if self._session_id is not None:
+                self._store.end_session(self._session_id)
+                self._session_id = None
+        finally:
+            # Stopped before `Shutdown` is queued: the worker takes one
+            # command at a time, so the command would wait behind whatever is
+            # speaking, and a long line outlasts the join below.
+            self._speaker.stop()
+            self._speech.enqueue_shutdown()
+            self._keys.stop()
+            self._speech.join(config.WORKER_JOIN_SECONDS)
+            self._focus.close()
 
     # ---- the loop ------------------------------------------------------
 
@@ -239,6 +250,10 @@ class SessionLoop:
             except queue.Empty:
                 break
             self._dispatch(event)
+            if not self.running:
+                # The session has ended. What is queued behind a quit is not
+                # counted, cued or announced, and nothing more is issued.
+                return
         self._check_deadlines()
         self._advance()
         self._frames.wait()
@@ -493,6 +508,14 @@ class SessionLoop:
         """
         if self._index >= len(self._block.prompts):
             return
+        if self._prompt is not None:
+            # The abandoned prompt's letter may still be sounding, and the
+            # letter the unit starts on is sent at once. If that one has no
+            # length it does not replace the first but queues behind it, and
+            # the two are outstanding together (ADR-012). Only with a prompt
+            # open: with none, what is speaking is an introduction script,
+            # and the key abandons nothing.
+            self._speaker.interrupt()
         self._index = self._block.unit_start[self._index]
         self._prompt = None
         self._prompt_deadline = None

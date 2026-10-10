@@ -196,7 +196,8 @@ class DrillGenerator:
         self._last_prompt: str | None = None
         self._paced_attempts = 0
         self._block_seconds = 0.0
-        self._answered_at = 0.0
+        # None until the block's first answer: see `record_attempt`.
+        self._answered_at: float | None = None
 
     @property
     def ramp_up(self) -> RampUp | None:
@@ -256,13 +257,12 @@ class DrillGenerator:
         return self.begin_step(step)
 
     def next_block(self) -> DrillBlock:
-        now = self._clock.monotonic()
         if self._block_open:
             self._pace.append((self._paced_attempts, self._block_seconds))
         self._block_open = True
         self._paced_attempts = 0
         self._block_seconds = 0.0
-        self._answered_at = now
+        self._answered_at = None
         target = self._target_prompts()
         ramp = self._ramp_up
         # Read here, at the boundary, where the session holds the key states
@@ -297,10 +297,13 @@ class DrillGenerator:
         # time nor count, so an interruption leaves the measured pace exactly
         # where it was instead of collapsing it. A block nobody answered
         # therefore contributes no sample at all rather than dead air.
-        gap = now - self._answered_at
-        self._answered_at = now
-        if gap <= config.PACE_IDLE_GAP_SECONDS:
-            self._block_seconds += gap
+        # A block's first answer has no answer before it, so it opens the
+        # measure and is not a gap. What lies between the block being built
+        # and that answer is whatever the session says first, an introduction
+        # script or a celebration, and none of it is the child's typing.
+        previous, self._answered_at = self._answered_at, now
+        if previous is not None and now - previous <= config.PACE_IDLE_GAP_SECONDS:
+            self._block_seconds += now - previous
             self._paced_attempts += 1
         self._session_attempts[grapheme] = self._session_attempts.get(grapheme, 0) + 1
         ramp = self._ramp_up

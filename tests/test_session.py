@@ -1,5 +1,6 @@
 import queue
 import random
+import threading
 from collections import Counter
 from collections.abc import Callable
 from itertools import pairwise
@@ -10,7 +11,9 @@ import pytest
 from takki import config
 from takki.audio.synthetic_letters import SyntheticLetterAudioSource
 from takki.audio.tts_worker import SpeechFinished, TTSWorker
+from takki.display.focus import FocusLost
 from takki.events import Quit
+from takki.focus_model import PAUSED_ANNOUNCEMENT, RESUMED_ANNOUNCEMENT
 from takki.input import KeyEvent
 from takki.language import WordSource
 from takki.lesson.drills import DrillGenerator
@@ -186,6 +189,25 @@ class Harness:
             self.press(target)
             self.loop.tick()
         return asked
+
+
+def queued(harness: Harness) -> list[InboundEvent]:
+    """What is still on the inbound queue, in order. Empties it."""
+    events: list[InboundEvent] = []
+    while True:
+        try:
+            events.append(harness.inbound.get_nowait())
+        except queue.Empty:
+            return events
+
+
+def sound(harness: Harness) -> None:
+    """Run the worker dry, each letter it really speaks taking LETTER_SECONDS, then tick once."""
+    while not harness.worker.idle:
+        spoken = len(harness.engine.spoken)
+        harness.worker.run_one()
+        harness.clock.advance(LETTER_SECONDS * (len(harness.engine.spoken) - spoken))
+    harness.loop.tick()
 
 
 def hear_out(harness: Harness) -> None:
@@ -1205,6 +1227,41 @@ class TestLetterLengths:
         assert harness.engine.spoken == [target, "Back in Takki.", target]
         assert harness.loop.prompt == target
 
+    def test_the_restart_key_does_not_leave_two_letters_outstanding(self) -> None:
+        # Review of 2026-10-06, C3. The restart key abandoned the prompt
+        # without stopping its letter. Going back to a letter with no length,
+        # which is sent so that it cannot be cut, then put a second letter at
+        # the worker behind the first, and the wait was measured as its length.
+        harness = Harness(seed=FULL_SLOTS, voice="another", synthetic_letters=True)
+        # The unit's first letter fails to play, so it ends with no length.
+        harness.engine.fail_on = set(FULL_SLOTS)
+        harness.loop.start()
+        first = harness.opened()
+        sound(harness)
+        harness.engine.fail_on = set()
+        harness.press(first)
+        harness.loop.tick()
+        second = harness.loop.prompt
+        assert second is not None and second != first
+        # Its second letter is heard to its end and has one.
+        sound(harness)
+        # Said again, now as a letter a press can cut, and still outstanding
+        # when the restart key goes back to the first.
+        harness.key(config.REREAD_KEY)
+        harness.loop.tick()
+        harness.key(config.REREAD_KEY, pressed=False)
+        harness.loop.tick()
+        harness.key(config.RESTART_KEY)
+        harness.loop.tick()
+        harness.clock.advance(config.RESTART_HOLD_MS / 1000.0)
+        harness.loop.tick()
+        assert harness.loop.prompt == first
+        sound(harness)
+        assert harness.engine.spoken == [second, first]
+        harness.loop.shutdown()
+        assert self.stored(harness, first, "another") == [LETTER_MS]
+        assert self.stored(harness, second, "another") == [LETTER_MS]
+
     def test_a_letter_the_script_failed_to_say_is_heard_out_at_its_first_prompt(self) -> None:
         # The introduction measured nothing, so the rule that covers a new
         # voice covers this too, and no letter stays without a length.
@@ -1271,6 +1328,52 @@ class TestRecoveryKeys:
         # Back to the top of the bigram, not to where the child was standing.
         assert harness.letters.played == [first]
         assert harness.loop.prompt == first
+
+    def test_a_restart_hold_during_the_introduction_leaves_the_script_whole(self) -> None:
+        # No prompt is open, so the key abandons none and cuts nothing.
+        harness = Harness()
+        harness.loop.start()
+        harness.key(config.RESTART_KEY)
+        harness.loop.tick()
+        harness.clock.advance(config.RESTART_HOLD_MS / 1000.0)
+        harness.loop.tick()
+        target = harness.opened()
+        assert harness.engine.spoken == intro_lines(("f", "j"))
+        assert harness.letters.played == [*HOME, target]
+        assert (harness.engine.stopped, harness.letters.stopped) == (0, 0)
+
+    def test_re_read_taps_over_the_resume_announcement_leave_it_whole(self) -> None:
+        # Review of 2026-10-06, C6. A letter's stop on the real source is the
+        # worker's stop, which cancels everything queued, speech included.
+        # What keeps the announcement safe is that no letter is issued while
+        # the speaker is busy, and on the fake source a break in that would
+        # not show: its stop cancels only its own letter. Two taps, because a
+        # second letter is what stops the first.
+        harness = Harness(seed=FULL_SLOTS, synthetic_letters=True)
+        harness.loop.start()
+        target = harness.opened()
+        harness.pump()
+        harness.focus.lose_focus()
+        harness.loop.tick()
+        harness.pump()
+        harness.focus.gain_focus()
+        harness.loop.tick()
+        for _ in range(2):
+            harness.key(config.REREAD_KEY)
+            harness.loop.tick()
+            harness.key(config.REREAD_KEY, pressed=False)
+            harness.loop.tick()
+        for _ in range(3):
+            harness.pump()
+            harness.loop.tick()
+        assert harness.engine.spoken == [
+            target,
+            PAUSED_ANNOUNCEMENT,
+            RESUMED_ANNOUNCEMENT,
+            target,
+        ]
+        assert (harness.engine.stopped, harness.engine.skipped) == (0, [])
+        assert harness.loop.prompt == target
 
     def test_a_restart_re_counts_the_prompts_it_re_presents(self) -> None:
         harness = Harness(seed=FULL_SLOTS)
@@ -1417,6 +1520,126 @@ class TestShutdown:
         assert harness.stream.stopped is True
         assert harness.focus.closed is True
         assert harness.store.sessions() == [(harness.profile.id, ANY_TS, ANY_TS)]
+
+    def test_shutdown_cancels_speech_instead_of_waiting_behind_it(self) -> None:
+        # Review of 2026-10-06, C1. The introduction's first line is at the
+        # worker and nothing has run it yet. The engine is built first, as
+        # the worker thread does before anything else, so the stop reaches it.
+        harness = Harness()
+        harness.worker.build_engine()
+        harness.loop.start()
+        harness.loop.shutdown()
+        assert harness.engine.stopped == 1
+        # The cancelled line is reported and never spoken, then the worker ends.
+        assert harness.worker.run_one() is True
+        assert harness.worker.run_one() is False
+        assert harness.engine.spoken == []
+        assert queued(harness) == [SpeechFinished(1, "cancelled")]
+
+    def test_shutdown_ends_a_worker_thread_that_is_mid_utterance(self) -> None:
+        # C1 as the review reproduced it, on a real thread: the utterance
+        # lasts until it is stopped, as a long line does on SAPI.
+        class SpeaksUntilStopped(FakeTTSEngine):
+            def __init__(self) -> None:
+                super().__init__()
+                self.speaking = threading.Event()
+                self.cut = threading.Event()
+
+            def speak(self, text: str) -> None:
+                self.speaking.set()
+                self.cut.wait(timeout=5)
+                super().speak(text)
+
+            def stop(self) -> None:
+                super().stop()
+                self.cut.set()
+
+        harness = Harness()
+        engine = SpeaksUntilStopped()
+        harness.engine = engine
+        harness.worker.start()
+        harness.loop.start()
+        assert engine.speaking.wait(timeout=5)
+        harness.loop.shutdown()
+        thread = harness.worker._thread  # pyright: ignore[reportPrivateUsage]
+        assert thread is not None and not thread.is_alive()
+        assert (engine.stopped, engine.spoken) == (1, [])
+        assert queued(harness) == [SpeechFinished(1, "cancelled")]
+
+    def test_what_is_queued_behind_a_quit_is_not_handled(self) -> None:
+        # Review of 2026-10-06, C2: the press was counted with its chime and
+        # the pause announcement queued, in a session that had already ended.
+        harness = Harness()
+        harness.loop.start()
+        target = harness.opened()
+        harness.pump()
+        harness.loop.tick()
+        spoken = list(harness.engine.spoken)
+        harness.focus.quit()
+        harness.press(target, release=False)
+        harness.focus.lose_focus()
+        harness.loop.tick()
+        assert harness.loop.running is False
+        assert queued(harness) == [KeyEvent(pressed=True, char=target, name=None), FocusLost()]
+        assert harness.cues.played == []
+        assert harness.store.window_stats(harness.profile.id, target).attempt_count == 0
+        harness.pump()
+        assert harness.engine.spoken == spoken
+        assert harness.loop.prompt == target
+
+    def test_a_stop_as_start_sets_running_is_not_lost(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Review of 2026-10-06, C7. start() read the stop flag and then set
+        # `running = True`, so a signal between the two had its
+        # `running = False` overwritten and the session ran on.
+        class SignalledAsItStarts(SessionLoop):
+            signalled = False
+
+            def __setattr__(self, name: str, value: object) -> None:
+                if name == "running" and value is True and not self.signalled:
+                    self.signalled = True
+                    self.stop()
+                super().__setattr__(name, value)
+
+        monkeypatch.setattr("tests.test_session.SessionLoop", SignalledAsItStarts)
+        harness = Harness()
+        harness.loop.start()
+        assert harness.loop.running is False
+        ticks: list[None] = []
+
+        def tick() -> None:
+            ticks.append(None)
+            harness.loop.running = False
+
+        monkeypatch.setattr(harness.loop, "tick", tick)
+        harness.loop.run()
+        harness.pump()
+        assert ticks == []
+        assert harness.engine.spoken == []
+        assert harness.store.introductions(harness.profile.id) == []
+        assert harness.stream.stopped is True
+        assert harness.focus.closed is True
+        assert harness.store.sessions() == [(harness.profile.id, ANY_TS, ANY_TS)]
+
+    def test_a_failure_in_the_stores_work_still_stops_the_threads(self) -> None:
+        # C7: the SQLite work comes first in shutdown(), and when it raised
+        # the worker and the key listener were left running.
+        class CannotEndASession(FakeStore):
+            def end_session(self, session_id: int, ended_at: str | None = None) -> None:
+                raise RuntimeError("disk")
+
+        harness = Harness(store=CannotEndASession())
+        harness.worker.build_engine()
+        harness.loop.start()
+        with pytest.raises(RuntimeError, match="disk"):
+            harness.loop.shutdown()
+        assert harness.stream.stopped is True
+        assert harness.focus.closed is True
+        assert harness.engine.stopped == 1
+        assert harness.worker.run_one() is True
+        assert harness.worker.run_one() is False
+        assert harness.engine.spoken == []
 
     def test_shutdown_ends_the_session_row_once(self) -> None:
         harness = Harness()

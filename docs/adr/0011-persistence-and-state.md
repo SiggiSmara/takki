@@ -81,7 +81,9 @@ CREATE TABLE milestones (
     level       TEXT    NOT NULL,   -- slug: "anchor", "third", "half", "two_thirds",
                                     -- "five_sixths", "alphabet", "diamond", "speed".
                                     -- Never spoken; the name resolves via ADR-022 YAML.
-    achieved_at TEXT    NOT NULL,
+    achieved_at TEXT    NOT NULL,   -- Rungs fired at one block boundary share a stamp.
+                                    -- Read back by achieved_at, then rowid: the
+                                    -- order earned (alpha-plan #12k, 2026-10-10).
     PRIMARY KEY (profile_id, level)
 );
 

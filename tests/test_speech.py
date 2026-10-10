@@ -234,6 +234,36 @@ class TestInterrupt:
         assert letters.stopped == 0
 
 
+class TestStop:
+    # Shutdown's channel: nothing is left to finish, whatever it is.
+
+    def test_stop_cuts_what_an_interrupt_leaves_to_finish(self) -> None:
+        speaker, worker, engine, _, outbound = build()
+        worker.build_engine()
+        speaker.say("Well done.", "You know six keys.", interruptible=False)
+        speaker.interrupt()
+        assert engine.stopped == 0
+        speaker.stop()
+        assert engine.stopped == 1
+        assert speaker.busy is False
+        drain(worker)
+        assert engine.spoken == []
+        assert outbound.get_nowait() == SpeechFinished(1, "cancelled")
+        assert outbound.empty()
+
+    def test_stop_stops_a_prompts_letter_once(self) -> None:
+        speaker, _, engine, letters, _ = build()
+        speaker.letter("f")
+        speaker.stop()
+        speaker.stop()
+        assert (letters.stopped, engine.stopped) == (1, 0)
+
+    def test_stop_with_nothing_audible_stops_nothing(self) -> None:
+        speaker, _, engine, letters, _ = build()
+        speaker.stop()
+        assert (letters.stopped, engine.stopped) == (0, 0)
+
+
 class TestLetterInASequence:
     """ADR-012 § A letter inside a sequence (alpha-plan #12l)."""
 

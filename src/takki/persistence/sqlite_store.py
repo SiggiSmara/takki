@@ -364,6 +364,7 @@ class SqliteStore:
             """
             SELECT phase, started_attempts, completed_attempts FROM ramp_up_phases
             WHERE profile_id = ? AND key_char = ?
+            ORDER BY phase
             """,
             (profile_id, key_char),
         ).fetchall()
@@ -466,6 +467,7 @@ class SqliteStore:
             SELECT key_char, attempt_count, correct_count, last_practised_at
             FROM key_stats
             WHERE profile_id = ?
+            ORDER BY key_char
             """,
             (profile_id,),
         ).fetchall()
@@ -611,8 +613,10 @@ class SqliteStore:
         self.conn.commit()
 
     def achieved_milestones(self, profile_id: int) -> list[str]:
+        # Rungs fired at one block boundary share a stamp; `rowid` keeps
+        # those in the order they were earned.
         rows = self.conn.execute(
-            "SELECT level FROM milestones WHERE profile_id = ? ORDER BY achieved_at",
+            "SELECT level FROM milestones WHERE profile_id = ? ORDER BY achieved_at, rowid",
             (profile_id,),
         ).fetchall()
         return [cast(str, r[0]) for r in rows]

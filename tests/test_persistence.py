@@ -778,6 +778,38 @@ class TestLetterLengths:
         assert store.letter_lengths(p.id, "j", "voice", 1.0) == [700]
 
 
+class TestOrderOfResults:
+    # Review of 2026-10-06, F6. No caller reads these three in order today,
+    # and one that starts to must not pass on the fake alone.
+
+    def test_key_stats_come_back_by_key(self, any_store: Store) -> None:
+        profile = any_store.create_profile("kid")
+        for name in "jfad":
+            any_store.upsert_key_stat(profile.id, name, True)
+        assert list(any_store.key_stats(profile.id)) == ["a", "d", "f", "j"]
+
+    def test_phase_records_come_back_by_phase(self, any_store: Store) -> None:
+        profile = any_store.create_profile("kid")
+        for phase in ("C", "A", "B"):
+            any_store.begin_phase(profile.id, "f", phase, 0)
+        assert list(any_store.phase_records(profile.id, "f")) == ["A", "B", "C"]
+
+    def test_milestones_with_one_stamp_come_back_in_the_order_earned(
+        self, any_store: Store
+    ) -> None:
+        # Rungs fired at one block boundary share a stamp.
+        profile = any_store.create_profile("kid")
+        any_store.record_milestone(profile.id, "bronze", achieved_at="2026-01-02T10:00:00+00:00")
+        for level in ("third", "anchor", "silver"):
+            any_store.record_milestone(profile.id, level, achieved_at=UTC_STAMP)
+        assert any_store.achieved_milestones(profile.id) == [
+            "third",
+            "anchor",
+            "silver",
+            "bronze",
+        ]
+
+
 class TestMigration:
     def test_a_database_from_before_letter_lengths_needs_no_migration(self, tmp_path: Path) -> None:
         # alpha-plan #12l adds a table and changes no other. A letter with no

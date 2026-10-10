@@ -182,7 +182,14 @@ def main() -> int:
     signal.signal(signal.SIGTERM, _on_signal)
 
     try:
-        loop.start()
+        try:
+            loop.start()
+        except BaseException:
+            # run() shuts down in a `finally` of its own and is not reached.
+            # start() has opened the session row and started the listener by
+            # the time it builds the first block.
+            loop.shutdown()
+            raise
         loop.run()
         # Joining the listener is the only place a dead pynput hook becomes
         # visible -- it re-raises a callback exception here. `join()` is not on

@@ -151,6 +151,16 @@ class Speaker:
             self._pending.popleft()
         self._pump()
 
+    def stop(self) -> None:
+        """Shutdown: stop what is audible whatever it is, and drop the rest.
+
+        `interrupt` leaves a celebration or a letter that cannot be cut to
+        finish, which is right while the session goes on. A session that is
+        ending waits for the worker, and would wait behind them.
+        """
+        self._pending.clear()
+        self._stop_audible()
+
     def _stop_audible(self) -> None:
         if self._letter is not None:
             self._letters.stop()

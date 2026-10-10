@@ -5,11 +5,13 @@ import time
 from collections.abc import Callable, Iterator
 from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from takki.audio.cues import CueOutputError
 from takki.audio.tts import SpeechOutputError
+from takki.audio.tts_worker import TTSWorker
 from takki.main import (
     EXIT_LAYOUT_MISMATCH,
     EXIT_NO_AUDIO,
@@ -273,6 +275,58 @@ class TestStartup:
         assert (profile.name, profile.language) == ("dev", "en")
         introduced = [(row.key_char, row.step) for row in store.introductions(profile.id)]
         assert introduced == [("f", 1), ("j", 1)]
+        with sqlite3.connect(database) as connection:
+            sessions = connection.execute("SELECT ended_at IS NOT NULL FROM sessions").fetchall()
+        assert sessions == [(1,)]
+
+    def test_a_failure_while_starting_still_shuts_down(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, signals: None
+    ) -> None:
+        # The fix round's review, 2026-10-10. `run()` shuts down in a
+        # `finally`, and `start()` is not inside it: by the time the first
+        # block is built the session row is open and the listener started.
+        database = tmp_path / "data" / "takki.sqlite"
+
+        class Window(FakeFocusSource):
+            closes = 0
+
+            def close(self) -> None:
+                Window.closes += 1
+
+        class Keys(ScriptedKeyStream):
+            stops = 0
+
+            def __init__(self, inbound: queue.Queue[InboundEvent]) -> None:
+                super().__init__([], inbound)
+
+            def stop(self) -> None:
+                Keys.stops += 1
+
+        made: list[TTSWorker] = []
+
+        class Worker(TTSWorker):
+            def __init__(self, *args: Any, **kwargs: Any) -> None:
+                super().__init__(*args, **kwargs)
+                made.append(self)
+
+        def no_first_block(loop: object) -> None:
+            raise RuntimeError("first block")
+
+        monkeypatch.setattr("takki.main.config.LANGUAGE", "en")
+        monkeypatch.setattr("takki.main.select_platform_interface", FakePlatformInterface)
+        monkeypatch.setattr("takki.main.PygameFocusSource", Window)
+        monkeypatch.setattr("takki.main.PygameMixerCues", FakeSoundCues)
+        monkeypatch.setattr("takki.main.PynputKeyStream", Keys)
+        monkeypatch.setattr("takki.main.TTSWorker", Worker)
+        monkeypatch.setattr("takki.main.database_path", lambda: database)
+        monkeypatch.setattr("takki.session.SessionLoop._begin_block", no_first_block)
+
+        with pytest.raises(RuntimeError, match="first block"):
+            main()
+        assert (Keys.stops, Window.closes) == (1, 1)
+        (worker,) = made
+        thread = worker._thread  # pyright: ignore[reportPrivateUsage]
+        assert thread is not None and not thread.is_alive()
         with sqlite3.connect(database) as connection:
             sessions = connection.execute("SELECT ended_at IS NOT NULL FROM sessions").fetchall()
         assert sessions == [(1,)]
