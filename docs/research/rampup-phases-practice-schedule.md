@@ -1,6 +1,6 @@
 # Research note: the ramp-up phases — what practice-schedule research supports
 
-> **Status:** Findings and a proposal. Nothing is decided and no ADR has changed. The developer has settled two points in discussion (repeats are allowed; staying on a letter after a miss is wanted); they are marked where they appear.
+> **Status:** Findings, a first proposal, and the direction the developer chose on 2026-10-10 after [ADR-033](../adr/0033-rest-keys-and-keyboard-alignment.md), which differs from the proposal: see [§ What was decided](#what-was-decided). ADR-024 has not been amended yet; that is alpha-plan #12m.
 > **Date:** 2026-10-10 (follows the whole-repo review of 2026-10-06, alpha-plan #12k, findings E1 to E3)
 > **Feeds:** [ADR-024](../adr/0024-drill-content-and-lesson-granularity.md) § New-key ramp-up and § Ramp-up variability
 > **See also:** [ADR-033](../adr/0033-rest-keys-and-keyboard-alignment.md) (2026-10-10) removes Stage 0, so the `r u` and `v m` rows of § What the generator does today describe steps that go. Its ADR-024 amendment and this note's proposal are best decided together ([alpha-plan](../alpha-plan.md) #12m).
@@ -12,8 +12,11 @@ unpredictability as a motor-learning benefit for children: the effect of random 
 practice in under-18s is close to zero. The reason to draw prompts at random is a different one.
 A child who can predict the next letter does not need to listen to it, and listening is the skill.
 Measured on the current generator, the new letter is fully predictable through Phase A and, for
-every step that reaches off the home row, through Phase B as well. The proposal is to keep Phase A
+every step that reaches off the home row, through Phase B as well. The first proposal was to keep Phase A
 as it is, draw Phase B prompt by prompt with repeats allowed up to two in a row, and shrink Phase C.
+After ADR-033 the developer chose a cleaner shape: the location is introduced once, then three
+levels each add one difficulty (Reach, Choose, Combine), and one bar decides when a new letter may
+come.
 
 ---
 
@@ -357,7 +360,9 @@ For a blind child this is the argument for the anchor in plain terms. The reach 
 accurate, and where it starts from does not, unless the hand comes back to a key it can feel. It
 supports keeping reach-and-return in Phase A and keeping the reworded anchor invariant in Phase B.
 
-## Proposal (not decided)
+## Proposal, as first written
+
+*Written before ADR-033. Kept for the reasoning; the next section says what was decided instead.*
 
 1. **Phase A, "find it": keep.** A predictable reach-and-return cycle, the same size as now. Stated
    in the ADR as the one deliberately predictable phase, and why.
@@ -371,6 +376,76 @@ supports keeping reach-and-return in Phase A and keeping the reworded anchor inv
 4. **Phase C, "use it": make it smaller, and skip it for a step with no partners.** How much
    smaller is a judgment, not a finding.
 5. **Keep every number configurable**: the cap on runs, the repeat after a miss, Phase C's length.
+
+## What was decided
+
+Decided by the developer in discussion on 2026-10-10, after ADR-033 was accepted. Each item is
+marked **[D]** where the developer stated or accepted it, and **[P]** where it is this note's
+proposal that the developer has not yet answered. This is the input to the ADR-024 amendment.
+
+**Why the proposal above was set aside.** ADR-033 moved three of the ramp-up's jobs to the rest
+tier: the place a finger returns to is its rest key, the anchor bar that the "anchor between
+reaches" rule fed is retired, and a rest letter has no location to find. The questions the proposal
+then raised (what a rest letter alternates with, what stands in for a rest key with no letter,
+whether the anchor rule stays) were about keeping Phase B's machinery after its purpose had moved.
+The developer's reading: the intent of the phases was always a gradual increase in difficulty, as
+in traditional typing instruction, and it had become blurred. **[D]**
+
+**Four objectives, each with one owner. [D]**
+
+| Objective | What serves it | Differs by kind of letter? | Measure |
+|---|---|---|---|
+| 1. Introduce the location of the new letter | The script, described from the finger's rest key, then guided presses | Yes, and only here | None; it is guidance |
+| 2. Give gradually increasing difficulty using that location | A short ladder of practice levels | No | A light rule to move on **[P]** |
+| 3. Decide when the letter is stable enough for a new letter to be added | One bar | No | Read only where the child had to listen |
+| 4. Decide when the letter is Known, after which its practice follows the general rules | ADR-027 as it stands | No | Known |
+
+Objectives 3 and 4 are the two halves of the existing introduction gate: this step's ramp-up has
+ended, and a slot is free.
+
+**The ladder: each level adds one difficulty. [D]**
+
+| Level | What is new | What stays easy |
+|---|---|---|
+| Reach | The finger leaves its rest key, finds the letter and comes back | Only this letter; the child knows what is coming |
+| Choose | The child must listen: the letter is drawn among a few active ones | Single letters, a small set |
+| Combine | The finger arrives from another key: pairs, and words where they exist | A few partners only |
+| General practice | The full active set, planned by need | |
+
+**The return is forced by asking for the rest key. [D]** At the Reach level Takki tells the child
+to press that finger's rest key, then asks for the letter. It is the same for every finger and
+every language, and it works whether or not the rest key carries a letter. Repeating one letter
+with nothing between teaches little, because the finger can stay on the key (§ 3).
+
+**What follows for a rest letter. [D]** It has no reach, so it has no Reach level and starts at
+Choose. The same holds for the two bump letters. ADR-033 says a rest letter's ramp-up is "the
+ordinary one"; the amendment has to restate that as the ordinary ladder without its first level.
+
+**A press the child could predict does not count toward objective 3. [D]** The bar is read on
+Choose and Combine presses only. Whether such presses count toward Known is not yet answered.
+
+**Carried over from the first proposal.** A prompt may follow itself **[D]**, at most twice in a
+row **[P]**. A missed letter is asked again **[D]**; for how long is open **[P]**. Every number is
+configurable.
+
+**What goes.** The special cases for the first step, Stage 0's own content and the borrowed anchor
+of a solo step belong to objective 1, not to the levels. The anchor rule and the fixed direction of
+a reach unit, which made the blocks a fixed cycle (E1, E2), are not carried into the ladder. The
+three bars of Phases A, B and C become one.
+
+**Still to settle in the ADR-024 session.**
+
+- The rule for moving up a level, and its numbers.
+- The one bar for objective 3. Phase C's (30 presses at 85%, and not too slow) is the candidate.
+- Whether predictable presses count toward Known.
+- What Takki does when the press after the rest cue is not the rest key. In the alignment there is
+  no wrong answer; here the finger has a chosen key.
+- Whether the rest cue is spoken or a sound, and that ADR-033 has to allow a rest key to be asked
+  for during practice. It says a rest key is never prompted by character, which a cue by finger
+  respects, and that alignment presses are untimed and kept apart from `key_attempts`.
+- Which letters make up the small set at Choose, and how partners are limited at Combine.
+- What Combine uses for content in Alpha, where real words (Layer 2) are not built.
+- How the levels are recorded: ADR-011's `ramp_up_phases` holds the three phases as events today.
 
 ## What this leaves open
 
