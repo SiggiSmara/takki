@@ -1,0 +1,528 @@
+{"k": "meta", "t": 285.38, "run": "switch", "started": "2026-11-01T21:43:40.317", "pygame": "2.6.1", "sdl": [2, 28, 4], "python": "3.11.15 (main, May 10 2026, 19:31:25) [MSC v.1944 64 bit (AMD64)]", "hook": true, "had_pygame_filter": true, "text_input_active_at_start": true, "main_hkl": "0x04090409", "keyboard_delay_setting": 1, "keyboard_delay_ms_nominal": 500, "keyboard_speed_setting": 31, "stickykeys_flags": "0x1fe", "stickykeys_hotkey_active": true, "filterkeys_flags": "0x7e", "filterkeys_hotkey_active": true}
+{"k": "step", "t": 304.85, "n": 1, "id": "US keys", "text": "On English (US). Type four keys: bottom-left letter (US z), the key right of T (US y), the key right of L (US ;), the key right of that (US ').", "attempt": 0, "flush": false, "main_hkl": "0x04090409", "text_input_active": true}
+{"k": "raw", "t": 14028.35, "type": "KEYDOWN", "ts": 14026, "sc": 29, "sym": 122, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 14028.42, "type": "TEXTINPUT", "ts": 14026, "text": "z"}
+{"k": "pg", "t": 14028.91, "type": "KeyDown", "key": 122, "sc": 29, "uni": "z", "mod": 4096, "dead": false}
+{"k": "pg", "t": 14029.06, "type": "TextInput", "text": "z"}
+{"k": "hook", "dir": "down", "t": 14024.92, "msg": 256, "vk": 90, "scan": 44, "flags": 0, "ll_time": 37493156, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 29, "char": "z", "dead": false, "kvk": 90, "tr_char": "z", "tr_name": null}
+{"k": "raw", "t": 14274.92, "type": "KEYUP", "ts": 14272, "sc": 29, "sym": 122, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 14275.12, "type": "KeyUp", "key": 122, "sc": 29, "uni": "z", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 14272.53, "msg": 257, "vk": 90, "scan": 44, "flags": 128, "ll_time": 37493406, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 29, "char": "z", "dead": false, "kvk": 90, "tr_char": "z", "tr_name": null}
+{"k": "raw", "t": 15096.84, "type": "KEYDOWN", "ts": 15094, "sc": 28, "sym": 121, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 15096.89, "type": "TEXTINPUT", "ts": 15094, "text": "y"}
+{"k": "pg", "t": 15097.14, "type": "KeyDown", "key": 121, "sc": 28, "uni": "y", "mod": 4096, "dead": false}
+{"k": "pg", "t": 15097.22, "type": "TextInput", "text": "y"}
+{"k": "hook", "dir": "down", "t": 15094.92, "msg": 256, "vk": 89, "scan": 21, "flags": 0, "ll_time": 37494234, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 28, "char": "y", "dead": false, "kvk": 89, "tr_char": "y", "tr_name": null}
+{"k": "raw", "t": 15343.48, "type": "KEYUP", "ts": 15341, "sc": 28, "sym": 121, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 15343.75, "type": "KeyUp", "key": 121, "sc": 28, "uni": "y", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 15341.29, "msg": 257, "vk": 89, "scan": 21, "flags": 128, "ll_time": 37494468, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 28, "char": "y", "dead": false, "kvk": 89, "tr_char": "y", "tr_name": null}
+{"k": "raw", "t": 23818.62, "type": "KEYDOWN", "ts": 23816, "sc": 51, "sym": 59, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 23818.68, "type": "TEXTINPUT", "ts": 23816, "text": ";"}
+{"k": "pg", "t": 23818.84, "type": "KeyDown", "key": 59, "sc": 51, "uni": ";", "mod": 4096, "dead": false}
+{"k": "pg", "t": 23818.88, "type": "TextInput", "text": ";"}
+{"k": "hook", "dir": "down", "t": 23816.76, "msg": 256, "vk": 186, "scan": 39, "flags": 0, "ll_time": 37502953, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 51, "char": ";", "dead": false, "kvk": 186, "tr_char": ";", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 24060.64, "msg": 257, "vk": 186, "scan": 39, "flags": 128, "ll_time": 37503203, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 51, "char": ";", "dead": false, "kvk": 186, "tr_char": ";", "tr_name": null}
+{"k": "raw", "t": 24065.94, "type": "KEYUP", "ts": 24064, "sc": 51, "sym": 59, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 24066.39, "type": "KeyUp", "key": 59, "sc": 51, "uni": ";", "mod": 4096}
+{"k": "raw", "t": 24776.81, "type": "KEYDOWN", "ts": 24774, "sc": 52, "sym": 39, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 24776.87, "type": "TEXTINPUT", "ts": 24774, "text": "'"}
+{"k": "pg", "t": 24777.06, "type": "KeyDown", "key": 39, "sc": 52, "uni": "'", "mod": 4096, "dead": false}
+{"k": "pg", "t": 24777.1, "type": "TextInput", "text": "'"}
+{"k": "hook", "dir": "down", "t": 24775.1, "msg": 256, "vk": 222, "scan": 40, "flags": 0, "ll_time": 37503906, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 52, "char": "'", "dead": false, "kvk": 222, "tr_char": "'", "tr_name": null}
+{"k": "raw", "t": 24990.49, "type": "KEYUP", "ts": 24988, "sc": 52, "sym": 39, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 24990.65, "type": "KeyUp", "key": 39, "sc": 52, "uni": "'", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 24988.29, "msg": 257, "vk": 222, "scan": 40, "flags": 128, "ll_time": 37504125, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 52, "char": "'", "dead": false, "kvk": 222, "tr_char": "'", "tr_name": null}
+{"k": "pg", "t": 27291.55, "type": "MouseButtonDown"}
+{"k": "step", "t": 27291.65, "n": 2, "id": "win+space to German", "text": "Hold Win, tap Space until Deutsch is selected, let go of Win. (Watch the layout line above.)", "attempt": 0, "flush": false, "main_hkl": "0x04090409", "text_input_active": true}
+{"k": "pg", "t": 27517.73, "type": "MouseButtonUp"}
+{"k": "raw", "t": 34809.73, "type": "KEYDOWN", "ts": 34807, "sc": 227, "sym": 1073742051, "mod": 5120, "rep": 0, "state": 1}
+{"k": "pg", "t": 34809.9, "type": "KeyDown", "key": 1073742051, "sc": 227, "uni": "", "mod": 5120, "dead": false}
+{"k": "hook", "dir": "down", "t": 34807.36, "msg": 256, "vk": 91, "scan": 91, "flags": 1, "ll_time": 37513937, "hkl_thread": "0x04090409", "ext": true, "inj": false, "sdl_sc": 227, "name": "cmd", "tr_char": null, "tr_name": "cmd"}
+{"k": "hook", "dir": "down", "t": 35120.41, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37514250, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 35271.98, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37514406, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "raw", "t": 35414.42, "type": "WINDOW", "ts": 35412, "wev": "LEAVE"}
+{"k": "pg", "t": 35414.54, "type": "WindowLeave"}
+{"k": "raw", "t": 35495.94, "type": "WINDOW", "ts": 35494, "wev": "ENTER"}
+{"k": "pg", "t": 35496.13, "type": "WindowEnter"}
+{"k": "hook", "dir": "up", "t": 36392.84, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37515531, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 37161.48, "msg": 257, "vk": 91, "scan": 91, "flags": 129, "ll_time": 37516296, "hkl_thread": "0x04090409", "ext": true, "inj": false, "sdl_sc": 227, "name": "cmd", "tr_char": null, "tr_name": "cmd"}
+{"k": "raw", "t": 37165.89, "type": "KEYUP", "ts": 37163, "sc": 227, "sym": 1073742051, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 37166.02, "type": "KeyUp", "key": 1073742051, "sc": 227, "uni": "", "mod": 4096}
+{"k": "raw", "t": 37178.58, "type": "TEXTEDITING", "ts": 37176, "text": "", "start": 0, "length": 0}
+{"k": "raw", "t": 37178.94, "type": "TEXTEDITING", "ts": 37177, "text": "", "start": 0, "length": 0}
+{"k": "raw", "t": 37178.99, "type": "TEXTEDITING", "ts": 37177, "text": "", "start": 0, "length": 0}
+{"k": "raw", "t": 37179.92, "type": "KEYMAPCHANGED", "ts": 37177}
+{"k": "pg", "t": 37181.63, "type": "TextEditing", "text": ""}
+{"k": "pg", "t": 37181.67, "type": "TextEditing", "text": ""}
+{"k": "pg", "t": 37181.69, "type": "TextEditing", "text": ""}
+{"k": "pg", "t": 37181.71, "type": "KeyMapChanged"}
+{"k": "pg", "t": 44032.38, "type": "MouseButtonDown"}
+{"k": "step", "t": 44032.49, "n": 3, "id": "German keys", "text": "Type the same four keys again.", "attempt": 0, "flush": false, "main_hkl": "0x04070407", "text_input_active": true}
+{"k": "pg", "t": 44254.5, "type": "MouseButtonUp"}
+{"k": "raw", "t": 55596.61, "type": "WINDOW", "ts": 55594, "wev": "LEAVE"}
+{"k": "pg", "t": 55596.78, "type": "WindowLeave"}
+{"k": "raw", "t": 57641.84, "type": "WINDOW", "ts": 57639, "wev": "FOCUS_LOST"}
+{"k": "raw", "t": 57643.74, "type": "TEXTEDITING", "ts": 57641, "text": "", "start": 0, "length": 0}
+{"k": "pg", "t": 57655.15, "type": "WindowFocusLost"}
+{"k": "pg", "t": 57655.19, "type": "TextEditing", "text": ""}
+{"k": "hook", "dir": "down", "t": 60450.69, "msg": 256, "vk": 84, "scan": 20, "flags": 0, "ll_time": 37539593, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 60596.53, "msg": 257, "vk": 84, "scan": 20, "flags": 128, "ll_time": 37539734, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 60606.61, "msg": 256, "vk": 65, "scan": 30, "flags": 0, "ll_time": 37539750, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 60751.24, "msg": 257, "vk": 65, "scan": 30, "flags": 128, "ll_time": 37539890, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 60764.56, "msg": 256, "vk": 75, "scan": 37, "flags": 0, "ll_time": 37539906, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 14, "char": "k", "dead": false, "kvk": 75, "tr_char": "k", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 60860.43, "msg": 257, "vk": 75, "scan": 37, "flags": 128, "ll_time": 37540000, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 14, "char": "k", "dead": false, "kvk": 75, "tr_char": "k", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 60892.25, "msg": 256, "vk": 69, "scan": 18, "flags": 0, "ll_time": 37540031, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 61028.99, "msg": 257, "vk": 69, "scan": 18, "flags": 128, "ll_time": 37540171, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 61042.62, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37540171, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 61156.22, "msg": 256, "vk": 65, "scan": 30, "flags": 0, "ll_time": 37540296, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 61170.81, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37540312, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 61265.71, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37540406, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 61271.87, "msg": 257, "vk": 65, "scan": 30, "flags": 128, "ll_time": 37540406, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 61408.11, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37540546, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 61582.26, "msg": 256, "vk": 76, "scan": 38, "flags": 0, "ll_time": 37540718, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 15, "char": "l", "dead": false, "kvk": 76, "tr_char": "l", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 61695.0, "msg": 257, "vk": 76, "scan": 38, "flags": 128, "ll_time": 37540828, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 15, "char": "l", "dead": false, "kvk": 76, "tr_char": "l", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 61811.37, "msg": 256, "vk": 79, "scan": 24, "flags": 0, "ll_time": 37540953, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 18, "char": "o", "dead": false, "kvk": 79, "tr_char": "o", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 61904.59, "msg": 257, "vk": 79, "scan": 24, "flags": 128, "ll_time": 37541046, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 18, "char": "o", "dead": false, "kvk": 79, "tr_char": "o", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 61949.91, "msg": 256, "vk": 79, "scan": 24, "flags": 0, "ll_time": 37541078, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 18, "char": "o", "dead": false, "kvk": 79, "tr_char": "o", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 62080.74, "msg": 257, "vk": 79, "scan": 24, "flags": 128, "ll_time": 37541218, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 18, "char": "o", "dead": false, "kvk": 79, "tr_char": "o", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 62196.52, "msg": 256, "vk": 75, "scan": 37, "flags": 0, "ll_time": 37541328, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 14, "char": "k", "dead": false, "kvk": 75, "tr_char": "k", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 62335.38, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37541468, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 62352.72, "msg": 257, "vk": 75, "scan": 37, "flags": 128, "ll_time": 37541484, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 14, "char": "k", "dead": false, "kvk": 75, "tr_char": "k", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 62477.6, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37541609, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 62500.66, "msg": 256, "vk": 65, "scan": 30, "flags": 0, "ll_time": 37541640, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 62659.39, "msg": 257, "vk": 65, "scan": 30, "flags": 128, "ll_time": 37541796, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 62684.99, "msg": 256, "vk": 84, "scan": 20, "flags": 0, "ll_time": 37541828, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 62834.79, "msg": 257, "vk": 84, "scan": 20, "flags": 128, "ll_time": 37541968, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 62839.01, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37541968, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 62962.14, "msg": 256, "vk": 84, "scan": 20, "flags": 0, "ll_time": 37542093, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 62980.17, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37542109, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 63063.43, "msg": 256, "vk": 72, "scan": 35, "flags": 0, "ll_time": 37542203, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 11, "char": "h", "dead": false, "kvk": 72, "tr_char": "h", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 63099.02, "msg": 257, "vk": 84, "scan": 20, "flags": 128, "ll_time": 37542234, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 63179.63, "msg": 256, "vk": 69, "scan": 18, "flags": 0, "ll_time": 37542312, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 63191.18, "msg": 257, "vk": 72, "scan": 35, "flags": 128, "ll_time": 37542328, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 11, "char": "h", "dead": false, "kvk": 72, "tr_char": "h", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 63283.98, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37542421, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 63309.41, "msg": 257, "vk": 69, "scan": 18, "flags": 128, "ll_time": 37542437, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 63428.66, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37542562, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 63447.82, "msg": 256, "vk": 83, "scan": 31, "flags": 0, "ll_time": 37542578, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 22, "char": "s", "dead": false, "kvk": 83, "tr_char": "s", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 63580.72, "msg": 257, "vk": 83, "scan": 31, "flags": 128, "ll_time": 37542718, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 22, "char": "s", "dead": false, "kvk": 83, "tr_char": "s", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 63669.44, "msg": 256, "vk": 87, "scan": 17, "flags": 0, "ll_time": 37542796, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 26, "char": "w", "dead": false, "kvk": 87, "tr_char": "w", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 63798.68, "msg": 257, "vk": 87, "scan": 17, "flags": 128, "ll_time": 37542937, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 26, "char": "w", "dead": false, "kvk": 87, "tr_char": "w", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 63906.17, "msg": 256, "vk": 73, "scan": 23, "flags": 0, "ll_time": 37543046, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 12, "char": "i", "dead": false, "kvk": 73, "tr_char": "i", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 64085.13, "msg": 257, "vk": 73, "scan": 23, "flags": 128, "ll_time": 37543218, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 12, "char": "i", "dead": false, "kvk": 73, "tr_char": "i", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 64294.49, "msg": 256, "vk": 84, "scan": 20, "flags": 0, "ll_time": 37543421, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 64405.28, "msg": 257, "vk": 84, "scan": 20, "flags": 128, "ll_time": 37543546, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 64489.62, "msg": 256, "vk": 72, "scan": 35, "flags": 0, "ll_time": 37543625, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 11, "char": "h", "dead": false, "kvk": 72, "tr_char": "h", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 64565.77, "msg": 257, "vk": 72, "scan": 35, "flags": 128, "ll_time": 37543703, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 11, "char": "h", "dead": false, "kvk": 72, "tr_char": "h", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 64659.64, "msg": 256, "vk": 67, "scan": 46, "flags": 0, "ll_time": 37543796, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 6, "char": "c", "dead": false, "kvk": 67, "tr_char": "c", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 64785.63, "msg": 257, "vk": 67, "scan": 46, "flags": 128, "ll_time": 37543921, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 6, "char": "c", "dead": false, "kvk": 67, "tr_char": "c", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 65359.27, "msg": 256, "vk": 8, "scan": 14, "flags": 0, "ll_time": 37544500, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 42, "name": "backspace", "tr_char": null, "tr_name": "backspace"}
+{"k": "hook", "dir": "up", "t": 65477.45, "msg": 257, "vk": 8, "scan": 14, "flags": 128, "ll_time": 37544609, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 42, "name": "backspace", "tr_char": null, "tr_name": "backspace"}
+{"k": "hook", "dir": "down", "t": 65500.74, "msg": 256, "vk": 8, "scan": 14, "flags": 0, "ll_time": 37544640, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 42, "name": "backspace", "tr_char": null, "tr_name": "backspace"}
+{"k": "hook", "dir": "up", "t": 65677.41, "msg": 257, "vk": 8, "scan": 14, "flags": 128, "ll_time": 37544812, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 42, "name": "backspace", "tr_char": null, "tr_name": "backspace"}
+{"k": "hook", "dir": "down", "t": 65695.78, "msg": 256, "vk": 67, "scan": 46, "flags": 0, "ll_time": 37544828, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 6, "char": "c", "dead": false, "kvk": 67, "tr_char": "c", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 65843.37, "msg": 257, "vk": 67, "scan": 46, "flags": 128, "ll_time": 37544984, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 6, "char": "c", "dead": false, "kvk": 67, "tr_char": "c", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 65872.71, "msg": 256, "vk": 72, "scan": 35, "flags": 0, "ll_time": 37545015, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 11, "char": "h", "dead": false, "kvk": 72, "tr_char": "h", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 65964.29, "msg": 257, "vk": 72, "scan": 35, "flags": 128, "ll_time": 37545093, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 11, "char": "h", "dead": false, "kvk": 72, "tr_char": "h", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 66803.5, "msg": 256, "vk": 188, "scan": 51, "flags": 0, "ll_time": 37545937, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 54, "char": ",", "dead": false, "kvk": 188, "tr_char": ",", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 66869.32, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37546000, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 66937.83, "msg": 257, "vk": 188, "scan": 51, "flags": 128, "ll_time": 37546078, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 54, "char": ",", "dead": false, "kvk": 188, "tr_char": ",", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 66993.98, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37546125, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 69363.02, "msg": 256, "vk": 73, "scan": 23, "flags": 0, "ll_time": 37548500, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 12, "char": "i", "dead": false, "kvk": 73, "tr_char": "i", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 69472.27, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37548609, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 69527.7, "msg": 257, "vk": 73, "scan": 23, "flags": 128, "ll_time": 37548656, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 12, "char": "i", "dead": false, "kvk": 73, "tr_char": "i", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 69608.91, "msg": 256, "vk": 87, "scan": 17, "flags": 0, "ll_time": 37548750, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 26, "char": "w", "dead": false, "kvk": 87, "tr_char": "w", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 69648.02, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37548781, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 69759.15, "msg": 257, "vk": 87, "scan": 17, "flags": 128, "ll_time": 37548890, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 26, "char": "w", "dead": false, "kvk": 87, "tr_char": "w", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 69831.49, "msg": 256, "vk": 65, "scan": 30, "flags": 0, "ll_time": 37548968, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 69894.6, "msg": 256, "vk": 83, "scan": 31, "flags": 0, "ll_time": 37549031, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 22, "char": "s", "dead": false, "kvk": 83, "tr_char": "s", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 69986.76, "msg": 257, "vk": 65, "scan": 30, "flags": 128, "ll_time": 37549125, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 70066.24, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37549203, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 70082.33, "msg": 257, "vk": 83, "scan": 31, "flags": 128, "ll_time": 37549218, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 22, "char": "s", "dead": false, "kvk": 83, "tr_char": "s", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 70219.81, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37549359, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 70223.52, "msg": 256, "vk": 65, "scan": 30, "flags": 0, "ll_time": 37549359, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 70315.84, "msg": 256, "vk": 83, "scan": 31, "flags": 0, "ll_time": 37549453, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 22, "char": "s", "dead": false, "kvk": 83, "tr_char": "s", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 70398.41, "msg": 257, "vk": 65, "scan": 30, "flags": 128, "ll_time": 37549531, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 70552.85, "msg": 257, "vk": 83, "scan": 31, "flags": 128, "ll_time": 37549687, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 22, "char": "s", "dead": false, "kvk": 83, "tr_char": "s", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 70556.51, "msg": 256, "vk": 75, "scan": 37, "flags": 0, "ll_time": 37549687, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 14, "char": "k", "dead": false, "kvk": 75, "tr_char": "k", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 70631.2, "msg": 256, "vk": 69, "scan": 18, "flags": 0, "ll_time": 37549765, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 70696.66, "msg": 257, "vk": 75, "scan": 37, "flags": 128, "ll_time": 37549828, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 14, "char": "k", "dead": false, "kvk": 75, "tr_char": "k", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 70748.06, "msg": 257, "vk": 69, "scan": 18, "flags": 128, "ll_time": 37549890, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 70847.3, "msg": 256, "vk": 68, "scan": 32, "flags": 0, "ll_time": 37549984, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 7, "char": "d", "dead": false, "kvk": 68, "tr_char": "d", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 71007.06, "msg": 257, "vk": 68, "scan": 32, "flags": 128, "ll_time": 37550140, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 7, "char": "d", "dead": false, "kvk": 68, "tr_char": "d", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 71019.41, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37550156, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 71147.96, "msg": 256, "vk": 84, "scan": 20, "flags": 0, "ll_time": 37550281, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 71166.53, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37550296, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 71262.15, "msg": 257, "vk": 84, "scan": 20, "flags": 128, "ll_time": 37550390, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 71271.86, "msg": 256, "vk": 79, "scan": 24, "flags": 0, "ll_time": 37550406, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 18, "char": "o", "dead": false, "kvk": 79, "tr_char": "o", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 71355.26, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37550484, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 71442.09, "msg": 257, "vk": 79, "scan": 24, "flags": 128, "ll_time": 37550578, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 18, "char": "o", "dead": false, "kvk": 79, "tr_char": "o", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 71495.95, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37550625, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 71811.64, "msg": 256, "vk": 83, "scan": 31, "flags": 0, "ll_time": 37550953, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 22, "char": "s", "dead": false, "kvk": 83, "tr_char": "s", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 71930.78, "msg": 257, "vk": 83, "scan": 31, "flags": 128, "ll_time": 37551062, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 22, "char": "s", "dead": false, "kvk": 83, "tr_char": "s", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 72064.22, "msg": 256, "vk": 87, "scan": 17, "flags": 0, "ll_time": 37551203, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 26, "char": "w", "dead": false, "kvk": 87, "tr_char": "w", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 72176.87, "msg": 257, "vk": 87, "scan": 17, "flags": 128, "ll_time": 37551312, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 26, "char": "w", "dead": false, "kvk": 87, "tr_char": "w", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 72623.33, "msg": 256, "vk": 73, "scan": 23, "flags": 0, "ll_time": 37551765, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 12, "char": "i", "dead": false, "kvk": 73, "tr_char": "i", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 72714.72, "msg": 257, "vk": 73, "scan": 23, "flags": 128, "ll_time": 37551843, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 12, "char": "i", "dead": false, "kvk": 73, "tr_char": "i", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 72738.05, "msg": 256, "vk": 84, "scan": 20, "flags": 0, "ll_time": 37551875, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 72846.66, "msg": 257, "vk": 84, "scan": 20, "flags": 128, "ll_time": 37551984, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 73007.88, "msg": 256, "vk": 67, "scan": 46, "flags": 0, "ll_time": 37552140, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 6, "char": "c", "dead": false, "kvk": 67, "tr_char": "c", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 73127.29, "msg": 256, "vk": 72, "scan": 35, "flags": 0, "ll_time": 37552265, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 11, "char": "h", "dead": false, "kvk": 72, "tr_char": "h", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 73138.16, "msg": 257, "vk": 67, "scan": 46, "flags": 128, "ll_time": 37552265, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 6, "char": "c", "dead": false, "kvk": 67, "tr_char": "c", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 73240.64, "msg": 257, "vk": 72, "scan": 35, "flags": 128, "ll_time": 37552375, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 11, "char": "h", "dead": false, "kvk": 72, "tr_char": "h", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 73354.33, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37552484, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 73483.35, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37552625, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 73566.79, "msg": 256, "vk": 84, "scan": 20, "flags": 0, "ll_time": 37552703, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 73684.07, "msg": 257, "vk": 84, "scan": 20, "flags": 128, "ll_time": 37552812, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 73687.42, "msg": 256, "vk": 79, "scan": 24, "flags": 0, "ll_time": 37552828, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 18, "char": "o", "dead": false, "kvk": 79, "tr_char": "o", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 73798.64, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37552937, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 73857.4, "msg": 257, "vk": 79, "scan": 24, "flags": 128, "ll_time": 37553000, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 18, "char": "o", "dead": false, "kvk": 79, "tr_char": "o", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 73894.93, "msg": 256, "vk": 71, "scan": 34, "flags": 0, "ll_time": 37553031, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 10, "char": "g", "dead": false, "kvk": 71, "tr_char": "g", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 73955.08, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37553093, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 73988.59, "msg": 256, "vk": 69, "scan": 18, "flags": 0, "ll_time": 37553125, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 74053.26, "msg": 257, "vk": 71, "scan": 34, "flags": 128, "ll_time": 37553187, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 10, "char": "g", "dead": false, "kvk": 71, "tr_char": "g", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 74089.09, "msg": 256, "vk": 82, "scan": 19, "flags": 0, "ll_time": 37553218, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 21, "char": "r", "dead": false, "kvk": 82, "tr_char": "r", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 74161.89, "msg": 257, "vk": 69, "scan": 18, "flags": 128, "ll_time": 37553296, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 74244.87, "msg": 257, "vk": 82, "scan": 19, "flags": 128, "ll_time": 37553375, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 21, "char": "r", "dead": false, "kvk": 82, "tr_char": "r", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 74323.4, "msg": 256, "vk": 77, "scan": 50, "flags": 0, "ll_time": 37553453, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 16, "char": "m", "dead": false, "kvk": 77, "tr_char": "m", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 74457.76, "msg": 257, "vk": 77, "scan": 50, "flags": 128, "ll_time": 37553593, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 16, "char": "m", "dead": false, "kvk": 77, "tr_char": "m", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 74505.74, "msg": 256, "vk": 65, "scan": 30, "flags": 0, "ll_time": 37553640, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 74601.8, "msg": 257, "vk": 65, "scan": 30, "flags": 128, "ll_time": 37553734, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 74892.84, "msg": 256, "vk": 78, "scan": 49, "flags": 0, "ll_time": 37554031, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 17, "char": "n", "dead": false, "kvk": 78, "tr_char": "n", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 74976.47, "msg": 257, "vk": 78, "scan": 49, "flags": 128, "ll_time": 37554109, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 17, "char": "n", "dead": false, "kvk": 78, "tr_char": "n", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 75326.71, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37554468, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 75450.67, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37554593, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 75457.21, "msg": 256, "vk": 65, "scan": 30, "flags": 0, "ll_time": 37554593, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 75563.5, "msg": 256, "vk": 78, "scan": 49, "flags": 0, "ll_time": 37554703, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 17, "char": "n", "dead": false, "kvk": 78, "tr_char": "n", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 75578.56, "msg": 257, "vk": 65, "scan": 30, "flags": 128, "ll_time": 37554718, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 75653.61, "msg": 257, "vk": 78, "scan": 49, "flags": 128, "ll_time": 37554796, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 17, "char": "n", "dead": false, "kvk": 78, "tr_char": "n", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 75671.41, "msg": 256, "vk": 68, "scan": 32, "flags": 0, "ll_time": 37554812, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 7, "char": "d", "dead": false, "kvk": 68, "tr_char": "d", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 75783.98, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37554921, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 75798.54, "msg": 257, "vk": 68, "scan": 32, "flags": 128, "ll_time": 37554937, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 7, "char": "d", "dead": false, "kvk": 68, "tr_char": "d", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 75889.97, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37555031, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 75928.44, "msg": 256, "vk": 84, "scan": 20, "flags": 0, "ll_time": 37555062, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 76032.76, "msg": 257, "vk": 84, "scan": 20, "flags": 128, "ll_time": 37555171, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 76562.34, "msg": 256, "vk": 8, "scan": 14, "flags": 0, "ll_time": 37555703, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 42, "name": "backspace", "tr_char": null, "tr_name": "backspace"}
+{"k": "hook", "dir": "down", "t": 76656.96, "msg": 256, "vk": 65, "scan": 30, "flags": 0, "ll_time": 37555796, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 76671.38, "msg": 257, "vk": 8, "scan": 14, "flags": 128, "ll_time": 37555812, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 42, "name": "backspace", "tr_char": null, "tr_name": "backspace"}
+{"k": "hook", "dir": "down", "t": 76784.68, "msg": 256, "vk": 70, "scan": 33, "flags": 0, "ll_time": 37555921, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 9, "char": "f", "dead": false, "kvk": 70, "tr_char": "f", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 76845.42, "msg": 257, "vk": 65, "scan": 30, "flags": 128, "ll_time": 37555984, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 76918.84, "msg": 257, "vk": 70, "scan": 33, "flags": 128, "ll_time": 37556046, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 9, "char": "f", "dead": false, "kvk": 70, "tr_char": "f", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 77016.03, "msg": 256, "vk": 84, "scan": 20, "flags": 0, "ll_time": 37556156, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 77116.28, "msg": 256, "vk": 69, "scan": 18, "flags": 0, "ll_time": 37556250, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 77180.83, "msg": 257, "vk": 84, "scan": 20, "flags": 128, "ll_time": 37556312, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 77186.17, "msg": 256, "vk": 82, "scan": 19, "flags": 0, "ll_time": 37556328, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 21, "char": "r", "dead": false, "kvk": 82, "tr_char": "r", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 77259.89, "msg": 257, "vk": 69, "scan": 18, "flags": 128, "ll_time": 37556390, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 77299.86, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37556437, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 77310.2, "msg": 257, "vk": 82, "scan": 19, "flags": 128, "ll_time": 37556437, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 21, "char": "r", "dead": false, "kvk": 82, "tr_char": "r", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 77460.09, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37556593, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 77462.51, "msg": 256, "vk": 83, "scan": 31, "flags": 0, "ll_time": 37556593, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 22, "char": "s", "dead": false, "kvk": 83, "tr_char": "s", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 77587.32, "msg": 257, "vk": 83, "scan": 31, "flags": 128, "ll_time": 37556718, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 22, "char": "s", "dead": false, "kvk": 83, "tr_char": "s", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 78010.51, "msg": 256, "vk": 87, "scan": 17, "flags": 0, "ll_time": 37557140, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 26, "char": "w", "dead": false, "kvk": 87, "tr_char": "w", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 78136.54, "msg": 257, "vk": 87, "scan": 17, "flags": 128, "ll_time": 37557265, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 26, "char": "w", "dead": false, "kvk": 87, "tr_char": "w", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 78157.67, "msg": 256, "vk": 73, "scan": 23, "flags": 0, "ll_time": 37557296, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 12, "char": "i", "dead": false, "kvk": 73, "tr_char": "i", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 78250.36, "msg": 256, "vk": 84, "scan": 20, "flags": 0, "ll_time": 37557390, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 78265.67, "msg": 257, "vk": 73, "scan": 23, "flags": 128, "ll_time": 37557406, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 12, "char": "i", "dead": false, "kvk": 73, "tr_char": "i", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 78338.59, "msg": 257, "vk": 84, "scan": 20, "flags": 128, "ll_time": 37557468, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 78491.24, "msg": 256, "vk": 67, "scan": 46, "flags": 0, "ll_time": 37557625, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 6, "char": "c", "dead": false, "kvk": 67, "tr_char": "c", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 78609.89, "msg": 257, "vk": 67, "scan": 46, "flags": 128, "ll_time": 37557750, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 6, "char": "c", "dead": false, "kvk": 67, "tr_char": "c", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 78617.08, "msg": 256, "vk": 72, "scan": 35, "flags": 0, "ll_time": 37557750, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 11, "char": "h", "dead": false, "kvk": 72, "tr_char": "h", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 78713.64, "msg": 257, "vk": 72, "scan": 35, "flags": 128, "ll_time": 37557843, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 11, "char": "h", "dead": false, "kvk": 72, "tr_char": "h", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 79488.47, "msg": 256, "vk": 73, "scan": 23, "flags": 0, "ll_time": 37558625, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 12, "char": "i", "dead": false, "kvk": 73, "tr_char": "i", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 79553.03, "msg": 256, "vk": 78, "scan": 49, "flags": 0, "ll_time": 37558687, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 17, "char": "n", "dead": false, "kvk": 78, "tr_char": "n", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 79641.41, "msg": 257, "vk": 73, "scan": 23, "flags": 128, "ll_time": 37558781, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 12, "char": "i", "dead": false, "kvk": 73, "tr_char": "i", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 79645.21, "msg": 256, "vk": 71, "scan": 34, "flags": 0, "ll_time": 37558781, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 10, "char": "g", "dead": false, "kvk": 71, "tr_char": "g", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 79703.51, "msg": 257, "vk": 78, "scan": 49, "flags": 128, "ll_time": 37558843, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 17, "char": "n", "dead": false, "kvk": 78, "tr_char": "n", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 79753.29, "msg": 257, "vk": 71, "scan": 34, "flags": 128, "ll_time": 37558890, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 10, "char": "g", "dead": false, "kvk": 71, "tr_char": "g", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 80084.87, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37559218, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 80147.19, "msg": 256, "vk": 87, "scan": 17, "flags": 0, "ll_time": 37559281, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 26, "char": "w", "dead": false, "kvk": 87, "tr_char": "w", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 80212.87, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37559343, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 80305.75, "msg": 257, "vk": 87, "scan": 17, "flags": 128, "ll_time": 37559437, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 26, "char": "w", "dead": false, "kvk": 87, "tr_char": "w", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 80384.47, "msg": 256, "vk": 65, "scan": 30, "flags": 0, "ll_time": 37559515, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 80444.23, "msg": 256, "vk": 83, "scan": 31, "flags": 0, "ll_time": 37559578, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 22, "char": "s", "dead": false, "kvk": 83, "tr_char": "s", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 80509.02, "msg": 257, "vk": 65, "scan": 30, "flags": 128, "ll_time": 37559640, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 80563.55, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37559703, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 80573.46, "msg": 257, "vk": 83, "scan": 31, "flags": 128, "ll_time": 37559703, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 22, "char": "s", "dead": false, "kvk": 83, "tr_char": "s", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 80678.16, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37559812, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 80747.1, "msg": 256, "vk": 65, "scan": 30, "flags": 0, "ll_time": 37559875, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 80857.42, "msg": 256, "vk": 83, "scan": 31, "flags": 0, "ll_time": 37560000, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 22, "char": "s", "dead": false, "kvk": 83, "tr_char": "s", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 80912.72, "msg": 257, "vk": 65, "scan": 30, "flags": 128, "ll_time": 37560046, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 81025.38, "msg": 256, "vk": 75, "scan": 37, "flags": 0, "ll_time": 37560156, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 14, "char": "k", "dead": false, "kvk": 75, "tr_char": "k", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 81034.37, "msg": 257, "vk": 83, "scan": 31, "flags": 128, "ll_time": 37560171, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 22, "char": "s", "dead": false, "kvk": 83, "tr_char": "s", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 81136.3, "msg": 257, "vk": 75, "scan": 37, "flags": 128, "ll_time": 37560265, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 14, "char": "k", "dead": false, "kvk": 75, "tr_char": "k", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 81162.56, "msg": 256, "vk": 69, "scan": 18, "flags": 0, "ll_time": 37560296, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 81266.31, "msg": 257, "vk": 69, "scan": 18, "flags": 128, "ll_time": 37560406, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 81347.71, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37560484, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 81403.22, "msg": 256, "vk": 68, "scan": 32, "flags": 0, "ll_time": 37560546, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 7, "char": "d", "dead": false, "kvk": 68, "tr_char": "d", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 81441.91, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37560578, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 81532.41, "msg": 257, "vk": 68, "scan": 32, "flags": 128, "ll_time": 37560671, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 7, "char": "d", "dead": false, "kvk": 68, "tr_char": "d", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 81983.72, "msg": 256, "vk": 8, "scan": 14, "flags": 0, "ll_time": 37561125, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 42, "name": "backspace", "tr_char": null, "tr_name": "backspace"}
+{"k": "hook", "dir": "up", "t": 82072.35, "msg": 257, "vk": 8, "scan": 14, "flags": 128, "ll_time": 37561203, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 42, "name": "backspace", "tr_char": null, "tr_name": "backspace"}
+{"k": "hook", "dir": "down", "t": 82112.56, "msg": 256, "vk": 8, "scan": 14, "flags": 0, "ll_time": 37561250, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 42, "name": "backspace", "tr_char": null, "tr_name": "backspace"}
+{"k": "hook", "dir": "down", "t": 82206.87, "msg": 256, "vk": 68, "scan": 32, "flags": 0, "ll_time": 37561343, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 7, "char": "d", "dead": false, "kvk": 68, "tr_char": "d", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 82213.01, "msg": 257, "vk": 8, "scan": 14, "flags": 128, "ll_time": 37561343, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 42, "name": "backspace", "tr_char": null, "tr_name": "backspace"}
+{"k": "hook", "dir": "up", "t": 82339.14, "msg": 257, "vk": 68, "scan": 32, "flags": 128, "ll_time": 37561468, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 7, "char": "d", "dead": false, "kvk": 68, "tr_char": "d", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 82343.72, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37561484, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 82449.72, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37561578, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 82453.34, "msg": 256, "vk": 84, "scan": 20, "flags": 0, "ll_time": 37561593, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 82538.87, "msg": 256, "vk": 79, "scan": 24, "flags": 0, "ll_time": 37561671, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 18, "char": "o", "dead": false, "kvk": 79, "tr_char": "o", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 82549.69, "msg": 257, "vk": 84, "scan": 20, "flags": 128, "ll_time": 37561687, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 82633.37, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37561765, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 82704.11, "msg": 257, "vk": 79, "scan": 24, "flags": 128, "ll_time": 37561843, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 18, "char": "o", "dead": false, "kvk": 79, "tr_char": "o", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 82786.86, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37561921, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 82847.4, "msg": 256, "vk": 84, "scan": 20, "flags": 0, "ll_time": 37561984, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 82986.72, "msg": 256, "vk": 72, "scan": 35, "flags": 0, "ll_time": 37562125, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 11, "char": "h", "dead": false, "kvk": 72, "tr_char": "h", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 83009.75, "msg": 257, "vk": 84, "scan": 20, "flags": 128, "ll_time": 37562140, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 83092.79, "msg": 257, "vk": 72, "scan": 35, "flags": 128, "ll_time": 37562234, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 11, "char": "h", "dead": false, "kvk": 72, "tr_char": "h", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 83106.1, "msg": 256, "vk": 69, "scan": 18, "flags": 0, "ll_time": 37562250, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 83204.14, "msg": 257, "vk": 69, "scan": 18, "flags": 128, "ll_time": 37562343, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 83242.62, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37562375, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 83402.1, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37562531, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 83965.3, "msg": 256, "vk": 84, "scan": 20, "flags": 0, "ll_time": 37563093, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 84089.71, "msg": 257, "vk": 84, "scan": 20, "flags": 128, "ll_time": 37563218, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 84095.54, "msg": 256, "vk": 72, "scan": 35, "flags": 0, "ll_time": 37563234, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 11, "char": "h", "dead": false, "kvk": 72, "tr_char": "h", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 84183.78, "msg": 257, "vk": 72, "scan": 35, "flags": 128, "ll_time": 37563312, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 11, "char": "h", "dead": false, "kvk": 72, "tr_char": "h", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 84188.05, "msg": 256, "vk": 69, "scan": 18, "flags": 0, "ll_time": 37563328, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 84257.1, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37563390, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 84320.26, "msg": 257, "vk": 69, "scan": 18, "flags": 128, "ll_time": 37563453, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 84402.26, "msg": 256, "vk": 70, "scan": 33, "flags": 0, "ll_time": 37563531, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 9, "char": "f", "dead": false, "kvk": 70, "tr_char": "f", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 84409.85, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37563546, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 84511.85, "msg": 256, "vk": 79, "scan": 24, "flags": 0, "ll_time": 37563640, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 18, "char": "o", "dead": false, "kvk": 79, "tr_char": "o", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 84543.07, "msg": 257, "vk": 70, "scan": 33, "flags": 128, "ll_time": 37563671, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 9, "char": "f", "dead": false, "kvk": 70, "tr_char": "f", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 84608.42, "msg": 256, "vk": 85, "scan": 22, "flags": 0, "ll_time": 37563750, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 24, "char": "u", "dead": false, "kvk": 85, "tr_char": "u", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 84667.34, "msg": 257, "vk": 79, "scan": 24, "flags": 128, "ll_time": 37563796, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 18, "char": "o", "dead": false, "kvk": 79, "tr_char": "o", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 84695.7, "msg": 256, "vk": 82, "scan": 19, "flags": 0, "ll_time": 37563828, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 21, "char": "r", "dead": false, "kvk": 82, "tr_char": "r", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 84724.04, "msg": 257, "vk": 85, "scan": 22, "flags": 128, "ll_time": 37563859, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 24, "char": "u", "dead": false, "kvk": 85, "tr_char": "u", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 84808.81, "msg": 257, "vk": 82, "scan": 19, "flags": 128, "ll_time": 37563937, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 21, "char": "r", "dead": false, "kvk": 82, "tr_char": "r", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 84831.18, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37563968, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 84980.37, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37564109, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 84997.6, "msg": 256, "vk": 76, "scan": 38, "flags": 0, "ll_time": 37564140, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 15, "char": "l", "dead": false, "kvk": 76, "tr_char": "l", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 85049.17, "msg": 256, "vk": 69, "scan": 18, "flags": 0, "ll_time": 37564187, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 85112.27, "msg": 257, "vk": 76, "scan": 38, "flags": 128, "ll_time": 37564250, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 15, "char": "l", "dead": false, "kvk": 76, "tr_char": "l", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 85223.38, "msg": 257, "vk": 69, "scan": 18, "flags": 128, "ll_time": 37564359, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 85318.0, "msg": 256, "vk": 84, "scan": 20, "flags": 0, "ll_time": 37564453, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 85404.44, "msg": 257, "vk": 84, "scan": 20, "flags": 128, "ll_time": 37564546, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 85461.81, "msg": 256, "vk": 84, "scan": 20, "flags": 0, "ll_time": 37564593, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 85588.57, "msg": 256, "vk": 69, "scan": 18, "flags": 0, "ll_time": 37564718, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 85598.9, "msg": 257, "vk": 84, "scan": 20, "flags": 128, "ll_time": 37564734, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 85698.93, "msg": 256, "vk": 82, "scan": 19, "flags": 0, "ll_time": 37564828, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 21, "char": "r", "dead": false, "kvk": 82, "tr_char": "r", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 85778.31, "msg": 257, "vk": 69, "scan": 18, "flags": 128, "ll_time": 37564906, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 85819.37, "msg": 257, "vk": 82, "scan": 19, "flags": 128, "ll_time": 37564953, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 21, "char": "r", "dead": false, "kvk": 82, "tr_char": "r", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 85910.66, "msg": 256, "vk": 83, "scan": 31, "flags": 0, "ll_time": 37565046, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 22, "char": "s", "dead": false, "kvk": 83, "tr_char": "s", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 86070.91, "msg": 257, "vk": 83, "scan": 31, "flags": 128, "ll_time": 37565203, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 22, "char": "s", "dead": false, "kvk": 83, "tr_char": "s", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 86074.85, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37565203, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 86181.11, "msg": 256, "vk": 65, "scan": 30, "flags": 0, "ll_time": 37565312, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 86216.85, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37565359, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 86328.54, "msg": 257, "vk": 65, "scan": 30, "flags": 128, "ll_time": 37565468, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 86373.81, "msg": 256, "vk": 71, "scan": 34, "flags": 0, "ll_time": 37565515, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 10, "char": "g", "dead": false, "kvk": 71, "tr_char": "g", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 86456.34, "msg": 256, "vk": 65, "scan": 30, "flags": 0, "ll_time": 37565593, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 86515.58, "msg": 257, "vk": 71, "scan": 34, "flags": 128, "ll_time": 37565656, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 10, "char": "g", "dead": false, "kvk": 71, "tr_char": "g", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 86604.71, "msg": 257, "vk": 65, "scan": 30, "flags": 128, "ll_time": 37565734, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 86664.21, "msg": 256, "vk": 73, "scan": 23, "flags": 0, "ll_time": 37565796, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 12, "char": "i", "dead": false, "kvk": 73, "tr_char": "i", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 86769.42, "msg": 256, "vk": 78, "scan": 49, "flags": 0, "ll_time": 37565906, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 17, "char": "n", "dead": false, "kvk": 78, "tr_char": "n", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 86857.87, "msg": 257, "vk": 73, "scan": 23, "flags": 128, "ll_time": 37566000, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 12, "char": "i", "dead": false, "kvk": 73, "tr_char": "i", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 86907.9, "msg": 257, "vk": 78, "scan": 49, "flags": 128, "ll_time": 37566046, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 17, "char": "n", "dead": false, "kvk": 78, "tr_char": "n", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 88338.36, "msg": 256, "vk": 188, "scan": 51, "flags": 0, "ll_time": 37567468, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 54, "char": ",", "dead": false, "kvk": 188, "tr_char": ",", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 88405.61, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37567546, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 88502.72, "msg": 257, "vk": 188, "scan": 51, "flags": 128, "ll_time": 37567640, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 54, "char": ",", "dead": false, "kvk": 188, "tr_char": ",", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 88551.85, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37567687, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 88823.63, "msg": 256, "vk": 87, "scan": 17, "flags": 0, "ll_time": 37567953, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 26, "char": "w", "dead": false, "kvk": 87, "tr_char": "w", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 88971.37, "msg": 257, "vk": 87, "scan": 17, "flags": 128, "ll_time": 37568109, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 26, "char": "w", "dead": false, "kvk": 87, "tr_char": "w", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 89189.38, "msg": 256, "vk": 72, "scan": 35, "flags": 0, "ll_time": 37568328, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 11, "char": "h", "dead": false, "kvk": 72, "tr_char": "h", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 89273.17, "msg": 257, "vk": 72, "scan": 35, "flags": 128, "ll_time": 37568406, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 11, "char": "h", "dead": false, "kvk": 72, "tr_char": "h", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 89365.64, "msg": 256, "vk": 73, "scan": 23, "flags": 0, "ll_time": 37568500, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 12, "char": "i", "dead": false, "kvk": 73, "tr_char": "i", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 89479.59, "msg": 256, "vk": 67, "scan": 46, "flags": 0, "ll_time": 37568609, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 6, "char": "c", "dead": false, "kvk": 67, "tr_char": "c", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 89491.86, "msg": 257, "vk": 73, "scan": 23, "flags": 128, "ll_time": 37568625, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 12, "char": "i", "dead": false, "kvk": 73, "tr_char": "i", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 89604.8, "msg": 256, "vk": 72, "scan": 35, "flags": 0, "ll_time": 37568734, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 11, "char": "h", "dead": false, "kvk": 72, "tr_char": "h", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 89614.3, "msg": 257, "vk": 67, "scan": 46, "flags": 128, "ll_time": 37568750, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 6, "char": "c", "dead": false, "kvk": 67, "tr_char": "c", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 89722.49, "msg": 257, "vk": 72, "scan": 35, "flags": 128, "ll_time": 37568859, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 11, "char": "h", "dead": false, "kvk": 72, "tr_char": "h", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 89735.25, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37568875, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 89920.14, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37569062, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 89943.53, "msg": 256, "vk": 70, "scan": 33, "flags": 0, "ll_time": 37569078, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 9, "char": "f", "dead": false, "kvk": 70, "tr_char": "f", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 90045.84, "msg": 256, "vk": 79, "scan": 24, "flags": 0, "ll_time": 37569187, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 18, "char": "o", "dead": false, "kvk": 79, "tr_char": "o", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 90091.78, "msg": 257, "vk": 70, "scan": 33, "flags": 128, "ll_time": 37569234, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 9, "char": "f", "dead": false, "kvk": 70, "tr_char": "f", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 90241.94, "msg": 256, "vk": 85, "scan": 22, "flags": 0, "ll_time": 37569375, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 24, "char": "u", "dead": false, "kvk": 85, "tr_char": "u", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 90277.49, "msg": 257, "vk": 79, "scan": 24, "flags": 128, "ll_time": 37569406, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 18, "char": "o", "dead": false, "kvk": 79, "tr_char": "o", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 90327.59, "msg": 256, "vk": 82, "scan": 19, "flags": 0, "ll_time": 37569468, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 21, "char": "r", "dead": false, "kvk": 82, "tr_char": "r", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 90350.84, "msg": 257, "vk": 85, "scan": 22, "flags": 128, "ll_time": 37569484, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 24, "char": "u", "dead": false, "kvk": 85, "tr_char": "u", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 90427.7, "msg": 257, "vk": 82, "scan": 19, "flags": 128, "ll_time": 37569562, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 21, "char": "r", "dead": false, "kvk": 82, "tr_char": "r", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 90496.68, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37569625, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 90661.07, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37569796, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "down", "t": 90664.68, "msg": 256, "vk": 76, "scan": 38, "flags": 0, "ll_time": 37569796, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 15, "char": "l", "dead": false, "kvk": 76, "tr_char": "l", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 90745.34, "msg": 256, "vk": 69, "scan": 18, "flags": 0, "ll_time": 37569875, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 90805.3, "msg": 257, "vk": 76, "scan": 38, "flags": 128, "ll_time": 37569937, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 15, "char": "l", "dead": false, "kvk": 76, "tr_char": "l", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 90877.65, "msg": 257, "vk": 69, "scan": 18, "flags": 128, "ll_time": 37570015, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 90949.35, "msg": 256, "vk": 84, "scan": 20, "flags": 0, "ll_time": 37570078, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 91044.62, "msg": 257, "vk": 84, "scan": 20, "flags": 128, "ll_time": 37570187, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 91117.17, "msg": 256, "vk": 84, "scan": 20, "flags": 0, "ll_time": 37570250, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 91215.96, "msg": 256, "vk": 69, "scan": 18, "flags": 0, "ll_time": 37570343, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 91243.17, "msg": 257, "vk": 84, "scan": 20, "flags": 128, "ll_time": 37570375, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 23, "char": "t", "dead": false, "kvk": 84, "tr_char": "t", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 91325.43, "msg": 256, "vk": 82, "scan": 19, "flags": 0, "ll_time": 37570468, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 21, "char": "r", "dead": false, "kvk": 82, "tr_char": "r", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 91398.39, "msg": 257, "vk": 69, "scan": 18, "flags": 128, "ll_time": 37570531, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 91450.23, "msg": 257, "vk": 82, "scan": 19, "flags": 128, "ll_time": 37570578, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 21, "char": "r", "dead": false, "kvk": 82, "tr_char": "r", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 91546.51, "msg": 256, "vk": 83, "scan": 31, "flags": 0, "ll_time": 37570687, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 22, "char": "s", "dead": false, "kvk": 83, "tr_char": "s", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 91696.09, "msg": 257, "vk": 83, "scan": 31, "flags": 128, "ll_time": 37570828, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 22, "char": "s", "dead": false, "kvk": 83, "tr_char": "s", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 91965.36, "msg": 256, "vk": 160, "scan": 42, "flags": 0, "ll_time": 37571093, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 225, "name": "shift", "tr_char": null, "tr_name": "shift"}
+{"k": "hook", "dir": "down", "t": 92232.2, "msg": 256, "vk": 219, "scan": 12, "flags": 0, "ll_time": 37571375, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 45, "char": "{", "dead": false, "kvk": 219, "tr_char": "{", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 92349.72, "msg": 257, "vk": 219, "scan": 12, "flags": 128, "ll_time": 37571484, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 45, "char": "{", "dead": false, "kvk": 219, "tr_char": "{", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 92548.74, "msg": 257, "vk": 160, "scan": 42, "flags": 128, "ll_time": 37571687, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 225, "name": "shift", "tr_char": null, "tr_name": "shift"}
+{"k": "hook", "dir": "down", "t": 92992.16, "msg": 256, "vk": 13, "scan": 28, "flags": 0, "ll_time": 37572125, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 40, "name": "enter", "tr_char": null, "tr_name": "enter"}
+{"k": "hook", "dir": "up", "t": 93129.97, "msg": 257, "vk": 13, "scan": 28, "flags": 128, "ll_time": 37572265, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 40, "name": "enter", "tr_char": null, "tr_name": "enter"}
+{"k": "raw", "t": 105686.2, "type": "WINDOW", "ts": 105684, "wev": "FOCUS_GAINED"}
+{"k": "raw", "t": 105703.41, "type": "WINDOW", "ts": 105701, "wev": "EXPOSED"}
+{"k": "pg", "t": 105705.99, "type": "WindowFocusGained"}
+{"k": "raw", "t": 106720.16, "type": "KEYDOWN", "ts": 106718, "sc": 29, "sym": 121, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 106720.2, "type": "TEXTINPUT", "ts": 106718, "text": "y"}
+{"k": "pg", "t": 106720.36, "type": "KeyDown", "key": 121, "sc": 29, "uni": "y", "mod": 4096, "dead": false}
+{"k": "pg", "t": 106720.4, "type": "TextInput", "text": "y"}
+{"k": "hook", "dir": "down", "t": 106718.51, "msg": 256, "vk": 89, "scan": 44, "flags": 0, "ll_time": 37585859, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 29, "char": "y", "dead": false, "kvk": 89, "tr_char": "y", "tr_name": null}
+{"k": "raw", "t": 106923.26, "type": "KEYUP", "ts": 106921, "sc": 29, "sym": 121, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 106923.41, "type": "KeyUp", "key": 121, "sc": 29, "uni": "y", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 106921.56, "msg": 257, "vk": 89, "scan": 44, "flags": 128, "ll_time": 37586062, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 29, "char": "y", "dead": false, "kvk": 89, "tr_char": "y", "tr_name": null}
+{"k": "raw", "t": 107341.41, "type": "KEYDOWN", "ts": 107339, "sc": 28, "sym": 122, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 107341.46, "type": "TEXTINPUT", "ts": 107339, "text": "z"}
+{"k": "pg", "t": 107341.62, "type": "KeyDown", "key": 122, "sc": 28, "uni": "z", "mod": 4096, "dead": false}
+{"k": "pg", "t": 107341.66, "type": "TextInput", "text": "z"}
+{"k": "hook", "dir": "down", "t": 107339.17, "msg": 256, "vk": 90, "scan": 21, "flags": 0, "ll_time": 37586468, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 28, "char": "z", "dead": false, "kvk": 90, "tr_char": "z", "tr_name": null}
+{"k": "raw", "t": 107489.38, "type": "KEYUP", "ts": 107487, "sc": 28, "sym": 122, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 107489.56, "type": "KeyUp", "key": 122, "sc": 28, "uni": "z", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 107487.57, "msg": 257, "vk": 90, "scan": 21, "flags": 128, "ll_time": 37586625, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 28, "char": "z", "dead": false, "kvk": 90, "tr_char": "z", "tr_name": null}
+{"k": "raw", "t": 109802.01, "type": "WINDOW", "ts": 109800, "wev": "FOCUS_LOST"}
+{"k": "raw", "t": 109802.17, "type": "TEXTEDITING", "ts": 109800, "text": "", "start": 0, "length": 0}
+{"k": "pg", "t": 109809.93, "type": "WindowFocusLost"}
+{"k": "pg", "t": 109809.96, "type": "TextEditing", "text": ""}
+{"k": "raw", "t": 118221.12, "type": "WINDOW", "ts": 118219, "wev": "FOCUS_GAINED"}
+{"k": "raw", "t": 118235.19, "type": "WINDOW", "ts": 118233, "wev": "EXPOSED"}
+{"k": "pg", "t": 118236.23, "type": "WindowFocusGained"}
+{"k": "raw", "t": 118806.84, "type": "KEYDOWN", "ts": 118804, "sc": 51, "sym": 246, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 118806.89, "type": "TEXTINPUT", "ts": 118804, "text": "ö"}
+{"k": "pg", "t": 118807.07, "type": "KeyDown", "key": 246, "sc": 51, "uni": "ö", "mod": 4096, "dead": false}
+{"k": "pg", "t": 118807.13, "type": "TextInput", "text": "ö"}
+{"k": "hook", "dir": "down", "t": 118804.56, "msg": 256, "vk": 192, "scan": 39, "flags": 0, "ll_time": 37597937, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 51, "char": "`", "dead": false, "kvk": 192, "tr_char": "`", "tr_name": null}
+{"k": "raw", "t": 119023.16, "type": "KEYUP", "ts": 119021, "sc": 51, "sym": 246, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 119023.33, "type": "KeyUp", "key": 246, "sc": 51, "uni": "ö", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 119021.24, "msg": 257, "vk": 192, "scan": 39, "flags": 128, "ll_time": 37598156, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 51, "char": "`", "dead": false, "kvk": 192, "tr_char": "`", "tr_name": null}
+{"k": "raw", "t": 119196.53, "type": "KEYDOWN", "ts": 119194, "sc": 52, "sym": 228, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 119196.63, "type": "TEXTINPUT", "ts": 119194, "text": "ä"}
+{"k": "pg", "t": 119197.03, "type": "KeyDown", "key": 228, "sc": 52, "uni": "ä", "mod": 4096, "dead": false}
+{"k": "pg", "t": 119197.24, "type": "TextInput", "text": "ä"}
+{"k": "hook", "dir": "down", "t": 119194.13, "msg": 256, "vk": 222, "scan": 40, "flags": 0, "ll_time": 37598328, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 52, "char": "'", "dead": false, "kvk": 222, "tr_char": "'", "tr_name": null}
+{"k": "raw", "t": 119358.57, "type": "KEYUP", "ts": 119356, "sc": 52, "sym": 228, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 119358.77, "type": "KeyUp", "key": 228, "sc": 52, "uni": "ä", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 119356.85, "msg": 257, "vk": 222, "scan": 40, "flags": 128, "ll_time": 37598500, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 52, "char": "'", "dead": false, "kvk": 222, "tr_char": "'", "tr_name": null}
+{"k": "raw", "t": 120175.14, "type": "WINDOW", "ts": 120173, "wev": "ENTER"}
+{"k": "pg", "t": 120175.33, "type": "WindowEnter"}
+{"k": "pg", "t": 120989.89, "type": "MouseButtonDown"}
+{"k": "step", "t": 120989.98, "n": 4, "id": "alt+shift", "text": "Press Left Alt + Shift once. Then type the same four keys again.", "attempt": 0, "flush": false, "main_hkl": "0x04070407", "text_input_active": true}
+{"k": "pg", "t": 121212.0, "type": "MouseButtonUp"}
+{"k": "hook", "dir": "down", "t": 129782.82, "msg": 260, "vk": 164, "scan": 56, "flags": 32, "ll_time": 37608921, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 226, "name": "alt_l", "tr_char": null, "tr_name": "alt_l"}
+{"k": "raw", "t": 129786.9, "type": "KEYDOWN", "ts": 129784, "sc": 226, "sym": 1073742050, "mod": 4352, "rep": 0, "state": 1}
+{"k": "pg", "t": 129787.11, "type": "KeyDown", "key": 1073742050, "sc": 226, "uni": "", "mod": 4352, "dead": false}
+{"k": "raw", "t": 129940.79, "type": "KEYDOWN", "ts": 129938, "sc": 224, "sym": 1073742048, "mod": 4416, "rep": 0, "state": 1}
+{"k": "pg", "t": 129940.95, "type": "KeyDown", "key": 1073742048, "sc": 224, "uni": "", "mod": 4416, "dead": false}
+{"k": "hook", "dir": "down", "t": 129939.01, "msg": 256, "vk": 162, "scan": 29, "flags": 0, "ll_time": 37609078, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 224, "name": "ctrl_l", "tr_char": null, "tr_name": "ctrl_l"}
+{"k": "raw", "t": 130204.31, "type": "KEYUP", "ts": 130202, "sc": 224, "sym": 1073742048, "mod": 4352, "rep": 0, "state": 0}
+{"k": "pg", "t": 130204.49, "type": "KeyUp", "key": 1073742048, "sc": 224, "uni": "", "mod": 4352}
+{"k": "hook", "dir": "up", "t": 130202.56, "msg": 261, "vk": 162, "scan": 29, "flags": 160, "ll_time": 37609343, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 224, "name": "ctrl_l", "tr_char": null, "tr_name": "ctrl_l"}
+{"k": "raw", "t": 130397.52, "type": "KEYUP", "ts": 130395, "sc": 226, "sym": 1073742050, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 130397.75, "type": "KeyUp", "key": 1073742050, "sc": 226, "uni": "", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 130395.3, "msg": 257, "vk": 164, "scan": 56, "flags": 128, "ll_time": 37609531, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 226, "name": "alt_l", "tr_char": null, "tr_name": "alt_l"}
+{"k": "raw", "t": 137755.4, "type": "KEYDOWN", "ts": 137753, "sc": 29, "sym": 121, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 137755.44, "type": "TEXTINPUT", "ts": 137753, "text": "y"}
+{"k": "pg", "t": 137755.68, "type": "KeyDown", "key": 121, "sc": 29, "uni": "y", "mod": 4096, "dead": false}
+{"k": "pg", "t": 137755.72, "type": "TextInput", "text": "y"}
+{"k": "hook", "dir": "down", "t": 137752.75, "msg": 256, "vk": 89, "scan": 44, "flags": 0, "ll_time": 37616890, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 29, "char": "y", "dead": false, "kvk": 89, "tr_char": "y", "tr_name": null}
+{"k": "raw", "t": 137908.17, "type": "KEYUP", "ts": 137906, "sc": 29, "sym": 121, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 137908.33, "type": "KeyUp", "key": 121, "sc": 29, "uni": "y", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 137906.39, "msg": 257, "vk": 89, "scan": 44, "flags": 128, "ll_time": 37617046, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 29, "char": "y", "dead": false, "kvk": 89, "tr_char": "y", "tr_name": null}
+{"k": "raw", "t": 138327.16, "type": "KEYDOWN", "ts": 138325, "sc": 28, "sym": 122, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 138327.26, "type": "TEXTINPUT", "ts": 138325, "text": "z"}
+{"k": "pg", "t": 138327.71, "type": "KeyDown", "key": 122, "sc": 28, "uni": "z", "mod": 4096, "dead": false}
+{"k": "pg", "t": 138327.78, "type": "TextInput", "text": "z"}
+{"k": "hook", "dir": "down", "t": 138325.4, "msg": 256, "vk": 90, "scan": 21, "flags": 0, "ll_time": 37617468, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 28, "char": "z", "dead": false, "kvk": 90, "tr_char": "z", "tr_name": null}
+{"k": "raw", "t": 138474.56, "type": "KEYUP", "ts": 138472, "sc": 28, "sym": 122, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 138474.72, "type": "KeyUp", "key": 122, "sc": 28, "uni": "z", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 138472.22, "msg": 257, "vk": 90, "scan": 21, "flags": 128, "ll_time": 37617609, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 28, "char": "z", "dead": false, "kvk": 90, "tr_char": "z", "tr_name": null}
+{"k": "raw", "t": 139911.25, "type": "KEYDOWN", "ts": 139909, "sc": 51, "sym": 246, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 139911.3, "type": "TEXTINPUT", "ts": 139909, "text": "ö"}
+{"k": "pg", "t": 139911.5, "type": "KeyDown", "key": 246, "sc": 51, "uni": "ö", "mod": 4096, "dead": false}
+{"k": "pg", "t": 139911.65, "type": "TextInput", "text": "ö"}
+{"k": "hook", "dir": "down", "t": 139909.33, "msg": 256, "vk": 192, "scan": 39, "flags": 0, "ll_time": 37619046, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 51, "char": "`", "dead": false, "kvk": 192, "tr_char": "`", "tr_name": null}
+{"k": "raw", "t": 140066.51, "type": "KEYUP", "ts": 140064, "sc": 51, "sym": 246, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 140066.8, "type": "KeyUp", "key": 246, "sc": 51, "uni": "ö", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 140064.22, "msg": 257, "vk": 192, "scan": 39, "flags": 128, "ll_time": 37619203, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 51, "char": "`", "dead": false, "kvk": 192, "tr_char": "`", "tr_name": null}
+{"k": "raw", "t": 140256.64, "type": "KEYDOWN", "ts": 140254, "sc": 52, "sym": 228, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 140256.68, "type": "TEXTINPUT", "ts": 140254, "text": "ä"}
+{"k": "pg", "t": 140256.92, "type": "KeyDown", "key": 228, "sc": 52, "uni": "ä", "mod": 4096, "dead": false}
+{"k": "pg", "t": 140256.97, "type": "TextInput", "text": "ä"}
+{"k": "hook", "dir": "down", "t": 140254.7, "msg": 256, "vk": 222, "scan": 40, "flags": 0, "ll_time": 37619390, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 52, "char": "'", "dead": false, "kvk": 222, "tr_char": "'", "tr_name": null}
+{"k": "raw", "t": 140429.5, "type": "KEYUP", "ts": 140427, "sc": 52, "sym": 228, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 140429.66, "type": "KeyUp", "key": 228, "sc": 52, "uni": "ä", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 140427.5, "msg": 257, "vk": 222, "scan": 40, "flags": 128, "ll_time": 37619562, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 52, "char": "'", "dead": false, "kvk": 222, "tr_char": "'", "tr_name": null}
+{"k": "pg", "t": 142118.48, "type": "MouseButtonDown"}
+{"k": "step", "t": 142118.59, "n": 5, "id": "back to US", "text": "Switch back to English (US) with Win+Space. Type the same four keys again.", "attempt": 0, "flush": false, "main_hkl": "0x04070407", "text_input_active": true}
+{"k": "pg", "t": 142341.6, "type": "MouseButtonUp"}
+{"k": "raw", "t": 144734.0, "type": "KEYDOWN", "ts": 144732, "sc": 227, "sym": 1073742051, "mod": 5120, "rep": 0, "state": 1}
+{"k": "pg", "t": 144734.18, "type": "KeyDown", "key": 1073742051, "sc": 227, "uni": "", "mod": 5120, "dead": false}
+{"k": "hook", "dir": "down", "t": 144731.83, "msg": 256, "vk": 91, "scan": 91, "flags": 1, "ll_time": 37623859, "hkl_thread": "0x04090409", "ext": true, "inj": false, "sdl_sc": 227, "name": "cmd", "tr_char": null, "tr_name": "cmd"}
+{"k": "hook", "dir": "down", "t": 145152.2, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37624281, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 145314.52, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37624453, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "raw", "t": 145439.82, "type": "WINDOW", "ts": 145437, "wev": "LEAVE"}
+{"k": "pg", "t": 145440.29, "type": "WindowLeave"}
+{"k": "raw", "t": 145537.36, "type": "WINDOW", "ts": 145535, "wev": "ENTER"}
+{"k": "pg", "t": 145537.56, "type": "WindowEnter"}
+{"k": "raw", "t": 146659.38, "type": "KEYUP", "ts": 146657, "sc": 227, "sym": 1073742051, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 146659.49, "type": "KeyUp", "key": 1073742051, "sc": 227, "uni": "", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 146657.33, "msg": 257, "vk": 91, "scan": 91, "flags": 129, "ll_time": 37625796, "hkl_thread": "0x04090409", "ext": true, "inj": false, "sdl_sc": 227, "name": "cmd", "tr_char": null, "tr_name": "cmd"}
+{"k": "raw", "t": 147204.39, "type": "TEXTEDITING", "ts": 147202, "text": "", "start": 0, "length": 0}
+{"k": "raw", "t": 147204.53, "type": "TEXTEDITING", "ts": 147202, "text": "", "start": 0, "length": 0}
+{"k": "raw", "t": 147204.55, "type": "TEXTEDITING", "ts": 147202, "text": "", "start": 0, "length": 0}
+{"k": "raw", "t": 147205.88, "type": "KEYMAPCHANGED", "ts": 147203}
+{"k": "pg", "t": 147207.45, "type": "TextEditing", "text": ""}
+{"k": "pg", "t": 147207.5, "type": "TextEditing", "text": ""}
+{"k": "pg", "t": 147207.52, "type": "TextEditing", "text": ""}
+{"k": "pg", "t": 147207.53, "type": "KeyMapChanged"}
+{"k": "hook", "dir": "up", "t": 147204.28, "msg": 257, "vk": 162, "scan": 541, "flags": 128, "ll_time": 0, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": null, "name": "ctrl_l", "tr_char": null, "tr_name": "ctrl_l"}
+{"k": "raw", "t": 148507.96, "type": "KEYDOWN", "ts": 148506, "sc": 29, "sym": 122, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 148508.0, "type": "TEXTINPUT", "ts": 148506, "text": "z"}
+{"k": "pg", "t": 148508.31, "type": "KeyDown", "key": 122, "sc": 29, "uni": "z", "mod": 4096, "dead": false}
+{"k": "pg", "t": 148508.36, "type": "TextInput", "text": "z"}
+{"k": "hook", "dir": "down", "t": 148505.1, "msg": 256, "vk": 90, "scan": 44, "flags": 0, "ll_time": 37627640, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 29, "char": "z", "dead": false, "kvk": 90, "tr_char": "z", "tr_name": null}
+{"k": "raw", "t": 148713.91, "type": "KEYUP", "ts": 148711, "sc": 29, "sym": 122, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 148714.08, "type": "KeyUp", "key": 122, "sc": 29, "uni": "z", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 148711.78, "msg": 257, "vk": 90, "scan": 44, "flags": 128, "ll_time": 37627843, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 29, "char": "z", "dead": false, "kvk": 90, "tr_char": "z", "tr_name": null}
+{"k": "raw", "t": 148936.5, "type": "KEYDOWN", "ts": 148934, "sc": 28, "sym": 121, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 148936.54, "type": "TEXTINPUT", "ts": 148934, "text": "y"}
+{"k": "pg", "t": 148936.69, "type": "KeyDown", "key": 121, "sc": 28, "uni": "y", "mod": 4096, "dead": false}
+{"k": "pg", "t": 148936.73, "type": "TextInput", "text": "y"}
+{"k": "hook", "dir": "down", "t": 148933.57, "msg": 256, "vk": 89, "scan": 21, "flags": 0, "ll_time": 37628062, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 28, "char": "y", "dead": false, "kvk": 89, "tr_char": "y", "tr_name": null}
+{"k": "raw", "t": 149087.21, "type": "KEYUP", "ts": 149085, "sc": 28, "sym": 121, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 149087.36, "type": "KeyUp", "key": 121, "sc": 28, "uni": "y", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 149085.42, "msg": 257, "vk": 89, "scan": 21, "flags": 128, "ll_time": 37628218, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 28, "char": "y", "dead": false, "kvk": 89, "tr_char": "y", "tr_name": null}
+{"k": "raw", "t": 149703.88, "type": "KEYDOWN", "ts": 149701, "sc": 51, "sym": 59, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 149703.96, "type": "TEXTINPUT", "ts": 149702, "text": ";"}
+{"k": "pg", "t": 149704.32, "type": "KeyDown", "key": 59, "sc": 51, "uni": ";", "mod": 4096, "dead": false}
+{"k": "pg", "t": 149704.39, "type": "TextInput", "text": ";"}
+{"k": "hook", "dir": "down", "t": 149701.55, "msg": 256, "vk": 186, "scan": 39, "flags": 0, "ll_time": 37628843, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 51, "char": ";", "dead": false, "kvk": 186, "tr_char": ";", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 149923.01, "msg": 257, "vk": 186, "scan": 39, "flags": 128, "ll_time": 37629062, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 51, "char": ";", "dead": false, "kvk": 186, "tr_char": ";", "tr_name": null}
+{"k": "raw", "t": 149927.57, "type": "KEYUP", "ts": 149925, "sc": 51, "sym": 59, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 149927.74, "type": "KeyUp", "key": 59, "sc": 51, "uni": ";", "mod": 4096}
+{"k": "raw", "t": 150129.18, "type": "KEYDOWN", "ts": 150127, "sc": 52, "sym": 39, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 150129.23, "type": "TEXTINPUT", "ts": 150127, "text": "'"}
+{"k": "pg", "t": 150129.41, "type": "KeyDown", "key": 39, "sc": 52, "uni": "'", "mod": 4096, "dead": false}
+{"k": "pg", "t": 150129.58, "type": "TextInput", "text": "'"}
+{"k": "hook", "dir": "down", "t": 150126.87, "msg": 256, "vk": 222, "scan": 40, "flags": 0, "ll_time": 37629265, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 52, "char": "'", "dead": false, "kvk": 222, "tr_char": "'", "tr_name": null}
+{"k": "raw", "t": 150316.7, "type": "KEYUP", "ts": 150314, "sc": 52, "sym": 39, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 150316.87, "type": "KeyUp", "key": 39, "sc": 52, "uni": "'", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 150314.35, "msg": 257, "vk": 222, "scan": 40, "flags": 128, "ll_time": 37629453, "hkl_thread": "0x04090409", "ext": false, "inj": false, "sdl_sc": 52, "char": "'", "dead": false, "kvk": 222, "tr_char": "'", "tr_name": null}
+{"k": "pg", "t": 152094.73, "type": "MouseButtonDown"}
+{"k": "note", "t": 152094.82, "text": "last step; close the window"}
+{"k": "pg", "t": 152313.76, "type": "MouseButtonUp"}
+{"k": "pg", "t": 153024.76, "type": "MouseButtonDown"}
+{"k": "note", "t": 153024.85, "text": "last step; close the window"}
+{"k": "pg", "t": 153151.96, "type": "MouseButtonUp"}
+{"k": "raw", "t": 153774.44, "type": "WINDOW", "ts": 153772, "wev": "LEAVE"}
+{"k": "pg", "t": 153774.57, "type": "WindowLeave"}
+{"k": "raw", "t": 154732.25, "type": "WINDOW", "ts": 154730, "wev": "CLOSE"}
+{"k": "pg", "t": 154733.16, "type": "WindowClose"}
+{"k": "pg", "t": 154733.22, "type": "Quit"}
+{"k": "end", "t": 154735.4}

@@ -1,0 +1,125 @@
+{"k": "meta", "t": 319.06, "run": "de", "started": "2026-11-01T21:39:51.441", "pygame": "2.6.1", "sdl": [2, 28, 4], "python": "3.11.15 (main, May 10 2026, 19:31:25) [MSC v.1944 64 bit (AMD64)]", "hook": true, "had_pygame_filter": true, "text_input_active_at_start": true, "main_hkl": "0x04070407", "keyboard_delay_setting": 1, "keyboard_delay_ms_nominal": 500, "keyboard_speed_setting": 31, "stickykeys_flags": "0x1fe", "stickykeys_hotkey_active": true, "filterkeys_flags": "0x7e", "filterkeys_hotkey_active": true}
+{"k": "step", "t": 338.13, "n": 1, "id": "baseline", "text": "Type  a , then the bottom-left letter key (right of left Shift; gives  y  on German).", "attempt": 0, "flush": false, "main_hkl": "0x04070407", "text_input_active": true}
+{"k": "raw", "t": 9444.68, "type": "KEYDOWN", "ts": 9442, "sc": 4, "sym": 97, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 9444.74, "type": "TEXTINPUT", "ts": 9442, "text": "a"}
+{"k": "pg", "t": 9444.92, "type": "KeyDown", "key": 97, "sc": 4, "uni": "a", "mod": 4096, "dead": false}
+{"k": "pg", "t": 9444.97, "type": "TextInput", "text": "a"}
+{"k": "hook", "dir": "down", "t": 9441.78, "msg": 256, "vk": 65, "scan": 30, "flags": 0, "ll_time": 37259671, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "raw", "t": 9610.91, "type": "KEYUP", "ts": 9608, "sc": 4, "sym": 97, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 9611.21, "type": "KeyUp", "key": 97, "sc": 4, "uni": "a", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 9608.75, "msg": 257, "vk": 65, "scan": 30, "flags": 128, "ll_time": 37259828, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 9788.04, "msg": 256, "vk": 89, "scan": 44, "flags": 0, "ll_time": 37260015, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 29, "char": "y", "dead": false, "kvk": 89, "tr_char": "y", "tr_name": null}
+{"k": "raw", "t": 9792.31, "type": "KEYDOWN", "ts": 9790, "sc": 29, "sym": 121, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 9792.36, "type": "TEXTINPUT", "ts": 9790, "text": "y"}
+{"k": "pg", "t": 9792.53, "type": "KeyDown", "key": 121, "sc": 29, "uni": "y", "mod": 4096, "dead": false}
+{"k": "pg", "t": 9792.57, "type": "TextInput", "text": "y"}
+{"k": "raw", "t": 9933.6, "type": "KEYUP", "ts": 9931, "sc": 29, "sym": 121, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 9933.87, "type": "KeyUp", "key": 121, "sc": 29, "uni": "y", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 9931.95, "msg": 257, "vk": 89, "scan": 44, "flags": 128, "ll_time": 37260156, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 29, "char": "y", "dead": false, "kvk": 89, "tr_char": "y", "tr_name": null}
+{"k": "pg", "t": 11163.35, "type": "MouseButtonDown"}
+{"k": "step", "t": 11163.51, "n": 2, "id": "^+e", "text": "Press the  ^  key (top-left, left of 1), let go, then  e .", "attempt": 0, "flush": false, "main_hkl": "0x04070407", "text_input_active": true}
+{"k": "pg", "t": 11389.61, "type": "MouseButtonUp"}
+{"k": "raw", "t": 18227.81, "type": "KEYDOWN", "ts": 18225, "sc": 53, "sym": 94, "mod": 4096, "rep": 0, "state": 1}
+{"k": "pg", "t": 18227.98, "type": "KeyDown", "key": 94, "sc": 53, "uni": "^", "mod": 4096, "dead": true}
+{"k": "hook", "dir": "down", "t": 18222.18, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37268453, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 18386.77, "type": "KEYUP", "ts": 18384, "sc": 53, "sym": 94, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 18386.92, "type": "KeyUp", "key": 94, "sc": 53, "uni": "^", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 18384.74, "msg": 257, "vk": 220, "scan": 41, "flags": 128, "ll_time": 37268609, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 18691.27, "type": "KEYDOWN", "ts": 18689, "sc": 8, "sym": 101, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 18691.33, "type": "TEXTINPUT", "ts": 18689, "text": "ê"}
+{"k": "pg", "t": 18691.62, "type": "KeyDown", "key": 101, "sc": 8, "uni": "ê", "mod": 4096, "dead": false}
+{"k": "pg", "t": 18691.69, "type": "TextInput", "text": "ê"}
+{"k": "hook", "dir": "down", "t": 18689.39, "msg": 256, "vk": 69, "scan": 18, "flags": 0, "ll_time": 37268921, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "raw", "t": 18821.19, "type": "KEYUP", "ts": 18819, "sc": 8, "sym": 101, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 18821.35, "type": "KeyUp", "key": 101, "sc": 8, "uni": "ê", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 18819.21, "msg": 257, "vk": 69, "scan": 18, "flags": 128, "ll_time": 37269046, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "pg", "t": 20602.49, "type": "MouseButtonDown"}
+{"k": "step", "t": 20602.63, "n": 3, "id": "^+space", "text": "^  then Space.", "attempt": 0, "flush": false, "main_hkl": "0x04070407", "text_input_active": true}
+{"k": "pg", "t": 20829.54, "type": "MouseButtonUp"}
+{"k": "raw", "t": 22492.12, "type": "KEYDOWN", "ts": 22490, "sc": 53, "sym": 94, "mod": 4096, "rep": 0, "state": 1}
+{"k": "pg", "t": 22492.4, "type": "KeyDown", "key": 94, "sc": 53, "uni": "^", "mod": 4096, "dead": true}
+{"k": "hook", "dir": "down", "t": 22490.39, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37272718, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 22604.87, "type": "KEYUP", "ts": 22602, "sc": 53, "sym": 94, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 22605.02, "type": "KeyUp", "key": 94, "sc": 53, "uni": "^", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 22603.12, "msg": 257, "vk": 220, "scan": 41, "flags": 128, "ll_time": 37272828, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 22854.82, "type": "KEYDOWN", "ts": 22852, "sc": 44, "sym": 32, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 22854.86, "type": "TEXTINPUT", "ts": 22852, "text": "^"}
+{"k": "pg", "t": 22855.11, "type": "KeyDown", "key": 32, "sc": 44, "uni": "^", "mod": 4096, "dead": false}
+{"k": "pg", "t": 22855.17, "type": "TextInput", "text": "^"}
+{"k": "hook", "dir": "down", "t": 22852.54, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37273078, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 22960.71, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37273187, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "raw", "t": 22965.0, "type": "KEYUP", "ts": 22962, "sc": 44, "sym": 32, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 22965.22, "type": "KeyUp", "key": 32, "sc": 44, "uni": "^", "mod": 4096}
+{"k": "pg", "t": 24246.09, "type": "MouseButtonDown"}
+{"k": "step", "t": 24246.19, "n": 4, "id": "^ twice", "text": "^  then  ^  again.", "attempt": 0, "flush": false, "main_hkl": "0x04070407", "text_input_active": true}
+{"k": "pg", "t": 24467.46, "type": "MouseButtonUp"}
+{"k": "raw", "t": 25897.66, "type": "KEYDOWN", "ts": 25895, "sc": 53, "sym": 94, "mod": 4096, "rep": 0, "state": 1}
+{"k": "pg", "t": 25897.82, "type": "KeyDown", "key": 94, "sc": 53, "uni": "^", "mod": 4096, "dead": true}
+{"k": "hook", "dir": "down", "t": 25895.16, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37276125, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 26015.23, "msg": 257, "vk": 220, "scan": 41, "flags": 128, "ll_time": 37276234, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 26019.23, "type": "KEYUP", "ts": 26017, "sc": 53, "sym": 94, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 26019.45, "type": "KeyUp", "key": 94, "sc": 53, "uni": "^", "mod": 4096}
+{"k": "raw", "t": 26342.84, "type": "KEYDOWN", "ts": 26340, "sc": 53, "sym": 94, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 26342.88, "type": "TEXTINPUT", "ts": 26340, "text": "^"}
+{"k": "raw", "t": 26342.9, "type": "TEXTINPUT", "ts": 26340, "text": "^"}
+{"k": "pg", "t": 26343.07, "type": "KeyDown", "key": 94, "sc": 53, "uni": "^", "mod": 4096, "dead": true}
+{"k": "pg", "t": 26343.11, "type": "TextInput", "text": "^"}
+{"k": "pg", "t": 26343.13, "type": "TextInput", "text": "^"}
+{"k": "hook", "dir": "down", "t": 26340.8, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37276562, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 26478.02, "type": "KEYUP", "ts": 26475, "sc": 53, "sym": 94, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 26478.18, "type": "KeyUp", "key": 94, "sc": 53, "uni": "^", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 26476.17, "msg": 257, "vk": 220, "scan": 41, "flags": 128, "ll_time": 37276703, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "pg", "t": 27354.34, "type": "MouseButtonDown"}
+{"k": "step", "t": 27354.44, "n": 5, "id": "^+k", "text": "^  then  k .", "attempt": 0, "flush": false, "main_hkl": "0x04070407", "text_input_active": true}
+{"k": "pg", "t": 27570.12, "type": "MouseButtonUp"}
+{"k": "raw", "t": 28397.11, "type": "KEYDOWN", "ts": 28395, "sc": 53, "sym": 94, "mod": 4096, "rep": 0, "state": 1}
+{"k": "pg", "t": 28397.26, "type": "KeyDown", "key": 94, "sc": 53, "uni": "^", "mod": 4096, "dead": true}
+{"k": "hook", "dir": "down", "t": 28394.2, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37278625, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 28538.71, "type": "KEYUP", "ts": 28536, "sc": 53, "sym": 94, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 28538.88, "type": "KeyUp", "key": 94, "sc": 53, "uni": "^", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 28537.09, "msg": 257, "vk": 220, "scan": 41, "flags": 128, "ll_time": 37278765, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 28763.0, "type": "KEYDOWN", "ts": 28760, "sc": 14, "sym": 107, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 28763.04, "type": "TEXTINPUT", "ts": 28761, "text": "^"}
+{"k": "raw", "t": 28763.06, "type": "TEXTINPUT", "ts": 28761, "text": "k"}
+{"k": "pg", "t": 28763.22, "type": "KeyDown", "key": 107, "sc": 14, "uni": "^", "mod": 4096, "dead": false}
+{"k": "pg", "t": 28763.26, "type": "TextInput", "text": "^"}
+{"k": "pg", "t": 28763.28, "type": "TextInput", "text": "k"}
+{"k": "hook", "dir": "down", "t": 28760.69, "msg": 256, "vk": 75, "scan": 37, "flags": 0, "ll_time": 37278984, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 14, "char": "k", "dead": false, "kvk": 75, "tr_char": "k", "tr_name": null}
+{"k": "raw", "t": 28887.74, "type": "KEYUP", "ts": 28885, "sc": 14, "sym": 107, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 28887.91, "type": "KeyUp", "key": 107, "sc": 14, "uni": "^", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 28885.58, "msg": 257, "vk": 75, "scan": 37, "flags": 128, "ll_time": 37279109, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 14, "char": "k", "dead": false, "kvk": 75, "tr_char": "k", "tr_name": null}
+{"k": "pg", "t": 29754.94, "type": "MouseButtonDown"}
+{"k": "step", "t": 29755.08, "n": 6, "id": "´+e", "text": "Press the  ´  key (right of ß, left of Backspace), let go, then  e .", "attempt": 0, "flush": false, "main_hkl": "0x04070407", "text_input_active": true}
+{"k": "pg", "t": 29970.96, "type": "MouseButtonUp"}
+{"k": "raw", "t": 36622.16, "type": "KEYDOWN", "ts": 36620, "sc": 46, "sym": 180, "mod": 4096, "rep": 0, "state": 1}
+{"k": "pg", "t": 36622.43, "type": "KeyDown", "key": 180, "sc": 46, "uni": "", "mod": 4096, "dead": true}
+{"k": "hook", "dir": "down", "t": 36619.76, "msg": 256, "vk": 221, "scan": 13, "flags": 0, "ll_time": 37286843, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 46, "char": "´", "dead": true, "kvk": 221, "tr_char": "´", "tr_name": null}
+{"k": "raw", "t": 36787.31, "type": "KEYUP", "ts": 36785, "sc": 46, "sym": 180, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 36787.46, "type": "KeyUp", "key": 180, "sc": 46, "uni": "", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 36785.62, "msg": 257, "vk": 221, "scan": 13, "flags": 128, "ll_time": 37287015, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 46, "char": "´", "dead": true, "kvk": 221, "tr_char": "´", "tr_name": null}
+{"k": "raw", "t": 37187.42, "type": "KEYDOWN", "ts": 37185, "sc": 8, "sym": 101, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 37187.46, "type": "TEXTINPUT", "ts": 37185, "text": "é"}
+{"k": "pg", "t": 37187.61, "type": "KeyDown", "key": 101, "sc": 8, "uni": "é", "mod": 4096, "dead": false}
+{"k": "pg", "t": 37187.65, "type": "TextInput", "text": "é"}
+{"k": "hook", "dir": "down", "t": 37184.79, "msg": 256, "vk": 69, "scan": 18, "flags": 0, "ll_time": 37287406, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "raw", "t": 37341.71, "type": "KEYUP", "ts": 37339, "sc": 8, "sym": 101, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 37341.88, "type": "KeyUp", "key": 101, "sc": 8, "uni": "é", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 37339.91, "msg": 257, "vk": 69, "scan": 18, "flags": 128, "ll_time": 37287562, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "raw", "t": 38512.04, "type": "KEYDOWN", "ts": 38509, "sc": 40, "sym": 13, "mod": 4096, "rep": 0, "state": 1}
+{"k": "pg", "t": 38512.22, "type": "KeyDown", "key": 13, "sc": 40, "uni": "\r", "mod": 4096, "dead": false}
+{"k": "hook", "dir": "down", "t": 38510.17, "msg": 256, "vk": 13, "scan": 28, "flags": 0, "ll_time": 37288734, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 40, "name": "enter", "tr_char": null, "tr_name": "enter"}
+{"k": "raw", "t": 38652.17, "type": "KEYUP", "ts": 38650, "sc": 40, "sym": 13, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 38652.35, "type": "KeyUp", "key": 13, "sc": 40, "uni": "\r", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 38649.78, "msg": 257, "vk": 13, "scan": 28, "flags": 128, "ll_time": 37288875, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 40, "name": "enter", "tr_char": null, "tr_name": "enter"}
+{"k": "pg", "t": 40666.27, "type": "MouseButtonDown"}
+{"k": "step", "t": 40666.42, "n": 7, "id": "`+a", "text": "Hold Shift, press the  ´  key (gives ` ), let go of both, then  a .", "attempt": 0, "flush": false, "main_hkl": "0x04070407", "text_input_active": true}
+{"k": "pg", "t": 40888.38, "type": "MouseButtonUp"}
+{"k": "pg", "t": 40947.68, "type": "MouseButtonDown"}
+{"k": "step", "t": 40947.79, "n": 8, "id": "´+space", "text": "´  then Space.", "attempt": 0, "flush": false, "main_hkl": "0x04070407", "text_input_active": true}
+{"k": "pg", "t": 41107.7, "type": "MouseButtonUp"}
+{"k": "raw", "t": 43276.4, "type": "WINDOW", "ts": 43274, "wev": "LEAVE"}
+{"k": "pg", "t": 43276.52, "type": "WindowLeave"}
+{"k": "raw", "t": 44318.22, "type": "WINDOW", "ts": 44316, "wev": "CLOSE"}
+{"k": "pg", "t": 44318.89, "type": "WindowClose"}
+{"k": "pg", "t": 44319.13, "type": "Quit"}
+{"k": "end", "t": 44321.19}

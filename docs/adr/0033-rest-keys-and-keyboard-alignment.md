@@ -2,6 +2,7 @@
 
 **Status:** Accepted. Not yet implemented, and the amendments it requires are not yet made.
 **Date:** 2026-10-10
+**Noted:** 2026-11-01 — alpha #13 answered § Work this ADR requires: the three Windows checks and the dead-key worry, from measurement. The answers are dated notes in that section, and none of them changes a decision here.
 
 > Part of the [Takki architecture](../architecture.md).
 > **Supersedes** [ADR-023](0023-key-introduction-protocol.md) § Stage 0. **Answers** ADR-023 open question 7 and [ADR-032](0032-grapheme-led-introduction-and-selectable-ordering.md) open question 2 (the probe Ordering C was waiting for).
@@ -193,6 +194,27 @@ Every number is configurable ([ADR-025](0025-configuration-system.md)) and none 
 - **That a held key is detected**, so that the "let go" instruction is spoken when it should be and not otherwise.
 
 **A worry stored for the key-capture question.** **[S]** A dead key must be usable as a rest key, and today a landing on one cannot be recognised. Its press reaches the engine as a composing event that does not say which key it was, and it leaves a state armed that the next letter would inherit ([ADR-028](0028-composite-input-and-keyboard-ownership.md)). English has no dead key, so Alpha does not need this. It is to be answered when the key-capture source is decided, which the alpha plan has as #13 and #14, and it is noted in the #13 row. If it is not answered there it goes to Beta with the first dead-key language. Until then a press on a dead key is not a landing.
+
+*Answered 2026-11-01 by alpha #13 ([research/key-capture-source.md](../research/key-capture-source.md) § 3; **[M]** measured, **[A]** argued).* Key events now come from Takki's own window ([ADR-028 § Event model](0028-composite-input-and-keyboard-ownership.md), "Decided").
+- **A dead key's press arrives as a `KEYDOWN` naming the physical key by scan code**, with no character **[M]**: Icelandic `´` 52, German `^` 53.
+- **It leaves compose state armed:** the next letter is composed with it, however long after **[M]**.
+- **Takki can disarm it** by calling `ToUnicodeEx(VK_SPACE)` on the window's thread: 10 of 10 trials, after which the next letter arrives plain **[M]**. Leaving the window also disarms it (7 of 7) **[M]**.
+- **A held dead key is armed or not by the parity of its presses** (6 of 6 holds) **[M]**. So the alignment disarms after *every* dead-key landing **[A]**. Lessons never do, because a composite must still compose.
+
+So the worry does not go to Beta. Two parts still wait for the first dead-key language, because English has none:
+- exposing the disarming call to the alignment, behind a Protocol ([ADR-019](0019-testing-strategy-and-io-isolation.md)). The call already exists as `_flush()` in `takki.platform.windows`, which the layout reader uses. It does what the spike did: Space through `ToUnicodeEx`, unflagged. It has to run on the window's thread, which is the main thread;
+- recognising the landing.
+
+*The three Windows checks above, spiked in alpha #13 (2026-11-01; [research/key-capture-source.md](../research/key-capture-source.md) § 7).*
+- **Landing on Enter, Backspace, Shift, Tab or Caps Lock.** Each arrives as a `KEYDOWN`/`KEYUP` pair with its scan code and no character **[M]**. So the window *can* say which non-character key a finger landed on. "A press on a key that produces no character is not a landing" is now a choice for #12m to make, not a limit of the capture.
+- **Side effects.**
+  - **Caps Lock** changes only case, which is folded **[M]**.
+  - **Tab** does nothing in Takki's window **[M]**.
+  - **Left Shift pressed five times** opened the Sticky Keys box and took focus (one trial) **[M]**.
+  - **Right Shift held about 8.5 s** opened the Filter Keys box and took focus (two trials) **[M]**.
+
+  Both shortcuts are on by default, and both pause the lesson with a dialog the child cannot see. A resting little finger on Shift is exactly what triggers them.
+- **A held key is caught in time.** The first OS repeat came 505–512 ms after the press **[M]**, long before Filter Keys' 8 s. pygame drops the repeat `KEYDOWN`s, though, and a non-character key has no `TEXTINPUT` to repeat. So "a repeat of a key that is still down" is visible for character keys only. For the alignment, a hold should be **a `KEYDOWN` with no `KEYUP` after a set time**, checked as a deadline every tick. That works for every key, Shift and Enter included, and does not depend on the user's repeat-delay setting **[A]**. #12m sets the time.
 
 ### Amendments this ADR requires
 

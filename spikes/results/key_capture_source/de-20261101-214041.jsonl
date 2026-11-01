@@ -1,0 +1,435 @@
+{"k": "meta", "t": 278.36, "run": "de", "started": "2026-11-01T21:40:42.244", "pygame": "2.6.1", "sdl": [2, 28, 4], "python": "3.11.15 (main, May 10 2026, 19:31:25) [MSC v.1944 64 bit (AMD64)]", "hook": true, "had_pygame_filter": true, "text_input_active_at_start": true, "main_hkl": "0x04070407", "keyboard_delay_setting": 1, "keyboard_delay_ms_nominal": 500, "keyboard_speed_setting": 31, "stickykeys_flags": "0x1fe", "stickykeys_hotkey_active": true, "filterkeys_flags": "0x7e", "filterkeys_hotkey_active": true}
+{"k": "step", "t": 298.85, "n": 1, "id": "baseline", "text": "Type  a , then the bottom-left letter key (right of left Shift; gives  y  on German).", "attempt": 0, "flush": false, "main_hkl": "0x04070407", "text_input_active": true}
+{"k": "raw", "t": 3356.81, "type": "KEYDOWN", "ts": 3354, "sc": 4, "sym": 97, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 3356.87, "type": "TEXTINPUT", "ts": 3355, "text": "a"}
+{"k": "pg", "t": 3357.15, "type": "KeyDown", "key": 97, "sc": 4, "uni": "a", "mod": 4096, "dead": false}
+{"k": "pg", "t": 3357.2, "type": "TextInput", "text": "a"}
+{"k": "hook", "dir": "down", "t": 3353.7, "msg": 256, "vk": 65, "scan": 30, "flags": 0, "ll_time": 37304421, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "raw", "t": 3524.43, "type": "KEYUP", "ts": 3522, "sc": 4, "sym": 97, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 3524.6, "type": "KeyUp", "key": 97, "sc": 4, "uni": "a", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 3522.7, "msg": 257, "vk": 65, "scan": 30, "flags": 128, "ll_time": 37304593, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 3641.52, "msg": 256, "vk": 89, "scan": 44, "flags": 0, "ll_time": 37304718, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 29, "char": "y", "dead": false, "kvk": 89, "tr_char": "y", "tr_name": null}
+{"k": "raw", "t": 3645.9, "type": "KEYDOWN", "ts": 3644, "sc": 29, "sym": 121, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 3645.96, "type": "TEXTINPUT", "ts": 3644, "text": "y"}
+{"k": "pg", "t": 3646.22, "type": "KeyDown", "key": 121, "sc": 29, "uni": "y", "mod": 4096, "dead": false}
+{"k": "pg", "t": 3646.42, "type": "TextInput", "text": "y"}
+{"k": "raw", "t": 3832.92, "type": "KEYUP", "ts": 3831, "sc": 29, "sym": 121, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 3833.11, "type": "KeyUp", "key": 121, "sc": 29, "uni": "y", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 3830.89, "msg": 257, "vk": 89, "scan": 44, "flags": 128, "ll_time": 37304906, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 29, "char": "y", "dead": false, "kvk": 89, "tr_char": "y", "tr_name": null}
+{"k": "pg", "t": 5701.16, "type": "MouseButtonDown"}
+{"k": "step", "t": 5701.35, "n": 2, "id": "^+e", "text": "Press the  ^  key (top-left, left of 1), let go, then  e .", "attempt": 0, "flush": false, "main_hkl": "0x04070407", "text_input_active": true}
+{"k": "pg", "t": 5927.13, "type": "MouseButtonUp"}
+{"k": "raw", "t": 9360.09, "type": "KEYDOWN", "ts": 9358, "sc": 53, "sym": 94, "mod": 4096, "rep": 0, "state": 1}
+{"k": "pg", "t": 9360.57, "type": "KeyDown", "key": 94, "sc": 53, "uni": "^", "mod": 4096, "dead": true}
+{"k": "hook", "dir": "down", "t": 9358.07, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37310421, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 9511.33, "type": "KEYUP", "ts": 9509, "sc": 53, "sym": 94, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 9511.48, "type": "KeyUp", "key": 94, "sc": 53, "uni": "^", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 9509.49, "msg": 257, "vk": 220, "scan": 41, "flags": 128, "ll_time": 37310578, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 9804.19, "type": "KEYDOWN", "ts": 9802, "sc": 8, "sym": 101, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 9804.23, "type": "TEXTINPUT", "ts": 9802, "text": "ê"}
+{"k": "pg", "t": 9804.51, "type": "KeyDown", "key": 101, "sc": 8, "uni": "ê", "mod": 4096, "dead": false}
+{"k": "pg", "t": 9804.57, "type": "TextInput", "text": "ê"}
+{"k": "hook", "dir": "down", "t": 9801.92, "msg": 256, "vk": 69, "scan": 18, "flags": 0, "ll_time": 37310875, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "raw", "t": 9940.62, "type": "KEYUP", "ts": 9938, "sc": 8, "sym": 101, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 9941.11, "type": "KeyUp", "key": 101, "sc": 8, "uni": "ê", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 9938.44, "msg": 257, "vk": 69, "scan": 18, "flags": 128, "ll_time": 37311000, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "pg", "t": 10974.89, "type": "MouseButtonDown"}
+{"k": "step", "t": 10975.0, "n": 3, "id": "^+space", "text": "^  then Space.", "attempt": 0, "flush": false, "main_hkl": "0x04070407", "text_input_active": true}
+{"k": "pg", "t": 11196.67, "type": "MouseButtonUp"}
+{"k": "raw", "t": 12323.13, "type": "KEYDOWN", "ts": 12321, "sc": 53, "sym": 94, "mod": 4096, "rep": 0, "state": 1}
+{"k": "pg", "t": 12323.35, "type": "KeyDown", "key": 94, "sc": 53, "uni": "^", "mod": 4096, "dead": true}
+{"k": "hook", "dir": "down", "t": 12321.53, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37313390, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 12457.39, "type": "KEYUP", "ts": 12455, "sc": 53, "sym": 94, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 12457.58, "type": "KeyUp", "key": 94, "sc": 53, "uni": "^", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 12455.5, "msg": 257, "vk": 220, "scan": 41, "flags": 128, "ll_time": 37313531, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 12732.1, "type": "KEYDOWN", "ts": 12730, "sc": 44, "sym": 32, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 12732.15, "type": "TEXTINPUT", "ts": 12730, "text": "^"}
+{"k": "pg", "t": 12732.34, "type": "KeyDown", "key": 32, "sc": 44, "uni": "^", "mod": 4096, "dead": false}
+{"k": "pg", "t": 12732.39, "type": "TextInput", "text": "^"}
+{"k": "hook", "dir": "down", "t": 12730.39, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37313796, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "raw", "t": 12870.22, "type": "KEYUP", "ts": 12868, "sc": 44, "sym": 32, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 12870.38, "type": "KeyUp", "key": 32, "sc": 44, "uni": "^", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 12867.9, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37313937, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "pg", "t": 14055.17, "type": "MouseButtonDown"}
+{"k": "step", "t": 14055.3, "n": 4, "id": "^ twice", "text": "^  then  ^  again.", "attempt": 0, "flush": false, "main_hkl": "0x04070407", "text_input_active": true}
+{"k": "pg", "t": 14271.78, "type": "MouseButtonUp"}
+{"k": "raw", "t": 15019.04, "type": "KEYDOWN", "ts": 15017, "sc": 53, "sym": 94, "mod": 4096, "rep": 0, "state": 1}
+{"k": "pg", "t": 15019.2, "type": "KeyDown", "key": 94, "sc": 53, "uni": "^", "mod": 4096, "dead": true}
+{"k": "hook", "dir": "down", "t": 15016.86, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37316093, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 15149.77, "type": "KEYUP", "ts": 15147, "sc": 53, "sym": 94, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 15150.33, "type": "KeyUp", "key": 94, "sc": 53, "uni": "^", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 15147.43, "msg": 257, "vk": 220, "scan": 41, "flags": 128, "ll_time": 37316218, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 15499.05, "type": "KEYDOWN", "ts": 15497, "sc": 53, "sym": 94, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 15499.09, "type": "TEXTINPUT", "ts": 15497, "text": "^"}
+{"k": "raw", "t": 15499.11, "type": "TEXTINPUT", "ts": 15497, "text": "^"}
+{"k": "pg", "t": 15499.26, "type": "KeyDown", "key": 94, "sc": 53, "uni": "^", "mod": 4096, "dead": true}
+{"k": "pg", "t": 15499.31, "type": "TextInput", "text": "^"}
+{"k": "pg", "t": 15499.32, "type": "TextInput", "text": "^"}
+{"k": "hook", "dir": "down", "t": 15496.85, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37316562, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 15653.47, "msg": 257, "vk": 220, "scan": 41, "flags": 128, "ll_time": 37316718, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 15658.2, "type": "KEYUP", "ts": 15656, "sc": 53, "sym": 94, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 15658.53, "type": "KeyUp", "key": 94, "sc": 53, "uni": "^", "mod": 4096}
+{"k": "pg", "t": 16968.85, "type": "MouseButtonDown"}
+{"k": "step", "t": 16969.0, "n": 5, "id": "^+k", "text": "^  then  k .", "attempt": 0, "flush": false, "main_hkl": "0x04070407", "text_input_active": true}
+{"k": "pg", "t": 17197.23, "type": "MouseButtonUp"}
+{"k": "raw", "t": 18171.66, "type": "KEYDOWN", "ts": 18169, "sc": 53, "sym": 94, "mod": 4096, "rep": 0, "state": 1}
+{"k": "pg", "t": 18171.91, "type": "KeyDown", "key": 94, "sc": 53, "uni": "^", "mod": 4096, "dead": true}
+{"k": "hook", "dir": "down", "t": 18169.55, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37319234, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 18354.41, "type": "KEYUP", "ts": 18352, "sc": 53, "sym": 94, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 18354.57, "type": "KeyUp", "key": 94, "sc": 53, "uni": "^", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 18351.61, "msg": 257, "vk": 220, "scan": 41, "flags": 128, "ll_time": 37319421, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 18590.79, "type": "KEYDOWN", "ts": 18588, "sc": 14, "sym": 107, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 18590.84, "type": "TEXTINPUT", "ts": 18589, "text": "^"}
+{"k": "raw", "t": 18590.86, "type": "TEXTINPUT", "ts": 18589, "text": "k"}
+{"k": "pg", "t": 18591.02, "type": "KeyDown", "key": 107, "sc": 14, "uni": "^", "mod": 4096, "dead": false}
+{"k": "pg", "t": 18591.08, "type": "TextInput", "text": "^"}
+{"k": "pg", "t": 18591.09, "type": "TextInput", "text": "k"}
+{"k": "hook", "dir": "down", "t": 18588.61, "msg": 256, "vk": 75, "scan": 37, "flags": 0, "ll_time": 37319656, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 14, "char": "k", "dead": false, "kvk": 75, "tr_char": "k", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 18725.8, "msg": 257, "vk": 75, "scan": 37, "flags": 128, "ll_time": 37319796, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 14, "char": "k", "dead": false, "kvk": 75, "tr_char": "k", "tr_name": null}
+{"k": "raw", "t": 18730.5, "type": "KEYUP", "ts": 18728, "sc": 14, "sym": 107, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 18730.91, "type": "KeyUp", "key": 107, "sc": 14, "uni": "^", "mod": 4096}
+{"k": "pg", "t": 20055.92, "type": "MouseButtonDown"}
+{"k": "step", "t": 20056.19, "n": 6, "id": "´+e", "text": "Press the  ´  key (right of ß, left of Backspace), let go, then  e .", "attempt": 0, "flush": false, "main_hkl": "0x04070407", "text_input_active": true}
+{"k": "pg", "t": 20283.37, "type": "MouseButtonUp"}
+{"k": "raw", "t": 23499.92, "type": "KEYDOWN", "ts": 23498, "sc": 46, "sym": 180, "mod": 4096, "rep": 0, "state": 1}
+{"k": "pg", "t": 23500.09, "type": "KeyDown", "key": 180, "sc": 46, "uni": "", "mod": 4096, "dead": true}
+{"k": "hook", "dir": "down", "t": 23498.18, "msg": 256, "vk": 221, "scan": 13, "flags": 0, "ll_time": 37324562, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 46, "char": "´", "dead": true, "kvk": 221, "tr_char": "´", "tr_name": null}
+{"k": "raw", "t": 23660.61, "type": "KEYUP", "ts": 23658, "sc": 46, "sym": 180, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 23660.91, "type": "KeyUp", "key": 180, "sc": 46, "uni": "", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 23658.64, "msg": 257, "vk": 221, "scan": 13, "flags": 128, "ll_time": 37324734, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 46, "char": "´", "dead": true, "kvk": 221, "tr_char": "´", "tr_name": null}
+{"k": "raw", "t": 24001.73, "type": "KEYDOWN", "ts": 23999, "sc": 8, "sym": 101, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 24001.8, "type": "TEXTINPUT", "ts": 23999, "text": "é"}
+{"k": "pg", "t": 24002.17, "type": "KeyDown", "key": 101, "sc": 8, "uni": "é", "mod": 4096, "dead": false}
+{"k": "pg", "t": 24002.24, "type": "TextInput", "text": "é"}
+{"k": "hook", "dir": "down", "t": 23999.54, "msg": 256, "vk": 69, "scan": 18, "flags": 0, "ll_time": 37325062, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "raw", "t": 24164.42, "type": "KEYUP", "ts": 24162, "sc": 8, "sym": 101, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 24164.57, "type": "KeyUp", "key": 101, "sc": 8, "uni": "é", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 24162.27, "msg": 257, "vk": 69, "scan": 18, "flags": 128, "ll_time": 37325234, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "pg", "t": 25336.22, "type": "MouseButtonDown"}
+{"k": "step", "t": 25336.34, "n": 7, "id": "`+a", "text": "Hold Shift, press the  ´  key (gives ` ), let go of both, then  a .", "attempt": 0, "flush": false, "main_hkl": "0x04070407", "text_input_active": true}
+{"k": "pg", "t": 25569.14, "type": "MouseButtonUp"}
+{"k": "raw", "t": 41186.05, "type": "KEYDOWN", "ts": 41184, "sc": 225, "sym": 1073742049, "mod": 4097, "rep": 0, "state": 1}
+{"k": "pg", "t": 41186.22, "type": "KeyDown", "key": 1073742049, "sc": 225, "uni": "", "mod": 4097, "dead": false}
+{"k": "hook", "dir": "down", "t": 41184.05, "msg": 256, "vk": 160, "scan": 42, "flags": 0, "ll_time": 37342250, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 225, "name": "shift", "tr_char": null, "tr_name": "shift"}
+{"k": "raw", "t": 41577.56, "type": "KEYDOWN", "ts": 41575, "sc": 46, "sym": 180, "mod": 4097, "rep": 0, "state": 1}
+{"k": "pg", "t": 41578.11, "type": "KeyDown", "key": 180, "sc": 46, "uni": "", "mod": 4097, "dead": true}
+{"k": "hook", "dir": "down", "t": 41572.82, "msg": 256, "vk": 221, "scan": 13, "flags": 0, "ll_time": 37342640, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 46, "char": "`", "dead": true, "kvk": 221, "tr_char": "`", "tr_name": null}
+{"k": "raw", "t": 41806.49, "type": "KEYUP", "ts": 41804, "sc": 46, "sym": 180, "mod": 4097, "rep": 0, "state": 0}
+{"k": "pg", "t": 41806.81, "type": "KeyUp", "key": 180, "sc": 46, "uni": "", "mod": 4097}
+{"k": "hook", "dir": "up", "t": 41804.52, "msg": 257, "vk": 221, "scan": 13, "flags": 128, "ll_time": 37342875, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 46, "char": "`", "dead": true, "kvk": 221, "tr_char": "`", "tr_name": null}
+{"k": "raw", "t": 41989.95, "type": "KEYUP", "ts": 41988, "sc": 225, "sym": 1073742049, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 41990.32, "type": "KeyUp", "key": 1073742049, "sc": 225, "uni": "", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 41988.05, "msg": 257, "vk": 160, "scan": 42, "flags": 128, "ll_time": 37343062, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 225, "name": "shift", "tr_char": null, "tr_name": "shift"}
+{"k": "raw", "t": 42298.06, "type": "KEYDOWN", "ts": 42296, "sc": 4, "sym": 97, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 42298.11, "type": "TEXTINPUT", "ts": 42296, "text": "à"}
+{"k": "pg", "t": 42298.43, "type": "KeyDown", "key": 97, "sc": 4, "uni": "à", "mod": 4096, "dead": false}
+{"k": "pg", "t": 42298.5, "type": "TextInput", "text": "à"}
+{"k": "hook", "dir": "down", "t": 42295.22, "msg": 256, "vk": 65, "scan": 30, "flags": 0, "ll_time": 37343359, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "raw", "t": 42456.55, "type": "KEYUP", "ts": 42454, "sc": 4, "sym": 97, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 42456.82, "type": "KeyUp", "key": 97, "sc": 4, "uni": "à", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 42454.76, "msg": 257, "vk": 65, "scan": 30, "flags": 128, "ll_time": 37343531, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 4, "char": "a", "dead": false, "kvk": 65, "tr_char": "a", "tr_name": null}
+{"k": "pg", "t": 47927.74, "type": "MouseButtonDown"}
+{"k": "step", "t": 47927.87, "n": 8, "id": "´+space", "text": "´  then Space.", "attempt": 0, "flush": false, "main_hkl": "0x04070407", "text_input_active": true}
+{"k": "pg", "t": 48148.42, "type": "MouseButtonUp"}
+{"k": "raw", "t": 54315.65, "type": "KEYDOWN", "ts": 54313, "sc": 46, "sym": 180, "mod": 4096, "rep": 0, "state": 1}
+{"k": "pg", "t": 54315.92, "type": "KeyDown", "key": 180, "sc": 46, "uni": "", "mod": 4096, "dead": true}
+{"k": "hook", "dir": "down", "t": 54314.01, "msg": 256, "vk": 221, "scan": 13, "flags": 0, "ll_time": 37355390, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 46, "char": "´", "dead": true, "kvk": 221, "tr_char": "´", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 54516.8, "msg": 257, "vk": 221, "scan": 13, "flags": 128, "ll_time": 37355593, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 46, "char": "´", "dead": true, "kvk": 221, "tr_char": "´", "tr_name": null}
+{"k": "raw", "t": 54521.17, "type": "KEYUP", "ts": 54519, "sc": 46, "sym": 180, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 54521.38, "type": "KeyUp", "key": 180, "sc": 46, "uni": "", "mod": 4096}
+{"k": "raw", "t": 54775.91, "type": "KEYDOWN", "ts": 54774, "sc": 44, "sym": 32, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 54775.96, "type": "TEXTINPUT", "ts": 54774, "text": "´"}
+{"k": "pg", "t": 54776.25, "type": "KeyDown", "key": 32, "sc": 44, "uni": "´", "mod": 4096, "dead": false}
+{"k": "pg", "t": 54776.41, "type": "TextInput", "text": "´"}
+{"k": "hook", "dir": "down", "t": 54773.67, "msg": 256, "vk": 32, "scan": 57, "flags": 0, "ll_time": 37355843, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "hook", "dir": "up", "t": 54923.85, "msg": 257, "vk": 32, "scan": 57, "flags": 128, "ll_time": 37356000, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 44, "name": "space", "tr_char": null, "tr_name": "space"}
+{"k": "raw", "t": 54927.89, "type": "KEYUP", "ts": 54926, "sc": 44, "sym": 32, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 54928.13, "type": "KeyUp", "key": 32, "sc": 44, "uni": "´", "mod": 4096}
+{"k": "pg", "t": 56495.46, "type": "MouseButtonDown"}
+{"k": "step", "t": 56495.68, "n": 9, "id": "´ twice", "text": "´  then  ´  again.", "attempt": 0, "flush": false, "main_hkl": "0x04070407", "text_input_active": true}
+{"k": "pg", "t": 56711.79, "type": "MouseButtonUp"}
+{"k": "raw", "t": 58601.35, "type": "KEYDOWN", "ts": 58599, "sc": 46, "sym": 180, "mod": 4096, "rep": 0, "state": 1}
+{"k": "pg", "t": 58601.73, "type": "KeyDown", "key": 180, "sc": 46, "uni": "", "mod": 4096, "dead": true}
+{"k": "hook", "dir": "down", "t": 58599.69, "msg": 256, "vk": 221, "scan": 13, "flags": 0, "ll_time": 37359671, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 46, "char": "´", "dead": true, "kvk": 221, "tr_char": "´", "tr_name": null}
+{"k": "raw", "t": 58817.89, "type": "KEYUP", "ts": 58816, "sc": 46, "sym": 180, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 58818.17, "type": "KeyUp", "key": 180, "sc": 46, "uni": "", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 58815.71, "msg": 257, "vk": 221, "scan": 13, "flags": 128, "ll_time": 37359890, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 46, "char": "´", "dead": true, "kvk": 221, "tr_char": "´", "tr_name": null}
+{"k": "raw", "t": 59065.02, "type": "KEYDOWN", "ts": 59063, "sc": 46, "sym": 180, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 59065.07, "type": "TEXTINPUT", "ts": 59063, "text": "´"}
+{"k": "raw", "t": 59065.1, "type": "TEXTINPUT", "ts": 59063, "text": "´"}
+{"k": "pg", "t": 59065.37, "type": "KeyDown", "key": 180, "sc": 46, "uni": "´", "mod": 4096, "dead": true}
+{"k": "pg", "t": 59065.49, "type": "TextInput", "text": "´"}
+{"k": "pg", "t": 59065.53, "type": "TextInput", "text": "´"}
+{"k": "hook", "dir": "down", "t": 59063.37, "msg": 256, "vk": 221, "scan": 13, "flags": 0, "ll_time": 37360140, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 46, "char": "´", "dead": true, "kvk": 221, "tr_char": "´", "tr_name": null}
+{"k": "raw", "t": 59249.74, "type": "KEYUP", "ts": 59247, "sc": 46, "sym": 180, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 59249.9, "type": "KeyUp", "key": 180, "sc": 46, "uni": "´", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 59248.03, "msg": 257, "vk": 221, "scan": 13, "flags": 128, "ll_time": 37360312, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 46, "char": "´", "dead": true, "kvk": 221, "tr_char": "´", "tr_name": null}
+{"k": "pg", "t": 60755.2, "type": "MouseButtonDown"}
+{"k": "step", "t": 60755.32, "n": 10, "id": "´+k", "text": "´  then  k .", "attempt": 0, "flush": false, "main_hkl": "0x04070407", "text_input_active": true}
+{"k": "pg", "t": 60971.17, "type": "MouseButtonUp"}
+{"k": "raw", "t": 62391.6, "type": "KEYDOWN", "ts": 62389, "sc": 46, "sym": 180, "mod": 4096, "rep": 0, "state": 1}
+{"k": "pg", "t": 62391.79, "type": "KeyDown", "key": 180, "sc": 46, "uni": "", "mod": 4096, "dead": true}
+{"k": "hook", "dir": "down", "t": 62388.58, "msg": 256, "vk": 221, "scan": 13, "flags": 0, "ll_time": 37363453, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 46, "char": "´", "dead": true, "kvk": 221, "tr_char": "´", "tr_name": null}
+{"k": "raw", "t": 62541.01, "type": "KEYUP", "ts": 62539, "sc": 46, "sym": 180, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 62541.2, "type": "KeyUp", "key": 180, "sc": 46, "uni": "", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 62538.98, "msg": 257, "vk": 221, "scan": 13, "flags": 128, "ll_time": 37363609, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 46, "char": "´", "dead": true, "kvk": 221, "tr_char": "´", "tr_name": null}
+{"k": "raw", "t": 62981.15, "type": "KEYDOWN", "ts": 62979, "sc": 14, "sym": 107, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 62981.2, "type": "TEXTINPUT", "ts": 62979, "text": "´"}
+{"k": "raw", "t": 62981.22, "type": "TEXTINPUT", "ts": 62979, "text": "k"}
+{"k": "pg", "t": 62981.38, "type": "KeyDown", "key": 107, "sc": 14, "uni": "´", "mod": 4096, "dead": false}
+{"k": "pg", "t": 62981.42, "type": "TextInput", "text": "´"}
+{"k": "pg", "t": 62981.43, "type": "TextInput", "text": "k"}
+{"k": "hook", "dir": "down", "t": 62978.67, "msg": 256, "vk": 75, "scan": 37, "flags": 0, "ll_time": 37364046, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 14, "char": "k", "dead": false, "kvk": 75, "tr_char": "k", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 63123.05, "msg": 257, "vk": 75, "scan": 37, "flags": 128, "ll_time": 37364187, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 14, "char": "k", "dead": false, "kvk": 75, "tr_char": "k", "tr_name": null}
+{"k": "raw", "t": 63127.28, "type": "KEYUP", "ts": 63125, "sc": 14, "sym": 107, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 63127.71, "type": "KeyUp", "key": 107, "sc": 14, "uni": "´", "mod": 4096}
+{"k": "pg", "t": 64313.67, "type": "MouseButtonDown"}
+{"k": "step", "t": 64313.82, "n": 11, "id": "altgr+q", "text": "Hold AltGr (right Alt), press  q  (gives @), let go of both.", "attempt": 0, "flush": false, "main_hkl": "0x04070407", "text_input_active": true}
+{"k": "pg", "t": 64538.47, "type": "MouseButtonUp"}
+{"k": "raw", "t": 69218.94, "type": "KEYDOWN", "ts": 69217, "sc": 224, "sym": 1073742048, "mod": 4160, "rep": 0, "state": 1}
+{"k": "pg", "t": 69219.2, "type": "KeyDown", "key": 1073742048, "sc": 224, "uni": "", "mod": 4160, "dead": false}
+{"k": "hook", "dir": "down", "t": 69216.37, "msg": 260, "vk": 162, "scan": 541, "flags": 32, "ll_time": 37370281, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": null, "name": "ctrl_l", "tr_char": null, "tr_name": "ctrl_l"}
+{"k": "hook", "dir": "down", "t": 69217.72, "msg": 260, "vk": 165, "scan": 56, "flags": 33, "ll_time": 37370281, "hkl_thread": "0x04070407", "ext": true, "inj": false, "sdl_sc": 230, "name": "alt_gr", "tr_char": null, "tr_name": "alt_gr"}
+{"k": "raw", "t": 69222.65, "type": "KEYDOWN", "ts": 69220, "sc": 230, "sym": 1073742054, "mod": 4672, "rep": 0, "state": 1}
+{"k": "pg", "t": 69222.91, "type": "KeyDown", "key": 1073742054, "sc": 230, "uni": "", "mod": 4672, "dead": false}
+{"k": "raw", "t": 69439.65, "type": "KEYDOWN", "ts": 69437, "sc": 20, "sym": 113, "mod": 4672, "rep": 0, "state": 1}
+{"k": "raw", "t": 69439.69, "type": "TEXTINPUT", "ts": 69437, "text": "@"}
+{"k": "pg", "t": 69439.93, "type": "KeyDown", "key": 113, "sc": 20, "uni": "@", "mod": 4672, "dead": false}
+{"k": "pg", "t": 69440.02, "type": "TextInput", "text": "@"}
+{"k": "hook", "dir": "down", "t": 69437.74, "msg": 260, "vk": 81, "scan": 16, "flags": 32, "ll_time": 37370500, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 20, "char": "@", "dead": false, "kvk": 81, "tr_char": "@", "tr_name": null}
+{"k": "raw", "t": 69569.2, "type": "KEYUP", "ts": 69567, "sc": 20, "sym": 113, "mod": 4672, "rep": 0, "state": 0}
+{"k": "pg", "t": 69569.35, "type": "KeyUp", "key": 113, "sc": 20, "uni": "@", "mod": 4672}
+{"k": "hook", "dir": "up", "t": 69567.33, "msg": 261, "vk": 81, "scan": 16, "flags": 160, "ll_time": 37370640, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 20, "char": "@", "dead": false, "kvk": 81, "tr_char": "@", "tr_name": null}
+{"k": "hook", "dir": "up", "t": 69823.41, "msg": 257, "vk": 162, "scan": 541, "flags": 128, "ll_time": 37370890, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": null, "name": "ctrl_l", "tr_char": null, "tr_name": "ctrl_l"}
+{"k": "raw", "t": 69828.14, "type": "KEYUP", "ts": 69826, "sc": 224, "sym": 1073742048, "mod": 4608, "rep": 0, "state": 0}
+{"k": "raw", "t": 69828.45, "type": "KEYUP", "ts": 69826, "sc": 230, "sym": 1073742054, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 69828.78, "type": "KeyUp", "key": 1073742048, "sc": 224, "uni": "", "mod": 4608}
+{"k": "pg", "t": 69828.82, "type": "KeyUp", "key": 1073742054, "sc": 230, "uni": "", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 69825.18, "msg": 257, "vk": 165, "scan": 56, "flags": 129, "ll_time": 37370890, "hkl_thread": "0x04070407", "ext": true, "inj": false, "sdl_sc": 230, "name": "alt_gr", "tr_char": null, "tr_name": "alt_gr"}
+{"k": "pg", "t": 71722.06, "type": "MouseButtonDown"}
+{"k": "step", "t": 71722.17, "n": 12, "id": "^ held", "text": "Hold the  ^  key for about 2 seconds, let go. Then  e .", "attempt": 0, "flush": false, "main_hkl": "0x04070407", "text_input_active": true}
+{"k": "pg", "t": 71953.97, "type": "MouseButtonUp"}
+{"k": "raw", "t": 75615.8, "type": "KEYDOWN", "ts": 75613, "sc": 53, "sym": 94, "mod": 4096, "rep": 0, "state": 1}
+{"k": "pg", "t": 75616.04, "type": "KeyDown", "key": 94, "sc": 53, "uni": "^", "mod": 4096, "dead": true}
+{"k": "hook", "dir": "down", "t": 75613.95, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37376687, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 76119.91, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37377187, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 76124.37, "type": "KEYDOWN", "ts": 76122, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 76124.43, "type": "TEXTINPUT", "ts": 76122, "text": "^"}
+{"k": "raw", "t": 76124.48, "type": "TEXTINPUT", "ts": 76122, "text": "^"}
+{"k": "pg", "t": 76124.96, "type": "TextInput", "text": "^"}
+{"k": "pg", "t": 76125.01, "type": "TextInput", "text": "^"}
+{"k": "raw", "t": 76153.81, "type": "KEYDOWN", "ts": 76151, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "hook", "dir": "down", "t": 76151.8, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37377218, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 76186.12, "type": "KEYDOWN", "ts": 76184, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 76186.17, "type": "TEXTINPUT", "ts": 76184, "text": "^"}
+{"k": "raw", "t": 76186.2, "type": "TEXTINPUT", "ts": 76184, "text": "^"}
+{"k": "pg", "t": 76186.45, "type": "TextInput", "text": "^"}
+{"k": "pg", "t": 76186.5, "type": "TextInput", "text": "^"}
+{"k": "hook", "dir": "down", "t": 76184.34, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37377250, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 76220.99, "type": "KEYDOWN", "ts": 76219, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "hook", "dir": "down", "t": 76219.4, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37377296, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 76251.76, "type": "KEYDOWN", "ts": 76249, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 76251.8, "type": "TEXTINPUT", "ts": 76249, "text": "^"}
+{"k": "raw", "t": 76251.82, "type": "TEXTINPUT", "ts": 76250, "text": "^"}
+{"k": "pg", "t": 76251.98, "type": "TextInput", "text": "^"}
+{"k": "pg", "t": 76252.01, "type": "TextInput", "text": "^"}
+{"k": "hook", "dir": "down", "t": 76249.67, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37377312, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 76285.95, "type": "KEYDOWN", "ts": 76284, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "hook", "dir": "down", "t": 76284.24, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37377359, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 76316.15, "type": "KEYDOWN", "ts": 76314, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 76316.22, "type": "TEXTINPUT", "ts": 76314, "text": "^"}
+{"k": "raw", "t": 76316.25, "type": "TEXTINPUT", "ts": 76314, "text": "^"}
+{"k": "pg", "t": 76316.4, "type": "TextInput", "text": "^"}
+{"k": "pg", "t": 76316.42, "type": "TextInput", "text": "^"}
+{"k": "hook", "dir": "down", "t": 76314.38, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37377390, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 76350.57, "type": "KEYDOWN", "ts": 76348, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "hook", "dir": "down", "t": 76348.43, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37377421, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 76384.98, "type": "KEYDOWN", "ts": 76383, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 76385.02, "type": "TEXTINPUT", "ts": 76383, "text": "^"}
+{"k": "raw", "t": 76385.04, "type": "TEXTINPUT", "ts": 76383, "text": "^"}
+{"k": "pg", "t": 76385.22, "type": "TextInput", "text": "^"}
+{"k": "pg", "t": 76385.28, "type": "TextInput", "text": "^"}
+{"k": "hook", "dir": "down", "t": 76383.02, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37377453, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 76414.46, "type": "KEYDOWN", "ts": 76412, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "hook", "dir": "down", "t": 76412.3, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37377484, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 76446.25, "type": "KEYDOWN", "ts": 76444, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 76446.29, "type": "TEXTINPUT", "ts": 76444, "text": "^"}
+{"k": "raw", "t": 76446.31, "type": "TEXTINPUT", "ts": 76444, "text": "^"}
+{"k": "pg", "t": 76446.47, "type": "TextInput", "text": "^"}
+{"k": "pg", "t": 76446.49, "type": "TextInput", "text": "^"}
+{"k": "hook", "dir": "down", "t": 76444.4, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37377515, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 76479.45, "type": "KEYDOWN", "ts": 76477, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "hook", "dir": "down", "t": 76477.64, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37377546, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 76512.19, "type": "KEYDOWN", "ts": 76510, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 76512.24, "type": "TEXTINPUT", "ts": 76510, "text": "^"}
+{"k": "raw", "t": 76512.26, "type": "TEXTINPUT", "ts": 76510, "text": "^"}
+{"k": "pg", "t": 76512.41, "type": "TextInput", "text": "^"}
+{"k": "pg", "t": 76512.43, "type": "TextInput", "text": "^"}
+{"k": "hook", "dir": "down", "t": 76510.35, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37377578, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 76546.01, "type": "KEYDOWN", "ts": 76544, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "hook", "dir": "down", "t": 76543.59, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37377609, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 76576.48, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37377640, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 76578.93, "type": "KEYDOWN", "ts": 76577, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 76578.97, "type": "TEXTINPUT", "ts": 76577, "text": "^"}
+{"k": "raw", "t": 76578.99, "type": "TEXTINPUT", "ts": 76577, "text": "^"}
+{"k": "pg", "t": 76579.17, "type": "TextInput", "text": "^"}
+{"k": "pg", "t": 76579.2, "type": "TextInput", "text": "^"}
+{"k": "hook", "dir": "down", "t": 76609.7, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37377671, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 76612.12, "type": "KEYDOWN", "ts": 76610, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 76641.26, "type": "KEYDOWN", "ts": 76639, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 76641.3, "type": "TEXTINPUT", "ts": 76639, "text": "^"}
+{"k": "raw", "t": 76641.33, "type": "TEXTINPUT", "ts": 76639, "text": "^"}
+{"k": "pg", "t": 76641.48, "type": "TextInput", "text": "^"}
+{"k": "pg", "t": 76641.5, "type": "TextInput", "text": "^"}
+{"k": "hook", "dir": "down", "t": 76639.47, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37377703, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 76673.85, "type": "KEYDOWN", "ts": 76672, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "hook", "dir": "down", "t": 76672.25, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37377750, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 76706.56, "type": "KEYDOWN", "ts": 76704, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 76706.64, "type": "TEXTINPUT", "ts": 76704, "text": "^"}
+{"k": "raw", "t": 76706.67, "type": "TEXTINPUT", "ts": 76704, "text": "^"}
+{"k": "pg", "t": 76707.05, "type": "TextInput", "text": "^"}
+{"k": "pg", "t": 76707.09, "type": "TextInput", "text": "^"}
+{"k": "hook", "dir": "down", "t": 76704.08, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37377781, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 76740.49, "type": "KEYDOWN", "ts": 76738, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "hook", "dir": "down", "t": 76738.51, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37377812, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 76774.44, "type": "KEYDOWN", "ts": 76772, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 76774.48, "type": "TEXTINPUT", "ts": 76772, "text": "^"}
+{"k": "raw", "t": 76774.5, "type": "TEXTINPUT", "ts": 76772, "text": "^"}
+{"k": "pg", "t": 76774.76, "type": "TextInput", "text": "^"}
+{"k": "pg", "t": 76774.79, "type": "TextInput", "text": "^"}
+{"k": "hook", "dir": "down", "t": 76772.23, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37377843, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 76805.5, "type": "KEYDOWN", "ts": 76803, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "hook", "dir": "down", "t": 76803.24, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37377875, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 76837.37, "type": "KEYDOWN", "ts": 76835, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 76837.43, "type": "TEXTINPUT", "ts": 76835, "text": "^"}
+{"k": "raw", "t": 76837.61, "type": "TEXTINPUT", "ts": 76835, "text": "^"}
+{"k": "pg", "t": 76837.99, "type": "TextInput", "text": "^"}
+{"k": "pg", "t": 76838.03, "type": "TextInput", "text": "^"}
+{"k": "hook", "dir": "down", "t": 76835.45, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37377906, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 76869.37, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37377937, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 76872.32, "type": "KEYDOWN", "ts": 76870, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 76901.46, "type": "KEYDOWN", "ts": 76899, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 76901.5, "type": "TEXTINPUT", "ts": 76899, "text": "^"}
+{"k": "raw", "t": 76901.52, "type": "TEXTINPUT", "ts": 76899, "text": "^"}
+{"k": "pg", "t": 76901.77, "type": "TextInput", "text": "^"}
+{"k": "pg", "t": 76901.8, "type": "TextInput", "text": "^"}
+{"k": "hook", "dir": "down", "t": 76899.59, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37377968, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 76933.95, "type": "KEYDOWN", "ts": 76932, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "hook", "dir": "down", "t": 76932.3, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37378000, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 76968.45, "type": "KEYDOWN", "ts": 76966, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 76968.52, "type": "TEXTINPUT", "ts": 76966, "text": "^"}
+{"k": "raw", "t": 76968.56, "type": "TEXTINPUT", "ts": 76966, "text": "^"}
+{"k": "pg", "t": 76968.95, "type": "TextInput", "text": "^"}
+{"k": "pg", "t": 76968.99, "type": "TextInput", "text": "^"}
+{"k": "hook", "dir": "down", "t": 76966.69, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37378031, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 76998.29, "type": "KEYDOWN", "ts": 76996, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "hook", "dir": "down", "t": 76996.58, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37378062, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 77029.27, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37378093, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 77031.82, "type": "KEYDOWN", "ts": 77029, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 77032.02, "type": "TEXTINPUT", "ts": 77030, "text": "^"}
+{"k": "raw", "t": 77032.17, "type": "TEXTINPUT", "ts": 77030, "text": "^"}
+{"k": "pg", "t": 77032.44, "type": "TextInput", "text": "^"}
+{"k": "pg", "t": 77032.48, "type": "TextInput", "text": "^"}
+{"k": "raw", "t": 77066.37, "type": "KEYDOWN", "ts": 77064, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "hook", "dir": "down", "t": 77064.13, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37378140, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 77097.28, "type": "KEYDOWN", "ts": 77095, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 77097.33, "type": "TEXTINPUT", "ts": 77095, "text": "^"}
+{"k": "raw", "t": 77097.36, "type": "TEXTINPUT", "ts": 77095, "text": "^"}
+{"k": "pg", "t": 77097.75, "type": "TextInput", "text": "^"}
+{"k": "pg", "t": 77097.77, "type": "TextInput", "text": "^"}
+{"k": "hook", "dir": "down", "t": 77095.26, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37378171, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 77128.5, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37378203, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 77131.26, "type": "KEYDOWN", "ts": 77129, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 77164.66, "type": "KEYDOWN", "ts": 77162, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 77164.7, "type": "TEXTINPUT", "ts": 77162, "text": "^"}
+{"k": "raw", "t": 77164.73, "type": "TEXTINPUT", "ts": 77162, "text": "^"}
+{"k": "pg", "t": 77164.95, "type": "TextInput", "text": "^"}
+{"k": "pg", "t": 77164.98, "type": "TextInput", "text": "^"}
+{"k": "hook", "dir": "down", "t": 77162.93, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37378234, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 77192.48, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37378265, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 77195.35, "type": "KEYDOWN", "ts": 77193, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 77227.76, "type": "KEYDOWN", "ts": 77225, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 77227.8, "type": "TEXTINPUT", "ts": 77225, "text": "^"}
+{"k": "raw", "t": 77227.82, "type": "TEXTINPUT", "ts": 77226, "text": "^"}
+{"k": "pg", "t": 77227.98, "type": "TextInput", "text": "^"}
+{"k": "pg", "t": 77228.0, "type": "TextInput", "text": "^"}
+{"k": "hook", "dir": "down", "t": 77225.64, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37378296, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 77261.0, "type": "KEYDOWN", "ts": 77259, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "hook", "dir": "down", "t": 77258.37, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37378328, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 77292.56, "type": "KEYDOWN", "ts": 77290, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 77292.61, "type": "TEXTINPUT", "ts": 77290, "text": "^"}
+{"k": "raw", "t": 77292.64, "type": "TEXTINPUT", "ts": 77290, "text": "^"}
+{"k": "pg", "t": 77292.81, "type": "TextInput", "text": "^"}
+{"k": "pg", "t": 77292.83, "type": "TextInput", "text": "^"}
+{"k": "hook", "dir": "down", "t": 77290.34, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37378359, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 77323.75, "type": "KEYDOWN", "ts": 77321, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "hook", "dir": "down", "t": 77321.69, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37378390, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 77359.48, "type": "KEYDOWN", "ts": 77357, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 77359.63, "type": "TEXTINPUT", "ts": 77357, "text": "^"}
+{"k": "raw", "t": 77359.83, "type": "TEXTINPUT", "ts": 77357, "text": "^"}
+{"k": "pg", "t": 77360.22, "type": "TextInput", "text": "^"}
+{"k": "pg", "t": 77360.25, "type": "TextInput", "text": "^"}
+{"k": "hook", "dir": "down", "t": 77357.89, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37378421, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 77391.16, "type": "KEYDOWN", "ts": 77389, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "hook", "dir": "down", "t": 77388.34, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37378453, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 77421.32, "type": "KEYDOWN", "ts": 77419, "sc": 53, "sym": 94, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 77421.36, "type": "TEXTINPUT", "ts": 77419, "text": "^"}
+{"k": "raw", "t": 77421.39, "type": "TEXTINPUT", "ts": 77419, "text": "^"}
+{"k": "pg", "t": 77421.85, "type": "TextInput", "text": "^"}
+{"k": "pg", "t": 77421.88, "type": "TextInput", "text": "^"}
+{"k": "hook", "dir": "down", "t": 77419.46, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37378484, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 77446.3, "type": "KEYUP", "ts": 77444, "sc": 53, "sym": 94, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 77446.54, "type": "KeyUp", "key": 94, "sc": 53, "uni": "^", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 77444.56, "msg": 257, "vk": 220, "scan": 41, "flags": 128, "ll_time": 37378515, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 77896.1, "type": "KEYDOWN", "ts": 77894, "sc": 8, "sym": 101, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 77896.15, "type": "TEXTINPUT", "ts": 77894, "text": "e"}
+{"k": "pg", "t": 77896.33, "type": "KeyDown", "key": 101, "sc": 8, "uni": "e", "mod": 4096, "dead": false}
+{"k": "pg", "t": 77896.37, "type": "TextInput", "text": "e"}
+{"k": "hook", "dir": "down", "t": 77893.86, "msg": 256, "vk": 69, "scan": 18, "flags": 0, "ll_time": 37378968, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "raw", "t": 78020.57, "type": "KEYUP", "ts": 78018, "sc": 8, "sym": 101, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 78020.77, "type": "KeyUp", "key": 101, "sc": 8, "uni": "e", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 78018.25, "msg": 257, "vk": 69, "scan": 18, "flags": 128, "ll_time": 37379093, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "pg", "t": 81564.11, "type": "MouseButtonDown"}
+{"k": "step", "t": 81564.31, "n": 13, "id": "FLUSH ON: ^+e x3", "text": "Takki-side flush is ON for this step. Three times:  ^  then  e .", "attempt": 0, "flush": true, "main_hkl": "0x04070407", "text_input_active": true}
+{"k": "pg", "t": 81784.83, "type": "MouseButtonUp"}
+{"k": "raw", "t": 85814.14, "type": "KEYDOWN", "ts": 85812, "sc": 53, "sym": 94, "mod": 4096, "rep": 0, "state": 1}
+{"k": "pg", "t": 85814.32, "type": "KeyDown", "key": 94, "sc": 53, "uni": "^", "mod": 4096, "dead": true}
+{"k": "flush", "t": 85814.36, "sc": 53, "result": [[1, "^"]]}
+{"k": "hook", "dir": "down", "t": 85811.71, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37386875, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 85989.92, "type": "KEYUP", "ts": 85988, "sc": 53, "sym": 94, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 85990.08, "type": "KeyUp", "key": 94, "sc": 53, "uni": "^", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 85988.12, "msg": 257, "vk": 220, "scan": 41, "flags": 128, "ll_time": 37387062, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "hook", "dir": "down", "t": 86134.8, "msg": 256, "vk": 220, "scan": 41, "flags": 0, "ll_time": 37387203, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 86139.45, "type": "KEYDOWN", "ts": 86137, "sc": 53, "sym": 94, "mod": 4096, "rep": 0, "state": 1}
+{"k": "pg", "t": 86139.97, "type": "KeyDown", "key": 94, "sc": 53, "uni": "^", "mod": 4096, "dead": true}
+{"k": "flush", "t": 86140.06, "sc": 53, "result": [[1, "^"]]}
+{"k": "raw", "t": 86295.16, "type": "KEYUP", "ts": 86293, "sc": 53, "sym": 94, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 86295.35, "type": "KeyUp", "key": 94, "sc": 53, "uni": "^", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 86293.48, "msg": 257, "vk": 220, "scan": 41, "flags": 128, "ll_time": 37387359, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 53, "char": "^", "dead": true, "kvk": 220, "tr_char": "^", "tr_name": null}
+{"k": "raw", "t": 86707.95, "type": "KEYDOWN", "ts": 86706, "sc": 8, "sym": 101, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 86708.02, "type": "TEXTINPUT", "ts": 86706, "text": "e"}
+{"k": "pg", "t": 86708.31, "type": "KeyDown", "key": 101, "sc": 8, "uni": "e", "mod": 4096, "dead": false}
+{"k": "pg", "t": 86708.36, "type": "TextInput", "text": "e"}
+{"k": "hook", "dir": "down", "t": 86705.68, "msg": 256, "vk": 69, "scan": 18, "flags": 0, "ll_time": 37387781, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "raw", "t": 86864.48, "type": "KEYUP", "ts": 86862, "sc": 8, "sym": 101, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 86864.63, "type": "KeyUp", "key": 101, "sc": 8, "uni": "e", "mod": 4096}
+{"k": "hook", "dir": "up", "t": 86862.91, "msg": 257, "vk": 69, "scan": 18, "flags": 128, "ll_time": 37387937, "hkl_thread": "0x04070407", "ext": false, "inj": false, "sdl_sc": 8, "char": "e", "dead": false, "kvk": 69, "tr_char": "e", "tr_name": null}
+{"k": "pg", "t": 88707.92, "type": "MouseButtonDown"}
+{"k": "note", "t": 88708.01, "text": "last step; close the window"}
+{"k": "pg", "t": 88931.58, "type": "MouseButtonUp"}
+{"k": "pg", "t": 90538.31, "type": "MouseButtonDown"}
+{"k": "note", "t": 90538.4, "text": "last step; close the window"}
+{"k": "pg", "t": 90762.39, "type": "MouseButtonUp"}
+{"k": "pg", "t": 91652.4, "type": "MouseButtonDown"}
+{"k": "note", "t": 91652.49, "text": "last step; close the window"}
+{"k": "pg", "t": 91794.8, "type": "MouseButtonUp"}
+{"k": "raw", "t": 93155.05, "type": "WINDOW", "ts": 93153, "wev": "LEAVE"}
+{"k": "pg", "t": 93155.24, "type": "WindowLeave"}
+{"k": "raw", "t": 93546.93, "type": "WINDOW", "ts": 93545, "wev": "ENTER"}
+{"k": "pg", "t": 93547.44, "type": "WindowEnter"}
+{"k": "raw", "t": 93896.03, "type": "WINDOW", "ts": 93894, "wev": "LEAVE"}
+{"k": "pg", "t": 93896.23, "type": "WindowLeave"}
+{"k": "raw", "t": 95368.26, "type": "WINDOW", "ts": 95366, "wev": "CLOSE"}
+{"k": "pg", "t": 95368.93, "type": "WindowClose"}
+{"k": "pg", "t": 95368.97, "type": "Quit"}
+{"k": "end", "t": 95370.59}

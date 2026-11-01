@@ -1,0 +1,2236 @@
+# confirm-20261101-220021.jsonl
+
+meta: {"k": "meta", "t": 312.95, "run": "confirm", "started": "2026-11-01T22:00:21.919", "pygame": "2.6.1", "sdl": [2, 28, 4], "python": "3.11.15 (main, May 10 2026, 19:31:25) [MSC v.1944 64 bit (AMD64)]", "hook": true, "had_pygame_filter": true, "text_input_active_at_start": true, "main_hkl": "0x040f040f", "keyboard_delay_setting": 1, "keyboard_delay_ms_nominal": 500, "keyboard_speed_setting": 31, "stickykeys_flags": "0x1fe", "stickykeys_hotkey_active": true, "filterkeys_flags": "0x7e", "filterkeys_hotkey_active": true}
+
+## step 1 'held dead key x4' attempt 0 (main_hkl 0x040f040f, text input active: True)
+   Four times: (1) hold the DEAD ACUTE (right of Æ) down - about 1 s the first time, a little longer each time; (2) let go; (3) press  a  once.
+     336.7  RAW  WINDOW EXPOSED
+   41946.8  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   41950.3  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=0
+   41950.6  PG   KeyDown  sc=52  key=180       unicode='' dead=True
+   42454.6  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   42456.6  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   42456.6  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 42456.7
+   42456.8  PG   TextInput '´'
+             ... x2 in all, last at 42456.9
+   42486.8  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   42488.6  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   42521.9  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   42523.4  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   42523.4  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 42523.4
+   42523.6  PG   TextInput '´'
+             ... x2 in all, last at 42523.7
+   42551.4  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   42553.7  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   42585.0  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   42587.3  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   42587.4  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 42587.4
+   42587.6  PG   TextInput '´'
+             ... x2 in all, last at 42587.6
+   42616.8  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   42618.5  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   42649.1  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   42651.1  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   42651.2  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 42651.2
+   42651.4  PG   TextInput '´'
+             ... x2 in all, last at 42651.5
+   42682.6  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   42684.9  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   42715.5  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   42717.1  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   42717.1  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 42717.1
+   42717.4  PG   TextInput '´'
+             ... x2 in all, last at 42717.4
+   42746.4  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   42748.7  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   42781.7  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   42783.5  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   42783.6  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 42783.6
+   42784.2  PG   TextInput '´'
+             ... x2 in all, last at 42784.3
+   42812.4  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   42814.6  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   42844.7  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   42847.7  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   42847.7  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 42847.8
+   42848.0  PG   TextInput '´'
+             ... x2 in all, last at 42848.0
+   42880.5  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   42882.7  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   42910.9  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   42914.3  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   42914.4  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 42914.4
+   42914.8  PG   TextInput '´'
+             ... x2 in all, last at 42914.8
+   42941.5  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   42943.3  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   42975.9  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   42977.6  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   42977.7  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 42977.7
+   42978.0  PG   TextInput '´'
+             ... x2 in all, last at 42978.1
+   43008.6  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   43010.5  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   43040.0  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   43041.7  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   43041.7  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 43041.7
+   43041.9  PG   TextInput '´'
+             ... x2 in all, last at 43041.9
+   43073.1  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   43075.0  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   43104.1  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   43106.0  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   43106.1  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 43106.1
+   43106.2  PG   TextInput '´'
+             ... x2 in all, last at 43106.3
+   43125.4  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   43127.7  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=0
+   43127.7  RAW  TEXTINPUT 'a'
+   43127.9  PG   KeyDown  sc=4   key=97        unicode='a' dead=False
+   43127.9  PG   TextInput 'a'
+   43633.7  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   43635.6  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   43635.7  RAW  TEXTINPUT 'a'
+   43635.8  PG   TextInput 'a'
+   43667.9  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   43670.0  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   43670.0  RAW  TEXTINPUT 'a'
+   43670.2  PG   TextInput 'a'
+   43696.7  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   43698.5  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   43698.6  RAW  TEXTINPUT 'a'
+   43698.8  PG   TextInput 'a'
+   43730.8  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   43732.7  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   43732.7  RAW  TEXTINPUT 'a'
+   43732.8  PG   TextInput 'a'
+   43762.9  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   43765.9  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   43765.9  RAW  TEXTINPUT 'a'
+   43766.1  PG   TextInput 'a'
+   43795.3  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   43799.2  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   43799.3  RAW  TEXTINPUT 'a'
+   43799.6  PG   TextInput 'a'
+   43827.8  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   43830.2  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   43830.2  RAW  TEXTINPUT 'a'
+   43830.3  PG   TextInput 'a'
+   43861.3  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   43864.0  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   43864.1  RAW  TEXTINPUT 'a'
+   43864.2  PG   TextInput 'a'
+   43893.7  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   43895.4  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   43895.4  RAW  TEXTINPUT 'a'
+   43895.8  PG   TextInput 'a'
+   43925.2  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   43926.9  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   43926.9  RAW  TEXTINPUT 'a'
+   43927.1  PG   TextInput 'a'
+   43958.8  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   43960.5  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   43960.5  RAW  TEXTINPUT 'a'
+   43960.7  PG   TextInput 'a'
+   43990.8  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   43993.9  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   43993.9  RAW  TEXTINPUT 'a'
+   43994.1  PG   TextInput 'a'
+   44024.0  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   44025.9  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   44026.0  RAW  TEXTINPUT 'a'
+   44026.1  PG   TextInput 'a'
+   44057.9  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   44060.7  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   44060.7  RAW  TEXTINPUT 'a'
+   44060.9  PG   TextInput 'a'
+   44087.2  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   44089.3  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   44089.3  RAW  TEXTINPUT 'a'
+   44089.5  PG   TextInput 'a'
+   44121.5  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   44123.5  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   44123.6  RAW  TEXTINPUT 'a'
+   44123.8  PG   TextInput 'a'
+   44154.1  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   44156.8  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   44156.8  RAW  TEXTINPUT 'a'
+   44157.0  PG   TextInput 'a'
+   44184.2  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   44186.3  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   44186.3  RAW  TEXTINPUT 'a'
+   44186.6  PG   TextInput 'a'
+   44218.5  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   44223.2  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   44223.3  RAW  TEXTINPUT 'a'
+   44223.5  PG   TextInput 'a'
+   44249.4  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   44251.2  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   44251.2  RAW  TEXTINPUT 'a'
+   44251.3  PG   TextInput 'a'
+   44281.9  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   44283.6  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   44283.7  RAW  TEXTINPUT 'a'
+   44283.9  PG   TextInput 'a'
+   44316.0  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   44318.4  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   44318.4  RAW  TEXTINPUT 'a'
+   44318.6  PG   TextInput 'a'
+   44349.8  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   44351.9  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   44352.0  RAW  TEXTINPUT 'a'
+   44352.3  PG   TextInput 'a'
+   44382.2  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   44383.7  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   44383.8  RAW  TEXTINPUT 'a'
+   44384.1  PG   TextInput 'a'
+   44413.9  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   44415.9  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   44415.9  RAW  TEXTINPUT 'a'
+   44416.1  PG   TextInput 'a'
+   44445.8  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   44447.7  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   44447.7  RAW  TEXTINPUT 'a'
+   44448.0  PG   TextInput 'a'
+   44476.9  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   44479.5  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   44479.6  RAW  TEXTINPUT 'a'
+   44479.8  PG   TextInput 'a'
+   44510.0  HOOK up   char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   44511.8  RAW  KEYUP    sc=52  sym=180       mod=0x1000 repeat=0
+   44511.9  PG   KeyUp    sc=52  key=180       unicode=''
+   44513.8  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   44515.6  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   44515.6  RAW  TEXTINPUT 'a'
+   44515.8  PG   TextInput 'a'
+   44540.4  HOOK up   char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   44543.2  RAW  KEYUP    sc=4   sym=97        mod=0x1000 repeat=0
+   44543.5  PG   KeyUp    sc=4   key=97        unicode='a'
+   46032.9  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   46034.8  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=0
+   46034.9  RAW  TEXTINPUT 'a'
+   46035.0  PG   KeyDown  sc=4   key=97        unicode='a' dead=False
+   46035.1  PG   TextInput 'a'
+   46199.9  HOOK up   char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   46201.8  RAW  KEYUP    sc=4   sym=97        mod=0x1000 repeat=0
+   46202.0  PG   KeyUp    sc=4   key=97        unicode='a'
+   51121.5  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   51123.5  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=0
+   51123.8  PG   KeyDown  sc=52  key=180       unicode='´' dead=True
+   51630.6  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   51632.6  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   51632.7  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 51632.7
+   51632.8  PG   TextInput '´'
+             ... x2 in all, last at 51632.9
+   51661.1  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   51664.1  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   51693.2  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   51695.3  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   51695.4  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 51695.4
+   51695.7  PG   TextInput '´'
+             ... x2 in all, last at 51695.7
+   51726.6  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   51729.2  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   51758.8  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   51760.7  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   51760.8  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 51760.8
+   51761.2  PG   TextInput '´'
+             ... x2 in all, last at 51761.2
+   51791.2  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   51792.8  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   51823.9  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   51826.8  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   51826.8  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 51826.9
+   51827.3  PG   TextInput '´'
+             ... x2 in all, last at 51827.3
+   51864.2  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   51867.1  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   51889.6  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   51892.6  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   51892.6  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 51892.6
+   51892.8  PG   TextInput '´'
+             ... x2 in all, last at 51892.9
+   51921.2  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   51923.7  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   51954.2  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   51955.9  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   51955.9  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 51955.9
+   51956.1  PG   TextInput '´'
+             ... x2 in all, last at 51956.2
+   51988.3  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   51990.4  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   52019.1  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   52021.1  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   52021.2  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 52021.2
+   52021.6  PG   TextInput '´'
+             ... x2 in all, last at 52021.7
+   52051.0  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   52052.8  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   52086.6  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   52088.9  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   52089.0  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 52089.0
+   52089.2  PG   TextInput '´'
+             ... x2 in all, last at 52089.2
+   52116.4  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   52118.4  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   52148.7  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   52150.7  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   52150.8  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 52150.8
+   52151.1  PG   TextInput '´'
+             ... x2 in all, last at 52151.2
+   52184.5  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   52186.5  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   52215.8  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   52219.3  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   52219.3  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 52219.3
+   52219.6  PG   TextInput '´'
+             ... x2 in all, last at 52219.6
+   52234.2  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   52237.2  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=0
+   52237.2  RAW  TEXTINPUT 'a'
+   52237.8  PG   KeyDown  sc=4   key=97        unicode='a' dead=False
+   52237.9  PG   TextInput 'a'
+   52742.2  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   52743.9  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   52744.0  RAW  TEXTINPUT 'a'
+   52744.1  PG   TextInput 'a'
+   52776.6  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   52779.5  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   52779.6  RAW  TEXTINPUT 'a'
+   52780.0  PG   TextInput 'a'
+   52807.1  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   52809.1  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   52809.1  RAW  TEXTINPUT 'a'
+   52809.3  PG   TextInput 'a'
+   52839.1  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   52840.7  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   52840.8  RAW  TEXTINPUT 'a'
+   52840.9  PG   TextInput 'a'
+   52873.4  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   52876.0  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   52876.0  RAW  TEXTINPUT 'a'
+   52876.2  PG   TextInput 'a'
+   52907.2  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   52909.2  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   52909.2  RAW  TEXTINPUT 'a'
+   52909.4  PG   TextInput 'a'
+   52938.4  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   52940.5  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   52940.5  RAW  TEXTINPUT 'a'
+   52940.7  PG   TextInput 'a'
+   52969.1  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   52971.8  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   52971.8  RAW  TEXTINPUT 'a'
+   52972.2  PG   TextInput 'a'
+   53002.3  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   53004.2  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   53004.3  RAW  TEXTINPUT 'a'
+   53004.6  PG   TextInput 'a'
+   53036.4  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   53039.2  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   53039.2  RAW  TEXTINPUT 'a'
+   53039.4  PG   TextInput 'a'
+   53067.8  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   53069.9  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   53070.0  RAW  TEXTINPUT 'a'
+   53070.7  PG   TextInput 'a'
+   53102.6  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   53104.3  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   53104.4  RAW  TEXTINPUT 'a'
+   53104.6  PG   TextInput 'a'
+   53131.7  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   53134.1  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   53134.2  RAW  TEXTINPUT 'a'
+   53134.3  PG   TextInput 'a'
+   53165.9  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   53167.7  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   53167.8  RAW  TEXTINPUT 'a'
+   53168.1  PG   TextInput 'a'
+   53199.9  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   53201.6  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   53201.7  RAW  TEXTINPUT 'a'
+   53201.8  PG   TextInput 'a'
+   53209.8  HOOK up   char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   53212.8  RAW  KEYUP    sc=52  sym=180       mod=0x1000 repeat=0
+   53213.1  PG   KeyUp    sc=52  key=180       unicode='´'
+   53229.3  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   53232.0  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   53232.1  RAW  TEXTINPUT 'a'
+   53232.2  PG   TextInput 'a'
+   53264.6  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   53267.1  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   53267.2  RAW  TEXTINPUT 'a'
+   53267.4  PG   TextInput 'a'
+   53296.9  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   53299.4  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   53299.4  RAW  TEXTINPUT 'a'
+   53299.7  PG   TextInput 'a'
+   53329.1  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   53331.2  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   53331.2  RAW  TEXTINPUT 'a'
+   53331.4  PG   TextInput 'a'
+   53354.6  HOOK up   char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   53356.9  RAW  KEYUP    sc=4   sym=97        mod=0x1000 repeat=0
+   53357.0  PG   KeyUp    sc=4   key=97        unicode='a'
+   55044.2  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   55049.9  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=0
+   55050.0  RAW  TEXTINPUT 'a'
+   55050.2  PG   KeyDown  sc=4   key=97        unicode='a' dead=False
+   55050.4  PG   TextInput 'a'
+   55218.7  HOOK up   char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   55223.8  RAW  KEYUP    sc=4   sym=97        mod=0x1000 repeat=0
+   55224.0  PG   KeyUp    sc=4   key=97        unicode='a'
+   57386.5  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   57388.3  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=0
+   57388.5  PG   KeyDown  sc=52  key=180       unicode='´' dead=True
+   57893.6  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   57895.8  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   57895.9  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 57895.9
+   57896.2  PG   TextInput '´'
+             ... x2 in all, last at 57896.2
+   57924.2  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   57926.4  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   57959.6  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   57961.3  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   57961.3  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 57961.3
+   57961.5  PG   TextInput '´'
+             ... x2 in all, last at 57961.5
+   57990.9  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   57993.7  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   58021.1  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   58023.4  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   58023.4  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 58023.5
+   58023.6  PG   TextInput '´'
+             ... x2 in all, last at 58023.6
+   58055.3  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   58057.1  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   58087.0  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   58089.1  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   58089.2  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 58089.2
+   58089.5  PG   TextInput '´'
+             ... x2 in all, last at 58089.5
+   58118.7  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   58121.0  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   58150.7  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   58152.3  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   58152.4  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 58152.4
+   58152.6  PG   TextInput '´'
+             ... x2 in all, last at 58152.7
+   58182.8  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   58185.8  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   58215.8  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   58218.0  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   58218.0  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 58218.1
+   58218.3  PG   TextInput '´'
+             ... x2 in all, last at 58218.4
+   58249.2  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   58250.9  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   58282.6  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   58284.9  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   58284.9  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 58285.0
+   58285.2  PG   TextInput '´'
+             ... x2 in all, last at 58285.2
+   58313.5  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   58315.5  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   58346.6  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   58349.7  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   58349.8  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 58349.8
+   58350.1  PG   TextInput '´'
+             ... x2 in all, last at 58350.1
+   58380.3  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   58383.2  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   58412.9  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   58414.8  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   58414.8  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 58414.9
+   58415.0  PG   TextInput '´'
+             ... x2 in all, last at 58415.1
+   58443.6  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   58445.9  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   58478.1  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   58479.9  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   58480.0  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 58480.0
+   58480.1  PG   TextInput '´'
+             ... x2 in all, last at 58480.2
+   58510.1  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   58512.1  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   58542.0  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   58543.6  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   58543.6  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 58543.7
+   58543.8  PG   TextInput '´'
+             ... x2 in all, last at 58543.8
+   58574.7  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   58576.2  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   58606.9  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   58608.7  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   58608.7  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 58608.8
+   58608.9  PG   TextInput '´'
+             ... x2 in all, last at 58608.9
+   58640.1  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   58642.1  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   58673.9  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   58675.8  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   58675.8  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 58675.9
+   58676.0  PG   TextInput '´'
+             ... x2 in all, last at 58676.0
+   58704.7  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   58707.4  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   58736.5  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   58738.2  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   58738.2  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 58738.2
+   58738.6  PG   TextInput '´'
+             ... x2 in all, last at 58738.6
+   58769.9  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   58772.1  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   58772.6  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   58774.2  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=0
+   58774.3  RAW  TEXTINPUT 'á'
+   58774.4  PG   KeyDown  sc=4   key=97        unicode='á' dead=False
+   58774.5  PG   TextInput 'á'
+   59280.5  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   59282.1  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   59282.2  RAW  TEXTINPUT 'a'
+   59282.3  PG   TextInput 'a'
+   59313.3  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   59316.0  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   59316.1  RAW  TEXTINPUT 'a'
+   59316.2  PG   TextInput 'a'
+   59348.6  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   59350.8  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   59351.0  RAW  TEXTINPUT 'a'
+   59351.4  PG   TextInput 'a'
+   59380.5  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   59382.5  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   59382.6  RAW  TEXTINPUT 'a'
+   59382.7  PG   TextInput 'a'
+   59410.6  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   59412.4  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   59412.5  RAW  TEXTINPUT 'a'
+   59412.6  PG   TextInput 'a'
+   59445.3  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   59447.0  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   59447.0  RAW  TEXTINPUT 'a'
+   59447.2  PG   TextInput 'a'
+   59476.7  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   59479.6  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   59479.6  RAW  TEXTINPUT 'a'
+   59479.8  PG   TextInput 'a'
+   59507.6  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   59509.5  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   59509.6  RAW  TEXTINPUT 'a'
+   59509.7  PG   TextInput 'a'
+   59543.4  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   59545.5  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   59545.6  RAW  TEXTINPUT 'a'
+   59545.7  PG   TextInput 'a'
+   59576.5  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   59579.1  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   59579.2  RAW  TEXTINPUT 'a'
+   59579.3  PG   TextInput 'a'
+   59608.1  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   59610.1  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   59610.2  RAW  TEXTINPUT 'a'
+   59610.3  PG   TextInput 'a'
+   59640.8  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   59643.3  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   59643.3  RAW  TEXTINPUT 'a'
+   59643.5  PG   TextInput 'a'
+   59671.2  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   59673.8  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   59673.8  RAW  TEXTINPUT 'a'
+   59674.0  PG   TextInput 'a'
+   59704.5  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   59707.3  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   59707.3  RAW  TEXTINPUT 'a'
+   59707.5  PG   TextInput 'a'
+   59737.6  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   59739.4  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   59739.4  RAW  TEXTINPUT 'a'
+   59739.7  PG   TextInput 'a'
+   59769.7  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   59772.6  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   59772.6  RAW  TEXTINPUT 'a'
+   59772.8  PG   TextInput 'a'
+   59801.7  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   59805.3  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   59805.3  RAW  TEXTINPUT 'a'
+   59805.5  PG   TextInput 'a'
+   59835.2  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   59837.8  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   59837.8  RAW  TEXTINPUT 'a'
+   59838.0  PG   TextInput 'a'
+   59866.9  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   59868.9  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   59868.9  RAW  TEXTINPUT 'a'
+   59869.1  PG   TextInput 'a'
+   59898.9  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   59900.5  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   59900.6  RAW  TEXTINPUT 'a'
+   59900.7  PG   TextInput 'a'
+   59935.7  HOOK up   char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   59937.7  RAW  KEYUP    sc=52  sym=180       mod=0x1000 repeat=0
+   59937.9  PG   KeyUp    sc=52  key=180       unicode='´'
+   59940.1  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   59942.6  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   59942.6  RAW  TEXTINPUT 'a'
+   59942.8  PG   TextInput 'a'
+   59966.5  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   59969.0  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   59969.1  RAW  TEXTINPUT 'a'
+   59969.2  PG   TextInput 'a'
+   59995.8  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   59998.1  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   59998.2  RAW  TEXTINPUT 'a'
+   59998.3  PG   TextInput 'a'
+   60017.4  HOOK up   char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   60019.5  RAW  KEYUP    sc=4   sym=97        mod=0x1000 repeat=0
+   60019.7  PG   KeyUp    sc=4   key=97        unicode='á'
+   61194.3  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   61196.0  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=0
+   61196.1  RAW  TEXTINPUT 'a'
+   61196.2  PG   KeyDown  sc=4   key=97        unicode='a' dead=False
+   61196.3  PG   TextInput 'a'
+   61334.3  HOOK up   char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   61336.0  RAW  KEYUP    sc=4   sym=97        mod=0x1000 repeat=0
+   61336.3  PG   KeyUp    sc=4   key=97        unicode='a'
+   65497.0  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   65499.2  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=0
+   65499.4  PG   KeyDown  sc=52  key=180       unicode='´' dead=True
+   66005.0  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66007.0  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66007.1  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 66007.1
+   66007.3  PG   TextInput '´'
+             ... x2 in all, last at 66007.3
+   66041.6  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66043.2  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66069.5  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66071.2  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66071.3  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 66071.4
+   66071.5  PG   TextInput '´'
+             ... x2 in all, last at 66071.5
+   66104.7  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66106.6  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66136.1  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66138.6  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66138.6  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 66138.7
+   66138.8  PG   TextInput '´'
+             ... x2 in all, last at 66138.8
+   66167.0  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66168.8  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66200.9  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66203.6  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66203.7  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 66203.7
+   66204.1  PG   TextInput '´'
+             ... x2 in all, last at 66204.1
+   66232.1  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66234.1  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66267.4  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66269.6  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66269.7  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 66269.7
+   66269.9  PG   TextInput '´'
+             ... x2 in all, last at 66269.9
+   66298.4  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66300.6  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66333.2  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66335.7  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66335.8  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 66335.8
+   66336.0  PG   TextInput '´'
+             ... x2 in all, last at 66336.1
+   66364.8  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66366.5  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66395.3  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66397.2  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66397.2  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 66397.3
+   66397.6  PG   TextInput '´'
+             ... x2 in all, last at 66397.7
+   66428.4  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66432.1  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66459.6  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66461.6  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66461.6  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 66461.6
+   66461.9  PG   TextInput '´'
+             ... x2 in all, last at 66461.9
+   66493.0  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66495.7  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66526.0  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66528.0  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66528.1  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 66528.1
+   66528.3  PG   TextInput '´'
+             ... x2 in all, last at 66528.3
+   66557.7  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66560.5  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66589.9  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66591.9  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66591.9  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 66591.9
+   66592.1  PG   TextInput '´'
+             ... x2 in all, last at 66592.1
+   66623.9  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66625.9  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66654.4  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66656.3  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66656.3  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 66656.4
+   66656.5  PG   TextInput '´'
+             ... x2 in all, last at 66656.5
+   66688.3  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66691.2  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66721.2  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66724.2  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66724.2  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 66724.3
+   66724.4  PG   TextInput '´'
+             ... x2 in all, last at 66724.4
+   66755.6  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66757.2  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66788.3  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66790.2  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66790.3  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 66790.3
+   66790.5  PG   TextInput '´'
+             ... x2 in all, last at 66790.5
+   66818.4  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66820.1  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66851.2  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66852.8  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66852.9  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 66852.9
+   66853.1  PG   TextInput '´'
+             ... x2 in all, last at 66853.1
+   66883.5  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66885.2  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66915.7  HOOK down char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   66918.2  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=1
+   66918.3  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 66918.3
+   66918.5  PG   TextInput '´'
+             ... x2 in all, last at 66918.5
+   66941.1  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   66942.9  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=0
+   66942.9  RAW  TEXTINPUT 'a'
+   66943.1  PG   KeyDown  sc=4   key=97        unicode='a' dead=False
+   66943.2  PG   TextInput 'a'
+   67449.9  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   67452.7  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   67452.7  RAW  TEXTINPUT 'a'
+   67452.9  PG   TextInput 'a'
+   67479.6  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   67481.4  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   67481.5  RAW  TEXTINPUT 'a'
+   67481.9  PG   TextInput 'a'
+   67513.4  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   67515.3  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   67515.4  RAW  TEXTINPUT 'a'
+   67515.5  PG   TextInput 'a'
+   67544.4  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   67546.9  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   67546.9  RAW  TEXTINPUT 'a'
+   67547.3  PG   TextInput 'a'
+   67579.1  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   67580.7  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   67580.7  RAW  TEXTINPUT 'a'
+   67581.1  PG   TextInput 'a'
+   67610.5  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   67612.6  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   67612.7  RAW  TEXTINPUT 'a'
+   67612.9  PG   TextInput 'a'
+   67644.2  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   67646.8  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   67646.8  RAW  TEXTINPUT 'a'
+   67647.0  PG   TextInput 'a'
+   67677.1  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   67679.0  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   67679.1  RAW  TEXTINPUT 'a'
+   67679.2  PG   TextInput 'a'
+   67708.3  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   67710.6  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   67710.7  RAW  TEXTINPUT 'a'
+   67711.0  PG   TextInput 'a'
+   67742.2  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   67744.2  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   67744.3  RAW  TEXTINPUT 'a'
+   67744.4  PG   TextInput 'a'
+   67774.5  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   67776.7  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   67776.8  RAW  TEXTINPUT 'a'
+   67776.9  PG   TextInput 'a'
+   67805.1  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   67807.4  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   67807.4  RAW  TEXTINPUT 'a'
+   67807.6  PG   TextInput 'a'
+   67837.6  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   67839.2  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   67839.3  RAW  TEXTINPUT 'a'
+   67839.4  PG   TextInput 'a'
+   67870.3  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   67872.3  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   67872.3  RAW  TEXTINPUT 'a'
+   67872.5  PG   TextInput 'a'
+   67902.9  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   67905.3  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   67905.4  RAW  TEXTINPUT 'a'
+   67905.6  PG   TextInput 'a'
+   67938.4  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   67940.1  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   67940.1  RAW  TEXTINPUT 'a'
+   67940.3  PG   TextInput 'a'
+   67969.9  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   67972.7  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   67972.7  RAW  TEXTINPUT 'a'
+   67972.9  PG   TextInput 'a'
+   67999.3  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68001.0  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68001.1  RAW  TEXTINPUT 'a'
+   68001.3  PG   TextInput 'a'
+   68034.3  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68036.1  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68036.2  RAW  TEXTINPUT 'a'
+   68036.3  PG   TextInput 'a'
+   68066.2  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68068.4  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68068.5  RAW  TEXTINPUT 'a'
+   68068.6  PG   TextInput 'a'
+   68097.7  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68099.5  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68099.6  RAW  TEXTINPUT 'a'
+   68100.0  PG   TextInput 'a'
+   68131.5  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68133.7  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68133.8  RAW  TEXTINPUT 'a'
+   68134.2  PG   TextInput 'a'
+   68164.1  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68166.1  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68166.1  RAW  TEXTINPUT 'a'
+   68166.3  PG   TextInput 'a'
+   68195.3  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68197.1  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68197.1  RAW  TEXTINPUT 'a'
+   68197.3  PG   TextInput 'a'
+   68230.2  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68233.1  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68233.1  RAW  TEXTINPUT 'a'
+   68233.3  PG   TextInput 'a'
+   68261.5  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68263.1  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68263.1  RAW  TEXTINPUT 'a'
+   68263.3  PG   TextInput 'a'
+   68293.1  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68295.2  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68295.2  RAW  TEXTINPUT 'a'
+   68295.4  PG   TextInput 'a'
+   68325.8  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68327.6  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68327.6  RAW  TEXTINPUT 'a'
+   68327.8  PG   TextInput 'a'
+   68357.0  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68358.7  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68358.7  RAW  TEXTINPUT 'a'
+   68358.9  PG   TextInput 'a'
+   68391.2  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68393.3  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68393.3  RAW  TEXTINPUT 'a'
+   68393.5  PG   TextInput 'a'
+   68422.6  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68424.4  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68424.4  RAW  TEXTINPUT 'a'
+   68424.7  PG   TextInput 'a'
+   68454.6  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68456.5  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68456.6  RAW  TEXTINPUT 'a'
+   68456.9  PG   TextInput 'a'
+   68488.7  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68491.4  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68491.4  RAW  TEXTINPUT 'a'
+   68491.6  PG   TextInput 'a'
+   68521.7  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68524.0  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68524.0  RAW  TEXTINPUT 'a'
+   68524.2  PG   TextInput 'a'
+   68552.2  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68554.3  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68554.4  RAW  TEXTINPUT 'a'
+   68554.6  PG   TextInput 'a'
+   68586.6  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68588.9  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68589.0  RAW  TEXTINPUT 'a'
+   68589.1  PG   TextInput 'a'
+   68618.1  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68621.0  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68621.0  RAW  TEXTINPUT 'a'
+   68621.1  PG   TextInput 'a'
+   68650.0  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68652.0  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68652.0  RAW  TEXTINPUT 'a'
+   68652.1  PG   TextInput 'a'
+   68684.4  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68686.2  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68686.3  RAW  TEXTINPUT 'a'
+   68686.4  PG   TextInput 'a'
+   68715.0  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68716.8  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68716.8  RAW  TEXTINPUT 'a'
+   68717.0  PG   TextInput 'a'
+   68748.3  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68749.9  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68750.0  RAW  TEXTINPUT 'a'
+   68750.1  PG   TextInput 'a'
+   68781.6  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68783.3  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68783.4  RAW  TEXTINPUT 'a'
+   68783.6  PG   TextInput 'a'
+   68813.5  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68815.8  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68815.9  RAW  TEXTINPUT 'a'
+   68816.0  PG   TextInput 'a'
+   68845.7  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68847.3  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68847.4  RAW  TEXTINPUT 'a'
+   68847.5  PG   TextInput 'a'
+   68879.7  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68882.5  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68882.6  RAW  TEXTINPUT 'a'
+   68882.7  PG   TextInput 'a'
+   68912.3  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68914.6  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68914.6  RAW  TEXTINPUT 'a'
+   68914.8  PG   TextInput 'a'
+   68943.2  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68945.2  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68945.3  RAW  TEXTINPUT 'a'
+   68945.5  PG   TextInput 'a'
+   68978.0  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   68980.2  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   68980.3  RAW  TEXTINPUT 'a'
+   68980.4  PG   TextInput 'a'
+   69009.4  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   69011.3  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   69011.4  RAW  TEXTINPUT 'a'
+   69011.6  PG   TextInput 'a'
+   69041.8  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   69043.5  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   69043.6  RAW  TEXTINPUT 'a'
+   69043.7  PG   TextInput 'a'
+   69076.1  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   69078.0  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   69078.0  RAW  TEXTINPUT 'a'
+   69078.2  PG   TextInput 'a'
+   69106.2  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   69107.9  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   69108.0  RAW  TEXTINPUT 'a'
+   69108.1  PG   TextInput 'a'
+   69140.4  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   69142.6  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   69142.7  RAW  TEXTINPUT 'a'
+   69142.9  PG   TextInput 'a'
+   69173.1  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   69175.2  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   69175.2  RAW  TEXTINPUT 'a'
+   69175.4  PG   TextInput 'a'
+   69203.4  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   69205.1  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   69205.2  RAW  TEXTINPUT 'a'
+   69205.3  PG   TextInput 'a'
+   69235.3  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   69237.0  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   69237.1  RAW  TEXTINPUT 'a'
+   69237.2  PG   TextInput 'a'
+   69270.5  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   69273.3  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   69273.3  RAW  TEXTINPUT 'a'
+   69273.4  PG   TextInput 'a'
+   69300.9  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   69303.2  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   69303.2  RAW  TEXTINPUT 'a'
+   69303.4  PG   TextInput 'a'
+   69336.0  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   69337.6  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   69337.7  RAW  TEXTINPUT 'a'
+   69337.8  PG   TextInput 'a'
+   69367.1  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   69368.9  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   69369.0  RAW  TEXTINPUT 'a'
+   69369.4  PG   TextInput 'a'
+   69397.6  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   69400.4  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   69400.5  RAW  TEXTINPUT 'a'
+   69400.7  PG   TextInput 'a'
+   69430.7  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   69432.7  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   69432.7  RAW  TEXTINPUT 'a'
+   69433.0  PG   TextInput 'a'
+   69463.1  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   69468.8  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   69468.8  RAW  TEXTINPUT 'a'
+   69469.0  PG   TextInput 'a'
+   69495.6  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   69497.8  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   69497.8  RAW  TEXTINPUT 'a'
+   69498.0  PG   TextInput 'a'
+   69530.1  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   69532.7  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   69532.7  RAW  TEXTINPUT 'a'
+   69533.0  PG   TextInput 'a'
+   69561.4  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   69563.4  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   69563.4  RAW  TEXTINPUT 'a'
+   69563.6  PG   TextInput 'a'
+   69593.5  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   69595.7  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   69595.7  RAW  TEXTINPUT 'a'
+   69595.9  PG   TextInput 'a'
+   69627.0  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   69628.9  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   69629.0  RAW  TEXTINPUT 'a'
+   69629.1  PG   TextInput 'a'
+   69657.7  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   69659.4  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   69659.5  RAW  TEXTINPUT 'a'
+   69659.6  PG   TextInput 'a'
+   69692.9  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   69694.6  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   69694.6  RAW  TEXTINPUT 'a'
+   69694.9  PG   TextInput 'a'
+   69707.9  HOOK up   char='´' DEAD      vk=0xde scan=0x28  sdl_sc=52 tr='´' thread_hkl=0x040f040f
+   69710.1  RAW  KEYUP    sc=52  sym=180       mod=0x1000 repeat=0
+   69710.3  PG   KeyUp    sc=52  key=180       unicode='´'
+   69722.7  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   69725.3  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   69725.3  RAW  TEXTINPUT 'a'
+   69725.5  PG   TextInput 'a'
+   69755.5  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   69757.3  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=1
+   69757.3  RAW  TEXTINPUT 'a'
+   69757.5  PG   TextInput 'a'
+   69773.2  HOOK up   char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   69775.2  RAW  KEYUP    sc=4   sym=97        mod=0x1000 repeat=0
+   69775.3  PG   KeyUp    sc=4   key=97        unicode='a'
+   71092.5  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   71097.8  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=0
+   71097.9  RAW  TEXTINPUT 'a'
+   71098.1  PG   KeyDown  sc=4   key=97        unicode='a' dead=False
+   71098.2  PG   TextInput 'a'
+   71293.5  HOOK up   char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x040f040f
+   71295.1  RAW  KEYUP    sc=4   sym=97        mod=0x1000 repeat=0
+   71295.3  PG   KeyUp    sc=4   key=97        unicode='a'
+   75035.3  PG   MouseButtonDown
+  text:
+    today, translate() presses: '´´´´´´´´´´´´´´´´´´´´´´aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa´´´´´´´´´´´´´´´´´´´´aaaaaaaaaaaaaaaaaaaaa´´´´´´´´´´´´´´´´´´´´´´´´´´´´´aaaaaaaaaaaaaaaaaaaaaaaaa´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'  ['´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A]
+    (1) pynput + join():        '´´´´´´´´´´´aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa´´´´´´´´´´aaaaaaaaaaaaaaaaaaaaa´´´´´´´´´´´´´´áaaaaaaaaaaaaaaaaaaaaaaaa´´´´´´´´´´´´´´´aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+    (2) window TEXTINPUT:       '´´´´´´´´´´´´´´´´´´´´´´aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa´´´´´´´´´´´´´´´´´´´´aaaaaaaaaaaaaaaaaaaaa´´´´´´´´´´´´´´´´´´´´´´´´´´´´áaaaaaaaaaaaaaaaaaaaaaaaa´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'  ['´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, 'á' LATIN SMALL LETTER A WITH ACUTE, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, '´' ACUTE ACCENT, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A, 'a' LATIN SMALL LETTER A]
+        pygame KEYDOWN.unicode: 'aa´aa´áa´aa'
+  holds:
+  hook key=´      fresh=1 repeats=21  first repeat after  508 ms  interval  32 ms  held 2563 ms
+  hook key=´      fresh=1 repeats=19  first repeat after  509 ms  interval  32 ms  held 2088 ms
+  hook key=´      fresh=1 repeats=28  first repeat after  507 ms  interval  32 ms  held 2549 ms
+  hook key=´      fresh=1 repeats=29  first repeat after  508 ms  interval  33 ms  held 4211 ms
+  hook key=a      fresh=1 repeats=28  first repeat after  508 ms  interval  32 ms  held 1415 ms
+  hook key=a      fresh=1 repeats=0   first repeat after       -  interval      -  held 167 ms
+  hook key=a      fresh=1 repeats=19  first repeat after  508 ms  interval  33 ms  held 1120 ms
+  hook key=a      fresh=1 repeats=0   first repeat after       -  interval      -  held 174 ms
+  hook key=a      fresh=1 repeats=23  first repeat after  508 ms  interval  32 ms  held 1245 ms
+  hook key=a      fresh=1 repeats=0   first repeat after       -  interval      -  held 140 ms
+  hook key=a      fresh=1 repeats=72  first repeat after  509 ms  interval  32 ms  held 2832 ms
+  hook key=a      fresh=1 repeats=0   first repeat after       -  interval      -  held 201 ms
+  pg   key=4      fresh=1 repeats=0   first repeat after       -  interval      -  held 1416 ms
+  pg   key=4      fresh=1 repeats=0   first repeat after       -  interval      -  held 167 ms
+  pg   key=4      fresh=1 repeats=0   first repeat after       -  interval      -  held 1119 ms
+  pg   key=4      fresh=1 repeats=0   first repeat after       -  interval      -  held 174 ms
+  pg   key=4      fresh=1 repeats=0   first repeat after       -  interval      -  held 1245 ms
+  pg   key=4      fresh=1 repeats=0   first repeat after       -  interval      -  held 140 ms
+  pg   key=4      fresh=1 repeats=0   first repeat after       -  interval      -  held 2832 ms
+  pg   key=4      fresh=1 repeats=0   first repeat after       -  interval      -  held 197 ms
+  pg   key=52     fresh=1 repeats=0   first repeat after       -  interval      -  held 2561 ms
+  pg   key=52     fresh=1 repeats=0   first repeat after       -  interval      -  held 2089 ms
+  pg   key=52     fresh=1 repeats=0   first repeat after       -  interval      -  held 2549 ms
+  pg   key=52     fresh=1 repeats=0   first repeat after       -  interval      -  held 4211 ms
+  raw  key=4      fresh=1 repeats=28  first repeat after  508 ms  interval  33 ms  held 1416 ms
+  raw  key=4      fresh=1 repeats=0   first repeat after       -  interval      -  held 167 ms
+  raw  key=4      fresh=1 repeats=19  first repeat after  507 ms  interval  32 ms  held 1120 ms
+  raw  key=4      fresh=1 repeats=0   first repeat after       -  interval      -  held 174 ms
+  raw  key=4      fresh=1 repeats=23  first repeat after  508 ms  interval  33 ms  held 1245 ms
+  raw  key=4      fresh=1 repeats=0   first repeat after       -  interval      -  held 140 ms
+  raw  key=4      fresh=1 repeats=72  first repeat after  510 ms  interval  32 ms  held 2832 ms
+  raw  key=4      fresh=1 repeats=0   first repeat after       -  interval      -  held 197 ms
+  raw  key=52     fresh=1 repeats=21  first repeat after  506 ms  interval  32 ms  held 2561 ms
+  raw  key=52     fresh=1 repeats=19  first repeat after  509 ms  interval  32 ms  held 2089 ms
+  raw  key=52     fresh=1 repeats=28  first repeat after  508 ms  interval  32 ms  held 2549 ms
+  raw  key=52     fresh=1 repeats=29  first repeat after  508 ms  interval  33 ms  held 4211 ms
+  pg   TEXTINPUT x250: '´´´´´´´´´´´´´´´´´´´´´´aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa´´´´´´´´´´´´´´´´´´´´aaaaaaaaaaaaaaaaaaaaa´´´´´´´´´´´´´´´´´´´´´´´´´´´´áaaaaaaaaaaaaaaaaaaaaaaaa´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'  gaps ms: [0, 67, 0, 64, 0, 64] ...
+  balance:
+  raw : every KEYDOWN has its KEYUP
+  pg  : every KEYDOWN has its KEYUP
+  pairing:
+  matched 263 hook events to SDL events; inversions of order: 0; next hook event before this SDL event (interleaved): 0
+  lag hook->SDL ms: min 1.5  median 2.0  max 5.7
+
+## step 2 'focus lost mid-hold x2' attempt 0 (main_hkl 0x040f040f, text input active: True)
+   Twice: (1) hold  j  with your right hand and keep holding; (2) with your left hand press Alt+Tab and let go of Alt and Tab; (3) let go of  j ; (4) press Alt+Tab to come back to THIS window.
+   75259.0  PG   MouseButtonUp
+   96885.8  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   96888.4  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=0
+   96888.4  RAW  TEXTINPUT 'j'
+   96888.6  PG   KeyDown  sc=13  key=106       unicode='j' dead=False
+   96888.6  PG   TextInput 'j'
+   97395.1  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   97397.2  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   97397.2  RAW  TEXTINPUT 'j'
+   97397.4  PG   TextInput 'j'
+   97429.4  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   97431.1  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   97431.2  RAW  TEXTINPUT 'j'
+   97431.3  PG   TextInput 'j'
+   97460.4  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   97462.1  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   97462.1  RAW  TEXTINPUT 'j'
+   97462.2  PG   TextInput 'j'
+   97491.4  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   97493.4  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   97493.4  RAW  TEXTINPUT 'j'
+   97493.6  PG   TextInput 'j'
+   97523.9  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   97526.3  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   97526.4  RAW  TEXTINPUT 'j'
+   97526.6  PG   TextInput 'j'
+   97558.6  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   97560.3  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   97560.4  RAW  TEXTINPUT 'j'
+   97560.6  PG   TextInput 'j'
+   97590.3  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   97592.1  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   97592.1  RAW  TEXTINPUT 'j'
+   97592.4  PG   TextInput 'j'
+   97621.7  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   97623.3  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   97623.3  RAW  TEXTINPUT 'j'
+   97623.6  PG   TextInput 'j'
+   97655.2  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   97657.3  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   97657.4  RAW  TEXTINPUT 'j'
+   97657.5  PG   TextInput 'j'
+   97687.8  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   97690.1  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   97690.1  RAW  TEXTINPUT 'j'
+   97690.3  PG   TextInput 'j'
+   97719.5  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   97721.6  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   97721.7  RAW  TEXTINPUT 'j'
+   97721.8  PG   TextInput 'j'
+   97752.9  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   97754.9  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   97754.9  RAW  TEXTINPUT 'j'
+   97755.1  PG   TextInput 'j'
+   97785.9  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   97787.8  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   97787.9  RAW  TEXTINPUT 'j'
+   97788.0  PG   TextInput 'j'
+   97816.8  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   97818.5  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   97818.6  RAW  TEXTINPUT 'j'
+   97818.7  PG   TextInput 'j'
+   97849.3  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   97850.9  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   97851.0  RAW  TEXTINPUT 'j'
+   97851.1  PG   TextInput 'j'
+   97884.8  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   97886.3  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   97886.4  RAW  TEXTINPUT 'j'
+   97886.5  PG   TextInput 'j'
+   97914.3  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   97916.2  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   97916.2  RAW  TEXTINPUT 'j'
+   97916.4  PG   TextInput 'j'
+   97947.4  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   97950.8  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   97950.9  RAW  TEXTINPUT 'j'
+   97951.0  PG   TextInput 'j'
+   97979.5  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   97981.4  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   97981.4  RAW  TEXTINPUT 'j'
+   97981.6  PG   TextInput 'j'
+   98013.3  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   98015.2  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   98015.3  RAW  TEXTINPUT 'j'
+   98015.4  PG   TextInput 'j'
+   98044.1  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   98046.1  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   98046.2  RAW  TEXTINPUT 'j'
+   98046.6  PG   TextInput 'j'
+   98079.1  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   98081.4  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   98081.4  RAW  TEXTINPUT 'j'
+   98081.6  PG   TextInput 'j'
+   98111.1  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   98113.4  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   98113.4  RAW  TEXTINPUT 'j'
+   98113.7  PG   TextInput 'j'
+   98142.1  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   98147.4  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   98147.5  RAW  TEXTINPUT 'j'
+   98147.9  PG   TextInput 'j'
+   98175.1  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   98177.4  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   98177.4  RAW  TEXTINPUT 'j'
+   98177.6  PG   TextInput 'j'
+   98209.9  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   98211.7  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   98211.7  RAW  TEXTINPUT 'j'
+   98211.9  PG   TextInput 'j'
+   98241.1  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   98242.9  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   98242.9  RAW  TEXTINPUT 'j'
+   98243.2  PG   TextInput 'j'
+   98272.3  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   98274.5  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   98274.6  RAW  TEXTINPUT 'j'
+   98274.8  PG   TextInput 'j'
+   98304.8  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   98306.6  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   98306.6  RAW  TEXTINPUT 'j'
+   98306.8  PG   TextInput 'j'
+   98338.8  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   98340.8  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   98340.8  RAW  TEXTINPUT 'j'
+   98340.9  PG   TextInput 'j'
+   98370.9  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   98372.8  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   98372.8  RAW  TEXTINPUT 'j'
+   98372.9  PG   TextInput 'j'
+   98404.4  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   98406.3  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   98406.4  RAW  TEXTINPUT 'j'
+   98406.8  PG   TextInput 'j'
+   98435.8  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+   98437.4  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+   98437.5  RAW  TEXTINPUT 'j'
+   98437.6  PG   TextInput 'j'
+   98456.8  HOOK down name=alt_l         vk=0xa4 scan=0x38  sdl_sc=226 tr='alt_l' thread_hkl=0x040f040f
+   98459.1  RAW  KEYDOWN  sc=226 sym=1073742050 mod=0x1100 repeat=0
+   98459.3  PG   KeyDown  sc=226 key=1073742050 unicode='' dead=False
+   98670.7  HOOK down name=tab           vk=0x09 scan=0x0f  sdl_sc=43 tr='tab' thread_hkl=0x040f040f
+   98678.7  RAW  KEYUP    sc=13  sym=106       mod=0x1100 repeat=0
+   98678.7  RAW  KEYUP    sc=226 sym=1073742050 mod=0x1000 repeat=0
+   98678.7  RAW  WINDOW FOCUS_LOST
+   98679.6  RAW  TEXTEDITING ''
+   98687.1  PG   KeyUp    sc=13  key=106       unicode='j'
+   98687.1  PG   KeyUp    sc=226 key=1073742050 unicode=''
+   98687.1  PG   WindowFocusLost
+   98687.2  PG   TextEditing ''
+   98851.6  RAW  WINDOW LEAVE
+   98851.7  PG   WindowLeave
+   98874.7  HOOK up   name=tab           vk=0x09 scan=0x0f  sdl_sc=43 tr='tab' thread_hkl=0x040f040f
+   98904.8  HOOK up   name=alt_l         vk=0xa4 scan=0x38  sdl_sc=226 tr='alt_l' thread_hkl=0x040f040f
+   99946.6  HOOK down name=alt_l         vk=0xa4 scan=0x38  sdl_sc=226 tr='alt_l' thread_hkl=0x040f040f
+  100096.4  HOOK down name=tab           vk=0x09 scan=0x0f  sdl_sc=43 tr='tab' thread_hkl=0x040f040f
+  100283.6  HOOK up   name=tab           vk=0x09 scan=0x0f  sdl_sc=43 tr='tab' thread_hkl=0x040f040f
+  100335.4  HOOK up   name=alt_l         vk=0xa4 scan=0x38  sdl_sc=226 tr='alt_l' thread_hkl=0x040f040f
+  100356.0  RAW  WINDOW FOCUS_GAINED
+  100356.5  RAW  WINDOW ENTER
+  100368.9  RAW  WINDOW EXPOSED
+  100375.6  PG   WindowFocusGained
+  100375.6  PG   WindowEnter
+  103480.7  HOOK up   char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  109693.9  RAW  WINDOW LEAVE
+  109694.1  PG   WindowLeave
+  111094.0  RAW  WINDOW FOCUS_LOST
+  111096.4  RAW  TEXTEDITING ''
+  111105.5  PG   WindowFocusLost
+  111105.5  PG   TextEditing ''
+  112547.6  RAW  WINDOW ENTER
+  112548.2  PG   WindowEnter
+  112974.7  RAW  WINDOW FOCUS_GAINED
+  112985.0  RAW  WINDOW EXPOSED
+  112985.6  PG   WindowFocusGained
+  117200.6  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  117202.4  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=0
+  117202.5  RAW  TEXTINPUT 'j'
+  117202.7  PG   KeyDown  sc=13  key=106       unicode='j' dead=False
+  117202.7  PG   TextInput 'j'
+  117708.4  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  117710.2  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  117710.2  RAW  TEXTINPUT 'j'
+  117710.5  PG   TextInput 'j'
+  117741.6  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  117743.3  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  117743.4  RAW  TEXTINPUT 'j'
+  117743.6  PG   TextInput 'j'
+  117773.6  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  117776.0  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  117776.1  RAW  TEXTINPUT 'j'
+  117776.4  PG   TextInput 'j'
+  117808.5  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  117811.6  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  117811.6  RAW  TEXTINPUT 'j'
+  117811.9  PG   TextInput 'j'
+  117840.7  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  117842.8  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  117842.9  RAW  TEXTINPUT 'j'
+  117843.0  PG   TextInput 'j'
+  117871.8  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  117874.1  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  117874.1  RAW  TEXTINPUT 'j'
+  117874.3  PG   TextInput 'j'
+  117903.4  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  117904.9  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  117905.0  RAW  TEXTINPUT 'j'
+  117905.2  PG   TextInput 'j'
+  117938.6  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  117940.5  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  117940.6  RAW  TEXTINPUT 'j'
+  117940.9  PG   TextInput 'j'
+  117969.8  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  117972.0  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  117972.1  RAW  TEXTINPUT 'j'
+  117972.4  PG   TextInput 'j'
+  118001.0  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118003.2  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118003.2  RAW  TEXTINPUT 'j'
+  118003.4  PG   TextInput 'j'
+  118034.9  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118036.5  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118036.5  RAW  TEXTINPUT 'j'
+  118036.7  PG   TextInput 'j'
+  118066.3  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118068.6  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118068.7  RAW  TEXTINPUT 'j'
+  118068.8  PG   TextInput 'j'
+  118097.9  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118099.7  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118099.7  RAW  TEXTINPUT 'j'
+  118099.9  PG   TextInput 'j'
+  118132.4  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118134.3  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118134.3  RAW  TEXTINPUT 'j'
+  118134.6  PG   TextInput 'j'
+  118165.1  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118167.0  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118167.0  RAW  TEXTINPUT 'j'
+  118167.2  PG   TextInput 'j'
+  118196.3  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118198.0  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118198.1  RAW  TEXTINPUT 'j'
+  118198.5  PG   TextInput 'j'
+  118228.5  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118230.7  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118230.7  RAW  TEXTINPUT 'j'
+  118230.9  PG   TextInput 'j'
+  118260.8  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118262.8  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118262.9  RAW  TEXTINPUT 'j'
+  118263.2  PG   TextInput 'j'
+  118294.7  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118297.2  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118297.4  RAW  TEXTINPUT 'j'
+  118297.9  PG   TextInput 'j'
+  118326.4  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118328.9  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118329.0  RAW  TEXTINPUT 'j'
+  118329.2  PG   TextInput 'j'
+  118358.7  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118360.4  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118360.5  RAW  TEXTINPUT 'j'
+  118360.6  PG   TextInput 'j'
+  118392.1  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118394.1  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118394.1  RAW  TEXTINPUT 'j'
+  118394.4  PG   TextInput 'j'
+  118424.2  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118426.2  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118426.2  RAW  TEXTINPUT 'j'
+  118426.4  PG   TextInput 'j'
+  118455.4  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118457.0  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118457.0  RAW  TEXTINPUT 'j'
+  118457.3  PG   TextInput 'j'
+  118489.9  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118491.6  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118491.7  RAW  TEXTINPUT 'j'
+  118492.0  PG   TextInput 'j'
+  118520.8  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118523.1  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118523.2  RAW  TEXTINPUT 'j'
+  118523.4  PG   TextInput 'j'
+  118554.5  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118556.3  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118556.4  RAW  TEXTINPUT 'j'
+  118556.6  PG   TextInput 'j'
+  118587.1  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118589.2  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118589.2  RAW  TEXTINPUT 'j'
+  118589.5  PG   TextInput 'j'
+  118620.2  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118622.9  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118623.0  RAW  TEXTINPUT 'j'
+  118623.3  PG   TextInput 'j'
+  118651.0  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118653.9  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118654.0  RAW  TEXTINPUT 'j'
+  118654.3  PG   TextInput 'j'
+  118684.4  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118686.3  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118686.4  RAW  TEXTINPUT 'j'
+  118686.8  PG   TextInput 'j'
+  118717.6  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118723.0  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118723.1  RAW  TEXTINPUT 'j'
+  118723.2  PG   TextInput 'j'
+  118749.1  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118751.7  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118751.7  RAW  TEXTINPUT 'j'
+  118751.9  PG   TextInput 'j'
+  118783.1  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118784.6  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118784.6  RAW  TEXTINPUT 'j'
+  118784.8  PG   TextInput 'j'
+  118814.6  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118818.2  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118818.3  RAW  TEXTINPUT 'j'
+  118818.6  PG   TextInput 'j'
+  118845.8  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118848.2  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118848.3  RAW  TEXTINPUT 'j'
+  118848.4  PG   TextInput 'j'
+  118879.4  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  118881.1  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=1
+  118881.2  RAW  TEXTINPUT 'j'
+  118881.3  PG   TextInput 'j'
+  118892.5  HOOK down name=alt_l         vk=0xa4 scan=0x38  sdl_sc=226 tr='alt_l' thread_hkl=0x040f040f
+  118895.4  RAW  KEYDOWN  sc=226 sym=1073742050 mod=0x1100 repeat=0
+  118895.6  PG   KeyDown  sc=226 key=1073742050 unicode='' dead=False
+  119089.2  HOOK down name=tab           vk=0x09 scan=0x0f  sdl_sc=43 tr='tab' thread_hkl=0x040f040f
+  119098.1  RAW  KEYUP    sc=13  sym=106       mod=0x1100 repeat=0
+  119098.2  RAW  KEYUP    sc=226 sym=1073742050 mod=0x1000 repeat=0
+  119098.2  RAW  WINDOW FOCUS_LOST
+  119098.5  RAW  TEXTEDITING ''
+  119115.5  PG   KeyUp    sc=13  key=106       unicode='j'
+  119115.7  PG   KeyUp    sc=226 key=1073742050 unicode=''
+  119115.8  PG   WindowFocusLost
+  119115.8  PG   TextEditing ''
+  119290.1  HOOK up   name=tab           vk=0x09 scan=0x0f  sdl_sc=43 tr='tab' thread_hkl=0x040f040f
+  119353.5  HOOK up   name=alt_l         vk=0xa4 scan=0x38  sdl_sc=226 tr='alt_l' thread_hkl=0x040f040f
+  119365.0  RAW  WINDOW LEAVE
+  119365.3  PG   WindowLeave
+  119383.7  RAW  WINDOW ENTER
+  119384.2  PG   WindowEnter
+  120164.6  RAW  WINDOW LEAVE
+  120164.7  PG   WindowLeave
+  120182.4  RAW  WINDOW ENTER
+  120182.7  PG   WindowEnter
+  121089.3  HOOK up   char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  121545.3  HOOK down name=alt_l         vk=0xa4 scan=0x38  sdl_sc=226 tr='alt_l' thread_hkl=0x040f040f
+  121720.0  HOOK down name=tab           vk=0x09 scan=0x0f  sdl_sc=43 tr='tab' thread_hkl=0x040f040f
+  121866.3  RAW  WINDOW LEAVE
+  121866.5  PG   WindowLeave
+  121950.2  HOOK up   name=tab           vk=0x09 scan=0x0f  sdl_sc=43 tr='tab' thread_hkl=0x040f040f
+  121968.1  HOOK up   name=alt_l         vk=0xa4 scan=0x38  sdl_sc=226 tr='alt_l' thread_hkl=0x040f040f
+  121989.2  RAW  WINDOW FOCUS_GAINED
+  121989.4  RAW  WINDOW ENTER
+  121996.7  RAW  WINDOW EXPOSED
+  121999.1  PG   WindowFocusGained
+  121999.1  PG   WindowEnter
+  124598.8  PG   MouseButtonDown
+  text:
+    today, translate() presses: 'jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj'  ['j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J]
+    (1) pynput + join():        'jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj'
+    (2) window TEXTINPUT:       'jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj'  ['j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J]
+        pygame KEYDOWN.unicode: 'jj'
+    TEXTEDITING events (IME composition): 6
+  holds:
+  hook key=alt_l  fresh=1 repeats=0   first repeat after       -  interval      -  held 448 ms
+  hook key=alt_l  fresh=1 repeats=0   first repeat after       -  interval      -  held 389 ms
+  hook key=alt_l  fresh=1 repeats=0   first repeat after       -  interval      -  held 461 ms
+  hook key=alt_l  fresh=1 repeats=0   first repeat after       -  interval      -  held 423 ms
+  hook key=j      fresh=1 repeats=33  first repeat after  509 ms  interval  32 ms  held 6595 ms
+  hook key=j      fresh=1 repeats=37  first repeat after  508 ms  interval  32 ms  held 3889 ms
+  hook key=tab    fresh=1 repeats=0   first repeat after       -  interval      -  held 204 ms
+  hook key=tab    fresh=1 repeats=0   first repeat after       -  interval      -  held 187 ms
+  hook key=tab    fresh=1 repeats=0   first repeat after       -  interval      -  held 201 ms
+  hook key=tab    fresh=1 repeats=0   first repeat after       -  interval      -  held 230 ms
+  pg   key=13     fresh=1 repeats=0   first repeat after       -  interval      -  held 1798 ms
+  pg   key=13     fresh=1 repeats=0   first repeat after       -  interval      -  held 1913 ms
+  pg   key=226    fresh=1 repeats=0   first repeat after       -  interval      -  held 228 ms
+  pg   key=226    fresh=1 repeats=0   first repeat after       -  interval      -  held 220 ms
+  raw  key=13     fresh=1 repeats=33  first repeat after  509 ms  interval  32 ms  held 1790 ms
+  raw  key=13     fresh=1 repeats=37  first repeat after  508 ms  interval  33 ms  held 1896 ms
+  raw  key=226    fresh=1 repeats=0   first repeat after       -  interval      -  held 220 ms
+  raw  key=226    fresh=1 repeats=0   first repeat after       -  interval      -  held 203 ms
+  pg   TEXTINPUT x72: 'jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj'  gaps ms: [509, 34, 31, 31, 33, 34] ...
+  balance:
+  raw : every KEYDOWN has its KEYUP
+  pg  : every KEYDOWN has its KEYUP
+  pairing:
+  matched 74 hook events to SDL events; inversions of order: 0; next hook event before this SDL event (interleaved): 0
+  lag hook->SDL ms: min 1.5  median 2.0  max 5.4
+  hook event with no SDL event: down 'tab' scan=0x0f x1
+  hook event with no SDL event: up 'tab' scan=0x0f x1
+  hook event with no SDL event: up 'alt_l' scan=0x38 x1
+  hook event with no SDL event: down 'alt_l' scan=0x38 x1
+  hook event with no SDL event: down 'tab' scan=0x0f x1
+  hook event with no SDL event: up 'tab' scan=0x0f x1
+  hook event with no SDL event: up 'alt_l' scan=0x38 x1
+  hook event with no SDL event: up 'j' scan=0x24 x1
+  hook event with no SDL event: down 'tab' scan=0x0f x1
+  hook event with no SDL event: up 'tab' scan=0x0f x1
+  hook event with no SDL event: up 'alt_l' scan=0x38 x1
+  hook event with no SDL event: up 'j' scan=0x24 x1
+  hook event with no SDL event: down 'alt_l' scan=0x38 x1
+  hook event with no SDL event: down 'tab' scan=0x0f x1
+  hook event with no SDL event: up 'tab' scan=0x0f x1
+  hook event with no SDL event: up 'alt_l' scan=0x38 x1
+  SDL event with no hook event: KEYUP sc=13 repeat=0 x1
+  SDL event with no hook event: KEYUP sc=226 repeat=0 x1
+  SDL event with no hook event: KEYUP sc=13 repeat=0 x1
+  SDL event with no hook event: KEYUP sc=226 repeat=0 x1
+
+## step 3 'focus gained mid-hold x2' attempt 0 (main_hkl 0x040f040f, text input active: True)
+   Twice: (1) click into Notepad; (2) hold  j  there and keep holding; (3) with your left hand press Alt+Tab to come back to THIS window, let go of Alt and Tab; (4) let go of  j .
+  124817.5  PG   MouseButtonUp
+  128857.6  RAW  WINDOW LEAVE
+  128857.8  PG   WindowLeave
+  134345.1  RAW  WINDOW FOCUS_LOST
+  134346.7  RAW  TEXTEDITING ''
+  134357.3  PG   WindowFocusLost
+  134357.4  PG   TextEditing ''
+  135985.2  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+             ... x30 in all, last at 137405.0
+  137414.5  HOOK down name=alt_l         vk=0xa4 scan=0x38  sdl_sc=226 tr='alt_l' thread_hkl=0x040f040f
+  137583.0  HOOK down name=tab           vk=0x09 scan=0x0f  sdl_sc=43 tr='tab' thread_hkl=0x040f040f
+  137774.6  HOOK up   name=tab           vk=0x09 scan=0x0f  sdl_sc=43 tr='tab' thread_hkl=0x040f040f
+  137842.2  HOOK up   name=alt_l         vk=0xa4 scan=0x38  sdl_sc=226 tr='alt_l' thread_hkl=0x040f040f
+  137861.5  RAW  WINDOW FOCUS_GAINED
+  137872.0  RAW  WINDOW EXPOSED
+  137873.5  PG   WindowFocusGained
+  138659.6  HOOK up   char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  143097.6  HOOK down name=alt_l         vk=0xa4 scan=0x38  sdl_sc=226 tr='alt_l' thread_hkl=0x040f040f
+  143099.6  RAW  KEYDOWN  sc=226 sym=1073742050 mod=0x1100 repeat=0
+  143099.7  PG   KeyDown  sc=226 key=1073742050 unicode='' dead=False
+  143253.9  HOOK down name=tab           vk=0x09 scan=0x0f  sdl_sc=43 tr='tab' thread_hkl=0x040f040f
+  143265.6  RAW  KEYUP    sc=226 sym=1073742050 mod=0x1000 repeat=0
+  143265.6  RAW  WINDOW FOCUS_LOST
+  143266.5  RAW  TEXTEDITING ''
+  143294.0  PG   KeyUp    sc=226 key=1073742050 unicode=''
+  143294.9  PG   WindowFocusLost
+  143294.9  PG   TextEditing ''
+  143453.3  HOOK up   name=tab           vk=0x09 scan=0x0f  sdl_sc=43 tr='tab' thread_hkl=0x040f040f
+  143669.4  HOOK up   name=alt_l         vk=0xa4 scan=0x38  sdl_sc=226 tr='alt_l' thread_hkl=0x040f040f
+  146642.0  HOOK down char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+             ... x36 in all, last at 148254.1
+  148258.8  HOOK down name=alt_l         vk=0xa4 scan=0x38  sdl_sc=226 tr='alt_l' thread_hkl=0x040f040f
+  148470.7  HOOK down name=tab           vk=0x09 scan=0x0f  sdl_sc=43 tr='tab' thread_hkl=0x040f040f
+  148716.4  HOOK up   name=tab           vk=0x09 scan=0x0f  sdl_sc=43 tr='tab' thread_hkl=0x040f040f
+  148759.6  HOOK up   name=alt_l         vk=0xa4 scan=0x38  sdl_sc=226 tr='alt_l' thread_hkl=0x040f040f
+  148781.4  RAW  WINDOW FOCUS_GAINED
+  148792.3  RAW  WINDOW EXPOSED
+  148794.0  PG   WindowFocusGained
+  151151.6  HOOK up   char='j'           vk=0x4a scan=0x24  sdl_sc=13 tr='j' thread_hkl=0x040f040f
+  152704.0  HOOK down name=alt_l         vk=0xa4 scan=0x38  sdl_sc=226 tr='alt_l' thread_hkl=0x040f040f
+  152708.5  RAW  KEYDOWN  sc=226 sym=1073742050 mod=0x1100 repeat=0
+  152708.7  PG   KeyDown  sc=226 key=1073742050 unicode='' dead=False
+  153214.2  HOOK down name=alt_l         vk=0xa4 scan=0x38  sdl_sc=226 tr='alt_l' thread_hkl=0x040f040f
+  153216.6  RAW  KEYDOWN  sc=226 sym=1073742050 mod=0x1100 repeat=1
+  153247.9  HOOK down name=alt_l         vk=0xa4 scan=0x38  sdl_sc=226 tr='alt_l' thread_hkl=0x040f040f
+  153250.6  RAW  KEYDOWN  sc=226 sym=1073742050 mod=0x1100 repeat=1
+  153277.4  HOOK down name=alt_l         vk=0xa4 scan=0x38  sdl_sc=226 tr='alt_l' thread_hkl=0x040f040f
+  153279.6  RAW  KEYDOWN  sc=226 sym=1073742050 mod=0x1100 repeat=1
+  153311.6  HOOK down name=alt_l         vk=0xa4 scan=0x38  sdl_sc=226 tr='alt_l' thread_hkl=0x040f040f
+  153313.6  RAW  KEYDOWN  sc=226 sym=1073742050 mod=0x1100 repeat=1
+  153344.1  HOOK down name=alt_l         vk=0xa4 scan=0x38  sdl_sc=226 tr='alt_l' thread_hkl=0x040f040f
+  153345.9  RAW  KEYDOWN  sc=226 sym=1073742050 mod=0x1100 repeat=1
+  153376.5  HOOK down name=alt_l         vk=0xa4 scan=0x38  sdl_sc=226 tr='alt_l' thread_hkl=0x040f040f
+  153378.2  RAW  KEYDOWN  sc=226 sym=1073742050 mod=0x1100 repeat=1
+  153410.1  HOOK down name=alt_l         vk=0xa4 scan=0x38  sdl_sc=226 tr='alt_l' thread_hkl=0x040f040f
+  153412.9  RAW  KEYDOWN  sc=226 sym=1073742050 mod=0x1100 repeat=1
+  153442.4  HOOK down name=alt_l         vk=0xa4 scan=0x38  sdl_sc=226 tr='alt_l' thread_hkl=0x040f040f
+  153445.1  RAW  KEYDOWN  sc=226 sym=1073742050 mod=0x1100 repeat=1
+  153445.4  HOOK down name=tab           vk=0x09 scan=0x0f  sdl_sc=43 tr='tab' thread_hkl=0x040f040f
+  153452.8  RAW  KEYUP    sc=226 sym=1073742050 mod=0x1000 repeat=0
+  153452.9  RAW  WINDOW FOCUS_LOST
+  153453.8  RAW  TEXTEDITING ''
+  153460.7  PG   KeyUp    sc=226 key=1073742050 unicode=''
+  153461.1  PG   WindowFocusLost
+  153461.4  PG   TextEditing ''
+  153798.3  HOOK up   name=tab           vk=0x09 scan=0x0f  sdl_sc=43 tr='tab' thread_hkl=0x040f040f
+  153869.9  HOOK up   name=alt_l         vk=0xa4 scan=0x38  sdl_sc=226 tr='alt_l' thread_hkl=0x040f040f
+  156427.1  RAW  WINDOW ENTER
+  156427.8  PG   WindowEnter
+  157077.7  RAW  WINDOW FOCUS_GAINED
+  157090.5  RAW  WINDOW EXPOSED
+  157098.0  PG   WindowFocusGained
+  161270.1  PG   MouseButtonDown
+  text:
+    today, translate() presses: 'jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj'  ['j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J, 'j' LATIN SMALL LETTER J]
+    (1) pynput + join():        'jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj'
+    (2) window TEXTINPUT:       ''  [(nothing)]
+        pygame KEYDOWN.unicode: ''
+    TEXTEDITING events (IME composition): 6
+  holds:
+  hook key=alt_l  fresh=1 repeats=0   first repeat after       -  interval      -  held 428 ms
+  hook key=alt_l  fresh=1 repeats=0   first repeat after       -  interval      -  held 572 ms
+  hook key=alt_l  fresh=1 repeats=0   first repeat after       -  interval      -  held 501 ms
+  hook key=alt_l  fresh=1 repeats=8   first repeat after  510 ms  interval  33 ms  held 1166 ms
+  hook key=j      fresh=1 repeats=29  first repeat after  511 ms  interval  32 ms  held 2674 ms
+  hook key=j      fresh=1 repeats=35  first repeat after  506 ms  interval  32 ms  held 4510 ms
+  hook key=tab    fresh=1 repeats=0   first repeat after       -  interval      -  held 192 ms
+  hook key=tab    fresh=1 repeats=0   first repeat after       -  interval      -  held 199 ms
+  hook key=tab    fresh=1 repeats=0   first repeat after       -  interval      -  held 246 ms
+  hook key=tab    fresh=1 repeats=0   first repeat after       -  interval      -  held 353 ms
+  pg   key=226    fresh=1 repeats=0   first repeat after       -  interval      -  held 194 ms
+  pg   key=226    fresh=1 repeats=0   first repeat after       -  interval      -  held 752 ms
+  raw  key=226    fresh=1 repeats=0   first repeat after       -  interval      -  held 166 ms
+  raw  key=226    fresh=1 repeats=8   first repeat after  508 ms  interval  32 ms  held 744 ms
+  balance:
+  raw : every KEYDOWN has its KEYUP
+  pg  : every KEYDOWN has its KEYUP
+  pairing:
+  matched 10 hook events to SDL events; inversions of order: 0; next hook event before this SDL event (interleaved): 0
+  lag hook->SDL ms: min 1.7  median 2.3  max 4.5
+  hook event with no SDL event: down 'j' scan=0x24 x30
+  hook event with no SDL event: down 'alt_l' scan=0x38 x1
+  hook event with no SDL event: down 'tab' scan=0x0f x1
+  hook event with no SDL event: up 'tab' scan=0x0f x1
+  hook event with no SDL event: up 'alt_l' scan=0x38 x1
+  hook event with no SDL event: up 'j' scan=0x24 x1
+  hook event with no SDL event: down 'tab' scan=0x0f x1
+  hook event with no SDL event: up 'tab' scan=0x0f x1
+  hook event with no SDL event: up 'alt_l' scan=0x38 x1
+  hook event with no SDL event: down 'j' scan=0x24 x36
+  hook event with no SDL event: down 'alt_l' scan=0x38 x1
+  hook event with no SDL event: down 'tab' scan=0x0f x1
+  hook event with no SDL event: up 'tab' scan=0x0f x1
+  hook event with no SDL event: up 'alt_l' scan=0x38 x1
+  hook event with no SDL event: up 'j' scan=0x24 x1
+  hook event with no SDL event: down 'tab' scan=0x0f x1
+  hook event with no SDL event: up 'tab' scan=0x0f x1
+  hook event with no SDL event: up 'alt_l' scan=0x38 x1
+  SDL event with no hook event: KEYUP sc=226 repeat=0 x2
+
+## step 4 'filter keys' attempt 0 (main_hkl 0x040f040f, text input active: True)
+   Hold RIGHT Shift down until a Filter Keys box appears (about 8 s), then let go of Shift. Press Escape to close the box. If THIS window is not in front, click it.
+  161492.0  PG   MouseButtonUp
+  174871.5  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  174873.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=0
+  174874.0  PG   KeyDown  sc=229 key=1073742053 unicode='' dead=False
+  175378.1  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  175380.2  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  175412.9  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  175414.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  175444.7  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  175447.7  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  175475.5  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  175478.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  175510.5  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  175512.2  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  175540.9  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  175542.7  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  175572.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  175574.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  175607.3  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  175611.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  175637.2  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  175640.3  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  175669.5  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  175672.5  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  175702.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  175703.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  175737.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  175739.7  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  175767.4  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  175769.1  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  175802.2  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  175806.3  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  175834.6  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  175837.3  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  175865.9  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  175868.5  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  175898.4  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  175900.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  175930.2  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  175933.2  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  175962.4  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  175965.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  175995.3  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  175997.3  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176028.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176030.7  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176061.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176063.9  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176092.7  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176095.6  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176127.4  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176129.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176157.5  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176159.6  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176191.6  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176193.9  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176224.9  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176226.6  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176255.5  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176257.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176288.1  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176290.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176323.9  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176333.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176356.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176358.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176388.3  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176390.3  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176421.3  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176423.1  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176450.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176452.5  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176485.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176486.9  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176518.5  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176520.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176548.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176551.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176580.9  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176583.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176615.5  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176617.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176647.5  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176649.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176679.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176680.7  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176713.2  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176715.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176745.6  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176747.6  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176776.5  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176778.5  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176810.2  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176812.3  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176843.3  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176845.2  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176874.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176876.3  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176910.1  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176912.9  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176939.5  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176941.2  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  176973.9  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  176975.9  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177005.4  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177008.2  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177036.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177037.7  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177072.9  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177075.1  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177104.4  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177106.1  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177134.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177136.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177167.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177170.5  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177202.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177203.7  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177231.9  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177233.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177267.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177269.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177298.1  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177300.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177330.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177333.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177362.5  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177364.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177395.6  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177397.9  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177426.9  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177429.6  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177461.3  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177463.3  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177492.2  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177498.2  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177524.1  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177527.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177557.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177559.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177592.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177595.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177622.4  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177624.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177656.2  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177658.1  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177690.6  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177692.3  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177722.7  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177725.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177752.7  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177755.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177786.1  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177788.2  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177820.2  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177822.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177850.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177852.1  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177882.3  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177884.1  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177917.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177919.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177946.6  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177949.5  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  177979.6  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  177982.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178014.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178016.7  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178044.9  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178047.3  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178079.9  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178082.1  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178109.6  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178111.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178142.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178145.3  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178174.4  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178176.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178210.4  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178212.5  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178240.2  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178241.9  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178273.6  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178276.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178306.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178308.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178338.5  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178340.1  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178370.7  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178372.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178402.6  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178404.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178436.3  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178438.6  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178470.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178473.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178500.7  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178503.7  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178533.5  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178535.3  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178566.6  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178568.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178598.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178600.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178630.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178633.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178662.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178667.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178695.4  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178697.5  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178728.1  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178730.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178761.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178762.7  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178792.6  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178795.3  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178825.5  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178827.6  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178858.7  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178860.9  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178890.9  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178892.9  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178923.4  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178926.3  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178956.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178959.6  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  178987.7  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  178990.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179021.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179024.3  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179054.6  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179056.5  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179089.4  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179091.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179118.5  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179120.3  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179153.5  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179156.1  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179183.4  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179190.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179215.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179217.7  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179250.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179253.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179281.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179282.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179313.5  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179316.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179347.9  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179352.7  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179380.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179381.9  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179411.4  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179413.5  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179445.1  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179446.9  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179477.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179478.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179508.3  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179512.3  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179540.9  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179542.9  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179573.6  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179575.6  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179606.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179609.1  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179638.2  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179641.2  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179674.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179677.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179704.7  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179706.6  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179736.9  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179739.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179769.2  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179771.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179804.1  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179805.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179833.4  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179836.2  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179865.7  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179867.6  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179900.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179903.7  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179931.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179932.7  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179965.2  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179966.9  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  179996.9  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  179998.5  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180029.3  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180031.7  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180062.1  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180064.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180094.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180096.1  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180129.1  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180130.9  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180160.7  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180163.6  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180191.3  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180196.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180226.1  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180228.7  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180257.3  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180261.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180290.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180293.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180322.3  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180325.6  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180355.2  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180357.6  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180387.4  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180390.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180420.1  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180422.3  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180452.2  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180454.2  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180486.2  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180488.3  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180517.9  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180519.9  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180549.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180551.1  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180582.9  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180584.7  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180615.4  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180617.3  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180648.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180649.9  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180682.5  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180684.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180712.1  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180713.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180746.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180748.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180777.2  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180778.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180810.1  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180811.9  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180842.5  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180844.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180873.9  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180876.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180909.2  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180910.9  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180939.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180941.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  180972.1  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  180974.9  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181007.1  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181009.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181037.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181042.2  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181071.5  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181074.2  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181102.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181105.2  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181135.7  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181137.6  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181167.9  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181170.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181200.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181202.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181232.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181235.5  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181264.4  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181266.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181298.2  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181300.2  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181330.3  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181332.5  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181364.6  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181366.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181397.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181399.2  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181431.3  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181433.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181459.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181462.1  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181493.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181496.1  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181528.2  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181530.3  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181558.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181559.7  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181591.6  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181593.7  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181624.6  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181627.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181655.6  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181658.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181687.9  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181689.6  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181719.9  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181722.1  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181753.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181756.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181785.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181786.9  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181817.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181819.5  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181853.6  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181855.6  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181882.2  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181884.1  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181915.7  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181917.5  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181950.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181953.3  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  181981.6  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  181984.2  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182013.6  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182015.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182045.6  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182047.5  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182078.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182081.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182112.2  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182113.9  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182143.1  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182144.9  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182176.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182177.7  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182207.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182209.9  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182242.9  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182244.6  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182273.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182275.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182306.9  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182308.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182340.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182342.7  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182370.2  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182372.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182403.4  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182406.6  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182436.9  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182439.1  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182469.1  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182471.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182500.3  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182503.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182533.1  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182535.5  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182566.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182569.3  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182600.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182603.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182631.3  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182634.9  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182665.4  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182667.2  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182698.6  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182700.2  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182729.7  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182731.5  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182761.3  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182763.6  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182795.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182797.9  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182826.2  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182828.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182859.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182862.1  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182892.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182894.9  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182925.2  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182927.7  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182956.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182958.6  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  182988.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  182990.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  183021.7  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  183024.2  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  183053.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  183056.1  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  183087.5  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  183090.5  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  183120.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  183123.0  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  183151.9  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  183154.6  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  183184.1  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  183187.2  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  183217.1  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  183218.9  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  183248.5  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  183250.7  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  183282.2  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  183284.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  183313.5  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  183320.4  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  183346.6  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  183350.8  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  183380.0  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  183386.2  RAW  KEYDOWN  sc=229 sym=1073742053 mod=0x1002 repeat=1
+  183413.8  HOOK down name=shift_r       vk=0xa1 scan=0x36e sdl_sc=229 tr='shift_r' thread_hkl=0x040f040f
+  183418.4  RAW  KEYUP    sc=229 sym=1073742053 mod=0x1000 repeat=0
+  183418.5  RAW  WINDOW FOCUS_LOST
+  183420.0  RAW  TEXTEDITING ''
+  183431.6  PG   KeyUp    sc=229 key=1073742053 unicode=''
+  183431.7  PG   WindowFocusLost
+  183431.7  PG   TextEditing ''
+  186331.4  RAW  WINDOW FOCUS_GAINED
+  186342.3  PG   WindowFocusGained
+  188901.5  PG   MouseButtonDown
+  text:
+    today, translate() presses: ''  [(nothing)]
+    (1) pynput + join():        ''
+    (2) window TEXTINPUT:       ''  [(nothing)]
+        pygame KEYDOWN.unicode: ''
+    TEXTEDITING events (IME composition): 2
+  holds:
+  hook key=shift_r fresh=1 repeats=248 first repeat after  507 ms  interval  32 ms  held NO RELEASE
+  pg   key=229    fresh=1 repeats=0   first repeat after       -  interval      -  held 8558 ms
+  raw  key=229    fresh=1 repeats=247 first repeat after  506 ms  interval  32 ms  held 8545 ms
+  balance:
+  raw : every KEYDOWN has its KEYUP
+  pg  : every KEYDOWN has its KEYUP
+  pairing:
+  matched 248 hook events to SDL events; inversions of order: 0; next hook event before this SDL event (interleaved): 0
+  lag hook->SDL ms: min 1.6  median 2.1  max 9.9
+  hook event with no SDL event: down 'shift_r' scan=0x36 x1
+  SDL event with no hook event: KEYUP sc=229 repeat=0 x1
+
+## step 5 'right ctrl while unfocused' attempt 0 (main_hkl 0x040f040f, text input active: True)
+   (1) Click into Notepad; (2) press and release RIGHT Ctrl (right of the space bar, past AltGr) twice; (3) press and release Escape; (4) click back into THIS window.
+  189133.4  PG   MouseButtonUp
+  198093.0  RAW  WINDOW LEAVE
+  198093.1  PG   WindowLeave
+  200037.1  RAW  WINDOW FOCUS_LOST
+  200038.5  RAW  TEXTEDITING ''
+  200048.5  PG   WindowFocusLost
+  200048.5  PG   TextEditing ''
+  202520.4  HOOK down name=ctrl_r        vk=0xa3 scan=0x1de sdl_sc=228 tr='ctrl_r' thread_hkl=0x040f040f
+  202748.8  HOOK up   name=ctrl_r        vk=0xa3 scan=0x1de sdl_sc=228 tr='ctrl_r' thread_hkl=0x040f040f
+  203390.1  HOOK down name=ctrl_r        vk=0xa3 scan=0x1de sdl_sc=228 tr='ctrl_r' thread_hkl=0x040f040f
+  203592.4  HOOK up   name=ctrl_r        vk=0xa3 scan=0x1de sdl_sc=228 tr='ctrl_r' thread_hkl=0x040f040f
+  205983.1  RAW  WINDOW ENTER
+  205983.6  PG   WindowEnter
+  209040.8  HOOK down name=esc           vk=0x1b scan=0x01  sdl_sc=41 tr='esc' thread_hkl=0x040f040f
+  209226.7  HOOK up   name=esc           vk=0x1b scan=0x01  sdl_sc=41 tr='esc' thread_hkl=0x040f040f
+  211063.8  RAW  WINDOW FOCUS_GAINED
+  211080.1  RAW  WINDOW EXPOSED
+  211080.3  PG   WindowFocusGained
+  213471.6  PG   MouseButtonDown
+  213471.7  NOTE last step; close the window
+  213688.8  PG   MouseButtonUp
+  214930.9  PG   MouseButtonDown
+  214931.0  NOTE last step; close the window
+  215059.0  PG   MouseButtonUp
+  215467.4  RAW  WINDOW LEAVE
+  215467.6  PG   WindowLeave
+  215794.8  RAW  WINDOW ENTER
+  215795.1  PG   WindowEnter
+  215847.1  RAW  WINDOW LEAVE
+  215847.3  PG   WindowLeave
+  216380.5  RAW  WINDOW CLOSE
+  216381.2  PG   WindowClose
+  216381.2  PG   Quit
+  text:
+    today, translate() presses: ''  [(nothing)]
+    (1) pynput + join():        ''
+    (2) window TEXTINPUT:       ''  [(nothing)]
+        pygame KEYDOWN.unicode: ''
+    TEXTEDITING events (IME composition): 2
+  holds:
+  hook key=ctrl_r fresh=1 repeats=0   first repeat after       -  interval      -  held 228 ms
+  hook key=ctrl_r fresh=1 repeats=0   first repeat after       -  interval      -  held 202 ms
+  hook key=esc    fresh=1 repeats=0   first repeat after       -  interval      -  held 186 ms
+  balance:
+  raw : every KEYDOWN has its KEYUP
+  pg  : every KEYDOWN has its KEYUP
+  pairing:
+  matched 0 hook events to SDL events; inversions of order: 0; next hook event before this SDL event (interleaved): 0
+  hook event with no SDL event: down 'ctrl_r' scan=0x1d x1
+  hook event with no SDL event: up 'ctrl_r' scan=0x1d x1
+  hook event with no SDL event: down 'ctrl_r' scan=0x1d x1
+  hook event with no SDL event: up 'ctrl_r' scan=0x1d x1
+  hook event with no SDL event: down 'esc' scan=0x01 x1
+  hook event with no SDL event: up 'esc' scan=0x01 x1
+
+# all steps: 595 hook->SDL pairs, lag ms min 1.5 median 2.1 p95 3.4 max 9.9; interleaved 0; order inversions 0
+# simulated 60 Hz loop (4 phases, 2380 pair-placements): hook and SDL event in different ticks 334 (14.0%); another event delivered between them 18 (0.8%), at most 1 events between

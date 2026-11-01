@@ -17,6 +17,8 @@ The problem this note settles: Takki combines four things that each bring their 
 | **pynput listener** | `pynput.keyboard.Listener` | translate raw key event → `KeyEvent` → `inbound_queue.put()` | touch engine state, call pygame, do I/O, block |
 | **TTS worker** | `audio` module at startup | **construct** (from the factory `get_fallback_tts()` returns) and own the TTS engine exclusively; pop `Speak(text, utterance_id)` commands; speak; post `SpeechFinished(utterance_id, completed | cancelled | failed)` to the inbound queue — **every** command gets one, including when the engine raises | be called into from other threads (sole exception: `stop()`, which on `SapiTTS` only sets a flag); **have its engine handed to it from another thread** |
 
+*(2026-11-01, alpha #13: key events move from the pynput listener to Takki's own window, read from the SDL pump the main thread already drains ([ADR-028 § Event model](adr/0028-composite-input-and-keyboard-ownership.md), "Decided"). When alpha #14 builds it, the **pynput listener** row goes and Alpha has one auxiliary thread, the TTS worker. The loop sketch below, and the hook-timeout reason the inbound queue must be unbounded, change with it. Until then this table describes the code.)*
+
 Beta adds one more producer of the same shape: a **voice capture worker** (mic frames → `webrtcvad` endpointing → Whisper transcription → `TranscriptReady` event). ADR-030's record mode reuses that worker in a keep/redo loop. Nothing about the model changes; the queue grows new event types.
 
 ## The loop

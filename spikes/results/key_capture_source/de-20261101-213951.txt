@@ -1,0 +1,276 @@
+# de-20261101-213951.jsonl
+
+meta: {"k": "meta", "t": 319.06, "run": "de", "started": "2026-11-01T21:39:51.441", "pygame": "2.6.1", "sdl": [2, 28, 4], "python": "3.11.15 (main, May 10 2026, 19:31:25) [MSC v.1944 64 bit (AMD64)]", "hook": true, "had_pygame_filter": true, "text_input_active_at_start": true, "main_hkl": "0x04070407", "keyboard_delay_setting": 1, "keyboard_delay_ms_nominal": 500, "keyboard_speed_setting": 31, "stickykeys_flags": "0x1fe", "stickykeys_hotkey_active": true, "filterkeys_flags": "0x7e", "filterkeys_hotkey_active": true}
+
+## step 1 'baseline' attempt 0 (main_hkl 0x04070407, text input active: True)
+   Type  a , then the bottom-left letter key (right of left Shift; gives  y  on German).
+    9441.8  HOOK down char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x04070407
+    9444.7  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=0
+    9444.7  RAW  TEXTINPUT 'a'
+    9444.9  PG   KeyDown  sc=4   key=97        unicode='a' dead=False
+    9445.0  PG   TextInput 'a'
+    9608.8  HOOK up   char='a'           vk=0x41 scan=0x1e  sdl_sc=4 tr='a' thread_hkl=0x04070407
+    9610.9  RAW  KEYUP    sc=4   sym=97        mod=0x1000 repeat=0
+    9611.2  PG   KeyUp    sc=4   key=97        unicode='a'
+    9788.0  HOOK down char='y'           vk=0x59 scan=0x2c  sdl_sc=29 tr='y' thread_hkl=0x04070407
+    9792.3  RAW  KEYDOWN  sc=29  sym=121       mod=0x1000 repeat=0
+    9792.4  RAW  TEXTINPUT 'y'
+    9792.5  PG   KeyDown  sc=29  key=121       unicode='y' dead=False
+    9792.6  PG   TextInput 'y'
+    9932.0  HOOK up   char='y'           vk=0x59 scan=0x2c  sdl_sc=29 tr='y' thread_hkl=0x04070407
+    9933.6  RAW  KEYUP    sc=29  sym=121       mod=0x1000 repeat=0
+    9933.9  PG   KeyUp    sc=29  key=121       unicode='y'
+   11163.4  PG   MouseButtonDown
+  text:
+    today, translate() presses: 'ay'  ['a' LATIN SMALL LETTER A, 'y' LATIN SMALL LETTER Y]
+    (1) pynput + join():        'ay'
+    (2) window TEXTINPUT:       'ay'  ['a' LATIN SMALL LETTER A, 'y' LATIN SMALL LETTER Y]
+        pygame KEYDOWN.unicode: 'ay'
+  holds:
+  hook key=a      fresh=1 repeats=0   first repeat after       -  interval      -  held 167 ms
+  hook key=y      fresh=1 repeats=0   first repeat after       -  interval      -  held 144 ms
+  pg   key=29     fresh=1 repeats=0   first repeat after       -  interval      -  held 141 ms
+  pg   key=4      fresh=1 repeats=0   first repeat after       -  interval      -  held 166 ms
+  raw  key=29     fresh=1 repeats=0   first repeat after       -  interval      -  held 141 ms
+  raw  key=4      fresh=1 repeats=0   first repeat after       -  interval      -  held 166 ms
+  pg   TEXTINPUT x2: 'ay'  gaps ms: [348]
+  balance:
+  raw : every KEYDOWN has its KEYUP
+  pg  : every KEYDOWN has its KEYUP
+  pairing:
+  matched 4 hook events to SDL events; inversions of order: 0; next hook event before this SDL event (interleaved): 0
+  lag hook->SDL ms: min 1.6  median 2.5  max 4.3
+
+## step 2 '^+e' attempt 0 (main_hkl 0x04070407, text input active: True)
+   Press the  ^  key (top-left, left of 1), let go, then  e .
+   11389.6  PG   MouseButtonUp
+   18222.2  HOOK down char='^' DEAD      vk=0xdc scan=0x29  sdl_sc=53 tr='^' thread_hkl=0x04070407
+   18227.8  RAW  KEYDOWN  sc=53  sym=94        mod=0x1000 repeat=0
+   18228.0  PG   KeyDown  sc=53  key=94        unicode='^' dead=True
+   18384.7  HOOK up   char='^' DEAD      vk=0xdc scan=0x29  sdl_sc=53 tr='^' thread_hkl=0x04070407
+   18386.8  RAW  KEYUP    sc=53  sym=94        mod=0x1000 repeat=0
+   18386.9  PG   KeyUp    sc=53  key=94        unicode='^'
+   18689.4  HOOK down char='e'           vk=0x45 scan=0x12  sdl_sc=8 tr='e' thread_hkl=0x04070407
+   18691.3  RAW  KEYDOWN  sc=8   sym=101       mod=0x1000 repeat=0
+   18691.3  RAW  TEXTINPUT 'ê'
+   18691.6  PG   KeyDown  sc=8   key=101       unicode='ê' dead=False
+   18691.7  PG   TextInput 'ê'
+   18819.2  HOOK up   char='e'           vk=0x45 scan=0x12  sdl_sc=8 tr='e' thread_hkl=0x04070407
+   18821.2  RAW  KEYUP    sc=8   sym=101       mod=0x1000 repeat=0
+   18821.3  PG   KeyUp    sc=8   key=101       unicode='ê'
+   20602.5  PG   MouseButtonDown
+  text:
+    today, translate() presses: '^e'  ['^' CIRCUMFLEX ACCENT, 'e' LATIN SMALL LETTER E]
+    (1) pynput + join():        'ê'
+    (2) window TEXTINPUT:       'ê'  ['ê' LATIN SMALL LETTER E WITH CIRCUMFLEX]
+        pygame KEYDOWN.unicode: '^ê'
+  holds:
+  hook key=^      fresh=1 repeats=0   first repeat after       -  interval      -  held 163 ms
+  hook key=e      fresh=1 repeats=0   first repeat after       -  interval      -  held 130 ms
+  pg   key=53     fresh=1 repeats=0   first repeat after       -  interval      -  held 159 ms
+  pg   key=8      fresh=1 repeats=0   first repeat after       -  interval      -  held 130 ms
+  raw  key=53     fresh=1 repeats=0   first repeat after       -  interval      -  held 159 ms
+  raw  key=8      fresh=1 repeats=0   first repeat after       -  interval      -  held 130 ms
+  pg   TEXTINPUT x1: 'ê'
+  balance:
+  raw : every KEYDOWN has its KEYUP
+  pg  : every KEYDOWN has its KEYUP
+  pairing:
+  matched 4 hook events to SDL events; inversions of order: 0; next hook event before this SDL event (interleaved): 0
+  lag hook->SDL ms: min 1.9  median 2.0  max 5.6
+
+## step 3 '^+space' attempt 0 (main_hkl 0x04070407, text input active: True)
+   ^  then Space.
+   20829.5  PG   MouseButtonUp
+   22490.4  HOOK down char='^' DEAD      vk=0xdc scan=0x29  sdl_sc=53 tr='^' thread_hkl=0x04070407
+   22492.1  RAW  KEYDOWN  sc=53  sym=94        mod=0x1000 repeat=0
+   22492.4  PG   KeyDown  sc=53  key=94        unicode='^' dead=True
+   22603.1  HOOK up   char='^' DEAD      vk=0xdc scan=0x29  sdl_sc=53 tr='^' thread_hkl=0x04070407
+   22604.9  RAW  KEYUP    sc=53  sym=94        mod=0x1000 repeat=0
+   22605.0  PG   KeyUp    sc=53  key=94        unicode='^'
+   22852.5  HOOK down name=space         vk=0x20 scan=0x39  sdl_sc=44 tr='space' thread_hkl=0x04070407
+   22854.8  RAW  KEYDOWN  sc=44  sym=32        mod=0x1000 repeat=0
+   22854.9  RAW  TEXTINPUT '^'
+   22855.1  PG   KeyDown  sc=44  key=32        unicode='^' dead=False
+   22855.2  PG   TextInput '^'
+   22960.7  HOOK up   name=space         vk=0x20 scan=0x39  sdl_sc=44 tr='space' thread_hkl=0x04070407
+   22965.0  RAW  KEYUP    sc=44  sym=32        mod=0x1000 repeat=0
+   22965.2  PG   KeyUp    sc=44  key=32        unicode='^'
+   24246.1  PG   MouseButtonDown
+  text:
+    today, translate() presses: '^'  ['^' CIRCUMFLEX ACCENT]
+    (1) pynput + join():        '^'
+    (2) window TEXTINPUT:       '^'  ['^' CIRCUMFLEX ACCENT]
+        pygame KEYDOWN.unicode: '^^'
+  holds:
+  hook key=^      fresh=1 repeats=0   first repeat after       -  interval      -  held 113 ms
+  hook key=space  fresh=1 repeats=0   first repeat after       -  interval      -  held 108 ms
+  pg   key=44     fresh=1 repeats=0   first repeat after       -  interval      -  held 110 ms
+  pg   key=53     fresh=1 repeats=0   first repeat after       -  interval      -  held 113 ms
+  raw  key=44     fresh=1 repeats=0   first repeat after       -  interval      -  held 110 ms
+  raw  key=53     fresh=1 repeats=0   first repeat after       -  interval      -  held 113 ms
+  pg   TEXTINPUT x1: '^'
+  balance:
+  raw : every KEYDOWN has its KEYUP
+  pg  : every KEYDOWN has its KEYUP
+  pairing:
+  matched 4 hook events to SDL events; inversions of order: 0; next hook event before this SDL event (interleaved): 0
+  lag hook->SDL ms: min 1.7  median 2.0  max 4.3
+
+## step 4 '^ twice' attempt 0 (main_hkl 0x04070407, text input active: True)
+   ^  then  ^  again.
+   24467.5  PG   MouseButtonUp
+   25895.2  HOOK down char='^' DEAD      vk=0xdc scan=0x29  sdl_sc=53 tr='^' thread_hkl=0x04070407
+   25897.7  RAW  KEYDOWN  sc=53  sym=94        mod=0x1000 repeat=0
+   25897.8  PG   KeyDown  sc=53  key=94        unicode='^' dead=True
+   26015.2  HOOK up   char='^' DEAD      vk=0xdc scan=0x29  sdl_sc=53 tr='^' thread_hkl=0x04070407
+   26019.2  RAW  KEYUP    sc=53  sym=94        mod=0x1000 repeat=0
+   26019.5  PG   KeyUp    sc=53  key=94        unicode='^'
+   26340.8  HOOK down char='^' DEAD      vk=0xdc scan=0x29  sdl_sc=53 tr='^' thread_hkl=0x04070407
+   26342.8  RAW  KEYDOWN  sc=53  sym=94        mod=0x1000 repeat=0
+   26342.9  RAW  TEXTINPUT '^'
+             ... x2 in all, last at 26342.9
+   26343.1  PG   KeyDown  sc=53  key=94        unicode='^' dead=True
+   26343.1  PG   TextInput '^'
+             ... x2 in all, last at 26343.1
+   26476.2  HOOK up   char='^' DEAD      vk=0xdc scan=0x29  sdl_sc=53 tr='^' thread_hkl=0x04070407
+   26478.0  RAW  KEYUP    sc=53  sym=94        mod=0x1000 repeat=0
+   26478.2  PG   KeyUp    sc=53  key=94        unicode='^'
+   27354.3  PG   MouseButtonDown
+  text:
+    today, translate() presses: '^^'  ['^' CIRCUMFLEX ACCENT, '^' CIRCUMFLEX ACCENT]
+    (1) pynput + join():        '^'
+    (2) window TEXTINPUT:       '^^'  ['^' CIRCUMFLEX ACCENT, '^' CIRCUMFLEX ACCENT]
+        pygame KEYDOWN.unicode: '^^'
+  holds:
+  hook key=^      fresh=1 repeats=0   first repeat after       -  interval      -  held 120 ms
+  hook key=^      fresh=1 repeats=0   first repeat after       -  interval      -  held 135 ms
+  pg   key=53     fresh=1 repeats=0   first repeat after       -  interval      -  held 122 ms
+  pg   key=53     fresh=1 repeats=0   first repeat after       -  interval      -  held 135 ms
+  raw  key=53     fresh=1 repeats=0   first repeat after       -  interval      -  held 122 ms
+  raw  key=53     fresh=1 repeats=0   first repeat after       -  interval      -  held 135 ms
+  pg   TEXTINPUT x2: '^^'  gaps ms: [0]
+  balance:
+  raw : every KEYDOWN has its KEYUP
+  pg  : every KEYDOWN has its KEYUP
+  pairing:
+  matched 4 hook events to SDL events; inversions of order: 0; next hook event before this SDL event (interleaved): 0
+  lag hook->SDL ms: min 1.9  median 2.3  max 4.0
+
+## step 5 '^+k' attempt 0 (main_hkl 0x04070407, text input active: True)
+   ^  then  k .
+   27570.1  PG   MouseButtonUp
+   28394.2  HOOK down char='^' DEAD      vk=0xdc scan=0x29  sdl_sc=53 tr='^' thread_hkl=0x04070407
+   28397.1  RAW  KEYDOWN  sc=53  sym=94        mod=0x1000 repeat=0
+   28397.3  PG   KeyDown  sc=53  key=94        unicode='^' dead=True
+   28537.1  HOOK up   char='^' DEAD      vk=0xdc scan=0x29  sdl_sc=53 tr='^' thread_hkl=0x04070407
+   28538.7  RAW  KEYUP    sc=53  sym=94        mod=0x1000 repeat=0
+   28538.9  PG   KeyUp    sc=53  key=94        unicode='^'
+   28760.7  HOOK down char='k'           vk=0x4b scan=0x25  sdl_sc=14 tr='k' thread_hkl=0x04070407
+   28763.0  RAW  KEYDOWN  sc=14  sym=107       mod=0x1000 repeat=0
+   28763.0  RAW  TEXTINPUT '^'
+   28763.1  RAW  TEXTINPUT 'k'
+   28763.2  PG   KeyDown  sc=14  key=107       unicode='^' dead=False
+   28763.3  PG   TextInput '^'
+   28763.3  PG   TextInput 'k'
+   28885.6  HOOK up   char='k'           vk=0x4b scan=0x25  sdl_sc=14 tr='k' thread_hkl=0x04070407
+   28887.7  RAW  KEYUP    sc=14  sym=107       mod=0x1000 repeat=0
+   28887.9  PG   KeyUp    sc=14  key=107       unicode='^'
+   29754.9  PG   MouseButtonDown
+  text:
+    today, translate() presses: '^k'  ['^' CIRCUMFLEX ACCENT, 'k' LATIN SMALL LETTER K]
+    (1) pynput + join():        "['k̂': 2 code points]"
+    (2) window TEXTINPUT:       '^k'  ['^' CIRCUMFLEX ACCENT, 'k' LATIN SMALL LETTER K]
+        pygame KEYDOWN.unicode: '^^'
+  holds:
+  hook key=^      fresh=1 repeats=0   first repeat after       -  interval      -  held 143 ms
+  hook key=k      fresh=1 repeats=0   first repeat after       -  interval      -  held 125 ms
+  pg   key=14     fresh=1 repeats=0   first repeat after       -  interval      -  held 125 ms
+  pg   key=53     fresh=1 repeats=0   first repeat after       -  interval      -  held 142 ms
+  raw  key=14     fresh=1 repeats=0   first repeat after       -  interval      -  held 125 ms
+  raw  key=53     fresh=1 repeats=0   first repeat after       -  interval      -  held 142 ms
+  pg   TEXTINPUT x2: '^k'  gaps ms: [0]
+  balance:
+  raw : every KEYDOWN has its KEYUP
+  pg  : every KEYDOWN has its KEYUP
+  pairing:
+  matched 4 hook events to SDL events; inversions of order: 0; next hook event before this SDL event (interleaved): 0
+  lag hook->SDL ms: min 1.6  median 2.2  max 2.9
+
+## step 6 '´+e' attempt 0 (main_hkl 0x04070407, text input active: True)
+   Press the  ´  key (right of ß, left of Backspace), let go, then  e .
+   29971.0  PG   MouseButtonUp
+   36619.8  HOOK down char='´' DEAD      vk=0xdd scan=0x0d  sdl_sc=46 tr='´' thread_hkl=0x04070407
+   36622.2  RAW  KEYDOWN  sc=46  sym=180       mod=0x1000 repeat=0
+   36622.4  PG   KeyDown  sc=46  key=180       unicode='' dead=True
+   36785.6  HOOK up   char='´' DEAD      vk=0xdd scan=0x0d  sdl_sc=46 tr='´' thread_hkl=0x04070407
+   36787.3  RAW  KEYUP    sc=46  sym=180       mod=0x1000 repeat=0
+   36787.5  PG   KeyUp    sc=46  key=180       unicode=''
+   37184.8  HOOK down char='e'           vk=0x45 scan=0x12  sdl_sc=8 tr='e' thread_hkl=0x04070407
+   37187.4  RAW  KEYDOWN  sc=8   sym=101       mod=0x1000 repeat=0
+   37187.5  RAW  TEXTINPUT 'é'
+   37187.6  PG   KeyDown  sc=8   key=101       unicode='é' dead=False
+   37187.7  PG   TextInput 'é'
+   37339.9  HOOK up   char='e'           vk=0x45 scan=0x12  sdl_sc=8 tr='e' thread_hkl=0x04070407
+   37341.7  RAW  KEYUP    sc=8   sym=101       mod=0x1000 repeat=0
+   37341.9  PG   KeyUp    sc=8   key=101       unicode='é'
+   38510.2  HOOK down name=enter         vk=0x0d scan=0x1c  sdl_sc=40 tr='enter' thread_hkl=0x04070407
+   38512.0  RAW  KEYDOWN  sc=40  sym=13        mod=0x1000 repeat=0
+   38512.2  PG   KeyDown  sc=40  key=13        unicode='\r' dead=False
+   38649.8  HOOK up   name=enter         vk=0x0d scan=0x1c  sdl_sc=40 tr='enter' thread_hkl=0x04070407
+   38652.2  RAW  KEYUP    sc=40  sym=13        mod=0x1000 repeat=0
+   38652.3  PG   KeyUp    sc=40  key=13        unicode='\r'
+   40666.3  PG   MouseButtonDown
+  text:
+    today, translate() presses: '´e'  ['´' ACUTE ACCENT, 'e' LATIN SMALL LETTER E]
+    (1) pynput + join():        'é'
+    (2) window TEXTINPUT:       'é'  ['é' LATIN SMALL LETTER E WITH ACUTE]
+        pygame KEYDOWN.unicode: 'é\r'
+  holds:
+  hook key=enter  fresh=1 repeats=0   first repeat after       -  interval      -  held 140 ms
+  hook key=´      fresh=1 repeats=0   first repeat after       -  interval      -  held 166 ms
+  hook key=e      fresh=1 repeats=0   first repeat after       -  interval      -  held 155 ms
+  pg   key=40     fresh=1 repeats=0   first repeat after       -  interval      -  held 140 ms
+  pg   key=46     fresh=1 repeats=0   first repeat after       -  interval      -  held 165 ms
+  pg   key=8      fresh=1 repeats=0   first repeat after       -  interval      -  held 154 ms
+  raw  key=40     fresh=1 repeats=0   first repeat after       -  interval      -  held 140 ms
+  raw  key=46     fresh=1 repeats=0   first repeat after       -  interval      -  held 165 ms
+  raw  key=8      fresh=1 repeats=0   first repeat after       -  interval      -  held 154 ms
+  pg   TEXTINPUT x1: 'é'
+  balance:
+  raw : every KEYDOWN has its KEYUP
+  pg  : every KEYDOWN has its KEYUP
+  pairing:
+  matched 6 hook events to SDL events; inversions of order: 0; next hook event before this SDL event (interleaved): 0
+  lag hook->SDL ms: min 1.7  median 2.1  max 2.6
+
+## step 7 '`+a' attempt 0 (main_hkl 0x04070407, text input active: True)
+   Hold Shift, press the  ´  key (gives ` ), let go of both, then  a .
+   40888.4  PG   MouseButtonUp
+   40947.7  PG   MouseButtonDown
+  text:
+    (2) window TEXTINPUT:       ''  [(nothing)]
+        pygame KEYDOWN.unicode: ''
+  holds:
+  balance:
+  raw : every KEYDOWN has its KEYUP
+  pg  : every KEYDOWN has its KEYUP
+
+## step 8 '´+space' attempt 0 (main_hkl 0x04070407, text input active: True)
+   ´  then Space.
+   41107.7  PG   MouseButtonUp
+   43276.4  RAW  WINDOW LEAVE
+   43276.5  PG   WindowLeave
+   44318.2  RAW  WINDOW CLOSE
+   44318.9  PG   WindowClose
+   44319.1  PG   Quit
+  text:
+    (2) window TEXTINPUT:       ''  [(nothing)]
+        pygame KEYDOWN.unicode: ''
+  holds:
+  balance:
+  raw : every KEYDOWN has its KEYUP
+  pg  : every KEYDOWN has its KEYUP
+
+# all steps: 26 hook->SDL pairs, lag ms min 1.6 median 2.2 p95 4.3 max 5.6; interleaved 0; order inversions 0
+# simulated 60 Hz loop (4 phases, 104 pair-placements): hook and SDL event in different ticks 18 (17.3%); another event delivered between them 0 (0.0%), at most 0 events between

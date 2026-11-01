@@ -1,7 +1,8 @@
 # ADR-027: Key & Accuracy State Model
 
 **Status:** Accepted  
-**Date:** 2026-06-14
+**Date:** 2026-06-14  
+**Noted:** 2026-11-01 — § First-Attempt Counting: the held-key rule's two Windows assumptions, restated for key events taken from Takki's window (alpha #13). The rule itself is unchanged.
 
 > Part of the [Takki architecture](../architecture.md).  
 > Closes roadmap issues A2, A3, and B6. Amends [ADR-010](0010-lesson-structure-and-progression.md) and [ADR-011](0011-persistence-and-state.md).
@@ -205,6 +206,15 @@ The rule above absorbs the harmless case: repeats of a *wrong* press are already
 **The doubled letter decides itself under this rule.** `ll` in "hello" is two prompts. A child who releases between them produces two distinct actuations, neither of which repeats a key that is down, so both count normally. A child who holds the key through both produces one attempt, and the second `l` stays open until they lift and press again — which is the thing being taught: a doubled letter is two keystrokes, and the tutor must not accept one held key as two. The rule is therefore *not* de-duplication by character or by elapsed time, either of which would have to choose between these two cases by guessing. It keys off physical down-state, which is exactly what separates them.
 
 **Two Windows assumptions this rests on, unverified until alpha session 12.** Both are behaviours of the real pynput path that no Linux test can exercise, and the rule is wrong if either fails. (1) OS auto-repeat delivers repeated *press* events with no intervening release — if Windows or pynput synthesises a release between repeats, every repeat reads as a fresh actuation and the rule silently does nothing. (2) A press and its release report the same character for the same physical key. `KeyCode.char` is recomputed from live modifier state, so a Shift released a beat before the letter reports `A` down and `a` up; the focus model case-folds both sides to absorb that, which fails if release instead reports `None` or an unrelated character, leaking a down entry that costs one ignored press of that key. Confirm both by hand on Windows and correct here if either is wrong.
+
+*(2026-11-01, alpha #13: key events move from pynput to Takki's own window ([ADR-028 § Event model](0028-composite-input-and-keyboard-ownership.md), "Decided"; [research/key-capture-source.md](../research/key-capture-source.md) § 2). The rule stands; how its two assumptions read changes.*
+- *(1) Auto-repeat:*
+  - *SDL flags every repeat, and pygame drops the repeat `KEYDOWN`s, so there is exactly one `KEYDOWN` per physical press. The characters repeat as `TEXTINPUT`s with no fresh `KEYDOWN`.*
+  - *"Fresh exactly when a `KEYDOWN` arrived since the previous `TEXTINPUT`" agreed with SDL's own repeat flag for 764 of 764 `TEXTINPUT`s [measured].*
+  - *`ll` released between presses gives two presses; held, it gives one [measured].*
+- *(2) Press and release, same key:* down-state is keyed on the scan code, which is the same on both sides by construction, including with Shift released first [measured]. The case-folding workaround in the focus model is no longer what makes the release find its entry.
+- *A release missed off the foreground:* SDL synthesises a `KEYUP` for every held key when focus leaves, so no down entry leaks [measured]. A key still held when focus comes back is invisible until it is pressed again [measured]. That costs nothing: the key counts on its next real press.
+- *#14 builds it, and re-runs windows-validation tier C against the new source.)*
 
 **Where each half lives.** The focus model labels the press — `TypedCharacter.repeat` — because down-state is a physical fact of the input stream and the gate already tracks it for gesture keys; it still suppresses nothing, so the engine sees every repeat. The counting decision, *repeat ⇒ not an attempt*, is this section's, implemented in `AttemptCounter` (`takki.lesson.attempts`). A release missed while Takki is off the foreground (the secure desktop) leaks one down entry, and the next release of that character clears it: the cost is one ignored press of one key, never a stuck prompt.
 

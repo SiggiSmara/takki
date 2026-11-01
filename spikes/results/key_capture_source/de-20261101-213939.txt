@@ -1,0 +1,22 @@
+# de-20261101-213939.jsonl
+
+meta: {"k": "meta", "t": 275.68, "run": "de", "started": "2026-11-01T21:39:39.895", "pygame": "2.6.1", "sdl": [2, 28, 4], "python": "3.11.15 (main, May 10 2026, 19:31:25) [MSC v.1944 64 bit (AMD64)]", "hook": true, "had_pygame_filter": true, "text_input_active_at_start": true, "main_hkl": "0x040f040f", "keyboard_delay_setting": 1, "keyboard_delay_ms_nominal": 500, "keyboard_speed_setting": 31, "stickykeys_flags": "0x1fe", "stickykeys_hotkey_active": true, "filterkeys_flags": "0x7e", "filterkeys_hotkey_active": true}
+
+## step 1 'baseline' attempt 0 (main_hkl 0x040f040f, text input active: True)
+   Type  a , then the bottom-left letter key (right of left Shift; gives  y  on German).
+    1534.5  RAW  WINDOW LEAVE
+    1534.7  PG   WindowLeave
+    1842.4  RAW  WINDOW ENTER
+    1842.6  PG   WindowEnter
+    1856.5  RAW  WINDOW LEAVE
+    1856.7  PG   WindowLeave
+    2348.2  RAW  WINDOW CLOSE
+    2348.7  PG   WindowClose
+    2348.7  PG   Quit
+  text:
+    (2) window TEXTINPUT:       ''  [(nothing)]
+        pygame KEYDOWN.unicode: ''
+  holds:
+  balance:
+  raw : every KEYDOWN has its KEYUP
+  pg  : every KEYDOWN has its KEYUP

@@ -1,0 +1,18 @@
+21:56:59.888 spike window 0xe005e, in front: True
+21:56:59.888 start layout 0x040f
+21:57:02.645 layout 1: 0x040f
+21:57:13.408   dead, alt+tab out (left) and back (back), then letter; try 1
+21:57:17.258   dead, alt+tab out (left) and back (back), then letter; try 2
+21:57:21.105   dead, alt+tab out (left) and back (back), then letter; try 3
+21:57:29.820   Left Alt + Left Shift did NOT switch (still 0x040f); trying Win+Space
+21:57:30.891   switched 0x040f -> 0x0407
+21:57:31.792 layout 2: 0x0407
+21:57:42.546   dead, alt+tab out (left) and back (back), then letter; try 1
+21:57:46.407   dead, alt+tab out (left) and back (back), then letter; try 2
+21:57:50.265   dead, alt+tab out (left) and back (back), then letter; try 3
+21:57:58.981   Left Alt + Left Shift did NOT switch (still 0x0407); trying Win+Space
+21:57:59.788   switched 0x0407 -> 0x0409
+21:58:00.689 layout 3: 0x0409
+21:58:03.244   no dead key on this layout; dead-key steps left empty
+21:58:06.753   switched 0x0409 -> 0x040f
+21:58:07.654 restored: 0x040f (started on 0x040f)

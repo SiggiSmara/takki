@@ -1,0 +1,546 @@
+# window-20261101-214817.jsonl
+
+meta: {"k": "meta", "t": 145.1, "run": "window", "started": "2026-11-01T21:48:18.004", "pygame": "2.6.1", "sdl": [2, 28, 4], "python": "3.11.15 (main, May 10 2026, 19:31:25) [MSC v.1944 64 bit (AMD64)]", "hook": false, "had_pygame_filter": true, "text_input_active_at_start": true, "main_hkl": "0x040f040f", "keyboard_delay_setting": 1, "keyboard_delay_ms_nominal": 500, "keyboard_speed_setting": 31, "stickykeys_flags": "0x1fe", "stickykeys_hotkey_active": true, "filterkeys_flags": "0x7e", "filterkeys_hotkey_active": true}
+
+## step 1 'dead+a' attempt 0 (main_hkl 0x040f040f, text input active: True)
+   Dead acute (right of Æ), then  a .
+     167.7  RAW  WINDOW EXPOSED
+    4271.0  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=0
+    4271.3  PG   KeyDown  sc=52  key=180       unicode='' dead=True
+    4469.6  RAW  KEYUP    sc=52  sym=180       mod=0x1000 repeat=0
+    4469.9  PG   KeyUp    sc=52  key=180       unicode=''
+    4521.7  RAW  KEYDOWN  sc=4   sym=97        mod=0x1000 repeat=0
+    4521.7  RAW  TEXTINPUT 'á'
+    4521.9  PG   KeyDown  sc=4   key=97        unicode='á' dead=False
+    4522.0  PG   TextInput 'á'
+    4677.8  RAW  KEYUP    sc=4   sym=97        mod=0x1000 repeat=0
+    4677.9  PG   KeyUp    sc=4   key=97        unicode='á'
+    6964.2  PG   MouseButtonDown
+  text:
+    (2) window TEXTINPUT:       'á'  ['á' LATIN SMALL LETTER A WITH ACUTE]
+        pygame KEYDOWN.unicode: 'á'
+  holds:
+  pg   key=4      fresh=1 repeats=0   first repeat after       -  interval      -  held 156 ms
+  pg   key=52     fresh=1 repeats=0   first repeat after       -  interval      -  held 199 ms
+  raw  key=4      fresh=1 repeats=0   first repeat after       -  interval      -  held 156 ms
+  raw  key=52     fresh=1 repeats=0   first repeat after       -  interval      -  held 199 ms
+  pg   TEXTINPUT x1: 'á'
+  balance:
+  raw : every KEYDOWN has its KEYUP
+  pg  : every KEYDOWN has its KEYUP
+
+## step 2 'dead+space' attempt 0 (main_hkl 0x040f040f, text input active: True)
+   Dead acute, then Space.
+    7180.7  PG   MouseButtonUp
+    9117.2  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=0
+    9117.4  PG   KeyDown  sc=52  key=180       unicode='' dead=True
+    9312.1  RAW  KEYUP    sc=52  sym=180       mod=0x1000 repeat=0
+    9312.3  PG   KeyUp    sc=52  key=180       unicode=''
+    9467.3  RAW  KEYDOWN  sc=44  sym=32        mod=0x1000 repeat=0
+    9467.4  RAW  TEXTINPUT '´'
+    9467.7  PG   KeyDown  sc=44  key=32        unicode='´' dead=False
+    9467.8  PG   TextInput '´'
+    9619.5  RAW  KEYUP    sc=44  sym=32        mod=0x1000 repeat=0
+    9619.6  PG   KeyUp    sc=44  key=32        unicode='´'
+   11068.2  PG   MouseButtonDown
+  text:
+    (2) window TEXTINPUT:       '´'  ['´' ACUTE ACCENT]
+        pygame KEYDOWN.unicode: '´'
+  holds:
+  pg   key=44     fresh=1 repeats=0   first repeat after       -  interval      -  held 152 ms
+  pg   key=52     fresh=1 repeats=0   first repeat after       -  interval      -  held 195 ms
+  raw  key=44     fresh=1 repeats=0   first repeat after       -  interval      -  held 152 ms
+  raw  key=52     fresh=1 repeats=0   first repeat after       -  interval      -  held 195 ms
+  pg   TEXTINPUT x1: '´'
+  balance:
+  raw : every KEYDOWN has its KEYUP
+  pg  : every KEYDOWN has its KEYUP
+
+## step 3 'dead twice' attempt 0 (main_hkl 0x040f040f, text input active: True)
+   Dead acute twice.
+   11286.3  PG   MouseButtonUp
+   13312.0  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=0
+   13312.1  PG   KeyDown  sc=52  key=180       unicode='' dead=True
+   13468.4  RAW  KEYUP    sc=52  sym=180       mod=0x1000 repeat=0
+   13468.6  PG   KeyUp    sc=52  key=180       unicode=''
+   13704.4  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=0
+   13704.5  RAW  TEXTINPUT '´'
+             ... x2 in all, last at 13704.5
+   13704.8  PG   KeyDown  sc=52  key=180       unicode='´' dead=True
+   13704.8  PG   TextInput '´'
+             ... x2 in all, last at 13704.8
+   13899.2  RAW  KEYUP    sc=52  sym=180       mod=0x1000 repeat=0
+   13899.4  PG   KeyUp    sc=52  key=180       unicode='´'
+   15120.3  PG   MouseButtonDown
+  text:
+    (2) window TEXTINPUT:       '´´'  ['´' ACUTE ACCENT, '´' ACUTE ACCENT]
+        pygame KEYDOWN.unicode: '´'
+  holds:
+  pg   key=52     fresh=1 repeats=0   first repeat after       -  interval      -  held 156 ms
+  pg   key=52     fresh=1 repeats=0   first repeat after       -  interval      -  held 195 ms
+  raw  key=52     fresh=1 repeats=0   first repeat after       -  interval      -  held 156 ms
+  raw  key=52     fresh=1 repeats=0   first repeat after       -  interval      -  held 195 ms
+  pg   TEXTINPUT x2: '´´'  gaps ms: [0]
+  balance:
+  raw : every KEYDOWN has its KEYUP
+  pg  : every KEYDOWN has its KEYUP
+
+## step 4 'dead+k' attempt 0 (main_hkl 0x040f040f, text input active: True)
+   Dead acute, then  k .
+   15341.0  PG   MouseButtonUp
+   16781.8  RAW  KEYDOWN  sc=52  sym=180       mod=0x1000 repeat=0
+   16781.9  PG   KeyDown  sc=52  key=180       unicode='' dead=True
+   16953.8  RAW  KEYUP    sc=52  sym=180       mod=0x1000 repeat=0
+   16954.0  PG   KeyUp    sc=52  key=180       unicode=''
+   17243.2  RAW  KEYDOWN  sc=14  sym=107       mod=0x1000 repeat=0
+   17243.3  RAW  TEXTINPUT '´'
+   17243.3  RAW  TEXTINPUT 'k'
+   17243.7  PG   KeyDown  sc=14  key=107       unicode='´' dead=False
+   17243.8  PG   TextInput '´'
+   17243.8  PG   TextInput 'k'
+   17372.9  RAW  KEYUP    sc=14  sym=107       mod=0x1000 repeat=0
+   17373.0  PG   KeyUp    sc=14  key=107       unicode='´'
+   18522.6  PG   MouseButtonDown
+  text:
+    (2) window TEXTINPUT:       '´k'  ['´' ACUTE ACCENT, 'k' LATIN SMALL LETTER K]
+        pygame KEYDOWN.unicode: '´'
+  holds:
+  pg   key=14     fresh=1 repeats=0   first repeat after       -  interval      -  held 129 ms
+  pg   key=52     fresh=1 repeats=0   first repeat after       -  interval      -  held 172 ms
+  raw  key=14     fresh=1 repeats=0   first repeat after       -  interval      -  held 130 ms
+  raw  key=52     fresh=1 repeats=0   first repeat after       -  interval      -  held 172 ms
+  pg   TEXTINPUT x2: '´k'  gaps ms: [0]
+  balance:
+  raw : every KEYDOWN has its KEYUP
+  pg  : every KEYDOWN has its KEYUP
+
+## step 5 'hold f' attempt 0 (main_hkl 0x040f040f, text input active: True)
+   Hold  f  for about 2 seconds, then let go.
+   18740.4  PG   MouseButtonUp
+   20449.7  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=0
+   20449.7  RAW  TEXTINPUT 'f'
+   20450.0  PG   KeyDown  sc=9   key=102       unicode='f' dead=False
+   20450.0  PG   TextInput 'f'
+   20958.7  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   20958.8  RAW  TEXTINPUT 'f'
+   20959.0  PG   TextInput 'f'
+   20987.2  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   20987.3  RAW  TEXTINPUT 'f'
+   20987.5  PG   TextInput 'f'
+   21019.5  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21019.6  RAW  TEXTINPUT 'f'
+   21019.7  PG   TextInput 'f'
+   21053.3  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21053.3  RAW  TEXTINPUT 'f'
+   21053.5  PG   TextInput 'f'
+   21086.0  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21086.1  RAW  TEXTINPUT 'f'
+   21086.2  PG   TextInput 'f'
+   21119.0  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21119.0  RAW  TEXTINPUT 'f'
+   21119.2  PG   TextInput 'f'
+   21151.7  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21151.7  RAW  TEXTINPUT 'f'
+   21152.4  PG   TextInput 'f'
+   21182.3  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21182.3  RAW  TEXTINPUT 'f'
+   21182.6  PG   TextInput 'f'
+   21216.5  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21216.5  RAW  TEXTINPUT 'f'
+   21216.8  PG   TextInput 'f'
+   21250.5  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21250.5  RAW  TEXTINPUT 'f'
+   21250.7  PG   TextInput 'f'
+   21281.7  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21281.7  RAW  TEXTINPUT 'f'
+   21281.9  PG   TextInput 'f'
+   21317.4  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21317.5  RAW  TEXTINPUT 'f'
+   21317.7  PG   TextInput 'f'
+   21345.7  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21345.8  RAW  TEXTINPUT 'f'
+   21346.1  PG   TextInput 'f'
+   21377.3  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21377.4  RAW  TEXTINPUT 'f'
+   21377.5  PG   TextInput 'f'
+   21413.1  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21413.2  RAW  TEXTINPUT 'f'
+   21413.3  PG   TextInput 'f'
+   21443.5  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21443.5  RAW  TEXTINPUT 'f'
+   21443.7  PG   TextInput 'f'
+   21474.9  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21475.0  RAW  TEXTINPUT 'f'
+   21475.2  PG   TextInput 'f'
+   21510.4  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21510.5  RAW  TEXTINPUT 'f'
+   21510.9  PG   TextInput 'f'
+   21540.0  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21540.0  RAW  TEXTINPUT 'f'
+   21540.2  PG   TextInput 'f'
+   21574.1  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21574.2  RAW  TEXTINPUT 'f'
+   21574.3  PG   TextInput 'f'
+   21606.1  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21606.1  RAW  TEXTINPUT 'f'
+   21606.3  PG   TextInput 'f'
+   21637.9  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21638.0  RAW  TEXTINPUT 'f'
+   21638.1  PG   TextInput 'f'
+   21671.8  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21671.9  RAW  TEXTINPUT 'f'
+   21672.2  PG   TextInput 'f'
+   21704.2  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21704.3  RAW  TEXTINPUT 'f'
+   21704.4  PG   TextInput 'f'
+   21737.0  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21737.0  RAW  TEXTINPUT 'f'
+   21737.2  PG   TextInput 'f'
+   21769.5  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21769.5  RAW  TEXTINPUT 'f'
+   21769.7  PG   TextInput 'f'
+   21805.3  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21805.4  RAW  TEXTINPUT 'f'
+   21805.5  PG   TextInput 'f'
+   21834.3  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21834.3  RAW  TEXTINPUT 'f'
+   21834.5  PG   TextInput 'f'
+   21866.3  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21866.3  RAW  TEXTINPUT 'f'
+   21866.5  PG   TextInput 'f'
+   21901.7  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21901.7  RAW  TEXTINPUT 'f'
+   21901.9  PG   TextInput 'f'
+   21931.9  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21931.9  RAW  TEXTINPUT 'f'
+   21932.1  PG   TextInput 'f'
+   21964.8  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21964.8  RAW  TEXTINPUT 'f'
+   21965.0  PG   TextInput 'f'
+   21996.4  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   21996.5  RAW  TEXTINPUT 'f'
+   21996.7  PG   TextInput 'f'
+   22028.8  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   22028.8  RAW  TEXTINPUT 'f'
+   22029.0  PG   TextInput 'f'
+   22061.8  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   22061.9  RAW  TEXTINPUT 'f'
+   22062.2  PG   TextInput 'f'
+   22095.3  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   22095.4  RAW  TEXTINPUT 'f'
+   22095.6  PG   TextInput 'f'
+   22126.9  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   22127.0  RAW  TEXTINPUT 'f'
+   22127.3  PG   TextInput 'f'
+   22159.3  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   22159.3  RAW  TEXTINPUT 'f'
+   22159.5  PG   TextInput 'f'
+   22194.4  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   22194.5  RAW  TEXTINPUT 'f'
+   22194.7  PG   TextInput 'f'
+   22226.4  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   22226.5  RAW  TEXTINPUT 'f'
+   22226.7  PG   TextInput 'f'
+   22256.2  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   22256.3  RAW  TEXTINPUT 'f'
+   22256.6  PG   TextInput 'f'
+   22290.7  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=1
+   22290.8  RAW  TEXTINPUT 'f'
+   22291.1  PG   TextInput 'f'
+   22327.9  RAW  KEYUP    sc=9   sym=102       mod=0x1000 repeat=0
+   22328.3  PG   KeyUp    sc=9   key=102       unicode='f'
+   23637.6  PG   MouseButtonDown
+  text:
+    (2) window TEXTINPUT:       'fffffffffffffffffffffffffffffffffffffffffff'  ['f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F, 'f' LATIN SMALL LETTER F]
+        pygame KEYDOWN.unicode: 'f'
+  holds:
+  pg   key=9      fresh=1 repeats=0   first repeat after       -  interval      -  held 1878 ms
+  raw  key=9      fresh=1 repeats=42  first repeat after  509 ms  interval  32 ms  held 1878 ms
+  pg   TEXTINPUT x43: 'fffffffffffffffffffffffffffffffffffffffffff'  gaps ms: [509, 28, 32, 34, 33, 33] ...
+  balance:
+  raw : every KEYDOWN has its KEYUP
+  pg  : every KEYDOWN has its KEYUP
+
+## step 6 'll held' attempt 0 (main_hkl 0x040f040f, text input active: True)
+   Press  l  and hold it about 1.5 seconds, then let go.
+   23868.5  PG   MouseButtonUp
+   25648.6  RAW  KEYDOWN  sc=15  sym=108       mod=0x1000 repeat=0
+   25648.7  RAW  TEXTINPUT 'l'
+   25648.8  PG   KeyDown  sc=15  key=108       unicode='l' dead=False
+   25648.9  PG   TextInput 'l'
+   26158.3  RAW  KEYDOWN  sc=15  sym=108       mod=0x1000 repeat=1
+   26158.3  RAW  TEXTINPUT 'l'
+   26158.5  PG   TextInput 'l'
+   26192.0  RAW  KEYDOWN  sc=15  sym=108       mod=0x1000 repeat=1
+   26192.1  RAW  TEXTINPUT 'l'
+   26192.3  PG   TextInput 'l'
+   26222.0  RAW  KEYDOWN  sc=15  sym=108       mod=0x1000 repeat=1
+   26222.0  RAW  TEXTINPUT 'l'
+   26222.3  PG   TextInput 'l'
+   26255.0  RAW  KEYDOWN  sc=15  sym=108       mod=0x1000 repeat=1
+   26255.0  RAW  TEXTINPUT 'l'
+   26255.2  PG   TextInput 'l'
+   26290.3  RAW  KEYDOWN  sc=15  sym=108       mod=0x1000 repeat=1
+   26290.4  RAW  TEXTINPUT 'l'
+   26290.5  PG   TextInput 'l'
+   26322.0  RAW  KEYDOWN  sc=15  sym=108       mod=0x1000 repeat=1
+   26322.1  RAW  TEXTINPUT 'l'
+   26322.2  PG   TextInput 'l'
+   26352.4  RAW  KEYDOWN  sc=15  sym=108       mod=0x1000 repeat=1
+   26352.5  RAW  TEXTINPUT 'l'
+   26352.7  PG   TextInput 'l'
+   26385.6  RAW  KEYDOWN  sc=15  sym=108       mod=0x1000 repeat=1
+   26385.6  RAW  TEXTINPUT 'l'
+   26385.8  PG   TextInput 'l'
+   26417.5  RAW  KEYDOWN  sc=15  sym=108       mod=0x1000 repeat=1
+   26417.6  RAW  TEXTINPUT 'l'
+   26417.8  PG   TextInput 'l'
+   26450.6  RAW  KEYDOWN  sc=15  sym=108       mod=0x1000 repeat=1
+   26450.6  RAW  TEXTINPUT 'l'
+   26450.8  PG   TextInput 'l'
+   26482.5  RAW  KEYDOWN  sc=15  sym=108       mod=0x1000 repeat=1
+   26482.5  RAW  TEXTINPUT 'l'
+   26482.8  PG   TextInput 'l'
+   26515.1  RAW  KEYDOWN  sc=15  sym=108       mod=0x1000 repeat=1
+   26515.1  RAW  TEXTINPUT 'l'
+   26515.3  PG   TextInput 'l'
+   26548.1  RAW  KEYDOWN  sc=15  sym=108       mod=0x1000 repeat=1
+   26548.1  RAW  TEXTINPUT 'l'
+   26548.3  PG   TextInput 'l'
+   26581.4  RAW  KEYDOWN  sc=15  sym=108       mod=0x1000 repeat=1
+   26581.4  RAW  TEXTINPUT 'l'
+   26581.6  PG   TextInput 'l'
+   26614.9  RAW  KEYDOWN  sc=15  sym=108       mod=0x1000 repeat=1
+   26614.9  RAW  TEXTINPUT 'l'
+   26615.1  PG   TextInput 'l'
+   26645.4  RAW  KEYDOWN  sc=15  sym=108       mod=0x1000 repeat=1
+   26645.4  RAW  TEXTINPUT 'l'
+   26645.7  PG   TextInput 'l'
+   26678.5  RAW  KEYDOWN  sc=15  sym=108       mod=0x1000 repeat=1
+   26678.5  RAW  TEXTINPUT 'l'
+   26678.7  PG   TextInput 'l'
+   26710.6  RAW  KEYDOWN  sc=15  sym=108       mod=0x1000 repeat=1
+   26710.6  RAW  TEXTINPUT 'l'
+   26710.9  PG   TextInput 'l'
+   26743.7  RAW  KEYDOWN  sc=15  sym=108       mod=0x1000 repeat=1
+   26743.8  RAW  TEXTINPUT 'l'
+   26744.0  PG   TextInput 'l'
+   26775.9  RAW  KEYDOWN  sc=15  sym=108       mod=0x1000 repeat=1
+   26776.0  RAW  TEXTINPUT 'l'
+   26776.3  PG   TextInput 'l'
+   26808.2  RAW  KEYDOWN  sc=15  sym=108       mod=0x1000 repeat=1
+   26808.2  RAW  TEXTINPUT 'l'
+   26808.5  PG   TextInput 'l'
+   26840.1  RAW  KEYDOWN  sc=15  sym=108       mod=0x1000 repeat=1
+   26840.2  RAW  TEXTINPUT 'l'
+   26840.5  PG   TextInput 'l'
+   26872.7  RAW  KEYDOWN  sc=15  sym=108       mod=0x1000 repeat=1
+   26872.7  RAW  TEXTINPUT 'l'
+   26873.0  PG   TextInput 'l'
+   26905.0  RAW  KEYDOWN  sc=15  sym=108       mod=0x1000 repeat=1
+   26905.1  RAW  TEXTINPUT 'l'
+   26905.4  PG   TextInput 'l'
+   26939.0  RAW  KEYUP    sc=15  sym=108       mod=0x1000 repeat=0
+   26939.1  PG   KeyUp    sc=15  key=108       unicode='l'
+   28311.5  PG   MouseButtonDown
+  text:
+    (2) window TEXTINPUT:       'lllllllllllllllllllllllll'  ['l' LATIN SMALL LETTER L, 'l' LATIN SMALL LETTER L, 'l' LATIN SMALL LETTER L, 'l' LATIN SMALL LETTER L, 'l' LATIN SMALL LETTER L, 'l' LATIN SMALL LETTER L, 'l' LATIN SMALL LETTER L, 'l' LATIN SMALL LETTER L, 'l' LATIN SMALL LETTER L, 'l' LATIN SMALL LETTER L, 'l' LATIN SMALL LETTER L, 'l' LATIN SMALL LETTER L, 'l' LATIN SMALL LETTER L, 'l' LATIN SMALL LETTER L, 'l' LATIN SMALL LETTER L, 'l' LATIN SMALL LETTER L, 'l' LATIN SMALL LETTER L, 'l' LATIN SMALL LETTER L, 'l' LATIN SMALL LETTER L, 'l' LATIN SMALL LETTER L, 'l' LATIN SMALL LETTER L, 'l' LATIN SMALL LETTER L, 'l' LATIN SMALL LETTER L, 'l' LATIN SMALL LETTER L, 'l' LATIN SMALL LETTER L]
+        pygame KEYDOWN.unicode: 'l'
+  holds:
+  pg   key=15     fresh=1 repeats=0   first repeat after       -  interval      -  held 1290 ms
+  raw  key=15     fresh=1 repeats=24  first repeat after  510 ms  interval  33 ms  held 1290 ms
+  pg   TEXTINPUT x25: 'lllllllllllllllllllllllll'  gaps ms: [510, 34, 30, 33, 35, 32] ...
+  balance:
+  raw : every KEYDOWN has its KEYUP
+  pg  : every KEYDOWN has its KEYUP
+
+## step 7 'fast roll' attempt 0 (main_hkl 0x040f040f, text input active: True)
+   Type  fjdk  as fast as you can, three times in a row.
+   28528.3  PG   MouseButtonUp
+   35827.6  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=0
+   35827.7  RAW  TEXTINPUT 'f'
+   35828.2  PG   KeyDown  sc=9   key=102       unicode='f' dead=False
+   35828.2  PG   TextInput 'f'
+   35967.4  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=0
+   35967.5  RAW  TEXTINPUT 'j'
+   35967.8  PG   KeyDown  sc=13  key=106       unicode='j' dead=False
+   35967.8  PG   TextInput 'j'
+   36053.8  RAW  KEYUP    sc=9   sym=102       mod=0x1000 repeat=0
+   36054.0  PG   KeyUp    sc=9   key=102       unicode='f'
+   36115.0  RAW  KEYDOWN  sc=14  sym=107       mod=0x1000 repeat=0
+   36115.1  RAW  TEXTINPUT 'k'
+   36115.6  PG   KeyDown  sc=14  key=107       unicode='k' dead=False
+   36115.7  PG   TextInput 'k'
+   36173.7  RAW  KEYUP    sc=13  sym=106       mod=0x1000 repeat=0
+   36174.0  PG   KeyUp    sc=13  key=106       unicode='j'
+   36256.3  RAW  KEYDOWN  sc=7   sym=100       mod=0x1000 repeat=0
+   36256.3  RAW  TEXTINPUT 'd'
+   36256.5  PG   KeyDown  sc=7   key=100       unicode='d' dead=False
+   36256.6  PG   TextInput 'd'
+   36294.2  RAW  KEYUP    sc=14  sym=107       mod=0x1000 repeat=0
+   36294.4  PG   KeyUp    sc=14  key=107       unicode='k'
+   36368.3  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=0
+   36368.3  RAW  TEXTINPUT 'f'
+   36368.8  PG   KeyDown  sc=9   key=102       unicode='f' dead=False
+   36368.9  PG   TextInput 'f'
+   36417.7  RAW  KEYUP    sc=7   sym=100       mod=0x1000 repeat=0
+   36417.9  PG   KeyUp    sc=7   key=100       unicode='d'
+   36528.4  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=0
+   36528.5  RAW  TEXTINPUT 'j'
+   36529.1  PG   KeyDown  sc=13  key=106       unicode='j' dead=False
+   36529.2  PG   TextInput 'j'
+   36552.9  RAW  KEYUP    sc=9   sym=102       mod=0x1000 repeat=0
+   36553.1  PG   KeyUp    sc=9   key=102       unicode='f'
+   36629.6  RAW  KEYDOWN  sc=14  sym=107       mod=0x1000 repeat=0
+   36629.7  RAW  TEXTINPUT 'k'
+   36629.9  PG   KeyDown  sc=14  key=107       unicode='k' dead=False
+   36630.0  PG   TextInput 'k'
+   36660.4  RAW  KEYDOWN  sc=7   sym=100       mod=0x1000 repeat=0
+   36660.5  RAW  TEXTINPUT 'd'
+   36660.6  PG   KeyDown  sc=7   key=100       unicode='d' dead=False
+   36660.7  PG   TextInput 'd'
+   36688.7  RAW  KEYUP    sc=13  sym=106       mod=0x1000 repeat=0
+   36689.0  PG   KeyUp    sc=13  key=106       unicode='j'
+   36777.7  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=0
+   36777.8  RAW  TEXTINPUT 'f'
+   36778.2  PG   KeyDown  sc=9   key=102       unicode='f' dead=False
+   36778.4  PG   TextInput 'f'
+   36787.7  RAW  KEYUP    sc=14  sym=107       mod=0x1000 repeat=0
+   36787.9  PG   KeyUp    sc=14  key=107       unicode='k'
+   36843.2  RAW  KEYUP    sc=7   sym=100       mod=0x1000 repeat=0
+   36843.3  PG   KeyUp    sc=7   key=100       unicode='d'
+   36952.7  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=0
+   36952.8  RAW  TEXTINPUT 'j'
+   36953.1  PG   KeyDown  sc=13  key=106       unicode='j' dead=False
+   36953.2  PG   TextInput 'j'
+   36972.6  RAW  KEYUP    sc=9   sym=102       mod=0x1000 repeat=0
+   36972.8  PG   KeyUp    sc=9   key=102       unicode='f'
+   37044.6  RAW  KEYDOWN  sc=14  sym=107       mod=0x1000 repeat=0
+   37044.6  RAW  TEXTINPUT 'k'
+   37044.8  PG   KeyDown  sc=14  key=107       unicode='k' dead=False
+   37044.9  PG   TextInput 'k'
+   37103.9  RAW  KEYUP    sc=13  sym=106       mod=0x1000 repeat=0
+   37104.1  PG   KeyUp    sc=13  key=106       unicode='j'
+   37107.8  RAW  KEYDOWN  sc=7   sym=100       mod=0x1000 repeat=0
+   37107.8  RAW  TEXTINPUT 'd'
+   37108.1  PG   KeyDown  sc=7   key=100       unicode='d' dead=False
+   37108.2  PG   TextInput 'd'
+   37217.0  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=0
+   37217.1  RAW  TEXTINPUT 'f'
+   37217.4  PG   KeyDown  sc=9   key=102       unicode='f' dead=False
+   37217.5  PG   TextInput 'f'
+   37231.2  RAW  KEYUP    sc=14  sym=107       mod=0x1000 repeat=0
+   37231.3  PG   KeyUp    sc=14  key=107       unicode='k'
+   37294.8  RAW  KEYUP    sc=7   sym=100       mod=0x1000 repeat=0
+   37295.3  PG   KeyUp    sc=7   key=100       unicode='d'
+   37352.3  RAW  KEYDOWN  sc=14  sym=107       mod=0x1000 repeat=0
+   37352.3  RAW  TEXTINPUT 'k'
+   37352.6  PG   KeyDown  sc=14  key=107       unicode='k' dead=False
+   37352.7  PG   TextInput 'k'
+   37402.4  RAW  KEYUP    sc=9   sym=102       mod=0x1000 repeat=0
+   37402.5  PG   KeyUp    sc=9   key=102       unicode='f'
+   37483.1  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=0
+   37483.2  RAW  TEXTINPUT 'j'
+   37483.5  PG   KeyDown  sc=13  key=106       unicode='j' dead=False
+   37483.6  PG   TextInput 'j'
+   37496.5  RAW  KEYDOWN  sc=7   sym=100       mod=0x1000 repeat=0
+   37496.6  RAW  TEXTINPUT 'd'
+   37497.1  PG   KeyDown  sc=7   key=100       unicode='d' dead=False
+   37497.2  PG   TextInput 'd'
+   37548.8  RAW  KEYUP    sc=14  sym=107       mod=0x1000 repeat=0
+   37548.9  PG   KeyUp    sc=14  key=107       unicode='k'
+   37592.9  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=0
+   37593.0  RAW  TEXTINPUT 'f'
+   37593.3  PG   KeyDown  sc=9   key=102       unicode='f' dead=False
+   37593.3  PG   TextInput 'f'
+   37633.7  RAW  KEYUP    sc=13  sym=106       mod=0x1000 repeat=0
+   37633.9  PG   KeyUp    sc=13  key=106       unicode='j'
+   37639.3  RAW  KEYUP    sc=7   sym=100       mod=0x1000 repeat=0
+   37639.5  PG   KeyUp    sc=7   key=100       unicode='d'
+   37687.9  RAW  KEYDOWN  sc=14  sym=107       mod=0x1000 repeat=0
+   37688.0  RAW  TEXTINPUT 'k'
+   37688.1  PG   KeyDown  sc=14  key=107       unicode='k' dead=False
+   37688.2  PG   TextInput 'k'
+   37722.7  RAW  KEYDOWN  sc=7   sym=100       mod=0x1000 repeat=0
+   37722.7  RAW  TEXTINPUT 'd'
+   37722.9  PG   KeyDown  sc=7   key=100       unicode='d' dead=False
+   37722.9  PG   TextInput 'd'
+   37774.8  RAW  KEYUP    sc=9   sym=102       mod=0x1000 repeat=0
+   37774.9  PG   KeyUp    sc=9   key=102       unicode='f'
+   37810.2  RAW  KEYDOWN  sc=13  sym=106       mod=0x1000 repeat=0
+   37810.2  RAW  TEXTINPUT 'j'
+   37810.4  PG   KeyDown  sc=13  key=106       unicode='j' dead=False
+   37810.4  PG   TextInput 'j'
+   37873.4  RAW  KEYDOWN  sc=9   sym=102       mod=0x1000 repeat=0
+   37873.5  RAW  TEXTINPUT 'f'
+   37873.7  PG   KeyDown  sc=9   key=102       unicode='f' dead=False
+   37873.7  PG   TextInput 'f'
+   37888.4  RAW  KEYUP    sc=14  sym=107       mod=0x1000 repeat=0
+   37888.6  PG   KeyUp    sc=14  key=107       unicode='k'
+   37917.7  RAW  KEYUP    sc=7   sym=100       mod=0x1000 repeat=0
+   37917.8  PG   KeyUp    sc=7   key=100       unicode='d'
+   37960.7  RAW  KEYUP    sc=13  sym=106       mod=0x1000 repeat=0
+   37961.0  PG   KeyUp    sc=13  key=106       unicode='j'
+   38066.7  RAW  KEYUP    sc=9   sym=102       mod=0x1000 repeat=0
+   38067.1  PG   KeyUp    sc=9   key=102       unicode='f'
+   41455.7  PG   MouseButtonDown
+   41455.8  NOTE last step; close the window
+   41681.4  PG   MouseButtonUp
+   42829.6  PG   MouseButtonDown
+   42829.7  NOTE last step; close the window
+   43056.2  PG   MouseButtonUp
+   43871.9  RAW  WINDOW LEAVE
+   43872.1  PG   WindowLeave
+   44687.2  RAW  WINDOW CLOSE
+   44688.0  PG   WindowClose
+   44688.1  PG   Quit
+  text:
+    (2) window TEXTINPUT:       'fjkdfjkdfjkdfkjdfkdjf'  ['f' LATIN SMALL LETTER F, 'j' LATIN SMALL LETTER J, 'k' LATIN SMALL LETTER K, 'd' LATIN SMALL LETTER D, 'f' LATIN SMALL LETTER F, 'j' LATIN SMALL LETTER J, 'k' LATIN SMALL LETTER K, 'd' LATIN SMALL LETTER D, 'f' LATIN SMALL LETTER F, 'j' LATIN SMALL LETTER J, 'k' LATIN SMALL LETTER K, 'd' LATIN SMALL LETTER D, 'f' LATIN SMALL LETTER F, 'k' LATIN SMALL LETTER K, 'j' LATIN SMALL LETTER J, 'd' LATIN SMALL LETTER D, 'f' LATIN SMALL LETTER F, 'k' LATIN SMALL LETTER K, 'd' LATIN SMALL LETTER D, 'j' LATIN SMALL LETTER J, 'f' LATIN SMALL LETTER F]
+        pygame KEYDOWN.unicode: 'fjkdfjkdfjkdfkjdfkdjf'
+  holds:
+  pg   key=13     fresh=1 repeats=0   first repeat after       -  interval      -  held 206 ms
+  pg   key=13     fresh=1 repeats=0   first repeat after       -  interval      -  held 160 ms
+  pg   key=13     fresh=1 repeats=0   first repeat after       -  interval      -  held 151 ms
+  pg   key=13     fresh=1 repeats=0   first repeat after       -  interval      -  held 150 ms
+  pg   key=13     fresh=1 repeats=0   first repeat after       -  interval      -  held 151 ms
+  pg   key=14     fresh=1 repeats=0   first repeat after       -  interval      -  held 179 ms
+  pg   key=14     fresh=1 repeats=0   first repeat after       -  interval      -  held 158 ms
+  pg   key=14     fresh=1 repeats=0   first repeat after       -  interval      -  held 187 ms
+  pg   key=14     fresh=1 repeats=0   first repeat after       -  interval      -  held 196 ms
+  pg   key=14     fresh=1 repeats=0   first repeat after       -  interval      -  held 200 ms
+  pg   key=7      fresh=1 repeats=0   first repeat after       -  interval      -  held 161 ms
+  pg   key=7      fresh=1 repeats=0   first repeat after       -  interval      -  held 183 ms
+  pg   key=7      fresh=1 repeats=0   first repeat after       -  interval      -  held 187 ms
+  pg   key=7      fresh=1 repeats=0   first repeat after       -  interval      -  held 142 ms
+  pg   key=7      fresh=1 repeats=0   first repeat after       -  interval      -  held 195 ms
+  pg   key=9      fresh=1 repeats=0   first repeat after       -  interval      -  held 226 ms
+  pg   key=9      fresh=1 repeats=0   first repeat after       -  interval      -  held 184 ms
+  pg   key=9      fresh=1 repeats=0   first repeat after       -  interval      -  held 195 ms
+  pg   key=9      fresh=1 repeats=0   first repeat after       -  interval      -  held 185 ms
+  pg   key=9      fresh=1 repeats=0   first repeat after       -  interval      -  held 182 ms
+  pg   key=9      fresh=1 repeats=0   first repeat after       -  interval      -  held 193 ms
+  raw  key=13     fresh=1 repeats=0   first repeat after       -  interval      -  held 206 ms
+  raw  key=13     fresh=1 repeats=0   first repeat after       -  interval      -  held 160 ms
+  raw  key=13     fresh=1 repeats=0   first repeat after       -  interval      -  held 151 ms
+  raw  key=13     fresh=1 repeats=0   first repeat after       -  interval      -  held 151 ms
+  raw  key=13     fresh=1 repeats=0   first repeat after       -  interval      -  held 151 ms
+  raw  key=14     fresh=1 repeats=0   first repeat after       -  interval      -  held 179 ms
+  raw  key=14     fresh=1 repeats=0   first repeat after       -  interval      -  held 158 ms
+  raw  key=14     fresh=1 repeats=0   first repeat after       -  interval      -  held 187 ms
+  raw  key=14     fresh=1 repeats=0   first repeat after       -  interval      -  held 196 ms
+  raw  key=14     fresh=1 repeats=0   first repeat after       -  interval      -  held 200 ms
+  raw  key=7      fresh=1 repeats=0   first repeat after       -  interval      -  held 161 ms
+  raw  key=7      fresh=1 repeats=0   first repeat after       -  interval      -  held 183 ms
+  raw  key=7      fresh=1 repeats=0   first repeat after       -  interval      -  held 187 ms
+  raw  key=7      fresh=1 repeats=0   first repeat after       -  interval      -  held 143 ms
+  raw  key=7      fresh=1 repeats=0   first repeat after       -  interval      -  held 195 ms
+  raw  key=9      fresh=1 repeats=0   first repeat after       -  interval      -  held 226 ms
+  raw  key=9      fresh=1 repeats=0   first repeat after       -  interval      -  held 185 ms
+  raw  key=9      fresh=1 repeats=0   first repeat after       -  interval      -  held 195 ms
+  raw  key=9      fresh=1 repeats=0   first repeat after       -  interval      -  held 185 ms
+  raw  key=9      fresh=1 repeats=0   first repeat after       -  interval      -  held 182 ms
+  raw  key=9      fresh=1 repeats=0   first repeat after       -  interval      -  held 193 ms
+  pg   TEXTINPUT x21: 'fjkdfjkdfjkdfkjdfkdjf'  gaps ms: [140, 148, 141, 112, 160, 101] ...
+  balance:
+  raw : every KEYDOWN has its KEYUP
+  pg  : every KEYDOWN has its KEYUP

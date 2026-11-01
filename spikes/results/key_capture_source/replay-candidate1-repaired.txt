@@ -1,0 +1,93 @@
+# auto-20261101-215656.jsonl: candidate (1) repaired (hook + ToUnicodeEx on a private thread)
+step  1 non-character taps                           same      repaired=''                           window=''
+step  2 layout 1: four keys                          same      repaired='zyæ'                        window='zyæ'
+step  3 layout 1: dead-key cases                     same      repaired='´´a´´´´k'                   window='´´a´´´´k'
+step  4 layout 1: dead, alt+tab out and back, a      DIFFERENT repaired='´a´a´a'                     window='aaa'  (focus changed during the step)
+step  5 FLUSH layout 1: dead+a x3, dead+space, dead+ DIFFERENT repaired='ááá´´k'                     window='aaa k'
+step  6 layout 1: alt+shift to the next layout       DIFFERENT repaired=' '                          window=''
+step  7 layout 2: four keys                          same      repaired='yzöä'                       window='yzöä'
+step  8 layout 2: dead-key cases                     same      repaired='ê^^^^k'                     window='ê^^^^k'
+step  9 layout 2: dead, alt+tab out and back, a      DIFFERENT repaired='^e^e^e'                     window='eee'  (focus changed during the step)
+step 10 FLUSH layout 2: dead+a x3, dead+space, dead+ DIFFERENT repaired='êêê^^k'                     window='eee k'
+step 11 layout 2: alt+shift to the next layout       DIFFERENT repaired=' '                          window=''
+step 12 layout 3: four keys                          same      repaired="zy;'"                       window="zy;'"
+step 13 layout 3: dead-key cases                     same      repaired=''                           window=''
+step 14 layout 3: dead, alt+tab out and back, a      same      repaired=''                           window=''
+step 15 FLUSH layout 3: dead+a x3, dead+space, dead+ same      repaired=''                           window=''
+step 16 layout 3: alt+shift to the next layout       same      repaired=''                           window=''
+step 17 restore                                      same      repaired=''                           window=''
+
+# confirm-20261101-220021.jsonl: candidate (1) repaired (hook + ToUnicodeEx on a private thread)
+step  1 held dead key x4                             same      repaired='´´´´´´´´´´´´´´´´´´´´´´aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa´´´´´´´´´´´´´´´´´´´´aaaaaaaaaaaaaaaaaaaaa´´´´´´´´´´´´´´´´´´´´´´´´´´´´áaaaaaaaaaaaaaaaaaaaaaaaa´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' window='´´´´´´´´´´´´´´´´´´´´´´aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa´´´´´´´´´´´´´´´´´´´´aaaaaaaaaaaaaaaaaaaaa´´´´´´´´´´´´´´´´´´´´´´´´´´´´áaaaaaaaaaaaaaaaaaaaaaaaa´´´´´´´´´´´´´´´´´´´´´´´´´´´´´´aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+step  2 focus lost mid-hold x2                       same      repaired='jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj' window='jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj'  (focus changed during the step)
+step  3 focus gained mid-hold x2                     same      repaired=''                           window=''  (focus changed during the step)
+step  4 filter keys                                  same      repaired=''                           window=''  (focus changed during the step)
+step  5 right ctrl while unfocused                   same      repaired=''                           window=''  (focus changed during the step)
+
+# de-20261101-213951.jsonl: candidate (1) repaired (hook + ToUnicodeEx on a private thread)
+step  1 baseline                                     same      repaired='ay'                         window='ay'
+step  2 ^+e                                          same      repaired='ê'                          window='ê'
+step  3 ^+space                                      same      repaired='^'                          window='^'
+step  4 ^ twice                                      same      repaired='^^'                         window='^^'
+step  5 ^+k                                          same      repaired='^k'                         window='^k'
+step  6 ´+e                                          same      repaired='é'                          window='é'
+step  7 `+a                                          same      repaired=''                           window=''
+step  8 ´+space                                      same      repaired=''                           window=''
+
+# de-20261101-214041.jsonl: candidate (1) repaired (hook + ToUnicodeEx on a private thread)
+step  1 baseline                                     same      repaired='ay'                         window='ay'
+step  2 ^+e                                          same      repaired='ê'                          window='ê'
+step  3 ^+space                                      same      repaired='^'                          window='^'
+step  4 ^ twice                                      same      repaired='^^'                         window='^^'
+step  5 ^+k                                          same      repaired='^k'                         window='^k'
+step  6 ´+e                                          same      repaired='é'                          window='é'
+step  7 `+a                                          same      repaired='à'                          window='à'
+step  8 ´+space                                      same      repaired='´'                          window='´'
+step  9 ´ twice                                      same      repaired='´´'                         window='´´'
+step 10 ´+k                                          same      repaired='´k'                         window='´k'
+step 11 altgr+q                                      same      repaired='@'                          window='@'
+step 12 ^ held                                       same      repaired='^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^e' window='^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^e'
+step 13 FLUSH ON: ^+e x3                             DIFFERENT repaired='^^e'                        window='e'
+
+# is-20261101-212330.jsonl: candidate (1) repaired (hook + ToUnicodeEx on a private thread)
+step  1 baseline                                     same      repaired='afj'                        window='afj'
+step  2 dead+a                                       same      repaired='á'                          window='á'
+step  3 dead+e                                       same      repaired='é'                          window='é'
+step  4 dead+space                                   same      repaired='´'                          window='´'
+step  5 dead twice                                   same      repaired='´´'                         window='´´'
+step  6 dead+k                                       same      repaired='´k'                         window='´k'
+step  7 shift+top-left (¨) +u                        same      repaired='ü'                          window='ü'
+step  8 top-left (°) +a                              same      repaired='å'                          window='å'
+step  9 dead, wait, a                                same      repaired='á'                          window='á'
+step 10 dead, focus out and back, a                  DIFFERENT repaired='á'                          window='a'  (focus changed during the step)
+step 11 dead held                                    same      repaired='´´´´´´´´´´´´´´´´´´´´´´´´á'  window='´´´´´´´´´´´´´´´´´´´´´´´´á'
+step 12 FLUSH ON: dead+a x3                          DIFFERENT repaired='´´á'                        window='a'
+step 13 FLUSH ON: dead+space, dead+k                 DIFFERENT repaired='´´k'                        window=' k'
+step 14 hold f                                       same      repaired='ffffffffffffffffffffff'     window='ffffffffffffffffffffff'
+step 15 ll released                                  same      repaired='II'                         window='II'
+step 16 ll held                                      same      repaired='IIIIIIIIII'                 window='IIIIIIIIII'
+step 17 shift released first                         same      repaired='G'                          window='G'
+step 18 focus lost mid-hold                          same      repaired='jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj' window='jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj'  (focus changed during the step)
+step 19 focus gained mid-hold                        same      repaired=''                           window=''  (focus changed during the step)
+step 20 alt+tab out and back                         same      repaired=''                           window=''  (focus changed during the step)
+step 21 keys while unfocused                         same      repaired=''                           window=''  (focus changed during the step)
+step 22 non-character keys                           same      repaired=''                           window=''
+step 23 caps lock on                                 same      repaired='AF'                         window='AF'
+step 24 held non-character keys                      same      repaired=''                           window=''
+step 25 fast roll                                    same      repaired='fjdkfjdkfjdk'               window='fjdkfjdkfjdk'
+step 26 sticky keys                                  same      repaired=''                           window=''  (focus changed during the step)
+step 27 filter keys                                  same      repaired=''                           window=''  (focus changed during the step)
+
+# redo-20261101-213647.jsonl: candidate (1) repaired (hook + ToUnicodeEx on a private thread)
+step  1 focus lost mid-hold (alt+tab)                same      repaired='jjjjjjjjjjjjjjjjjjjjj'      window='jjjjjjjjjjjjjjjjjjjjj'  (focus changed during the step)
+step  2 focus gained mid-hold (alt+tab)              same      repaired=''                           window=''  (focus changed during the step)
+step  3 ll released                                  same      repaired='ll'                         window='ll'
+step  4 ll held                                      same      repaired='llllllllllllllllllllllllll' window='llllllllllllllllllllllllll'
+step  5 drum                                         same      repaired='asdfasdfasdfasdfasdf'       window='asdfasdfasdfasdfasdf'
+
+# switch-20261101-214340.jsonl: candidate (1) repaired (hook + ToUnicodeEx on a private thread)
+step  1 US keys                                      same      repaired="zy;'"                       window="zy;'"
+step  2 win+space to German                          DIFFERENT repaired=' '                          window=''
+step  3 German keys                                  same      repaired='yzöä'                       window='yzöä'  (focus changed during the step)
+step  4 alt+shift                                    same      repaired='yzöä'                       window='yzöä'
+step  5 back to US                                   DIFFERENT repaired=' zyüä'                      window="zy;'"

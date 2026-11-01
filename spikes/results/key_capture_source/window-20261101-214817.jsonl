@@ -1,0 +1,413 @@
+{"k": "meta", "t": 145.1, "run": "window", "started": "2026-11-01T21:48:18.004", "pygame": "2.6.1", "sdl": [2, 28, 4], "python": "3.11.15 (main, May 10 2026, 19:31:25) [MSC v.1944 64 bit (AMD64)]", "hook": false, "had_pygame_filter": true, "text_input_active_at_start": true, "main_hkl": "0x040f040f", "keyboard_delay_setting": 1, "keyboard_delay_ms_nominal": 500, "keyboard_speed_setting": 31, "stickykeys_flags": "0x1fe", "stickykeys_hotkey_active": true, "filterkeys_flags": "0x7e", "filterkeys_hotkey_active": true}
+{"k": "step", "t": 165.91, "n": 1, "id": "dead+a", "text": "Dead acute (right of Æ), then  a .", "attempt": 0, "flush": false, "main_hkl": "0x040f040f", "text_input_active": true}
+{"k": "raw", "t": 167.71, "type": "WINDOW", "ts": 165, "wev": "EXPOSED"}
+{"k": "raw", "t": 4271.02, "type": "KEYDOWN", "ts": 4268, "sc": 52, "sym": 180, "mod": 4096, "rep": 0, "state": 1}
+{"k": "pg", "t": 4271.33, "type": "KeyDown", "key": 180, "sc": 52, "uni": "", "mod": 4096, "dead": true}
+{"k": "raw", "t": 4469.64, "type": "KEYUP", "ts": 4467, "sc": 52, "sym": 180, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 4469.86, "type": "KeyUp", "key": 180, "sc": 52, "uni": "", "mod": 4096}
+{"k": "raw", "t": 4521.68, "type": "KEYDOWN", "ts": 4519, "sc": 4, "sym": 97, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 4521.73, "type": "TEXTINPUT", "ts": 4519, "text": "á"}
+{"k": "pg", "t": 4521.95, "type": "KeyDown", "key": 97, "sc": 4, "uni": "á", "mod": 4096, "dead": false}
+{"k": "pg", "t": 4522.04, "type": "TextInput", "text": "á"}
+{"k": "raw", "t": 4677.75, "type": "KEYUP", "ts": 4675, "sc": 4, "sym": 97, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 4677.93, "type": "KeyUp", "key": 97, "sc": 4, "uni": "á", "mod": 4096}
+{"k": "pg", "t": 6964.18, "type": "MouseButtonDown"}
+{"k": "step", "t": 6964.34, "n": 2, "id": "dead+space", "text": "Dead acute, then Space.", "attempt": 0, "flush": false, "main_hkl": "0x040f040f", "text_input_active": true}
+{"k": "pg", "t": 7180.72, "type": "MouseButtonUp"}
+{"k": "raw", "t": 9117.21, "type": "KEYDOWN", "ts": 9114, "sc": 52, "sym": 180, "mod": 4096, "rep": 0, "state": 1}
+{"k": "pg", "t": 9117.37, "type": "KeyDown", "key": 180, "sc": 52, "uni": "", "mod": 4096, "dead": true}
+{"k": "raw", "t": 9312.15, "type": "KEYUP", "ts": 9309, "sc": 52, "sym": 180, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 9312.32, "type": "KeyUp", "key": 180, "sc": 52, "uni": "", "mod": 4096}
+{"k": "raw", "t": 9467.31, "type": "KEYDOWN", "ts": 9464, "sc": 44, "sym": 32, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 9467.37, "type": "TEXTINPUT", "ts": 9465, "text": "´"}
+{"k": "pg", "t": 9467.74, "type": "KeyDown", "key": 32, "sc": 44, "uni": "´", "mod": 4096, "dead": false}
+{"k": "pg", "t": 9467.81, "type": "TextInput", "text": "´"}
+{"k": "raw", "t": 9619.48, "type": "KEYUP", "ts": 9617, "sc": 44, "sym": 32, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 9619.64, "type": "KeyUp", "key": 32, "sc": 44, "uni": "´", "mod": 4096}
+{"k": "pg", "t": 11068.24, "type": "MouseButtonDown"}
+{"k": "step", "t": 11068.34, "n": 3, "id": "dead twice", "text": "Dead acute twice.", "attempt": 0, "flush": false, "main_hkl": "0x040f040f", "text_input_active": true}
+{"k": "pg", "t": 11286.28, "type": "MouseButtonUp"}
+{"k": "raw", "t": 13311.98, "type": "KEYDOWN", "ts": 13309, "sc": 52, "sym": 180, "mod": 4096, "rep": 0, "state": 1}
+{"k": "pg", "t": 13312.15, "type": "KeyDown", "key": 180, "sc": 52, "uni": "", "mod": 4096, "dead": true}
+{"k": "raw", "t": 13468.37, "type": "KEYUP", "ts": 13466, "sc": 52, "sym": 180, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 13468.56, "type": "KeyUp", "key": 180, "sc": 52, "uni": "", "mod": 4096}
+{"k": "raw", "t": 13704.42, "type": "KEYDOWN", "ts": 13702, "sc": 52, "sym": 180, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 13704.47, "type": "TEXTINPUT", "ts": 13702, "text": "´"}
+{"k": "raw", "t": 13704.49, "type": "TEXTINPUT", "ts": 13702, "text": "´"}
+{"k": "pg", "t": 13704.77, "type": "KeyDown", "key": 180, "sc": 52, "uni": "´", "mod": 4096, "dead": true}
+{"k": "pg", "t": 13704.83, "type": "TextInput", "text": "´"}
+{"k": "pg", "t": 13704.84, "type": "TextInput", "text": "´"}
+{"k": "raw", "t": 13899.23, "type": "KEYUP", "ts": 13896, "sc": 52, "sym": 180, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 13899.39, "type": "KeyUp", "key": 180, "sc": 52, "uni": "´", "mod": 4096}
+{"k": "pg", "t": 15120.29, "type": "MouseButtonDown"}
+{"k": "step", "t": 15120.4, "n": 4, "id": "dead+k", "text": "Dead acute, then  k .", "attempt": 0, "flush": false, "main_hkl": "0x040f040f", "text_input_active": true}
+{"k": "pg", "t": 15340.96, "type": "MouseButtonUp"}
+{"k": "raw", "t": 16781.76, "type": "KEYDOWN", "ts": 16779, "sc": 52, "sym": 180, "mod": 4096, "rep": 0, "state": 1}
+{"k": "pg", "t": 16781.93, "type": "KeyDown", "key": 180, "sc": 52, "uni": "", "mod": 4096, "dead": true}
+{"k": "raw", "t": 16953.82, "type": "KEYUP", "ts": 16951, "sc": 52, "sym": 180, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 16953.98, "type": "KeyUp", "key": 180, "sc": 52, "uni": "", "mod": 4096}
+{"k": "raw", "t": 17243.19, "type": "KEYDOWN", "ts": 17240, "sc": 14, "sym": 107, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 17243.26, "type": "TEXTINPUT", "ts": 17240, "text": "´"}
+{"k": "raw", "t": 17243.3, "type": "TEXTINPUT", "ts": 17240, "text": "k"}
+{"k": "pg", "t": 17243.67, "type": "KeyDown", "key": 107, "sc": 14, "uni": "´", "mod": 4096, "dead": false}
+{"k": "pg", "t": 17243.76, "type": "TextInput", "text": "´"}
+{"k": "pg", "t": 17243.8, "type": "TextInput", "text": "k"}
+{"k": "raw", "t": 17372.89, "type": "KEYUP", "ts": 17370, "sc": 14, "sym": 107, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 17373.05, "type": "KeyUp", "key": 107, "sc": 14, "uni": "´", "mod": 4096}
+{"k": "pg", "t": 18522.61, "type": "MouseButtonDown"}
+{"k": "step", "t": 18522.83, "n": 5, "id": "hold f", "text": "Hold  f  for about 2 seconds, then let go.", "attempt": 0, "flush": false, "main_hkl": "0x040f040f", "text_input_active": true}
+{"k": "pg", "t": 18740.42, "type": "MouseButtonUp"}
+{"k": "raw", "t": 20449.68, "type": "KEYDOWN", "ts": 20447, "sc": 9, "sym": 102, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 20449.73, "type": "TEXTINPUT", "ts": 20447, "text": "f"}
+{"k": "pg", "t": 20449.98, "type": "KeyDown", "key": 102, "sc": 9, "uni": "f", "mod": 4096, "dead": false}
+{"k": "pg", "t": 20450.04, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 20958.74, "type": "KEYDOWN", "ts": 20956, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 20958.79, "type": "TEXTINPUT", "ts": 20956, "text": "f"}
+{"k": "pg", "t": 20959.0, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 20987.24, "type": "KEYDOWN", "ts": 20984, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 20987.29, "type": "TEXTINPUT", "ts": 20984, "text": "f"}
+{"k": "pg", "t": 20987.45, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21019.52, "type": "KEYDOWN", "ts": 21017, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21019.57, "type": "TEXTINPUT", "ts": 21017, "text": "f"}
+{"k": "pg", "t": 21019.72, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21053.3, "type": "KEYDOWN", "ts": 21050, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21053.35, "type": "TEXTINPUT", "ts": 21051, "text": "f"}
+{"k": "pg", "t": 21053.49, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21086.02, "type": "KEYDOWN", "ts": 21083, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21086.07, "type": "TEXTINPUT", "ts": 21083, "text": "f"}
+{"k": "pg", "t": 21086.22, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21118.99, "type": "KEYDOWN", "ts": 21116, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21119.04, "type": "TEXTINPUT", "ts": 21116, "text": "f"}
+{"k": "pg", "t": 21119.19, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21151.65, "type": "KEYDOWN", "ts": 21149, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21151.71, "type": "TEXTINPUT", "ts": 21149, "text": "f"}
+{"k": "pg", "t": 21152.38, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21182.3, "type": "KEYDOWN", "ts": 21179, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21182.35, "type": "TEXTINPUT", "ts": 21180, "text": "f"}
+{"k": "pg", "t": 21182.63, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21216.46, "type": "KEYDOWN", "ts": 21214, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21216.51, "type": "TEXTINPUT", "ts": 21214, "text": "f"}
+{"k": "pg", "t": 21216.76, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21250.45, "type": "KEYDOWN", "ts": 21248, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21250.51, "type": "TEXTINPUT", "ts": 21248, "text": "f"}
+{"k": "pg", "t": 21250.66, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21281.66, "type": "KEYDOWN", "ts": 21279, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21281.7, "type": "TEXTINPUT", "ts": 21279, "text": "f"}
+{"k": "pg", "t": 21281.86, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21317.41, "type": "KEYDOWN", "ts": 21315, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21317.45, "type": "TEXTINPUT", "ts": 21315, "text": "f"}
+{"k": "pg", "t": 21317.66, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21345.71, "type": "KEYDOWN", "ts": 21343, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21345.78, "type": "TEXTINPUT", "ts": 21343, "text": "f"}
+{"k": "pg", "t": 21346.1, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21377.34, "type": "KEYDOWN", "ts": 21375, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21377.39, "type": "TEXTINPUT", "ts": 21375, "text": "f"}
+{"k": "pg", "t": 21377.55, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21413.1, "type": "KEYDOWN", "ts": 21410, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21413.16, "type": "TEXTINPUT", "ts": 21410, "text": "f"}
+{"k": "pg", "t": 21413.32, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21443.48, "type": "KEYDOWN", "ts": 21441, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21443.52, "type": "TEXTINPUT", "ts": 21441, "text": "f"}
+{"k": "pg", "t": 21443.7, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21474.93, "type": "KEYDOWN", "ts": 21472, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21474.99, "type": "TEXTINPUT", "ts": 21472, "text": "f"}
+{"k": "pg", "t": 21475.25, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21510.4, "type": "KEYDOWN", "ts": 21508, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21510.48, "type": "TEXTINPUT", "ts": 21508, "text": "f"}
+{"k": "pg", "t": 21510.92, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21539.99, "type": "KEYDOWN", "ts": 21537, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21540.05, "type": "TEXTINPUT", "ts": 21537, "text": "f"}
+{"k": "pg", "t": 21540.22, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21574.13, "type": "KEYDOWN", "ts": 21571, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21574.18, "type": "TEXTINPUT", "ts": 21571, "text": "f"}
+{"k": "pg", "t": 21574.35, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21606.08, "type": "KEYDOWN", "ts": 21603, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21606.13, "type": "TEXTINPUT", "ts": 21603, "text": "f"}
+{"k": "pg", "t": 21606.28, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21637.9, "type": "KEYDOWN", "ts": 21635, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21637.96, "type": "TEXTINPUT", "ts": 21635, "text": "f"}
+{"k": "pg", "t": 21638.11, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21671.85, "type": "KEYDOWN", "ts": 21669, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21671.9, "type": "TEXTINPUT", "ts": 21669, "text": "f"}
+{"k": "pg", "t": 21672.23, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21704.22, "type": "KEYDOWN", "ts": 21701, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21704.27, "type": "TEXTINPUT", "ts": 21701, "text": "f"}
+{"k": "pg", "t": 21704.42, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21736.99, "type": "KEYDOWN", "ts": 21734, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21737.04, "type": "TEXTINPUT", "ts": 21734, "text": "f"}
+{"k": "pg", "t": 21737.19, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21769.47, "type": "KEYDOWN", "ts": 21767, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21769.51, "type": "TEXTINPUT", "ts": 21767, "text": "f"}
+{"k": "pg", "t": 21769.68, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21805.32, "type": "KEYDOWN", "ts": 21802, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21805.37, "type": "TEXTINPUT", "ts": 21803, "text": "f"}
+{"k": "pg", "t": 21805.54, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21834.26, "type": "KEYDOWN", "ts": 21831, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21834.31, "type": "TEXTINPUT", "ts": 21832, "text": "f"}
+{"k": "pg", "t": 21834.47, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21866.26, "type": "KEYDOWN", "ts": 21863, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21866.31, "type": "TEXTINPUT", "ts": 21864, "text": "f"}
+{"k": "pg", "t": 21866.49, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21901.69, "type": "KEYDOWN", "ts": 21899, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21901.73, "type": "TEXTINPUT", "ts": 21899, "text": "f"}
+{"k": "pg", "t": 21901.91, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21931.86, "type": "KEYDOWN", "ts": 21929, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21931.91, "type": "TEXTINPUT", "ts": 21929, "text": "f"}
+{"k": "pg", "t": 21932.14, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21964.8, "type": "KEYDOWN", "ts": 21962, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21964.84, "type": "TEXTINPUT", "ts": 21962, "text": "f"}
+{"k": "pg", "t": 21965.03, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 21996.42, "type": "KEYDOWN", "ts": 21994, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 21996.47, "type": "TEXTINPUT", "ts": 21994, "text": "f"}
+{"k": "pg", "t": 21996.66, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 22028.81, "type": "KEYDOWN", "ts": 22026, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 22028.85, "type": "TEXTINPUT", "ts": 22026, "text": "f"}
+{"k": "pg", "t": 22029.0, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 22061.8, "type": "KEYDOWN", "ts": 22059, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 22061.89, "type": "TEXTINPUT", "ts": 22059, "text": "f"}
+{"k": "pg", "t": 22062.22, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 22095.33, "type": "KEYDOWN", "ts": 22092, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 22095.39, "type": "TEXTINPUT", "ts": 22093, "text": "f"}
+{"k": "pg", "t": 22095.57, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 22126.94, "type": "KEYDOWN", "ts": 22124, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 22127.0, "type": "TEXTINPUT", "ts": 22124, "text": "f"}
+{"k": "pg", "t": 22127.26, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 22159.29, "type": "KEYDOWN", "ts": 22156, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 22159.33, "type": "TEXTINPUT", "ts": 22157, "text": "f"}
+{"k": "pg", "t": 22159.52, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 22194.42, "type": "KEYDOWN", "ts": 22192, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 22194.46, "type": "TEXTINPUT", "ts": 22192, "text": "f"}
+{"k": "pg", "t": 22194.65, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 22226.44, "type": "KEYDOWN", "ts": 22224, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 22226.49, "type": "TEXTINPUT", "ts": 22224, "text": "f"}
+{"k": "pg", "t": 22226.67, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 22256.24, "type": "KEYDOWN", "ts": 22253, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 22256.31, "type": "TEXTINPUT", "ts": 22254, "text": "f"}
+{"k": "pg", "t": 22256.62, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 22290.71, "type": "KEYDOWN", "ts": 22288, "sc": 9, "sym": 102, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 22290.77, "type": "TEXTINPUT", "ts": 22288, "text": "f"}
+{"k": "pg", "t": 22291.08, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 22327.86, "type": "KEYUP", "ts": 22325, "sc": 9, "sym": 102, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 22328.31, "type": "KeyUp", "key": 102, "sc": 9, "uni": "f", "mod": 4096}
+{"k": "pg", "t": 23637.61, "type": "MouseButtonDown"}
+{"k": "step", "t": 23637.75, "n": 6, "id": "ll held", "text": "Press  l  and hold it about 1.5 seconds, then let go.", "attempt": 0, "flush": false, "main_hkl": "0x040f040f", "text_input_active": true}
+{"k": "pg", "t": 23868.49, "type": "MouseButtonUp"}
+{"k": "raw", "t": 25648.63, "type": "KEYDOWN", "ts": 25646, "sc": 15, "sym": 108, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 25648.69, "type": "TEXTINPUT", "ts": 25646, "text": "l"}
+{"k": "pg", "t": 25648.85, "type": "KeyDown", "key": 108, "sc": 15, "uni": "l", "mod": 4096, "dead": false}
+{"k": "pg", "t": 25648.89, "type": "TextInput", "text": "l"}
+{"k": "raw", "t": 26158.28, "type": "KEYDOWN", "ts": 26155, "sc": 15, "sym": 108, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 26158.32, "type": "TEXTINPUT", "ts": 26156, "text": "l"}
+{"k": "pg", "t": 26158.54, "type": "TextInput", "text": "l"}
+{"k": "raw", "t": 26192.02, "type": "KEYDOWN", "ts": 26189, "sc": 15, "sym": 108, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 26192.09, "type": "TEXTINPUT", "ts": 26189, "text": "l"}
+{"k": "pg", "t": 26192.34, "type": "TextInput", "text": "l"}
+{"k": "raw", "t": 26222.01, "type": "KEYDOWN", "ts": 26219, "sc": 15, "sym": 108, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 26222.05, "type": "TEXTINPUT", "ts": 26219, "text": "l"}
+{"k": "pg", "t": 26222.29, "type": "TextInput", "text": "l"}
+{"k": "raw", "t": 26254.98, "type": "KEYDOWN", "ts": 26252, "sc": 15, "sym": 108, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 26255.02, "type": "TEXTINPUT", "ts": 26252, "text": "l"}
+{"k": "pg", "t": 26255.21, "type": "TextInput", "text": "l"}
+{"k": "raw", "t": 26290.32, "type": "KEYDOWN", "ts": 26287, "sc": 15, "sym": 108, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 26290.36, "type": "TEXTINPUT", "ts": 26288, "text": "l"}
+{"k": "pg", "t": 26290.52, "type": "TextInput", "text": "l"}
+{"k": "raw", "t": 26322.02, "type": "KEYDOWN", "ts": 26319, "sc": 15, "sym": 108, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 26322.06, "type": "TEXTINPUT", "ts": 26319, "text": "l"}
+{"k": "pg", "t": 26322.22, "type": "TextInput", "text": "l"}
+{"k": "raw", "t": 26352.4, "type": "KEYDOWN", "ts": 26350, "sc": 15, "sym": 108, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 26352.46, "type": "TEXTINPUT", "ts": 26350, "text": "l"}
+{"k": "pg", "t": 26352.71, "type": "TextInput", "text": "l"}
+{"k": "raw", "t": 26385.6, "type": "KEYDOWN", "ts": 26383, "sc": 15, "sym": 108, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 26385.64, "type": "TEXTINPUT", "ts": 26383, "text": "l"}
+{"k": "pg", "t": 26385.81, "type": "TextInput", "text": "l"}
+{"k": "raw", "t": 26417.55, "type": "KEYDOWN", "ts": 26415, "sc": 15, "sym": 108, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 26417.6, "type": "TEXTINPUT", "ts": 26415, "text": "l"}
+{"k": "pg", "t": 26417.85, "type": "TextInput", "text": "l"}
+{"k": "raw", "t": 26450.57, "type": "KEYDOWN", "ts": 26448, "sc": 15, "sym": 108, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 26450.61, "type": "TEXTINPUT", "ts": 26448, "text": "l"}
+{"k": "pg", "t": 26450.79, "type": "TextInput", "text": "l"}
+{"k": "raw", "t": 26482.5, "type": "KEYDOWN", "ts": 26480, "sc": 15, "sym": 108, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 26482.55, "type": "TEXTINPUT", "ts": 26480, "text": "l"}
+{"k": "pg", "t": 26482.81, "type": "TextInput", "text": "l"}
+{"k": "raw", "t": 26515.07, "type": "KEYDOWN", "ts": 26512, "sc": 15, "sym": 108, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 26515.11, "type": "TEXTINPUT", "ts": 26512, "text": "l"}
+{"k": "pg", "t": 26515.28, "type": "TextInput", "text": "l"}
+{"k": "raw", "t": 26548.08, "type": "KEYDOWN", "ts": 26545, "sc": 15, "sym": 108, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 26548.12, "type": "TEXTINPUT", "ts": 26545, "text": "l"}
+{"k": "pg", "t": 26548.28, "type": "TextInput", "text": "l"}
+{"k": "raw", "t": 26581.4, "type": "KEYDOWN", "ts": 26579, "sc": 15, "sym": 108, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 26581.44, "type": "TEXTINPUT", "ts": 26579, "text": "l"}
+{"k": "pg", "t": 26581.63, "type": "TextInput", "text": "l"}
+{"k": "raw", "t": 26614.86, "type": "KEYDOWN", "ts": 26612, "sc": 15, "sym": 108, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 26614.91, "type": "TEXTINPUT", "ts": 26612, "text": "l"}
+{"k": "pg", "t": 26615.06, "type": "TextInput", "text": "l"}
+{"k": "raw", "t": 26645.37, "type": "KEYDOWN", "ts": 26643, "sc": 15, "sym": 108, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 26645.43, "type": "TEXTINPUT", "ts": 26643, "text": "l"}
+{"k": "pg", "t": 26645.72, "type": "TextInput", "text": "l"}
+{"k": "raw", "t": 26678.47, "type": "KEYDOWN", "ts": 26676, "sc": 15, "sym": 108, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 26678.52, "type": "TEXTINPUT", "ts": 26676, "text": "l"}
+{"k": "pg", "t": 26678.67, "type": "TextInput", "text": "l"}
+{"k": "raw", "t": 26710.59, "type": "KEYDOWN", "ts": 26708, "sc": 15, "sym": 108, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 26710.63, "type": "TEXTINPUT", "ts": 26708, "text": "l"}
+{"k": "pg", "t": 26710.86, "type": "TextInput", "text": "l"}
+{"k": "raw", "t": 26743.71, "type": "KEYDOWN", "ts": 26741, "sc": 15, "sym": 108, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 26743.76, "type": "TEXTINPUT", "ts": 26741, "text": "l"}
+{"k": "pg", "t": 26744.0, "type": "TextInput", "text": "l"}
+{"k": "raw", "t": 26775.89, "type": "KEYDOWN", "ts": 26773, "sc": 15, "sym": 108, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 26775.96, "type": "TEXTINPUT", "ts": 26773, "text": "l"}
+{"k": "pg", "t": 26776.26, "type": "TextInput", "text": "l"}
+{"k": "raw", "t": 26808.2, "type": "KEYDOWN", "ts": 26805, "sc": 15, "sym": 108, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 26808.25, "type": "TEXTINPUT", "ts": 26805, "text": "l"}
+{"k": "pg", "t": 26808.51, "type": "TextInput", "text": "l"}
+{"k": "raw", "t": 26840.14, "type": "KEYDOWN", "ts": 26837, "sc": 15, "sym": 108, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 26840.21, "type": "TEXTINPUT", "ts": 26837, "text": "l"}
+{"k": "pg", "t": 26840.55, "type": "TextInput", "text": "l"}
+{"k": "raw", "t": 26872.66, "type": "KEYDOWN", "ts": 26870, "sc": 15, "sym": 108, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 26872.71, "type": "TEXTINPUT", "ts": 26870, "text": "l"}
+{"k": "pg", "t": 26873.04, "type": "TextInput", "text": "l"}
+{"k": "raw", "t": 26905.04, "type": "KEYDOWN", "ts": 26902, "sc": 15, "sym": 108, "mod": 4096, "rep": 1, "state": 1}
+{"k": "raw", "t": 26905.12, "type": "TEXTINPUT", "ts": 26902, "text": "l"}
+{"k": "pg", "t": 26905.44, "type": "TextInput", "text": "l"}
+{"k": "raw", "t": 26938.96, "type": "KEYUP", "ts": 26936, "sc": 15, "sym": 108, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 26939.13, "type": "KeyUp", "key": 108, "sc": 15, "uni": "l", "mod": 4096}
+{"k": "pg", "t": 28311.48, "type": "MouseButtonDown"}
+{"k": "step", "t": 28311.64, "n": 7, "id": "fast roll", "text": "Type  fjdk  as fast as you can, three times in a row.", "attempt": 0, "flush": false, "main_hkl": "0x040f040f", "text_input_active": true}
+{"k": "pg", "t": 28528.32, "type": "MouseButtonUp"}
+{"k": "raw", "t": 35827.58, "type": "KEYDOWN", "ts": 35825, "sc": 9, "sym": 102, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 35827.66, "type": "TEXTINPUT", "ts": 35825, "text": "f"}
+{"k": "pg", "t": 35828.15, "type": "KeyDown", "key": 102, "sc": 9, "uni": "f", "mod": 4096, "dead": false}
+{"k": "pg", "t": 35828.25, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 35967.4, "type": "KEYDOWN", "ts": 35965, "sc": 13, "sym": 106, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 35967.46, "type": "TEXTINPUT", "ts": 35965, "text": "j"}
+{"k": "pg", "t": 35967.75, "type": "KeyDown", "key": 106, "sc": 13, "uni": "j", "mod": 4096, "dead": false}
+{"k": "pg", "t": 35967.84, "type": "TextInput", "text": "j"}
+{"k": "raw", "t": 36053.84, "type": "KEYUP", "ts": 36051, "sc": 9, "sym": 102, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 36054.0, "type": "KeyUp", "key": 102, "sc": 9, "uni": "f", "mod": 4096}
+{"k": "raw", "t": 36115.03, "type": "KEYDOWN", "ts": 36112, "sc": 14, "sym": 107, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 36115.11, "type": "TEXTINPUT", "ts": 36112, "text": "k"}
+{"k": "pg", "t": 36115.6, "type": "KeyDown", "key": 107, "sc": 14, "uni": "k", "mod": 4096, "dead": false}
+{"k": "pg", "t": 36115.7, "type": "TextInput", "text": "k"}
+{"k": "raw", "t": 36173.72, "type": "KEYUP", "ts": 36171, "sc": 13, "sym": 106, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 36173.97, "type": "KeyUp", "key": 106, "sc": 13, "uni": "j", "mod": 4096}
+{"k": "raw", "t": 36256.29, "type": "KEYDOWN", "ts": 36253, "sc": 7, "sym": 100, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 36256.34, "type": "TEXTINPUT", "ts": 36254, "text": "d"}
+{"k": "pg", "t": 36256.51, "type": "KeyDown", "key": 100, "sc": 7, "uni": "d", "mod": 4096, "dead": false}
+{"k": "pg", "t": 36256.55, "type": "TextInput", "text": "d"}
+{"k": "raw", "t": 36294.21, "type": "KEYUP", "ts": 36291, "sc": 14, "sym": 107, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 36294.38, "type": "KeyUp", "key": 107, "sc": 14, "uni": "k", "mod": 4096}
+{"k": "raw", "t": 36368.29, "type": "KEYDOWN", "ts": 36365, "sc": 9, "sym": 102, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 36368.35, "type": "TEXTINPUT", "ts": 36366, "text": "f"}
+{"k": "pg", "t": 36368.79, "type": "KeyDown", "key": 102, "sc": 9, "uni": "f", "mod": 4096, "dead": false}
+{"k": "pg", "t": 36368.88, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 36417.66, "type": "KEYUP", "ts": 36415, "sc": 7, "sym": 100, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 36417.87, "type": "KeyUp", "key": 100, "sc": 7, "uni": "d", "mod": 4096}
+{"k": "raw", "t": 36528.37, "type": "KEYDOWN", "ts": 36526, "sc": 13, "sym": 106, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 36528.52, "type": "TEXTINPUT", "ts": 36526, "text": "j"}
+{"k": "pg", "t": 36529.1, "type": "KeyDown", "key": 106, "sc": 13, "uni": "j", "mod": 4096, "dead": false}
+{"k": "pg", "t": 36529.15, "type": "TextInput", "text": "j"}
+{"k": "raw", "t": 36552.94, "type": "KEYUP", "ts": 36550, "sc": 9, "sym": 102, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 36553.09, "type": "KeyUp", "key": 102, "sc": 9, "uni": "f", "mod": 4096}
+{"k": "raw", "t": 36629.6, "type": "KEYDOWN", "ts": 36627, "sc": 14, "sym": 107, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 36629.65, "type": "TEXTINPUT", "ts": 36627, "text": "k"}
+{"k": "pg", "t": 36629.95, "type": "KeyDown", "key": 107, "sc": 14, "uni": "k", "mod": 4096, "dead": false}
+{"k": "pg", "t": 36630.04, "type": "TextInput", "text": "k"}
+{"k": "raw", "t": 36660.42, "type": "KEYDOWN", "ts": 36658, "sc": 7, "sym": 100, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 36660.47, "type": "TEXTINPUT", "ts": 36658, "text": "d"}
+{"k": "pg", "t": 36660.62, "type": "KeyDown", "key": 100, "sc": 7, "uni": "d", "mod": 4096, "dead": false}
+{"k": "pg", "t": 36660.66, "type": "TextInput", "text": "d"}
+{"k": "raw", "t": 36688.7, "type": "KEYUP", "ts": 36686, "sc": 13, "sym": 106, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 36689.02, "type": "KeyUp", "key": 106, "sc": 13, "uni": "j", "mod": 4096}
+{"k": "raw", "t": 36777.69, "type": "KEYDOWN", "ts": 36775, "sc": 9, "sym": 102, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 36777.77, "type": "TEXTINPUT", "ts": 36775, "text": "f"}
+{"k": "pg", "t": 36778.22, "type": "KeyDown", "key": 102, "sc": 9, "uni": "f", "mod": 4096, "dead": false}
+{"k": "pg", "t": 36778.38, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 36787.68, "type": "KEYUP", "ts": 36785, "sc": 14, "sym": 107, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 36787.92, "type": "KeyUp", "key": 107, "sc": 14, "uni": "k", "mod": 4096}
+{"k": "raw", "t": 36843.15, "type": "KEYUP", "ts": 36840, "sc": 7, "sym": 100, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 36843.31, "type": "KeyUp", "key": 100, "sc": 7, "uni": "d", "mod": 4096}
+{"k": "raw", "t": 36952.72, "type": "KEYDOWN", "ts": 36950, "sc": 13, "sym": 106, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 36952.77, "type": "TEXTINPUT", "ts": 36950, "text": "j"}
+{"k": "pg", "t": 36953.09, "type": "KeyDown", "key": 106, "sc": 13, "uni": "j", "mod": 4096, "dead": false}
+{"k": "pg", "t": 36953.16, "type": "TextInput", "text": "j"}
+{"k": "raw", "t": 36972.59, "type": "KEYUP", "ts": 36970, "sc": 9, "sym": 102, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 36972.78, "type": "KeyUp", "key": 102, "sc": 9, "uni": "f", "mod": 4096}
+{"k": "raw", "t": 37044.58, "type": "KEYDOWN", "ts": 37042, "sc": 14, "sym": 107, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 37044.62, "type": "TEXTINPUT", "ts": 37042, "text": "k"}
+{"k": "pg", "t": 37044.81, "type": "KeyDown", "key": 107, "sc": 14, "uni": "k", "mod": 4096, "dead": false}
+{"k": "pg", "t": 37044.89, "type": "TextInput", "text": "k"}
+{"k": "raw", "t": 37103.93, "type": "KEYUP", "ts": 37101, "sc": 13, "sym": 106, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 37104.12, "type": "KeyUp", "key": 106, "sc": 13, "uni": "j", "mod": 4096}
+{"k": "raw", "t": 37107.77, "type": "KEYDOWN", "ts": 37105, "sc": 7, "sym": 100, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 37107.82, "type": "TEXTINPUT", "ts": 37105, "text": "d"}
+{"k": "pg", "t": 37108.06, "type": "KeyDown", "key": 100, "sc": 7, "uni": "d", "mod": 4096, "dead": false}
+{"k": "pg", "t": 37108.18, "type": "TextInput", "text": "d"}
+{"k": "raw", "t": 37217.01, "type": "KEYDOWN", "ts": 37214, "sc": 9, "sym": 102, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 37217.07, "type": "TEXTINPUT", "ts": 37214, "text": "f"}
+{"k": "pg", "t": 37217.36, "type": "KeyDown", "key": 102, "sc": 9, "uni": "f", "mod": 4096, "dead": false}
+{"k": "pg", "t": 37217.47, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 37231.18, "type": "KEYUP", "ts": 37228, "sc": 14, "sym": 107, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 37231.34, "type": "KeyUp", "key": 107, "sc": 14, "uni": "k", "mod": 4096}
+{"k": "raw", "t": 37294.76, "type": "KEYUP", "ts": 37292, "sc": 7, "sym": 100, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 37295.26, "type": "KeyUp", "key": 100, "sc": 7, "uni": "d", "mod": 4096}
+{"k": "raw", "t": 37352.31, "type": "KEYDOWN", "ts": 37349, "sc": 14, "sym": 107, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 37352.35, "type": "TEXTINPUT", "ts": 37350, "text": "k"}
+{"k": "pg", "t": 37352.63, "type": "KeyDown", "key": 107, "sc": 14, "uni": "k", "mod": 4096, "dead": false}
+{"k": "pg", "t": 37352.68, "type": "TextInput", "text": "k"}
+{"k": "raw", "t": 37402.38, "type": "KEYUP", "ts": 37400, "sc": 9, "sym": 102, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 37402.54, "type": "KeyUp", "key": 102, "sc": 9, "uni": "f", "mod": 4096}
+{"k": "raw", "t": 37483.1, "type": "KEYDOWN", "ts": 37480, "sc": 13, "sym": 106, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 37483.16, "type": "TEXTINPUT", "ts": 37480, "text": "j"}
+{"k": "pg", "t": 37483.52, "type": "KeyDown", "key": 106, "sc": 13, "uni": "j", "mod": 4096, "dead": false}
+{"k": "pg", "t": 37483.57, "type": "TextInput", "text": "j"}
+{"k": "raw", "t": 37496.52, "type": "KEYDOWN", "ts": 37494, "sc": 7, "sym": 100, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 37496.6, "type": "TEXTINPUT", "ts": 37494, "text": "d"}
+{"k": "pg", "t": 37497.09, "type": "KeyDown", "key": 100, "sc": 7, "uni": "d", "mod": 4096, "dead": false}
+{"k": "pg", "t": 37497.15, "type": "TextInput", "text": "d"}
+{"k": "raw", "t": 37548.79, "type": "KEYUP", "ts": 37546, "sc": 14, "sym": 107, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 37548.95, "type": "KeyUp", "key": 107, "sc": 14, "uni": "k", "mod": 4096}
+{"k": "raw", "t": 37592.95, "type": "KEYDOWN", "ts": 37590, "sc": 9, "sym": 102, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 37593.0, "type": "TEXTINPUT", "ts": 37590, "text": "f"}
+{"k": "pg", "t": 37593.26, "type": "KeyDown", "key": 102, "sc": 9, "uni": "f", "mod": 4096, "dead": false}
+{"k": "pg", "t": 37593.34, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 37633.7, "type": "KEYUP", "ts": 37631, "sc": 13, "sym": 106, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 37633.88, "type": "KeyUp", "key": 106, "sc": 13, "uni": "j", "mod": 4096}
+{"k": "raw", "t": 37639.34, "type": "KEYUP", "ts": 37637, "sc": 7, "sym": 100, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 37639.5, "type": "KeyUp", "key": 100, "sc": 7, "uni": "d", "mod": 4096}
+{"k": "raw", "t": 37687.92, "type": "KEYDOWN", "ts": 37685, "sc": 14, "sym": 107, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 37687.98, "type": "TEXTINPUT", "ts": 37685, "text": "k"}
+{"k": "pg", "t": 37688.14, "type": "KeyDown", "key": 107, "sc": 14, "uni": "k", "mod": 4096, "dead": false}
+{"k": "pg", "t": 37688.18, "type": "TextInput", "text": "k"}
+{"k": "raw", "t": 37722.66, "type": "KEYDOWN", "ts": 37720, "sc": 7, "sym": 100, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 37722.7, "type": "TEXTINPUT", "ts": 37720, "text": "d"}
+{"k": "pg", "t": 37722.86, "type": "KeyDown", "key": 100, "sc": 7, "uni": "d", "mod": 4096, "dead": false}
+{"k": "pg", "t": 37722.89, "type": "TextInput", "text": "d"}
+{"k": "raw", "t": 37774.76, "type": "KEYUP", "ts": 37772, "sc": 9, "sym": 102, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 37774.92, "type": "KeyUp", "key": 102, "sc": 9, "uni": "f", "mod": 4096}
+{"k": "raw", "t": 37810.18, "type": "KEYDOWN", "ts": 37807, "sc": 13, "sym": 106, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 37810.23, "type": "TEXTINPUT", "ts": 37807, "text": "j"}
+{"k": "pg", "t": 37810.39, "type": "KeyDown", "key": 106, "sc": 13, "uni": "j", "mod": 4096, "dead": false}
+{"k": "pg", "t": 37810.45, "type": "TextInput", "text": "j"}
+{"k": "raw", "t": 37873.45, "type": "KEYDOWN", "ts": 37871, "sc": 9, "sym": 102, "mod": 4096, "rep": 0, "state": 1}
+{"k": "raw", "t": 37873.5, "type": "TEXTINPUT", "ts": 37871, "text": "f"}
+{"k": "pg", "t": 37873.65, "type": "KeyDown", "key": 102, "sc": 9, "uni": "f", "mod": 4096, "dead": false}
+{"k": "pg", "t": 37873.69, "type": "TextInput", "text": "f"}
+{"k": "raw", "t": 37888.41, "type": "KEYUP", "ts": 37886, "sc": 14, "sym": 107, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 37888.58, "type": "KeyUp", "key": 107, "sc": 14, "uni": "k", "mod": 4096}
+{"k": "raw", "t": 37917.66, "type": "KEYUP", "ts": 37915, "sc": 7, "sym": 100, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 37917.84, "type": "KeyUp", "key": 100, "sc": 7, "uni": "d", "mod": 4096}
+{"k": "raw", "t": 37960.73, "type": "KEYUP", "ts": 37958, "sc": 13, "sym": 106, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 37960.97, "type": "KeyUp", "key": 106, "sc": 13, "uni": "j", "mod": 4096}
+{"k": "raw", "t": 38066.74, "type": "KEYUP", "ts": 38064, "sc": 9, "sym": 102, "mod": 4096, "rep": 0, "state": 0}
+{"k": "pg", "t": 38067.07, "type": "KeyUp", "key": 102, "sc": 9, "uni": "f", "mod": 4096}
+{"k": "pg", "t": 41455.7, "type": "MouseButtonDown"}
+{"k": "note", "t": 41455.8, "text": "last step; close the window"}
+{"k": "pg", "t": 41681.43, "type": "MouseButtonUp"}
+{"k": "pg", "t": 42829.57, "type": "MouseButtonDown"}
+{"k": "note", "t": 42829.65, "text": "last step; close the window"}
+{"k": "pg", "t": 43056.17, "type": "MouseButtonUp"}
+{"k": "raw", "t": 43871.86, "type": "WINDOW", "ts": 43869, "wev": "LEAVE"}
+{"k": "pg", "t": 43872.08, "type": "WindowLeave"}
+{"k": "raw", "t": 44687.2, "type": "WINDOW", "ts": 44684, "wev": "CLOSE"}
+{"k": "pg", "t": 44688.04, "type": "WindowClose"}
+{"k": "pg", "t": 44688.09, "type": "Quit"}
+{"k": "end", "t": 44689.33}

@@ -5,9 +5,10 @@
 **Revised:** 2026-06-21 — §C8 keyboard ownership reworked: global `suppress=True` replaced by focus-gated dispatch over an always-on window.  
 **Amended:** 2026-09-26 — § Event model's premise refuted on hardware (alpha session 12b-2): pynput never delivers a composed character. The capture source is re-decided in alpha #13; see [roadmap A5](../roadmap.md#a-bites-alpha-specifically-the-next-step).
 **Amended:** 2026-09-29 — § C8 (alpha #12c and the #12b-2 E2/E3 result): the focus source drains SDL's whole queue every tick; in Alpha the pause announcement names Alt+Tab, and the held-key raise is deferred to Beta.  
+**Amended:** 2026-11-01 — § Event model decided (alpha #13, [research/key-capture-source.md](../research/key-capture-source.md)): Takki takes characters and key state from its own window (SDL), not from pynput's hook. Pointers added where § C8 and § Pre-V1 validation assumed pynput. Built in alpha #14.  
 
 > Part of the [Takki architecture](../architecture.md).  
-> **Amendment pending from [ADR-033](0033-rest-keys-and-keyboard-alignment.md) (2026-10-10):** what the keyboard alignment needs from key events; a dead key as a rest key waits on the key-capture decision. Not yet made here ([alpha-plan](../alpha-plan.md) #12m).
+> **Amendment pending from [ADR-033](0033-rest-keys-and-keyboard-alignment.md) (2026-10-10):** what the keyboard alignment needs from key events; a dead key as a rest key waits on the key-capture decision. Not yet made here ([alpha-plan](../alpha-plan.md) #12m). *(2026-11-01: the key-capture decision is made, and it answers the dead-key question; see § Event model, "Decided". What the alignment does with the answer is still #12m's amendment.)*
 > Closes roadmap issues B5, B7, and C8. Amends [ADR-024](0024-drill-content-and-lesson-granularity.md), and (per the 2026-06-21 revision) [ADR-016](0016-visual-display-design.md) and [ADR-026](0026-platform-interface-abstraction.md). Extends [ADR-005](0005-keyboard-handling.md) and adds the `FocusSource` Protocol to [ADR-019](0019-testing-strategy-and-io-isolation.md).
 
 ---
@@ -53,6 +54,68 @@ The lesson engine therefore has no concept of "modifier key" or "compose state."
 > | Base letter after it | `KeyCode(char='a')` | `KeyCode(char='á')` |
 >
 > pynput does not call `ToUnicodeEx` per keypress, because calling it from the hook would disturb the compose state of the application that has focus. It looks each key up in a table built once, compose state flushed, for the layout its listener thread started with. So the compose buffer this section relies on is never consulted, and the Windows application with focus is the only place `á` exists. Consequences under the code as built: `'´'` is printable, `classify()` returns it as a `Character`, and a prompted `á` can never be answered. The "Compose state at prompt advance" paragraph falls with it. **Nothing here changes Alpha**, whose English has no dead key. The capture source is re-decided in [alpha-plan](../alpha-plan.md) #13, with the candidates in [roadmap A5](../roadmap.md#a-bites-alpha-specifically-the-next-step); this section is rewritten when that decision lands, not before.
+
+> **Decided (2026-11-01, alpha #13).** **Takki takes its key events from its own window.**
+> - The character is SDL's `TEXTINPUT`.
+> - Physical key state (press, release, repeat, which key) is SDL's `KEYDOWN`/`KEYUP`, identified by scan code.
+> - pynput leaves Takki's input path.
+>
+> The measurements are in [research/key-capture-source.md](../research/key-capture-source.md). There, **[M]** marks a claim backed by a recorded log and **[A]** one that is argued. Built in [alpha-plan](../alpha-plan.md) #14, which rewrites the table at the top of this section and the taxonomy's conditions in SDL's terms. Until then, both still read as pynput.
+>
+> **Why the window.** The low-level hook sees a key before Windows turns it into a character. The window that has focus gets the character Windows produced, from its own thread's layout and compose state. Takki counts keys only while that window is its own, so the window holds the authoritative answer, and the hook can only reconstruct it.
+>
+> **What the window delivers:**
+>
+> | Physical input | What the window delivers |
+> |---|---|
+> | Dead key | `KEYDOWN` with its scan code (Icelandic `´` 52, German `^` 53), and **no** `TEXTINPUT` **[M]** |
+> | Base letter after it | `KEYDOWN`, then `TEXTINPUT` `á` **[M]** |
+> | Dead key then Space, itself, or a letter it cannot combine with | `´`, `´´` and `´k`, exactly as Windows composes them. The last is **two** `TEXTINPUT`s from one press **[M]** |
+> | AltGr + letter | `TEXTINPUT` `@`; AltGr's fake Left Ctrl arrives as a Left Ctrl `KEYDOWN` **[M]** |
+> | Enter, Backspace, Tab, Shift, Caps Lock | `KEYDOWN`/`KEYUP` with scan code, no `TEXTINPUT` **[M]** |
+> | Space | `KEYDOWN` and `TEXTINPUT` `' '` **[M]**. Unlike pynput's `Key.space`, so #14 keeps Space System by its key, not its text |
+> | Any key while another window has focus | Nothing **[M]** |
+>
+> pygame's `KEYDOWN.unicode` is not the character and must not be read; it reported `^^` for `^` `k` **[M]**.
+>
+> **Against the other candidates:**
+> - **Composing from pynput's `is_dead` with `KeyCode.join()`** gets `´´`, `´k`, `^^`, `^k` and `°a` wrong **[M]**.
+> - **Repaired with Windows' own `ToUnicodeEx` on a private thread**, it matched the window in all 68 ordinary steps **[M]**. It does so only by copying state Windows keeps for the window:
+>   - the window's layout, on every key;
+>   - the clearing of an armed dead key on every focus change, which Windows does in 7 of 7 trials **[M]**;
+>   - keys the window never received, such as the Space of Win+Space **[M]**.
+>
+>   That second copy of Windows' state is what failed in pynput itself.
+> - **Using both** (the hook for key state, the window for the character) pairs two streams. In Takki's 60 Hz loop, 14% of presses split across ticks and 0.8% interleave with another key **[A, replayed from measured times]**. It also keeps the hook's two defects:
+>   - the hook mixes layouts after a switch **[M]**;
+>   - the hook lost Right Shift's release both times the Filter Keys box opened **[M]**.
+>
+> **What this does to the rest of this section:**
+> - **The held-key rule ([ADR-027](0027-key-and-accuracy-state-model.md)) carries over.**
+>   - pygame passes one `KEYDOWN` per physical press and drops SDL's repeats, while `TEXTINPUT` repeats.
+>   - "A `TEXTINPUT` is fresh exactly when a `KEYDOWN` arrived since the previous one" agreed with SDL's own repeat flag for 764 of 764 `TEXTINPUT`s **[M]**.
+>   - Every `KEYDOWN` had its `KEYUP`. On focus loss, SDL synthesises the release for every held key, just ahead of `WINDOW FOCUS_LOST`, so no down-state leaks **[M]**.
+>   - A key already held when focus returns is invisible until it is released and pressed again **[M]**.
+> - **"Compose state at prompt advance" above holds again**, with the window as the source.
+>   - An armed dead key waits, and composes the next letter, 3 s later in the trial **[M]**.
+>   - A stale composite is then an ordinary wrong answer.
+>   - Two additions:
+>     - leaving the window clears the armed state **[M]**;
+>     - a dead key followed by a letter it cannot combine with gives one press with two characters, which #14 has to give a counting rule (most simply: wrong) **[A]**.
+> - **§ Composite ramp-up is unaffected:** `á` arrives as one `TEXTINPUT`.
+> - **A dead key as a rest key ([ADR-033](0033-rest-keys-and-keyboard-alignment.md)'s stored worry) is answered.**
+>   - The dead key's `KEYDOWN` names it by scan code **[M]**.
+>   - It leaves state armed for the next letter, or not, by the parity of its presses when held **[M]**.
+>   - Takki can disarm it by calling `ToUnicodeEx(VK_SPACE)` on the window's thread: 10 of 10 trials **[M]**.
+>   - That call belongs to the alignment, never to lessons, where `á` must still compose. It is a platform call behind a Protocol ([ADR-019](0019-testing-strategy-and-io-isolation.md)). Building it waits for the first dead-key language, because English has none. The question does not go to Beta.
+> - **A layout switch mid-session stops being silent.**
+>   - The window's characters follow the new layout **[M]**.
+>   - SDL posts `KEYMAPCHANGED` onto the queue the focus source already drains **[M]**.
+>   - [Roadmap § D](../roadmap.md#d-smaller-gaps-worth-a-line-in-the-relevant-adr)'s entry becomes a question of what to say, not of how to notice.
+> - **Keys typed into other applications no longer pass through Takki at all.** The hook delivered every key system-wide to Takki's process. In the spike it logged a message the tester typed into another program **[M]**.
+> - **Unfocused keys are lost** (§ C8, *Resume*).
+>   - In Alpha this costs nothing: Alt+Tab is the way back, and the held-key raise it fed never worked on the laptop (windows-validation E2).
+>   - In Beta, the talk key and any resume key that must work while Takki is in the background need a narrow global hook or `RegisterHotKey` for those keys alone. Neither needs character translation **[A]**.
 
 ### Composite ramp-up (B5)
 
@@ -120,11 +183,13 @@ An introduction step carries one or two **graphemes**, left-hand member first (A
 
 **pynput stays the key source; dispatch is focus-gated.** pynput remains the keyboard interface (ADR-005) and the event model above is unchanged — `ToUnicodeEx` translation, the `KeyCode`-with-printable-`char` filter, and composite handling all stand. What changes is that `on_press` processes an event as drill input **only while Takki's window holds OS foreground.** While it does, the focused window consumes the keystrokes, so nothing leaks; while it does not, Takki is paused by definition. `suppress=True` is dropped entirely.
 
+*(Superseded for the source on 2026-11-01, alpha #13. Key events now come from Takki's own window; see § Event model, "Decided". Focus gating stands. A window produces key events only while it has focus [M], so the gate stops being the only filter and becomes a backstop. One ordering to keep: SDL's synthesised `KEYUP`s for held keys arrive just before `WINDOW FOCUS_LOST`, and must still reach the down-state.)*
+
 **Focus is the single active/paused signal.** Intentional task-switch, a focus-stealing notification, and OS secure-desktop preemption all manifest as the same event: Takki's window is no longer foreground. One mechanism — window focus events (`WINDOWFOCUSGAINED` / `WINDOWFOCUSLOST`) behind the `FocusSource` Protocol (ADR-019) — covers what were three separate problems. On focus loss Takki enters PAUSED and announces it; a foreground poll backs up the event in case a secure-desktop transition does not deliver one.
 
-**The focus source drains SDL's whole queue every tick** *(added 2026-09-29, alpha #12c (3))*. `PygameFocusSource.poll()` takes every queued event, acts on each focus change and `QUIT` in order, and drops every other type. It used to take only those three types and leave the rest. Nothing else reads SDL's queue, so mouse motion and key events piled up to SDL's 65,535-event cap, after which SDL refuses every new event, `QUIT` and focus changes included: the close button stopped working after 18–20 minutes of mouse movement (windows-validation E10; confirmed fixed by the fix-verification run's FV-03). **The rule for anything that later reads SDL's queue:** one reader drains it whole every tick and hands each type to its consumer. A type-filtered `get()` that leaves other types queued brings the cap back. This bears on alpha #13 directly: if Takki takes characters from its own window, `KEYDOWN`, `TEXTINPUT` and `KEYUP` must reach the key reader instead of being dropped here.
+**The focus source drains SDL's whole queue every tick** *(added 2026-09-29, alpha #12c (3))*. `PygameFocusSource.poll()` takes every queued event, acts on each focus change and `QUIT` in order, and drops every other type. It used to take only those three types and leave the rest. Nothing else reads SDL's queue, so mouse motion and key events piled up to SDL's 65,535-event cap, after which SDL refuses every new event, `QUIT` and focus changes included: the close button stopped working after 18–20 minutes of mouse movement (windows-validation E10; confirmed fixed by the fix-verification run's FV-03). **The rule for anything that later reads SDL's queue:** one reader drains it whole every tick and hands each type to its consumer. A type-filtered `get()` that leaves other types queued brings the cap back. This bears on alpha #13 directly: if Takki takes characters from its own window, `KEYDOWN`, `TEXTINPUT` and `KEYUP` must reach the key reader instead of being dropped here. *(2026-11-01: #13 decided it does. `KEYDOWN`, `KEYUP`, `TEXTINPUT` and `KEYMAPCHANGED` go to the key reader from this one drain, in #14.)*
 
-**Resume — three converging paths:** the voice "resume" intent (ADR-017), a configurable held-key (works if the mic is unreliable), and simply Alt+Tab back to Takki (native, and announced by any running screen reader). The first two attempt a programmatic re-foreground; Windows' foreground-activation lock may downgrade that to a taskbar flash, in which case the spoken hint falls back to "press Alt+Tab to come back to Takki." The held-key and voice triggers are seen even while unfocused because pynput's hook is global.
+**Resume — three converging paths:** the voice "resume" intent (ADR-017), a configurable held-key (works if the mic is unreliable), and simply Alt+Tab back to Takki (native, and announced by any running screen reader). The first two attempt a programmatic re-foreground; Windows' foreground-activation lock may downgrade that to a taskbar flash, in which case the spoken hint falls back to "press Alt+Tab to come back to Takki." The held-key and voice triggers are seen even while unfocused because pynput's hook is global. *(2026-11-01: not after alpha #14. With key events taken from the window, nothing is seen while unfocused [M]. Alpha's way back is Alt+Tab (below). Beta decides whether the talk key and a resume key get a narrow global hook or `RegisterHotKey`; see § Event model, "Decided".)*
 
 **Re-acquire has no synchronous answer** (added 2026-08-22, from session 6a implementation). The paragraph above says the re-foreground attempt "may be downgraded to a taskbar flash," which reads as though the caller learns which happened. It does not, and cannot. `SDL_RaiseWindow` — the mechanism behind `FocusSource.request_foreground()` — is asynchronous: it posts an activation request to the OS and returns before Windows has ruled on it. Querying focus immediately afterwards reads the *pre-call* state, which while PAUSED is always "not focused," so a success-boolean would report failure even on the raises that worked.
 
@@ -159,6 +224,8 @@ This is also why an always-on window is load-bearing beyond focus ownership: wit
 | **Boundary** | `Key.backspace`, `Key.tab`, `Key.delete`, `Key.enter` | Ignore (Backspace disabled per ADR-012) |
 | **System** | All remaining `Key.*` events | Ignore — they reach the OS normally; if one moves focus (Win key → Start menu), the resulting focus-loss pauses the lesson |
 
+*(2026-11-01: the conditions above are written in pynput's terms: `KeyCode`, `Key.*`, `char is None`. Alpha #14 restates them for SDL events. Text comes from `TEXTINPUT` and named keys from `KEYDOWN`. **Composing** becomes "a `KEYDOWN` that produced no `TEXTINPUT`". Space must stay System by its key, because the window gives it the text `' '`.)*
+
 **The space bar lands in System, deliberately.** pynput reports it as `Key.space`, so it falls through to *ignore* — which is correct: [ADR-023](0023-key-introduction-protocol.md) § "The space bar is likewise never introduced" scopes it out of the curriculum until the post-V1 full-text stage (pointer added 2026-08-22, session 6b, so the taxonomy is not re-derived each time it is implemented).
 
 The "wrong" class still handles accidental composites: if the engine prompted `a` and the child produced `á` (stale dead-key state), `á` is a wrong answer for `a`; auto-reject fires, the dead-key state is consumed, re-prompt follows. No special case required. The "suppress from OS" column is gone — Takki no longer swallows system keys, because losing focus to them is now the intended pause trigger rather than a leak.
@@ -179,6 +246,8 @@ The event model above relies on pynput's `ToUnicodeEx` threading dead-key compos
 4. Confirm: dead-key arm event has `char=None` (or is otherwise filtered by the `KeyCode` + printable check); composed result has the correct `char`.
 
 If `ToUnicodeEx` does not thread compose state correctly, the app must maintain its own compose buffer using layout data from `get_layout_positions()`. That would require a follow-up amendment to this ADR and to ADR-005.
+
+*(Run, and superseded, 2026-11-01. The composition half ran on 2026-09-26: the hook never composes, as recorded in § Event model. Alpha #13 then ran the whole question against Takki's own window, on Icelandic and German, by hand and injected ([research/key-capture-source.md](../research/key-capture-source.md)). The window delivers Windows' own composed character. No compose buffer is built, and none is needed. What is left for the first dead-key language is #14's check at the new boundary, and the alignment's disarming call (§ Event model, "Decided").)*
 
 ### Open questions
 
