@@ -16,6 +16,7 @@ from takki.lesson.introducer import (
     anchor_keys,
     describe,
     describe_location,
+    home_anchor_keys,
     home_row_fill,
     introduction_sequence,
     phase1_slots,
@@ -129,7 +130,8 @@ class TestPhase1Order:
     def test_phase_1_is_exactly_the_home_row_letters_stage_0_did_not_take(self) -> None:
         layout = build_de()
         introduced = {name for row in phase1(layout) for name in row}
-        assert introduced == {n for n, key in layout.keys.items() if key.row == 3} - {"f", "j"}
+        home_letters = {n for n, key in layout.keys.items() if key.row == 3} & set(layout.graphemes)
+        assert introduced == home_letters - {"f", "j"}
 
     def test_left_member_always_precedes_right(self) -> None:
         for step in sequence(build_de()):
@@ -696,6 +698,26 @@ class TestStage0:
 
     def test_a_layout_with_other_letters_on_those_positions_yields_those_letters(self) -> None:
         assert anchor_keys(scrambled_index_columns()) == ("u", "h", "p", "g", "k", "m")
+
+    def test_a_position_with_no_letter_still_fails_loudly(self) -> None:
+        # Since ADR-026's 2026-11-01 amendment `keys` holds punctuation cells,
+        # so a non-letter at an anchor position must not be taken as the anchor.
+        # The KeyError must be the position's: a later graphemes['#'] would
+        # raise too, which is the quiet failure this guards against.
+        layout = build_en()
+        del layout.keys["r"], layout.graphemes["r"]
+        layout.keys["#"] = PhysicalKey("#", 2, 4)
+        with pytest.raises(KeyError, match=r"\(2, 4\)"):
+            anchor_keys(layout)
+        with pytest.raises(KeyError, match=r"\(2, 4\)"):
+            sequence(layout)
+
+    def test_a_bump_position_with_no_letter_still_fails_loudly(self) -> None:
+        layout = build_en()
+        del layout.keys["f"], layout.graphemes["f"]
+        layout.keys["#"] = PhysicalKey("#", 3, 4)
+        with pytest.raises(KeyError, match=r"\(3, 4\)"):
+            home_anchor_keys(layout)
 
     def test_stage_0_is_three_position_pairs_home_row_first_then_up_then_down(self) -> None:
         layout = build_en()

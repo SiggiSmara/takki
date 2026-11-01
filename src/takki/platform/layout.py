@@ -20,16 +20,51 @@ COL_TO_FINGER: dict[int, str] = {
     13: R_PINK,
 }
 
+# Set-1 scan codes are positional -- they name the physical key, not the
+# character on it -- so this table is a property of the keyboard rather than of
+# any layout, and it is the half Windows will not report: no API returns a row
+# or a column. It must agree with build_en/build_de/build_is exactly, because
+# COL_TO_FINGER is a pure function of `col`; an off-by-one here reassigns
+# fingers rather than merely moving a letter. Pinned by tests/test_platform.py
+# and, against Windows itself, by tests/test_windows_layout.py.
+#
+# Two keys, and every key that produces no character, are deliberately left
+# out (ADR-026 § Every cell of the grid): 0x56, the extra key ISO keyboards
+# carry left of Z, which an ANSI keyboard does not have and Windows cannot tell
+# is missing; and 0x29, left of `1` (roadmap § C17). 0x2B is placed where ISO
+# keyboards have it; on an ANSI keyboard it sits one row up, above Enter.
+SCAN_CODE_GRID: dict[int, tuple[int, int]] = {
+    **{sc: (1, col) for col, sc in enumerate(range(0x02, 0x0E), start=1)},
+    **{sc: (2, col) for col, sc in enumerate(range(0x10, 0x1C), start=1)},
+    **{sc: (3, col) for col, sc in enumerate(range(0x1E, 0x29), start=1)},
+    0x2B: (3, 12),
+    **{sc: (4, col) for col, sc in enumerate(range(0x2C, 0x36), start=1)},
+}
+_SCAN_CODES: dict[tuple[int, int], int] = {cell: sc for sc, cell in SCAN_CODE_GRID.items()}
+
 
 @dataclass(frozen=True)
 class PhysicalKey:
-    name: str  # character it produces, or modifier name ("altgr", "dead-acute")
+    name: str  # the character it produces unshifted, or "dead-acute", "altgr"
     row: int  # 1 = number row, 2 = top alpha, 3 = home, 4 = bottom alpha
     col: int  # 1-13, left to right
 
     @property
     def finger(self) -> str:
         return COL_TO_FINGER[self.col]
+
+    @property
+    def dead(self) -> bool:
+        # From the name, which the reader derives for every dead key
+        # (windows.dead_key_name), so a flag and a name can never disagree.
+        return self.name.startswith("dead-")
+
+    @property
+    def scan_code(self) -> int:
+        # Derived, not stored: the position is the key's identity (ADR-033's
+        # landing is a row and a column), and the scan code is that position in
+        # Windows' numbering, so the two cannot disagree.
+        return _SCAN_CODES[(self.row, self.col)]
 
     @property
     def side(self) -> str:
@@ -54,8 +89,25 @@ class Layout:
 
 
 def key_positions(layout: Layout) -> dict[str, tuple[int, int]]:
-    """Every physical key as name → (row, col). The comparable shape of a layout."""
+    """Every physical key as name → (row, col)."""
     return {name: (key.row, key.col) for name, key in layout.keys.items()}
+
+
+def letters_by_position(layout: Layout) -> dict[tuple[int, int], str]:
+    """(row, col) → letter, for every cell that carries one."""
+    # `keys` also holds every punctuation and digit cell (ADR-026, 2026-11-01),
+    # so anything that looks a letter up by position asks this.
+    return {
+        (key.row, key.col): name for name, key in layout.keys.items() if name in layout.graphemes
+    }
+
+
+def curriculum_positions(layout: Layout) -> dict[str, tuple[int, int]]:
+    """Letters, modifiers and dead keys as name → (row, col): what describe_mismatch compares."""
+    needed = {key for grapheme in layout.graphemes.values() for key in grapheme.prereq_keys}
+    return {
+        name: (key.row, key.col) for name, key in layout.keys.items() if name in needed or key.dead
+    }
 
 
 def describe_mismatch(expected: Layout, actual: Layout) -> str | None:
@@ -73,13 +125,15 @@ def describe_mismatch(expected: Layout, actual: Layout) -> str | None:
     never taught). US and UK QWERTY differ only outside that set, so comparing
     KLIDs would reject a UK keyboard that types the English curriculum
     perfectly. What matters is whether the same characters sit in the same
-    places.
+    places. For the same reason the cells that carry neither a letter nor a
+    dead key are not compared (ADR-026, 2026-11-01): they are rest keys, never
+    typing targets, and UK's `#` against US's `\\` must not stop startup.
     """
     if expected.lang != actual.lang:
         return (
             f"language {expected.lang!r} is configured but the active keyboard is {actual.lang!r}"
         )
-    want, have = key_positions(expected), key_positions(actual)
+    want, have = curriculum_positions(expected), curriculum_positions(actual)
     if want == have:
         return None
     missing = sorted(set(want) - set(have))
@@ -95,12 +149,16 @@ def describe_mismatch(expected: Layout, actual: Layout) -> str | None:
     return "; ".join(parts)
 
 
-def _direct_layout(lang: str, direct: dict[str, tuple[int, int]]) -> Layout:
+def _direct_layout(
+    lang: str, direct: dict[str, tuple[int, int]], cells: dict[str, tuple[int, int]]
+) -> Layout:
     keys: dict[str, PhysicalKey] = {}
     graphemes: dict[str, Grapheme] = {}
     for char, (row, col) in direct.items():
         keys[char] = PhysicalKey(char, row, col)
         graphemes[char] = Grapheme(char, "direct", (char,), 1)
+    for char, (row, col) in cells.items():
+        keys[char] = PhysicalKey(char, row, col)
     return Layout(lang=lang, keys=keys, graphemes=graphemes)
 
 
@@ -133,15 +191,40 @@ _QWERTY_COMMON: dict[str, tuple[int, int]] = {
     "m": (4, 7),
 }
 
+# The cells that carry neither a letter nor a dead key (ADR-026, 2026-11-01).
+# They are rest keys, never typing targets, so they are in `keys` and never in
+# `graphemes`. Each is named by the character the key produces unshifted, as
+# Windows reports it; tests/test_windows_layout.py pins all three tables to it.
+_SHARED_CELLS: dict[str, tuple[int, int]] = {
+    **{str(col % 10): (1, col) for col in range(1, 11)},
+    ",": (4, 8),
+    ".": (4, 9),
+}
+
 
 def build_en() -> Layout:
-    """US QWERTY layout — 26 direct lowercase letters."""
+    """US QWERTY layout — 26 direct lowercase letters, and the other 20 cells."""
     direct: dict[str, tuple[int, int]] = {**_QWERTY_COMMON, "y": (2, 6), "z": (4, 1)}
-    return _direct_layout("en", direct)
+    cells: dict[str, tuple[int, int]] = {
+        **_SHARED_CELLS,
+        "-": (1, 11),
+        "=": (1, 12),
+        "[": (2, 11),
+        "]": (2, 12),
+        ";": (3, 10),
+        "'": (3, 11),
+        # 0x2B: row 3 on ISO keyboards, row 2 above Enter on ANSI (ADR-026).
+        "\\": (3, 12),
+        "/": (4, 10),
+    }
+    return _direct_layout("en", direct, cells)
 
 
 def build_de() -> Layout:
-    """German QWERTZ layout — 26 direct lowercase letters plus ä, ö, ü, ß."""
+    """German QWERTZ layout — 26 letters plus ä, ö, ü, ß, and every other cell but one."""
+    # The one left out is the dead acute at (1, 12): declaring it is roadmap
+    # § C17's fix, and since describe_mismatch compares dead keys it would make
+    # German startable with a curriculum nobody has decided.
     direct: dict[str, tuple[int, int]] = {
         **_QWERTY_COMMON,
         "z": (2, 6),
@@ -151,7 +234,13 @@ def build_de() -> Layout:
         "ä": (3, 11),
         "ß": (1, 11),
     }
-    return _direct_layout("de", direct)
+    cells: dict[str, tuple[int, int]] = {
+        **_SHARED_CELLS,
+        "+": (2, 12),
+        "#": (3, 12),
+        "-": (4, 10),
+    }
+    return _direct_layout("de", direct, cells)
 
 
 # Icelandic: æ takes the right-pinky home position, the acute dead key sits
@@ -167,7 +256,7 @@ _ICELANDIC_ACUTES: dict[str, str] = {
 
 
 def build_is() -> Layout:
-    """Icelandic layout — direct letters plus the six dead-acute composites."""
+    """Icelandic layout — direct letters, the six dead-acute composites, and every other cell."""
     direct: dict[str, tuple[int, int]] = {
         **_QWERTY_COMMON,
         "y": (2, 6),
@@ -177,7 +266,13 @@ def build_is() -> Layout:
         "þ": (4, 10),
         "ö": (1, 11),
     }
-    layout = _direct_layout("is", direct)
+    cells: dict[str, tuple[int, int]] = {
+        **_SHARED_CELLS,
+        "-": (1, 12),
+        "'": (2, 12),
+        "+": (3, 12),
+    }
+    layout = _direct_layout("is", direct, cells)
     layout.keys["dead-acute"] = PhysicalKey("dead-acute", 3, 11)
     for composed, base in _ICELANDIC_ACUTES.items():
         layout.graphemes[composed] = Grapheme(

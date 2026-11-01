@@ -7,7 +7,7 @@ import unicodedata
 from collections.abc import Callable
 
 from takki.audio.tts import TTSEngine
-from takki.platform.layout import Grapheme, Layout, PhysicalKey
+from takki.platform.layout import SCAN_CODE_GRID, Grapheme, Layout, PhysicalKey
 
 logger = logging.getLogger(__name__)
 
@@ -146,27 +146,7 @@ _SPACE_SCAN_CODE = 0x39
 # *next* read: measured on Icelandic, reading the acute at 0x28 and then `a`
 # returns 'a-acute', not 'a'. The flag stops a read from creating that state; it
 # does not let a read consume state already pending, which is what _flush is for.
-_NO_KERNEL_STATE_CHANGE = 0x4
-
-# Set-1 scan codes are positional -- they name the physical key, not the
-# character on it -- so this table is a property of the keyboard rather than of
-# any layout, and it is the half Windows will not report: no API returns a row
-# or a column. It must agree with build_en/build_de/build_is exactly, because
-# COL_TO_FINGER is a pure function of `col`; an off-by-one here reassigns
-# fingers and re-pairs Phase 1's symmetric slots rather than merely moving a
-# letter. Pinned against all three tables by tests/test_windows_layout.py.
-#
-# 0x56, the extra key ISO keyboards carry left of Z, deliberately has no slot:
-# it is the angle-bracket key on German and Icelandic and phantoms as backslash
-# on US, and no layout in the target set puts a letter there. One that did would
-# read as a missing letter and stop startup, which is the loud failure.
-SCAN_CODE_GRID: dict[int, tuple[int, int]] = {
-    **{sc: (1, col) for col, sc in enumerate(range(0x02, 0x0E), start=1)},
-    **{sc: (2, col) for col, sc in enumerate(range(0x10, 0x1C), start=1)},
-    **{sc: (3, col) for col, sc in enumerate(range(0x1E, 0x29), start=1)},
-    0x2B: (3, 12),
-    **{sc: (4, col) for col, sc in enumerate(range(0x2C, 0x36), start=1)},
-}
+NO_KERNEL_STATE_CHANGE = 0x4
 
 _user32_cache: "ctypes.CDLL | None" = None
 
@@ -300,7 +280,7 @@ def read_layout(hkl: int) -> Layout:
     dead_scan_codes: list[int] = []
 
     for scan_code, (row, col) in SCAN_CODE_GRID.items():
-        count, chars = to_unicode(hkl, scan_code, _NO_KERNEL_STATE_CHANGE)
+        count, chars = to_unicode(hkl, scan_code, NO_KERNEL_STATE_CHANGE)
         if count < 0:
             dead_scan_codes.append(scan_code)
         elif count == 1 and chars.isalpha():
@@ -311,6 +291,14 @@ def read_layout(hkl: int) -> Layout:
             keys[letter] = PhysicalKey(letter, row, col)
             graphemes[letter] = Grapheme(letter, "direct", (letter,), 1)
             letter_scan_codes[letter] = scan_code
+        elif count == 1 and chars.isprintable() and not chars.isspace():
+            # Any other character is a cell a finger may rest on (ADR-033): a
+            # key, never a grapheme. Named by its character, so a character on
+            # two cells can keep only one; the first is kept, and said so.
+            if chars in keys:
+                logger.warning("two cells produce %r; keeping %s", chars, keys[chars])
+                continue
+            keys[chars] = PhysicalKey(chars, row, col)
 
     for scan_code in dead_scan_codes:
         row, col = SCAN_CODE_GRID[scan_code]

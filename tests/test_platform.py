@@ -6,9 +6,17 @@ import pytest
 from takki.audio.fallback_tts import FallbackTTS
 from takki.platform import select_platform_interface
 from takki.platform.dev_stub import DevStubInterface
-from takki.platform.layout import COL_TO_FINGER, Layout, PhysicalKey, build_en
-from takki.platform.windows import (
+from takki.platform.layout import (
+    COL_TO_FINGER,
     SCAN_CODE_GRID,
+    Layout,
+    PhysicalKey,
+    build_de,
+    build_en,
+    build_is,
+    describe_mismatch,
+)
+from takki.platform.windows import (
     dead_key_name,
     nvda_in_tasklist_output,
     primary_subtag,
@@ -310,6 +318,14 @@ class TestScanCodeGrid:
     def test_positions_are_unique(self) -> None:
         assert len(set(SCAN_CODE_GRID.values())) == len(SCAN_CODE_GRID)
 
+    def test_a_keys_scan_code_is_its_position_in_the_grid(self) -> None:
+        # Also every table key is a grid cell: scan_code raises for one that is not.
+        for build in (build_en, build_de, build_is):
+            for key in build().keys.values():
+                assert SCAN_CODE_GRID[key.scan_code] == (key.row, key.col)
+        assert build_en().keys[";"].scan_code == 0x27
+        assert build_is().keys["dead-acute"].scan_code == 0x28
+
 
 class TestSelectPlatformInterface:
     def test_returns_dev_stub_off_win32(self) -> None:
@@ -324,3 +340,95 @@ class TestSelectPlatformInterface:
         monkeypatch.setattr(sys, "platform", "win32")
         iface = select_platform_interface()
         assert isinstance(iface, WindowsPlatformInterface)
+
+
+class TestNonLetterCells:
+    """ADR-026 (2026-11-01): every cell of the grid, whatever it carries."""
+
+    def test_the_english_table_names_every_cell_by_its_character(self) -> None:
+        layout = build_en()
+        cells = {
+            name: (key.row, key.col)
+            for name, key in layout.keys.items()
+            if name not in layout.graphemes
+        }
+        assert cells == {
+            **{str(col % 10): (1, col) for col in range(1, 11)},
+            "-": (1, 11),
+            "=": (1, 12),
+            "[": (2, 11),
+            "]": (2, 12),
+            ";": (3, 10),
+            "'": (3, 11),
+            "\\": (3, 12),
+            ",": (4, 8),
+            ".": (4, 9),
+            "/": (4, 10),
+        }
+
+    def test_english_and_icelandic_fill_every_grid_cell(self) -> None:
+        for build in (build_en, build_is):
+            layout = build()
+            assert len(layout.keys) == len(SCAN_CODE_GRID) == 46
+            assert {(k.row, k.col) for k in layout.keys.values()} == set(SCAN_CODE_GRID.values())
+
+    def test_german_fills_every_cell_but_its_undeclared_dead_acute(self) -> None:
+        # roadmap § C17: declaring the dead key is C17's fix, not this table's.
+        layout = build_de()
+        missing = set(SCAN_CODE_GRID.values()) - {(k.row, k.col) for k in layout.keys.values()}
+        assert missing == {(1, 12)}
+
+    def test_a_cell_is_never_a_grapheme(self) -> None:
+        # `;` is never a typing target (ADR-033 § Four tiers of key), so the
+        # word pool and the milestone denominator are what they were.
+        assert len(build_en().graphemes) == 26
+        assert len(build_de().graphemes) == 30
+        assert len(build_is().graphemes) == 36
+        for build in (build_en, build_de, build_is):
+            layout = build()
+            letters = {name for name in layout.keys if len(name) == 1 and name.isalpha()}
+            assert {name for name in layout.keys if name in layout.graphemes} == letters
+
+    def test_only_a_dead_key_is_flagged_dead(self) -> None:
+        for build in (build_en, build_de, build_is):
+            flagged = {name for name, key in build().keys.items() if key.dead}
+            assert flagged == ({"dead-acute"} if build is build_is else set())
+
+    def test_the_dev_stub_and_the_fake_carry_the_cells(self) -> None:
+        for layout in (
+            DevStubInterface().get_layout_positions(),
+            FakePlatformInterface().get_layout_positions(),
+        ):
+            assert layout.keys == build_en().keys
+            assert (layout.keys[";"].row, layout.keys[";"].col) == (3, 10)
+
+
+class TestTheComparisonIgnoresPlainCells:
+    """A punctuation difference must not start refusing a startup (ADR-026, 2026-11-01)."""
+
+    def test_uk_style_punctuation_passes(self) -> None:
+        # UK QWERTY puts `#` where US puts `\`, the only grid cell where the two
+        # differ (measured 2026-11-01).
+        uk = build_en()
+        backslash = uk.keys.pop("\\")
+        uk.keys["#"] = PhysicalKey("#", backslash.row, backslash.col)
+        assert describe_mismatch(build_en(), uk) is None
+
+    def test_a_missing_or_moved_plain_cell_passes(self) -> None:
+        actual = build_en()
+        del actual.keys[";"]
+        actual.keys["/"] = PhysicalKey("/", 1, 12)
+        assert describe_mismatch(build_en(), actual) is None
+
+    def test_a_dead_key_is_still_compared(self) -> None:
+        # What keeps German refused until roadmap § C17: real German carries a
+        # dead acute build_de() does not declare. The message is the one
+        # describe_mismatch gave before plain cells existed.
+        real = build_de()
+        real.keys["dead-acute"] = PhysicalKey("dead-acute", 1, 12)
+        assert describe_mismatch(build_de(), real) == "unexpected dead-acute"
+
+    def test_a_letter_is_still_compared(self) -> None:
+        actual = build_en()
+        actual.keys["q"] = PhysicalKey("q", 1, 12)
+        assert describe_mismatch(build_en(), actual) == "moved q(1, 12)!=(2, 1)"

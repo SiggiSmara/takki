@@ -1,6 +1,6 @@
 # ADR-033: Rest Keys and the Keyboard Alignment
 
-**Status:** Accepted. Not yet implemented, and the amendments it requires are not yet made.
+**Status:** Accepted. Not yet implemented. Of the amendments it requires, ADR-026's is made (2026-11-01); the others are not.
 **Date:** 2026-10-10
 **Noted:** 2026-11-01 — alpha #13 answered § Work this ADR requires: the three Windows checks and the dead-key worry, from measurement. The answers are dated notes in that section, and none of them changes a decision here.
 
@@ -181,7 +181,7 @@ Every number is configurable ([ADR-025](0025-configuration-system.md)) and none 
 
 **To build, in Alpha.**
 
-- **The layout tables hold only letters** ([layout.py](../../src/takki/platform/layout.py)), so `;` cannot be recognised as a rest key. The tables need every cell in the columns of the six fingers that are not index fingers (columns 1 to 3 and 8 to 13), whatever it carries.
+- **The layout tables hold only letters** ([layout.py](../../src/takki/platform/layout.py)), so `;` cannot be recognised as a rest key. The tables need every cell in the columns of the six fingers that are not index fingers (columns 1 to 3 and 8 to 13), whatever it carries. *(Done 2026-11-01, alpha-plan #12m session 1: the tables, the Windows reader, the dev stub and the fake return every cell of the scan-code grid. Keys that produce no character are not cells, so a press on one is still not a landing. [ADR-026 § Every cell of the grid](0026-platform-interface-abstraction.md#every-cell-of-the-grid) has what is in and out, and why.)*
 - **A key that produces a character is already seen by the engine.** Any printable character reaches it as a character event, `;` included, so once the tables are filled a landing on such a key can be recognised. An earlier draft of this ADR said English could not recognise `;` before the key-capture work of alpha-plan #13 and #14. That was wrong: the gap is the table, not the capture.
 - **The key's share of key presses needs a definition in the engine.** The spike counted a composite's presses toward each key it needs. The engine's `key_frequencies` was retired in alpha session 8c (ADR-032).
 - **Spoken names for non-letter keys**, for the question "which one do you want", per language.
@@ -229,7 +229,7 @@ Each is a later session, one ADR per session.
 | [ADR-024](0024-drill-content-and-lesson-granularity.md) | Phase B's same-finger anchor is the rest key, and what stands in when that key has no Active letter; the ramp-up of a rest letter; Stage 0's own content removed; the alignment's time is outside pace and block length; the block plan holds no key to the anchor bar |
 | [ADR-011](0011-persistence-and-state.md) | The records in § What must be recorded; a landing has no latency |
 | [ADR-028](0028-composite-input-and-keyboard-ownership.md), [ADR-005](0005-keyboard-handling.md) | A press in the alignment on a key that produces no character; a dead key as a rest key, with the key-capture decision |
-| [ADR-026](0026-platform-interface-abstraction.md) | `get_layout_positions()` returns non-letter cells |
+| [ADR-026](0026-platform-interface-abstraction.md) | `get_layout_positions()` returns non-letter cells. **Done 2026-11-01** (alpha-plan #12m session 1): [§ Every cell of the grid](0026-platform-interface-abstraction.md#every-cell-of-the-grid) |
 | [ADR-022](0022-localisation-strategy.md) | The alignment's strings: "press and let go", the "let go" instruction, finger guidance and non-letter key names |
 | [ADR-012](0012-audio-feedback-design.md) | Feedback for a press that has no wrong answer |
 | [ADR-025](0025-configuration-system.md) | The numbers above; `ANCHOR_MIN_ATTEMPTS` and `ANCHOR_MIN_ACCURACY` removed; rest keys as per-profile state |

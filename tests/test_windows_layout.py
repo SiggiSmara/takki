@@ -7,7 +7,15 @@ from contextlib import contextmanager
 import pytest
 
 from takki.lesson.introducer import anchor_keys
-from takki.platform.layout import build_en, build_is, describe_mismatch, key_positions
+from takki.platform.layout import (
+    SCAN_CODE_GRID,
+    PhysicalKey,
+    build_de,
+    build_en,
+    build_is,
+    describe_mismatch,
+    key_positions,
+)
 
 pytestmark = pytest.mark.windows_only
 
@@ -20,6 +28,7 @@ KLF_NOTELLSHELL = 0x80
 US_QWERTY = "00000409"
 GERMAN_QWERTZ = "00000407"
 ICELANDIC = "0000040F"
+UK_QWERTY = "00000809"
 FRENCH_AZERTY = "0000040C"  # the "not installed on the dev laptop" case
 
 
@@ -98,7 +107,10 @@ class TestReadsTheTargetLayouts:
         assert describe_mismatch(expected, layout) is None
         assert key_positions(layout) == key_positions(expected)
         assert set(layout.graphemes) == set(expected.graphemes)
-        assert len(layout.keys) == 26
+        # Every cell, punctuation and digits included, field by field: the
+        # table's cells are what the dev stub and the fake hand the alignment.
+        assert layout.keys == expected.keys
+        assert len(layout.keys) == 46
 
     def test_icelandic_is_exactly_build_is_including_the_composites(self) -> None:
         from takki.platform.windows import read_layout
@@ -116,6 +128,22 @@ class TestReadsTheTargetLayouts:
             got, want = layout.graphemes[char], expected.graphemes[char]
             assert got == want, f"{char}: {got} != {want}"
         assert layout.keys["dead-acute"] == expected.keys["dead-acute"]
+        assert layout.keys == expected.keys
+
+    def test_german_is_build_de_and_its_undeclared_dead_acute(self) -> None:
+        """Roadmap § C17 as it stands: German is refused, for exactly this reason."""
+        # build_de() leaves the dead acute at (1, 12) out on purpose; declaring
+        # it is C17's fix. A plain cell must never be what stops or starts German.
+        from takki.platform.windows import read_layout
+
+        with loaded(GERMAN_QWERTZ) as hkl:
+            layout = read_layout(hkl)
+        expected = build_de()
+        assert layout.keys == {
+            **expected.keys,
+            "dead-acute": PhysicalKey("dead-acute", 1, 12),
+        }
+        assert describe_mismatch(expected, layout) == "unexpected dead-acute"
 
     def test_german_qwertz_swaps_y_and_z_against_us(self) -> None:
         from takki.platform.windows import read_layout
@@ -144,6 +172,47 @@ class TestReadsTheTargetLayouts:
             anchors = anchor_keys(layout)
             assert len(anchors) == 6
             assert all(name in layout.graphemes for name in anchors), (klid, anchors)
+
+
+class TestEveryCell:
+    """ADR-026 (2026-11-01): get_layout_positions() returns every cell of the grid."""
+
+    def test_every_grid_cell_is_read_on_every_target_layout(self) -> None:
+        # The whole grid, which holds ADR-033's rest columns (the six fingers
+        # that are not index fingers) and the index columns' four digits.
+        from takki.platform.windows import read_layout
+
+        for klid in (US_QWERTY, UK_QWERTY, GERMAN_QWERTZ, ICELANDIC):
+            with loaded(klid) as hkl:
+                layout = read_layout(hkl)
+            cells = {(key.row, key.col) for key in layout.keys.values()}
+            assert cells == set(SCAN_CODE_GRID.values()), klid
+
+    def test_a_cells_scan_code_gives_back_its_character(self) -> None:
+        # The scan code is derived from the position, not stored, so this is the
+        # check that the two numberings agree on Windows itself.
+        from takki.platform.windows import NO_KERNEL_STATE_CHANGE, read_layout, to_unicode
+
+        for klid in (US_QWERTY, UK_QWERTY, GERMAN_QWERTZ, ICELANDIC):
+            with loaded(klid) as hkl:
+                layout = read_layout(hkl)
+                for name, key in layout.keys.items():
+                    count, chars = to_unicode(hkl, key.scan_code, NO_KERNEL_STATE_CHANGE)
+                    if key.dead:
+                        assert count < 0, (klid, name)
+                    else:
+                        assert (count, chars.lower()) == (1, name), (klid, name)
+
+    def test_uk_differs_from_us_in_one_cell_and_still_teaches_english(self) -> None:
+        from takki.platform.windows import read_layout
+
+        with loaded(UK_QWERTY) as hkl:
+            layout = read_layout(hkl)
+        expected = build_en().keys
+        expected["#"] = PhysicalKey("#", 3, 12)
+        del expected["\\"]
+        assert layout.keys == expected
+        assert describe_mismatch(build_en(), layout) is None
 
 
 class TestTheCiAssumptions:
@@ -251,7 +320,7 @@ class TestLanguageComesFromTheKeyboard:
         """
         from takki.platform.windows import read_layout
 
-        with loaded("00000809") as hkl:
+        with loaded(UK_QWERTY) as hkl:
             layout = read_layout(hkl)
         assert layout.lang == "en"
         assert describe_mismatch(build_en(), layout) is None

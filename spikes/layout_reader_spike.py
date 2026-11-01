@@ -141,7 +141,9 @@ def main() -> None:
                 seen[chars.lower()] = pos
             elif count != 1 or chars.strip():
                 extras.append(f"0x{sc:02x}{pos}={count}:{chars!r}")
-        want = {k: v for k, v in key_positions(builder()).items() if k != "dead-acute"}
+        # Letters only: since #12m (1) the tables also carry every other cell.
+        table = builder()
+        want = {k: v for k, v in key_positions(table).items() if k in table.graphemes}
         missing = sorted(set(want) - set(seen))
         unexpected = sorted(set(seen) - set(want))
         moved = sorted(k for k in set(want) & set(seen) if want[k] != seen[k])

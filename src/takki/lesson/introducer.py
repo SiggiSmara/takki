@@ -17,6 +17,7 @@ from takki.platform.layout import (
     Grapheme,
     Layout,
     PhysicalKey,
+    letters_by_position,
 )
 
 HOME_ROW = 3
@@ -53,7 +54,7 @@ def anchor_keys(layout: Layout) -> tuple[str, ...]:
     # first rung. A layout that cannot supply these six positions is a broken
     # premise, so it fails loudly. Session 12 is where a real layout first
     # arrives; see its alpha-plan row.
-    by_pos = {(key.row, key.col): name for name, key in layout.keys.items()}
+    by_pos = letters_by_position(layout)
     return tuple(by_pos[(row, col)] for row in ANCHOR_ROWS for col in ANCHOR_COLUMNS)
 
 
@@ -64,7 +65,7 @@ def home_anchor_keys(layout: Layout) -> tuple[str, ...]:
     ANCHOR_MIN_ACCURACY for the life of the profile. The other four Stage 0
     keys are reaches away from them, not landmarks in their own right.
     """
-    by_pos = {(key.row, key.col): name for name, key in layout.keys.items()}
+    by_pos = letters_by_position(layout)
     return tuple(by_pos[(HOME_ROW, col)] for col in ANCHOR_COLUMNS)
 
 
@@ -314,7 +315,7 @@ def _stage0_slots(layout: Layout, had: AbstractSet[str]) -> list[IntroductionSlo
     unchanged. What marks the stage is `stage`, which the drill generator
     needs anyway to pick Stage 0's own content.
     """
-    by_pos = {(key.row, key.col): name for name, key in layout.keys.items()}
+    by_pos = letters_by_position(layout)
     slots: list[IntroductionSlot] = []
     for row in ANCHOR_ROWS:
         pending = tuple(name for col in ANCHOR_COLUMNS if (name := by_pos[(row, col)]) not in had)
@@ -332,9 +333,7 @@ def phase1_slots(layout: Layout, had: AbstractSet[str]) -> list[IntroductionSlot
     # and produces nothing the child can hear, so its column is treated as a
     # column with no letter and the partner is introduced solo.
     by_col = {
-        key.col: name
-        for name, key in layout.keys.items()
-        if key.row == HOME_ROW and name in layout.graphemes
+        col: name for (row, col), name in letters_by_position(layout).items() if row == HOME_ROW
     }
     slots: list[IntroductionSlot] = []
     paired: set[str] = set()

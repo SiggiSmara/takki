@@ -85,7 +85,10 @@ def _installed_hkls() -> list[int]:
 
 
 def _anchors(layout: "Layout") -> str:
-    at = {(k.row, k.col): name for name, k in layout.keys.items()}
+    from takki.platform.layout import letters_by_position
+
+    # Letters only: since #12m session 1 `keys` also holds punctuation cells.
+    at = letters_by_position(layout)
     return " ".join(f"({r},{c})={at.get((r, c), 'MISSING')}" for r, c in ANCHORS)
 
 
