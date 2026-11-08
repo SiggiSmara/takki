@@ -1,6 +1,6 @@
 # ADR-032: Grapheme-Led Introduction and Selectable Ordering
 
-**Status:** Accepted. Decision 2 amended 2026-11-08; the amendment is not yet implemented.
+**Status:** Accepted. Decision 2 amended 2026-11-08; of the amendment, only the key share is built (#12m session 3, the same day).
 **Date:** 2026-08-23
 **Amended:** 2026-11-08 — alpha-plan #12m, for [ADR-033](0033-rest-keys-and-keyboard-alignment.md): [§ Decision 2 restated](#decision-2-restated-rest-keys-and-ordering-c-as-the-default).
 
@@ -123,13 +123,13 @@ C cannot be specified further without the probe, and the probe cannot be designe
 
 *(Amended 2026-11-08, alpha-plan #12m, the ADR-032 session. This is the amendment that [ADR-033 § Amendments this ADR requires](0033-rest-keys-and-keyboard-alignment.md#amendments-this-adr-requires) asks of this ADR. In Decision 2 it supersedes "What Stage 0 already settles", the Status column of the candidates table, Ordering B, Ordering C and What Alpha ships. Each of those keeps its text, with a dated note pointing here, as the record of what was decided on 2026-08-23.)*
 
-**Not yet implemented.** The code still runs Stage 0, with Ordering A as the default. The builds are alpha-plan #12m session (3), the key share; (4), Stage 0 and the `stage` field removed; and (5), the order, the rest state and the rules below. This amendment changes no code.
+**Not yet implemented.** The code still runs Stage 0, with Ordering A as the default. The builds are alpha-plan #12m session (3), the key share; (4), Stage 0 and the `stage` field removed; and (5), the order, the rest state and the rules below. This amendment changes no code. *(2026-11-08, later: session (3) is built. See § A key's share of key presses, "Built". Sessions (4) and (5) are not.)*
 
 How to read the marks:
 
 - **[D, ADR-033]** and **[S, ADR-033]**: decided in ADR-033 on 2026-10-10, with that ADR's mark. Quoted here, not decided again.
 - **[S]**: settled with the developer in this session, 2026-11-08. Each was put as a question and answered.
-- **[M]**: measured by a spike run in this session: [key_share_definition_spike.py](../../spikes/key_share_definition_spike.py), [results](../../spikes/results/key_share_definition_results.txt). It reads wordfreq and the product layout tables (`build_en`, `build_de`, `build_is`), and uses the engine's word filter and ranking (`_eligible_words`, `compute_grapheme_weights`, `rank_graphemes`), so its numbers move if those change. Its orders come from its own implementation of Ordering C's count rule, with every finger ready; the engine's is session (5)'s, so a test that pins them pins the spike's reading of the rule, not the rule in every state. It ran on the Windows laptop, which does not matter for what it reads.
+- **[M]**: measured by a spike run in this session: [key_share_definition_spike.py](../../spikes/key_share_definition_spike.py), [results](../../spikes/results/key_share_definition_results.txt). It reads wordfreq and the product layout tables (`build_en`, `build_de`, `build_is`), and uses the engine's word filter and ranking (`_eligible_words`, `compute_grapheme_weights`, `rank_graphemes`), so its numbers move if those change. Its orders come from its own implementation of Ordering C's count rule, with every finger ready; the engine's is session (5)'s, so a test that pins them pins the spike's reading of the rule, not the rule in every state. It ran on the Windows laptop, which does not matter for what it reads. *(2026-11-08, #12m session 3: `compute_grapheme_weights` is gone. `compute_tables` builds the ranking's weights, the bigram weights and the key share in one walk, and the spike's `presses` column now reads the engine's share. Rerun on the dev box, the spike printed the same numbers in every row.)*
 - **[A]**: argued, not measured or tested.
 
 A statement with no mark restates or defines something marked.
@@ -287,6 +287,15 @@ Under none of them does a conventional rest letter of en, de or is change class.
 - `p` (the right little finger, one row up) is 2.03% and strong. It is weak with space counted (1.66%) and over the old spike's corpus (1.69%).
 
 **Cost** **[A]**. Counted on its own it is a third full pass over the corpus at startup, beside the two that `warm()` already makes, which together cost about 1,383 ms for English and 3,936 ms for German on the dev box ([concurrency-model.md § Startup](../concurrency-model.md#startup), 2026-09-10). Session (3) measures a separate pass against that, and decides whether to share a walk over the words with the other tables, which today are built and cached separately.
+
+**Built, #12m session (3), 2026-11-08.** The marks in this paragraph are that session's.
+- `WordSource.key_shares(layout)` gives every key in `layout.keys` its share as a fraction, keyed by key name. The fractions add up to 1, or are all zero as defined above.
+- **One walk** **[S]**. `compute_tables` builds the share in the same walk over the words as the ranking's weights and the bigram weights, and `WordfreqSource` caches the three together. The developer decided this on the measurement, on the dev box, cold, median of five **[M]**:
+  - the share as a pass of its own cost 482 ms for English, 1,336 ms for German and 77 ms for Icelandic, about a third more than `warm()`;
+  - in one walk, `warm()` costs 1,413 / 4,083 / 223 ms, against 1,402 / 3,930 / 224 ms for the two tables before. So the share is close to free, at about 4% more for German.
+- **The cache key** covers the language, the layout's keys and each letter's `prereq_keys`. A layout with the same letters reached through other keys gets its own entry (tested). The key is stricter than the ranking and the bigrams need, which costs nothing.
+- **Tests.** The default tests pin the definition with exact values on `FixedListSource`: every press of every word at any length, a doubled letter, the word filter, a composite on `build_is`, a cell with no letter, and an empty corpus or one with no word that fits. A `slow` test pins en `a` 8.29%, `k` 0.90% and is `k` 2.93%, `d` 1.45% on `WordfreqSource`. The spike's own count agreed with the engine's share to within 1e-14 on en, de and is **[M]**.
+- **What it assumes: every key a letter needs is a key of the layout.** A key named in a letter's `prereq_keys` and missing from `layout.keys` raises, in `warm()`, at startup. The three tables are one walk, so the ranking and the bigrams go down with it. Every layout today keeps the rule: the three builders, and the Windows reader, which adds a dead key to `keys` before any composite that names it (found by the session's review). **An AltGr chord will not keep it** **[A]**. Its `prereq_keys` begin with `altgr`, and AltGr is not a cell of the scan-code grid ([ADR-026](0026-platform-interface-abstraction.md)), so the reader has no cell to add. The first AltGr layout must say whether `altgr` becomes a key of the layout or how its presses are counted, which is the share's definition and is decided then. Roadmap § D has the line.
 
 #### Open question 4, answered
 

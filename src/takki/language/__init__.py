@@ -1,6 +1,7 @@
 import random
 from collections import defaultdict
 from collections.abc import Iterator
+from dataclasses import dataclass
 from typing import Protocol
 
 from takki.platform.layout import Layout
@@ -19,19 +20,23 @@ class WordSource(Protocol):
 
     def bigrams(self, layout: Layout, count: int, rng: random.Random) -> list[str]: ...
 
+    # Each physical key's share of the language's key presses, keyed by key name
+    # (ADR-032 § A key's share of key presses). Every key of the layout is present.
+    def key_shares(self, layout: Layout) -> dict[str, float]: ...
+
 
 def warm(source: WordSource, layout: Layout) -> None:
     """Force the derived tables before the loop is entered (concurrency-model.md § Startup).
 
-    Both are a full pass over the corpus -- ~767 ms for English and ~1,977 ms
-    for German on the dev box, against a 16 ms frame budget -- and both are
+    They come from one walk over the corpus -- ~1.4 s for English and ~4.0 s
+    for German on the dev box, against a 16 ms frame budget -- and they are
     read from inside the loop: `bigram_weights` builds every drill block and
     `letter_ranking` (which is `grapheme_weights` plus a sort) is re-derived on
-    every introduction step. A lazy first call would stall a tick for most of a
-    second.
+    every introduction step. A lazy first call would stall a tick for seconds.
     """
     source.grapheme_weights(layout)
     source.bigram_weights(layout)
+    source.key_shares(layout)
 
 
 def rank_graphemes(layout: Layout, weights: dict[str, float]) -> list[str]:
@@ -57,26 +62,49 @@ def _eligible_words(
         yield lower, freq
 
 
-def compute_grapheme_weights(word_weights: dict[str, float], layout: Layout) -> dict[str, float]:
-    # min_len=3 is the Layer 2 floor -- prevents short articles skewing the
-    # per-letter weight.
-    native = frozenset(layout.graphemes)
-    weights: dict[str, float] = defaultdict(float)
-    for lower, freq in _eligible_words(word_weights, native, min_len=3):
-        for char in frozenset(lower):
-            weights[char] += freq
-    return dict(weights)
+@dataclass(frozen=True)
+class DerivedTables:
+    grapheme_weights: dict[str, float]
+    bigram_weights: dict[str, float]
+    key_shares: dict[str, float]
 
 
-def compute_bigram_weights(word_weights: dict[str, float], layout: Layout) -> dict[str, float]:
-    # min_len=2 -- a bigram only needs two characters, so short real words
-    # like "of"/"to"/"in" still contribute their own bigram.
+def compute_tables(word_weights: dict[str, float], layout: Layout) -> DerivedTables:
+    # One walk for all three: each is a pass over the whole corpus, and the
+    # share as a pass of its own added about a third to startup (measured
+    # 2026-11-08, concurrency-model.md § Startup).
+    # The share takes every eligible word; the other two keep their floors.
     native = frozenset(layout.graphemes)
-    weights: dict[str, float] = defaultdict(float)
-    for lower, freq in _eligible_words(word_weights, native, min_len=2):
-        for i in range(len(lower) - 1):
-            weights[lower[i : i + 2]] += freq
-    return dict(weights)
+    graphemes: dict[str, float] = defaultdict(float)
+    bigrams: dict[str, float] = defaultdict(float)
+    occurrences: dict[str, float] = defaultdict(float)
+    for lower, freq in _eligible_words(word_weights, native, min_len=1):
+        for char in lower:
+            occurrences[char] += freq
+        if len(lower) >= 2:
+            # min_len=2 -- a bigram only needs two characters, so short real
+            # words like "of"/"to"/"in" still contribute their own bigram.
+            for i in range(len(lower) - 1):
+                bigrams[lower[i : i + 2]] += freq
+        if len(lower) >= 3:
+            # The Layer 2 floor -- prevents short articles skewing the
+            # per-letter weight.
+            for char in frozenset(lower):
+                graphemes[char] += freq
+    return DerivedTables(dict(graphemes), dict(bigrams), _key_shares(occurrences, layout))
+
+
+def _key_shares(occurrences: dict[str, float], layout: Layout) -> dict[str, float]:
+    # Each occurrence of a letter presses every key it needs once, a
+    # composite's modifier and base included. No Shift and no space.
+    presses = dict.fromkeys(layout.keys, 0.0)
+    for char, weight in occurrences.items():
+        for key in layout.graphemes[char].prereq_keys:
+            presses[key] += weight
+    total = sum(presses.values())
+    if total == 0:
+        return presses
+    return {key: count / total for key, count in presses.items()}
 
 
 def sample_bigrams(weights: dict[str, float], count: int, rng: random.Random) -> list[str]:

@@ -1,10 +1,11 @@
 import random
+from collections.abc import Callable
 
 import pytest
 
-from takki.language import WordSource
+from takki.language import DerivedTables, WordSource, warm
 from takki.language.wordfreq_source import WordfreqSource
-from takki.platform.layout import Grapheme, Layout, PhysicalKey, build_de, build_en
+from takki.platform.layout import Grapheme, Layout, PhysicalKey, build_de, build_en, build_is
 from tests.fakes.fixed_list_source import FixedListSource
 
 # Static structural conformance — pyright fails if either impl drifts from the Protocol.
@@ -144,6 +145,72 @@ class TestFixedListSourceBigrams:
         assert result == []
 
 
+def _shares(layout: Layout, pressed: dict[str, float]) -> dict[str, float]:
+    """Every key of the layout at zero, except the ones given."""
+    return {**dict.fromkeys(layout.keys, 0.0), **pressed}
+
+
+class TestFixedListSourceKeyShares:
+    """ADR-032 § A key's share of key presses: every press of every key a
+    letter needs, over every eligible word of any length, weighted by
+    frequency, divided by the same count for every key."""
+
+    def test_every_occurrence_of_every_word_is_a_press(self) -> None:
+        # No length floor: "a" and "ab" count. A doubled letter is two presses.
+        # Presses: a 1 + 2 = 3, b 2 + 3 = 5, e 3 * 2 = 6; 14 in all.
+        source = FixedListSource({"a": 1.0, "ab": 2.0, "bee": 3.0})
+        layout = build_en()
+        assert source.key_shares(layout) == _shares(layout, {"a": 3 / 14, "b": 5 / 14, "e": 6 / 14})
+
+    def test_a_word_that_is_not_alphabetic_or_has_a_letter_off_the_layout_is_left_out(
+        self,
+    ) -> None:
+        source = FixedListSource({"ab": 1.0, "a1": 1000.0, "café": 1000.0})
+        layout = build_en()
+        assert source.key_shares(layout) == _shares(layout, {"a": 0.5, "b": 0.5})
+
+    def test_a_composite_presses_its_modifier_and_its_base(self) -> None:
+        # "bá" presses b, dead-acute and a; "ad" presses a and d. 5 in all.
+        source = FixedListSource({"bá": 1.0, "ad": 1.0})
+        layout = build_is()
+        assert source.key_shares(layout) == _shares(
+            layout, {"b": 0.2, "dead-acute": 0.2, "a": 0.4, "d": 0.2}
+        )
+
+    def test_a_cell_with_no_letter_has_a_share_of_zero(self) -> None:
+        layout = build_en()
+        assert ";" in layout.keys and ";" not in layout.graphemes
+        shares = FixedListSource({"ab": 1.0}).key_shares(layout)
+        assert shares[";"] == 0.0
+        assert set(shares) == set(layout.keys)
+
+    @pytest.mark.parametrize("words", [{}, {"café": 1.0, "a1": 1.0}], ids=["empty", "none-fit"])
+    def test_every_key_is_zero_when_no_word_fits(self, words: dict[str, float]) -> None:
+        layout = build_en()
+        assert FixedListSource(words).key_shares(layout) == _shares(layout, {})
+
+
+class TestWarm:
+    def test_warm_builds_every_table(self) -> None:
+        calls: list[str] = []
+
+        class Recording(FixedListSource):
+            def grapheme_weights(self, layout: Layout) -> dict[str, float]:
+                calls.append("grapheme_weights")
+                return super().grapheme_weights(layout)
+
+            def bigram_weights(self, layout: Layout) -> dict[str, float]:
+                calls.append("bigram_weights")
+                return super().bigram_weights(layout)
+
+            def key_shares(self, layout: Layout) -> dict[str, float]:
+                calls.append("key_shares")
+                return super().key_shares(layout)
+
+        warm(Recording({"ab": 1.0}), build_en())
+        assert calls == ["grapheme_weights", "bigram_weights", "key_shares"]
+
+
 class TestWordfreqSourceEnglish:
     def test_letter_ranking_contains_all_26_letters(self, wordfreq_source: WordfreqSource) -> None:
         ranking = wordfreq_source.letter_ranking(build_en())
@@ -167,28 +234,22 @@ class TestWordfreqSourceEnglish:
     def test_derived_tables_are_computed_once_per_layout(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # Each derived table is a full pass over ~320k words. Recomputing one
-        # per call would put a multi-hundred-millisecond scan inside the drill
-        # loop, which has a ~16 ms frame budget (concurrency-model.md).
+        # The derived tables are one full pass over ~320k words. Recomputing
+        # per call would put a multi-second scan inside the drill loop, which
+        # has a ~16 ms frame budget (concurrency-model.md).
         import takki.language.wordfreq_source as mod
 
         calls: list[str] = []
-        real_graphemes = mod.compute_grapheme_weights
-        real_bigrams = mod.compute_bigram_weights
+        real = mod.compute_tables
 
-        def counting_graphemes(words: dict[str, float], layout: Layout) -> dict[str, float]:
-            calls.append("graphemes")
-            return real_graphemes(words, layout)
-
-        def counting_bigrams(words: dict[str, float], layout: Layout) -> dict[str, float]:
-            calls.append("bigrams")
-            return real_bigrams(words, layout)
+        def counting(words: dict[str, float], layout: Layout) -> DerivedTables:
+            calls.append(layout.lang)
+            return real(words, layout)
 
         def tiny_corpus(lang: str) -> dict[str, float]:
             return {"aaa": 1.0}
 
-        monkeypatch.setattr(mod, "compute_grapheme_weights", counting_graphemes)
-        monkeypatch.setattr(mod, "compute_bigram_weights", counting_bigrams)
+        monkeypatch.setattr(mod, "compute_tables", counting)
         monkeypatch.setattr(mod, "get_frequency_dict", tiny_corpus)
 
         source = WordfreqSource()
@@ -196,8 +257,10 @@ class TestWordfreqSourceEnglish:
         for _ in range(3):
             source.letter_ranking(layout)
             source.grapheme_weights(layout)
+            source.bigram_weights(layout)
             source.bigrams(layout, count=5, rng=random.Random(0))
-        assert calls == ["graphemes", "bigrams"]
+            source.key_shares(layout)
+        assert calls == ["en"]
 
     def test_grapheme_weights_caller_cannot_corrupt_the_cache(
         self, wordfreq_source: WordfreqSource
@@ -221,6 +284,61 @@ class TestWordfreqSourceEnglish:
         source.letter_ranking(build_en())
         source.grapheme_weights(build_en())
         assert calls == ["en"]
+
+
+def _corpus(words: dict[str, float]) -> Callable[[str], dict[str, float]]:
+    def get_frequency_dict(lang: str) -> dict[str, float]:
+        return words
+
+    return get_frequency_dict
+
+
+class TestWordfreqSourceKeyShares:
+    def test_the_cache_tells_apart_layouts_whose_letters_need_other_keys(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Same language and letters; only the keys "á" needs differ. Keyed on
+        # language and letters alone, the second layout got the first's shares.
+        import takki.language.wordfreq_source as mod
+
+        monkeypatch.setattr(mod, "get_frequency_dict", _corpus({"bá": 1.0}))
+        dead = build_is()
+        chord = build_is()
+        chord.keys["altgr"] = PhysicalKey("altgr", 4, 11)
+        chord.graphemes["á"] = Grapheme("á", "altgr-chord", ("altgr", "a"), 2, base="a")
+        source = WordfreqSource()
+        third = 1 / 3
+        assert source.key_shares(dead) == _shares(
+            dead, {"b": third, "dead-acute": third, "a": third}
+        )
+        assert source.key_shares(chord) == _shares(chord, {"b": third, "altgr": third, "a": third})
+
+    def test_key_shares_caller_cannot_corrupt_the_cache(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import takki.language.wordfreq_source as mod
+
+        monkeypatch.setattr(mod, "get_frequency_dict", _corpus({"ab": 1.0}))
+        source = WordfreqSource()
+        layout = build_en()
+        source.key_shares(layout)["a"] = -1.0
+        assert source.key_shares(layout)["a"] == 0.5
+
+    @pytest.mark.slow
+    @pytest.mark.parametrize(
+        ("build", "key", "percent"),
+        [
+            (build_en, "a", 8.29),
+            (build_en, "k", 0.90),
+            (build_is, "k", 2.93),
+            (build_is, "d", 1.45),
+        ],
+    )
+    def test_the_shares_the_amendment_records(
+        self, wordfreq_source: WordfreqSource, build: Callable[[], Layout], key: str, percent: float
+    ) -> None:
+        # ADR-032's table, from spikes/key_share_definition_spike.py.
+        assert round(wordfreq_source.key_shares(build())[key] * 100, 2) == percent
 
 
 class TestWordfreqSourceGerman:

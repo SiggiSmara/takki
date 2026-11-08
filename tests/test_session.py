@@ -259,7 +259,7 @@ def intro_lines(names: tuple[str, ...]) -> list[str]:
 
 class TestStartup:
     def test_the_language_tables_are_warm_before_the_first_prompt(self) -> None:
-        # concurrency-model.md § Startup: the cold build is ~0.8 s (en) against
+        # concurrency-model.md § Startup: the cold build is ~1.4 s (en) against
         # a 16 ms frame budget, so it must not happen lazily inside the loop.
         calls: list[str] = []
 
@@ -272,11 +272,15 @@ class TestStartup:
                 calls.append("bigram_weights")
                 return super().bigram_weights(layout)
 
+            def key_shares(self, layout: Layout) -> dict[str, float]:
+                calls.append("key_shares")
+                return super().key_shares(layout)
+
         harness = Harness(source=Recording(EN_WORDS))
         harness.loop.start()
         warmed = list(calls)
         harness.settle()
-        assert warmed[:2] == ["grapheme_weights", "bigram_weights"]
+        assert warmed[:3] == ["grapheme_weights", "bigram_weights", "key_shares"]
         assert harness.letters.played != []
 
     def test_start_opens_a_session_row_and_starts_the_key_stream(self) -> None:

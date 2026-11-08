@@ -12,7 +12,9 @@ the choice is made on numbers:
   presses    every occurrence of a grapheme presses each key it needs (a
              composite presses its modifier and its base), weighted by the
              word's frequency, over every word the language data has whose
-             letters are all graphemes of the layout. Any length.
+             letters are all graphemes of the layout. Any length. The
+             definition the amendment chose: read from the engine's
+             key_shares (takki.language.compute_tables).
   min3       as presses, but only words of 3+ letters (grapheme_weights' floor).
   own        as presses, but a key carries only its own letter's occurrences
              (the letter's share): a composite presses no key at all, neither
@@ -54,7 +56,7 @@ from pathlib import Path
 
 from wordfreq import get_frequency_dict, top_n_list
 
-from takki.language import _eligible_words, compute_grapheme_weights, rank_graphemes
+from takki.language import _eligible_words, compute_tables, rank_graphemes
 from takki.lesson.introducer import base_key, eligible
 from takki.platform.layout import Layout, build_de, build_en, build_is, letters_by_position
 
@@ -72,14 +74,18 @@ LAYOUTS = {"en": build_en, "de": build_de, "is": build_is}
 def key_presses(
     words: dict[str, float], layout: Layout, *, min_len: int, composite_to_base: bool, space: bool
 ) -> dict[str, float]:
-    # The engine's word filter, which the ADR-032 amendment's definition names. Once
-    # #12m session (3) adds the share, check the `presses` column against it.
+    # The engine's word filter, which the ADR-032 amendment's definition names. The
+    # `presses` column comes from the engine's key_shares since #12m session (3),
+    # which agreed with this function's to 1e-14 on en, de and is; this one is
+    # kept for the four alternatives.
     native = frozenset(layout.graphemes)
     presses: dict[str, float] = defaultdict(float)
     for lower, freq in _eligible_words(words, native, min_len):
         for char in lower:
             grapheme = layout.graphemes[char]
-            keys = grapheme.prereq_keys if composite_to_base or grapheme.mechanism == "direct" else ()
+            keys = (
+                grapheme.prereq_keys if composite_to_base or grapheme.mechanism == "direct" else ()
+            )
             for key in keys:
                 presses[key] += freq
         if space:
@@ -88,7 +94,9 @@ def key_presses(
     return {key: value / total for key, value in presses.items()}
 
 
-def strong_letters(layout: Layout, share: dict[str, float], rest_cells: set[tuple[int, int]]) -> set[str]:
+def strong_letters(
+    layout: Layout, share: dict[str, float], rest_cells: set[tuple[int, int]]
+) -> set[str]:
     by_cell = letters_by_position(layout)
     return {by_cell[c] for c in rest_cells if c in by_cell and share.get(by_cell[c], 0) >= FLOOR}
 
@@ -162,24 +170,38 @@ def analyse(lang: str) -> None:
     words = get_frequency_dict(lang)
     upper = sum(1 for w in words if w != w.lower())
     top = {w: words[w] for w in top_n_list(lang, 3000) if w in words}
+    tables = compute_tables(words, layout)
     definitions = {
-        "presses": key_presses(words, layout, min_len=1, composite_to_base=True, space=False),
+        "presses": tables.key_shares,
         "min3": key_presses(words, layout, min_len=3, composite_to_base=True, space=False),
         "own": key_presses(words, layout, min_len=1, composite_to_base=False, space=False),
         "+space": key_presses(words, layout, min_len=1, composite_to_base=True, space=True),
         "spike": key_presses(top, layout, min_len=1, composite_to_base=True, space=False),
     }
-    print(f"\n{'=' * 96}\n  {lang}: {len(words)} words in wordfreq, {upper} with an upper-case letter\n{'=' * 96}")
+    print(
+        f"\n{'=' * 96}\n  {lang}: {len(words)} words in wordfreq, {upper} with an upper-case letter\n{'=' * 96}"
+    )
     print(f"  space's own share under +space: {definitions['+space'][' ']:.1%}")
     bump_cells = letters_by_position(layout)
-    print("  bump letters under presses: " + "  ".join(
-        f"{bump_cells[c]} {definitions['presses'].get(bump_cells[c], 0):.2%}" for c in sorted(BUMP_CELLS)))
+    print(
+        "  bump letters under presses: "
+        + "  ".join(
+            f"{bump_cells[c]} {definitions['presses'].get(bump_cells[c], 0):.2%}"
+            for c in sorted(BUMP_CELLS)
+        )
+    )
     if "dead-acute" in layout.keys:
-        print("  dead-acute share: " + "  ".join(
-            f"{d} {definitions[d].get('dead-acute', 0):.1%}" for d in definitions))
+        print(
+            "  dead-acute share: "
+            + "  ".join(f"{d} {definitions[d].get('dead-acute', 0):.1%}" for d in definitions)
+        )
 
     cells = sorted(
-        (k for name, k in layout.keys.items() if name in layout.graphemes and k.col in NON_INDEX_COLS),
+        (
+            k
+            for name, k in layout.keys.items()
+            if name in layout.graphemes and k.col in NON_INDEX_COLS
+        ),
         key=lambda k: (k.col, k.row),
     )
     print(f"\n  {'cell':8} {'key':4} " + " ".join(f"{d:>8}" for d in definitions) + "   class")
@@ -190,11 +212,15 @@ def analyse(lang: str) -> None:
         flag = "differs" if len(classes) > 1 else ("strong" if row[0] >= FLOOR else "weak")
         flips += len(classes) > 1
         rest = "*" if (k.row, k.col) in REST_CELLS else " "
-        print(f"  ({k.row},{k.col:2}){rest} {k.name:4} " + " ".join(f"{v:>8.2%}" for v in row) + f"   {flag}")
+        print(
+            f"  ({k.row},{k.col:2}){rest} {k.name:4} "
+            + " ".join(f"{v:>8.2%}" for v in row)
+            + f"   {flag}"
+        )
     print(f"  (* = a conventional rest cell)   cells whose strong/weak class differs: {flips}")
 
     share = definitions["presses"]
-    ranking = rank_graphemes(layout, compute_grapheme_weights(words, layout))
+    ranking = rank_graphemes(layout, tables.grapheme_weights)
     rank = {name: index for index, name in enumerate(ranking)}
     by_cell = letters_by_position(layout)
     bumps = {by_cell[c] for c in BUMP_CELLS}
@@ -203,7 +229,10 @@ def analyse(lang: str) -> None:
     )
     strong = strong_letters(layout, share, REST_CELLS)
 
-    for label, useful in (("by share", by_share), ("by ranking", [n for n in ranking if n not in bumps])):
+    for label, useful in (
+        ("by share", by_share),
+        ("by ranking", [n for n in ranking if n not in bumps]),
+    ):
         steps = per_hand_order(layout, useful, share, strong, rank)
         print(f"\n  order, {label:10}: " + "  ".join("+".join(s) for s in steps[:STEPS]))
         if all(g.mechanism == "direct" for g in layout.graphemes.values()):
@@ -225,9 +254,13 @@ def analyse(lang: str) -> None:
     if lang == "en":
         own_rest = (REST_CELLS - {(3, 3)}) | {(2, 3)}
         own_strong = strong_letters(layout, share, own_rest)
-        steps = per_hand_order(layout, [n for n in ranking if n not in bumps], share, own_strong, rank)
-        print("\n  order, by ranking, left middle finger resting on e: "
-              + "  ".join("+".join(s) for s in steps[:STEPS]))
+        steps = per_hand_order(
+            layout, [n for n in ranking if n not in bumps], share, own_strong, rank
+        )
+        print(
+            "\n  order, by ranking, left middle finger resting on e: "
+            + "  ".join("+".join(s) for s in steps[:STEPS])
+        )
 
 
 def main() -> None:

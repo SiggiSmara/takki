@@ -1,11 +1,6 @@
 import random
 
-from takki.language import (
-    compute_bigram_weights,
-    compute_grapheme_weights,
-    rank_graphemes,
-    sample_bigrams,
-)
+from takki.language import compute_tables, rank_graphemes, sample_bigrams
 from takki.platform.layout import Layout
 
 
@@ -17,10 +12,13 @@ class FixedListSource:
         return rank_graphemes(layout, self.grapheme_weights(layout))
 
     def grapheme_weights(self, layout: Layout) -> dict[str, float]:
-        return compute_grapheme_weights(self._word_weights, layout)
+        return compute_tables(self._word_weights, layout).grapheme_weights
 
     def bigram_weights(self, layout: Layout) -> dict[str, float]:
-        return compute_bigram_weights(self._word_weights, layout)
+        return compute_tables(self._word_weights, layout).bigram_weights
 
     def bigrams(self, layout: Layout, count: int, rng: random.Random) -> list[str]:
         return sample_bigrams(self.bigram_weights(layout), count, rng)
+
+    def key_shares(self, layout: Layout) -> dict[str, float]:
+        return compute_tables(self._word_weights, layout).key_shares
