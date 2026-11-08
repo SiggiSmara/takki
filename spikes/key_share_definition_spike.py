@@ -14,12 +14,15 @@ the choice is made on numbers:
              word's frequency, over every word the language data has whose
              letters are all graphemes of the layout. Any length.
   min3       as presses, but only words of 3+ letters (grapheme_weights' floor).
-  own        as presses, but a composite presses nothing for its base key: a
-             key carries only its own letter's occurrences (the letter's share).
+  own        as presses, but a key carries only its own letter's occurrences
+             (the letter's share): a composite presses no key at all, neither
+             its base nor its modifier, and is left out of the total.
   +space     as presses, plus one space press per word.
   spike      as presses, over the rest-letter order spike's corpus (wordfreq's
              top 3000 words). Not an exact replay of that spike: this one drops
-             a word with any letter outside the layout, which that one did not.
+             a word that is not alphabetic ("don't") or has a letter outside
+             the layout, and reads frequencies from get_frequency_dict; that one
+             kept such words' other letters and used word_frequency.
 
 For each, every letter cell in the columns of the six fingers that are not
 index fingers is classed strong (share >= 2%) or weak, and cells whose class
@@ -27,7 +30,7 @@ differs between definitions are flagged.
 
 It then builds ADR-033's per-hand order for the conventional rest position with
 every finger ready, two ways, and checks the alternation rule the ADR-032
-amendment proposes (a hand's next turn is a rest letter when it has had more
+amendment decided (a hand's next turn is a rest letter when it has had more
 useful letters than strong rest letters) against the spike's queue:
 
   by share     useful = key share, as the rest-letter spike ranked.
@@ -46,12 +49,14 @@ Output: a printed report plus spikes/results/key_share_definition_results.txt.
 
 import sys
 from collections import defaultdict
+from itertools import zip_longest
 from pathlib import Path
 
 from wordfreq import get_frequency_dict, top_n_list
 
-from takki.language import compute_grapheme_weights, rank_graphemes
-from takki.platform.layout import Layout, build_de, build_en, build_is
+from takki.language import _eligible_words, compute_grapheme_weights, rank_graphemes
+from takki.lesson.introducer import base_key, eligible
+from takki.platform.layout import Layout, build_de, build_en, build_is, letters_by_position
 
 RESULTS_PATH = Path(__file__).resolve().parent / "results" / "key_share_definition_results.txt"
 
@@ -67,14 +72,11 @@ LAYOUTS = {"en": build_en, "de": build_de, "is": build_is}
 def key_presses(
     words: dict[str, float], layout: Layout, *, min_len: int, composite_to_base: bool, space: bool
 ) -> dict[str, float]:
+    # The engine's word filter, which the ADR-032 amendment's definition names. Once
+    # #12m session (3) adds the share, check the `presses` column against it.
     native = frozenset(layout.graphemes)
     presses: dict[str, float] = defaultdict(float)
-    for word, freq in words.items():
-        if not word.isalpha() or len(word) < min_len:
-            continue
-        lower = word.lower()
-        if not frozenset(lower) <= native:
-            continue
+    for lower, freq in _eligible_words(words, native, min_len):
         for char in lower:
             grapheme = layout.graphemes[char]
             keys = grapheme.prereq_keys if composite_to_base or grapheme.mechanism == "direct" else ()
@@ -86,24 +88,27 @@ def key_presses(
     return {key: value / total for key, value in presses.items()}
 
 
+def strong_letters(layout: Layout, share: dict[str, float], rest_cells: set[tuple[int, int]]) -> set[str]:
+    by_cell = letters_by_position(layout)
+    return {by_cell[c] for c in rest_cells if c in by_cell and share.get(by_cell[c], 0) >= FLOOR}
+
+
 def per_hand_order(
-    layout: Layout, useful: list[str], share: dict[str, float], rest_cells: set[tuple[int, int]]
+    layout: Layout,
+    useful: list[str],
+    share: dict[str, float],
+    strong: set[str],
+    rank: dict[str, int],
 ) -> list[tuple[str, ...]]:
-    """ADR-033's order, every finger ready, by the count rule the amendment proposes."""
-    by_cell = {(k.row, k.col): name for name, k in layout.keys.items() if name in layout.graphemes}
+    """ADR-033's order, every finger ready, by the count rule the amendment decided."""
+    by_cell = letters_by_position(layout)
     bumps = [by_cell[c] for c in sorted(BUMP_CELLS, key=lambda c: c[1])]
-    strong = {by_cell[c] for c in rest_cells if c in by_cell and share.get(by_cell[c], 0) >= FLOOR}
     had = set(bumps)
     steps: list[tuple[str, ...]] = [tuple(bumps)]
     counts = {"L": [0, 0], "R": [0, 0]}  # useful had, strong rest had (bumps excluded)
 
     def side(name: str) -> str:
-        g = layout.graphemes[name]
-        return layout.keys[g.base or g.char].side
-
-    def eligible(name: str) -> bool:
-        g = layout.graphemes[name]
-        return g.mechanism == "direct" or g.base in had
+        return base_key(layout, name).side
 
     while True:
         step = []
@@ -111,9 +116,10 @@ def per_hand_order(
             u, r = counts[hand]
             useful_q = [n for n in useful if n not in had and n not in strong and side(n) == hand]
             rest_q = sorted(
-                (n for n in strong if n not in had and side(n) == hand), key=lambda n: -share[n]
+                (n for n in strong if n not in had and side(n) == hand),
+                key=lambda n: (-share[n], rank[n]),  # equal shares in ranking order
             )
-            useful_q = [n for n in useful_q if eligible(n)]
+            useful_q = [n for n in useful_q if eligible(layout, n, had)]
             turn = rest_q if (u > r and rest_q) or not useful_q else useful_q
             if turn:
                 name = turn[0]
@@ -164,8 +170,10 @@ def analyse(lang: str) -> None:
         "spike": key_presses(top, layout, min_len=1, composite_to_base=True, space=False),
     }
     print(f"\n{'=' * 96}\n  {lang}: {len(words)} words in wordfreq, {upper} with an upper-case letter\n{'=' * 96}")
-    if "+space" in definitions:
-        print(f"  space's own share under +space: {definitions['+space'][' ']:.1%}")
+    print(f"  space's own share under +space: {definitions['+space'][' ']:.1%}")
+    bump_cells = letters_by_position(layout)
+    print("  bump letters under presses: " + "  ".join(
+        f"{bump_cells[c]} {definitions['presses'].get(bump_cells[c], 0):.2%}" for c in sorted(BUMP_CELLS)))
     if "dead-acute" in layout.keys:
         print("  dead-acute share: " + "  ".join(
             f"{d} {definitions[d].get('dead-acute', 0):.1%}" for d in definitions))
@@ -187,13 +195,16 @@ def analyse(lang: str) -> None:
 
     share = definitions["presses"]
     ranking = rank_graphemes(layout, compute_grapheme_weights(words, layout))
-    by_cell = {(k.row, k.col): n for n, k in layout.keys.items() if n in layout.graphemes}
+    rank = {name: index for index, name in enumerate(ranking)}
+    by_cell = letters_by_position(layout)
     bumps = {by_cell[c] for c in BUMP_CELLS}
-    by_share = sorted((n for n in layout.graphemes if n not in bumps), key=lambda n: -share.get(n, 0))
-    strong = {by_cell[c] for c in REST_CELLS if c in by_cell and share.get(by_cell[c], 0) >= FLOOR}
+    by_share = sorted(
+        (n for n in layout.graphemes if n not in bumps), key=lambda n: (-share.get(n, 0), rank[n])
+    )
+    strong = strong_letters(layout, share, REST_CELLS)
 
     for label, useful in (("by share", by_share), ("by ranking", [n for n in ranking if n not in bumps])):
-        steps = per_hand_order(layout, useful, share, REST_CELLS)
+        steps = per_hand_order(layout, useful, share, strong, rank)
         print(f"\n  order, {label:10}: " + "  ".join("+".join(s) for s in steps[:STEPS]))
         if all(g.mechanism == "direct" for g in layout.graphemes.values()):
             hands = {}
@@ -201,10 +212,8 @@ def analyse(lang: str) -> None:
                 mine = [n for n in useful if layout.keys[n].side == hand]
                 hands[hand] = spike_queue(
                     [n for n in mine if n not in strong],
-                    sorted((n for n in mine if n in strong), key=lambda n: -share[n]),
+                    sorted((n for n in mine if n in strong), key=lambda n: (-share[n], rank[n])),
                 )
-            from itertools import zip_longest
-
             expected = [tuple(sorted(bumps, key=lambda n: layout.keys[n].col))] + [
                 tuple(x for x in pair if x) for pair in zip_longest(hands["L"], hands["R"])
             ]
@@ -215,7 +224,8 @@ def analyse(lang: str) -> None:
 
     if lang == "en":
         own_rest = (REST_CELLS - {(3, 3)}) | {(2, 3)}
-        steps = per_hand_order(layout, [n for n in ranking if n not in bumps], share, own_rest)
+        own_strong = strong_letters(layout, share, own_rest)
+        steps = per_hand_order(layout, [n for n in ranking if n not in bumps], share, own_strong, rank)
         print("\n  order, by ranking, left middle finger resting on e: "
               + "  ".join("+".join(s) for s in steps[:STEPS]))
 

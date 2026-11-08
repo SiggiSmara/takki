@@ -1,0 +1,40 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --no-project python \"$CLAUDE_PROJECT_DIR/.claude/hooks/review_limit.py\" prompt",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --no-project python \"$CLAUDE_PROJECT_DIR/.claude/hooks/review_limit.py\" pre",
+            "timeout": 30,
+            "onFailure": "block"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --no-project python \"$CLAUDE_PROJECT_DIR/.claude/hooks/review_limit.py\" post",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

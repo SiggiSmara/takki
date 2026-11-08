@@ -4,6 +4,7 @@
 > **Date:** 2026-06-07
 > **Updated:** 2026-06-14 — order-comparison spike results folded in (see "What the order-comparison spike showed").
 > **Decided 2026-10-10:** [ADR-033](../adr/0033-rest-keys-and-keyboard-alignment.md) decides the order and the per-child rest position ahead of the pilot, on fit and comfort and not on this note's agency argument. The pilot may still change it.
+> **2026-11-08:** this note's recommended order, O5 (ADR-032's Ordering B), is retired, and ADR-033's per-hand order is the default: [ADR-032 § Decision 2 restated](../adr/0032-grapheme-led-introduction-and-selectable-ordering.md#decision-2-restated-rest-keys-and-ordering-c-as-the-default).
 > **Sources:** see [references.md](references.md)
 
 **One-line summary:** Frequency data, keyboard ergonomics, and actual VI teaching

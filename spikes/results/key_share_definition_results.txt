@@ -6,6 +6,7 @@ Floor: 2%   Layouts: en, de, is (product tables)
   en: 321180 words in wordfreq, 0 with an upper-case letter
 ================================================================================================
   space's own share under +space: 18.3%
+  bump letters under presses: f 2.21%  j 0.22%
 
   cell     key   presses     min3      own   +space    spike   class
   (2, 1)  q       0.09%    0.09%    0.09%    0.07%    0.06%   weak
@@ -36,6 +37,7 @@ Floor: 2%   Layouts: en, de, is (product tables)
   de: 634502 words in wordfreq, 0 with an upper-case letter
 ================================================================================================
   space's own share under +space: 16.1%
+  bump letters under presses: f 1.66%  j 0.29%
 
   cell     key   presses     min3      own   +space    spike   class
   (2, 1)  q       0.02%    0.02%    0.02%    0.02%    0.01%   weak
@@ -68,6 +70,7 @@ Floor: 2%   Layouts: en, de, is (product tables)
   is: 42304 words in wordfreq, 0 with an upper-case letter
 ================================================================================================
   space's own share under +space: 17.8%
+  bump letters under presses: f 2.93%  j 1.02%
   dead-acute share: presses 6.0%  min3 4.0%  own 0.0%  +space 4.9%  spike 6.8%
 
   cell     key   presses     min3      own   +space    spike   class
