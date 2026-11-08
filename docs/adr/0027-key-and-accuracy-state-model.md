@@ -1,8 +1,9 @@
 # ADR-027: Key & Accuracy State Model
 
-**Status:** Accepted  
+**Status:** Accepted. Amended 2026-11-08 for ADR-033 and ADR-024; the amendment is not yet implemented (alpha-plan #12m sessions (4) and (6)).  
 **Date:** 2026-06-14  
-**Noted:** 2026-11-01 — § First-Attempt Counting: the held-key rule's two Windows assumptions, restated for key events taken from Takki's window (alpha #13). The rule itself is unchanged.
+**Noted:** 2026-11-01 — § First-Attempt Counting: the held-key rule's two Windows assumptions, restated for key events taken from Takki's window (alpha #13). The rule itself is unchanged.  
+**Amended:** 2026-11-08 — alpha-plan #12m, for [ADR-033](0033-rest-keys-and-keyboard-alignment.md) and [ADR-024](0024-drill-content-and-lesson-granularity.md): [§ Rest keys, the ladder's presses and the `rest` rung](#rest-keys-the-ladders-presses-and-the-rest-rung). § The Anchor Gate is retired.
 
 > Part of the [Takki architecture](../architecture.md).  
 > Closes roadmap issues A2, A3, and B6. Amends [ADR-010](0010-lesson-structure-and-progression.md) and [ADR-011](0011-persistence-and-state.md).
@@ -23,6 +24,8 @@ A key character has two computational states:
 All characters start **Unseen** (no `key_stats` row). A character becomes **Active** when the lesson engine introduces it and the child answers the first prompt for it — the first counted keystroke creates the row (see § First-Attempt Counting). A character is **Known** when the criterion above is satisfied at query time.
 
 Known is a derived attribute, not a stored flag. This avoids synchronisation drift and means accuracy drops below 90% are reflected automatically within the rolling window. Milestones are one-time events (stored in the `milestones` table); they are never reverted even if a key's live accuracy later dips. The Layer-1 weighting engine handles struggling keys through drill frequency, independently of Known status.
+
+*(Amended 2026-11-08, alpha-plan #12m: a rest key has no key state, and a letter that takes ADR-024's ladder becomes Active at its first listened press, at Choose. [§ Rest keys, the ladder's presses and the `rest` rung](#a-rest-key-has-no-key-state).)*
 
 **Terminology alignment:** "Introduced" in ADR-010/023/024 = became Active. "Mastered" in milestone descriptions = Known. There are only two computed states; the different words were used for narrative variety, not to denote distinct thresholds.
 
@@ -122,7 +125,7 @@ A long weekend costs nothing (each press keeps 93% of its weight after three day
 
 - **Slots** ([ADR-010](0010-lesson-structure-and-progression.md)): a key that stops being Known takes its slot back, so after a long break no new letter comes until old ones are confirmed again. This is the consequence ADR-010 recorded in advance.
 - **Milestones** are still one-time events and are never revoked. A rung not yet earned counts the keys Known today.
-- **The anchor rung** reads the same bound at `ANCHOR_MIN_ACCURACY`: see [§ The Anchor Gate](#the-anchor-gate).
+- **The anchor rung** reads the same bound at `ANCHOR_MIN_ACCURACY`: see [§ The Anchor Gate](#the-anchor-gate). *(Retired 2026-11-08 with the Anchor Gate. The `rest` rung reads landings, not this bound: [§ The `rest` rung](#the-rest-rung).)*
 - **The time is the system clock's**, read as UTC like every other timestamp ([ADR-011](0011-persistence-and-state.md)). A press stamped in the future, after a clock correction, has an age of zero.
 
 **Relationship to `key_stats`:** `key_stats` retains its lifetime aggregate counters (`attempt_count`, `correct_count`, `last_practised_at`). Those are used for gamification displays (total attempts, milestone history) and are never the source of truth for Known. `key_attempts` is authoritative for Known.
@@ -150,7 +153,7 @@ A key the child answers correctly and still has to hunt for is not Known. Accura
 
 **No baseline or no speed, no term.** A key with too few timed answers, or a profile where nothing else has a speed yet, is judged on the floors alone. A measurement that cannot be made must not hold a key back.
 
-**`f` and `j` are the root.** They are in every baseline from their first `SPEED_MIN_SAMPLE` timed presses, before they meet the floors, and they have no speed term themselves. Something has to be the root of a comparison, and these are the two keys the fingers rest on.
+**`f` and `j` are the root.** They are in every baseline from their first `SPEED_MIN_SAMPLE` timed presses, before they meet the floors, and they have no speed term themselves. Something has to be the root of a comparison, and these are the two keys the fingers rest on. *(Amended 2026-11-08: they stay in every baseline from their first timed presses, on a new reason, and they now have a speed term of their own. [§ Known's speed term after the ladder](#knowns-speed-term-after-the-ladder).)*
 
 **Why this pool.** "The median over the child's Known keys", which is what Phase C's term used, is circular once Known itself has a speed term: whether a key is Known would depend on the baseline, and the baseline on which keys are Known. Three ways out were compared in a spike on 2026-10-04:
 
@@ -174,10 +177,10 @@ A and B agree on an even child, on a gradient between fingers, on keys that get 
 
 - **Slots** ([ADR-010](0010-lesson-structure-and-progression.md)): a key that only speed keeps from Known is in progress and holds its slot.
 - **The block plan** ([ADR-024](0024-drill-content-and-lesson-granularity.md) § Need and Known read one measure) gives such a key a need of `SLOW_KEY_NEED`, since accuracy asks nothing more of it and speed comes from practice.
-- **Phase C** of the ramp-up reads the same baseline at the same ratio.
+- **Phase C** of the ramp-up reads the same baseline at the same ratio. *(Since 2026-11-08: ADR-024's one bar, which replaces Phase C's. [§ Known's speed term after the ladder](#knowns-speed-term-after-the-ladder).)*
 - **Milestones** count Known, speed included, and are still never revoked.
 - **An answer after a re-read is not in a key's speed**, and this is a known gap, accepted by the developer on 2026-10-04. A prompt that timed out counts as the slowest answer; one the child asked to hear again is untimed and left out, because a re-read can mean "I did not hear it" as easily as "I cannot find it", and nothing yet says which is commoner. So a child who presses re-read on most prompts for a key they hunt for has too few timed answers for the term to apply, and the key can become Known on the floors alone. The pilot's data is where to see how often re-reads happen. The developer's note: the re-read matters more once words are practised, where it is the ordinary way to hear a word again ([roadmap § D](../roadmap.md#d-smaller-gaps-worth-a-line-in-the-relevant-adr), "Typing ahead is not counted").
-- **The anchor rung has no speed term.** It asks whether the child finds home, and its criterion stays the bound and the days ([§ The Anchor Gate](#the-anchor-gate)).
+- **The anchor rung has no speed term.** It asks whether the child finds home, and its criterion stays the bound and the days ([§ The Anchor Gate](#the-anchor-gate)). *(Retired 2026-11-08. The `rest` rung has no speed term either: the alignment is not timed. [§ The `rest` rung](#the-rest-rung).)*
 
 Every number here is a starting value. None comes from the literature, and none has been heard by a child.
 
@@ -202,7 +205,7 @@ The **first** keystroke response to a prompt determines the outcome for that pro
 
 **Every later press is an attempt and is timed, however early.** A floor at half the letter's usual length was proposed first, from that run: 64 of its 262 first presses came between 170 and 454 ms after the letter was sent, the rest at 719 ms or later, none in between, and the letters took 1.1 to 1.3 seconds. The early group was typed from the fixed cycle #12d has since replaced. It was withdrawn the same day, on the developer's point that the gap is a sighted adult's gap. Blind listeners follow speech far faster than sighted ones (reported: about 22 syllables a second against about 8, Dietrich, Hertrich & Ackermann 2013; and a simple reaction to a sound of 0.21 s against 0.32 s in congenitally blind adults; both from search summaries, neither read in full). A listener like that can know a letter from its first sound and answer 350 to 450 ms after it was sent, which is inside the band the run called pattern presses. A floor there would discard the real answers of the children Takki is for.
 
-**What removes a pattern press is that it is wrong.** The drill content is built so that the next prompt cannot be predicted ([ADR-024 § Ramp-up variability](0024-drill-content-and-lesson-granularity.md), property 1), so a press made without listening is a guess, and a guess is counted as the miss it usually is. Two things follow:
+**What removes a pattern press is that it is wrong.** The drill content is built so that the next prompt cannot be predicted ([ADR-024 § Ramp-up variability](0024-drill-content-and-lesson-granularity.md), property 1), so a press made without listening is a guess, and a guess is counted as the miss it usually is. *(Amended 2026-11-08: under ADR-024's ladder a press whose letter is predictable on purpose is not an attempt at all, and the reading here holds for the presses that are. [§ Presses that are not attempts](#presses-that-are-not-attempts).)* Two things follow:
 
 - **The speed term reads correct first presses only** ([§ Known has a speed term](#known-has-a-speed-term)). A wrong guess is fast and must not make a key look fast.
 - **Whether early answers are heard or guessed has to be visible.** The progress dump prints first-press accuracy by when the answer came: in the letter's first half, in its second half, after it. A first band well under the others means children are following a pattern and the content has failed.
@@ -258,7 +261,7 @@ ADR-010 defines a key as Known when "first-attempt accuracy has been sustained a
 
 **Superseded 2026-08-23 — Bronze is no longer positional.** The criterion above ("all home-row characters are Known") certified a skill it could not observe. `key_attempts` records one row per prompt with `correct` = first keystroke right, and nothing about what preceded the prompt — so it cannot distinguish a child who reached away and *found* F again from a child whose finger never left F. Under home-row-first drilling the second case is the common one, so a child could bank 90 correct F presses without their hand ever having moved. Bronze certified anchor security on evidence containing no anchoring.
 
-Bronze is replaced by the six-rung ladder in [§ Milestone Ladder](#milestone-ladder) below, whose first rung is an explicit anchor gate that measures the reach. See [§ The Anchor Gate](#the-anchor-gate).
+Bronze is replaced by the six-rung ladder in [§ Milestone Ladder](#milestone-ladder) below, whose first rung is an explicit anchor gate that measures the reach. See [§ The Anchor Gate](#the-anchor-gate). *(Since 2026-11-08 the first rung is `rest`, read from where the fingers land: [§ The `rest` rung](#the-rest-rung).)*
 
 ### Milestone Denominator
 
@@ -274,6 +277,8 @@ ADR-010's "alphabetic characters" wording is authoritative. ADR-023's "physical 
 
 Six key-count rungs, evenly spaced at sixths of the grapheme set, where N = the milestone denominator defined above. The first rung is the anchor gate and is not a fraction — it is six specific keys at a higher accuracy bar.
 
+*(Amended 2026-11-08, alpha-plan #12m: rung 1 is `rest`, all eight fingers landing on their rest keys, and `anchor` is retired. Rungs 2 to 6 are unchanged. [§ The `rest` rung](#the-rest-rung) and [§ The ladder's first slot](#the-ladders-first-slot).)*
+
 | # | Slug | Criterion |
 |---|---|---|
 | 1 | `anchor` | The six index-column keys Known at the anchor bar — see [§ The Anchor Gate](#the-anchor-gate) |
@@ -285,11 +290,11 @@ Six key-count rungs, evenly spaced at sixths of the grapheme set, where N = the 
 
 Diamond and Speed remain accuracy/fluency gates, not key-count gates, and are unaffected by this rewrite.
 
-**The fractions are hard-coded, not configurable.** They are the shape of the ladder, in the same sense that ADR-024's four-phase ramp-up structure is not configurable even though its thresholds are. Exposing them would let a parent produce a profile whose "half the alphabet" milestone fires at a fifth.
+**The fractions are hard-coded, not configurable.** They are the shape of the ladder, in the same sense that ADR-024's four-phase ramp-up structure is not configurable even though its thresholds are. *(2026-11-08: ADR-024 reversed "the four-phase structure is the design" on 2026-10-10. Read the comparison as its four objectives and the order of its levels, which are not configurable while their numbers are.)* Exposing them would let a parent produce a profile whose "half the alphabet" milestone fires at a fifth.
 
 **Rungs 2, 4 and 6 are the old Silver, Gold and Platinum gates unchanged** — 2/6 *is* 1/3 and 4/6 *is* 2/3 — so the rewrite inserts three rungs and replaces one; it does not move any existing threshold.
 
-**Why no rung at 1/6.** For English ⌊26/6⌋ = 4, which would fire before the anchor gate's six keys are Known. The anchor gate occupies the first slot instead, which is also the honest description: it certifies orientation, not coverage.
+**Why no rung at 1/6.** For English ⌊26/6⌋ = 4, which would fire before the anchor gate's six keys are Known. The anchor gate occupies the first slot instead, which is also the honest description: it certifies orientation, not coverage. *(Restated 2026-11-08 for a first rung that is not a count of keys: [§ The ladder's first slot](#the-ladders-first-slot).)*
 
 **Rung 2 is a real capability boundary, not just a fraction.** ADR-010 unlocks Layer 2 (real words) at ≥ 8 Active keys, and ⌊N/3⌋ is ≥ 8 for every layout in the v1 target set (en 8, de 10, is 12). So by rung 2 the child can type real words in any language — a claim the spoken framing can make without checking the layout. The middle rungs have no comparable intrinsic meaning and must not invent one: ADR-010 measured coverage at a fixed key-fraction varying from 5% to 35% across languages, which is why coverage was rejected as a gate in the first place. Their meaning comes from the spoken narrative, not from the arithmetic.
 
@@ -297,7 +302,7 @@ Diamond and Speed remain accuracy/fluency gates, not key-count gates, and are un
 
 ### The Anchor Gate
 
-> **Stage 0 is superseded by [ADR-033](0033-rest-keys-and-keyboard-alignment.md) (2026-10-10)**, which makes the rest position the first rung and retires the anchor bar. This section is not yet amended and is what the code does.
+> **Retired 2026-11-08**, for [ADR-033](0033-rest-keys-and-keyboard-alignment.md) (2026-10-10), by [§ Rest keys, the ladder's presses and the `rest` rung](#rest-keys-the-ladders-presses-and-the-rest-rung): the `anchor` rung, the anchor bar (`ANCHOR_MIN_ATTEMPTS`, `ANCHOR_MIN_ACCURACY`) and the lifelong hold of `f` and `j` to it all go. The section is kept as the record of what was decided. It is still what the code does until alpha-plan #12m session (4) builds the amendment.
 
 The first rung certifies that the child can **find home by touch** — the F and J tactile bumps, the one orientation landmark present on essentially every physical keyboard, and the foundation every later key position is described against ([ADR-023](0023-key-introduction-protocol.md) § Location).
 
@@ -327,3 +332,129 @@ The first rung certifies that the child can **find home by touch** — the F and
 Closing the evaluation window when Stage 0 ends would remove both, and would also decide roadmap § D's open "**Does the curriculum wait for the anchor gate?**" in code, by making the rung unreachable for any child the curriculum lets past six keys on day one. That decision belongs to whoever closes § D. **Until it closes, this section is the one place the rung's timing is defined.**
 
 **Several rungs can land on one check.** A long gap between checks, or a session that carries a child from below `third` to past `half`, satisfies more than one rung at once. Every rung crossed is written and returned, in ladder order; none is skipped for having been overtaken, because each is a thing that was earned. How a caller spaces two celebrations is the session loop's problem (ADR-012), not the detector's — it hands back a tuple and says nothing about pacing.
+
+### Rest keys, the ladder's presses and the `rest` rung
+
+*(Amended 2026-11-08, alpha-plan #12m, the ADR-027 session. This is the amendment that [ADR-033 § Amendments this ADR requires](0033-rest-keys-and-keyboard-alignment.md#amendments-this-adr-requires) and [ADR-024 § The ramp-up restated](0024-drill-content-and-lesson-granularity.md#the-ramp-up-restated-four-objectives-and-a-ladder-of-three-levels) ("What this amendment requires elsewhere") ask of this ADR. It supersedes § The Anchor Gate as a whole, the `anchor` row of § Milestone Ladder with its "Why no rung at 1/6", and the root paragraph of § Known has a speed term. Each keeps its text, with a dated note pointing here, as the record of what was decided before.)*
+
+**Not yet implemented.** The code still runs Stage 0, the anchor rung and the anchor bar, and `f` and `j` still have no speed term. Session (4) builds the retirement, the `rest` rung and the speed term. Session (6) builds the ladder, and with it the presses that are not attempts. Nothing writes landings or rest keys before session (7), so the `rest` rung cannot fire in a real session until then. This amendment changes no code.
+
+How to read the marks:
+
+- **[D, ADR-033]**, **[S, ADR-033]**, **[D, ADR-024]** and **[S, ADR-024]**: decided in that ADR on 2026-10-10, with that ADR's mark. Quoted here, not decided again.
+- **[S]**: settled with the developer in this session, 2026-11-08. Each was put as a question and answered.
+- **[A]**: argued, not measured or tested.
+
+A statement with no mark restates or works out something marked.
+
+#### What changes
+
+- A rest key has no key state, and a letter on the ladder becomes Active at its first listened press.
+- A predictable press, a press answering a rest cue and an alignment landing are not attempts.
+- ADR-024's bar reads Known's speed baseline in place of Phase C, and `f` and `j` now have a speed term of their own.
+- The Anchor Gate is retired: the `anchor` rung, the anchor bar and the lifelong hold of `f` and `j` to it.
+- The first rung is `rest`. It is read by day, against each finger's current rest key, and it also fires when the full round retires.
+- The ladder keeps six rungs, and the first slot still certifies orientation.
+
+#### A rest key has no key state
+
+- **A rest key is not a key character in this model.** It is never prompted by character, never counted, and in no milestone denominator **[D, ADR-033]**. Active and Known are states of typing targets only. A landing, the key pressed to answer "which one do you want", and a press answering a rest cue write no `key_stats` row, so none of them makes a key Active **[S, ADR-033; S, ADR-024]**.
+- **A rest letter is an ordinary typing target as well** **[D, ADR-033]**, with the ordinary states reached by the ordinary presses. That a key is a child's rest key changes nothing in this ADR's counting of its letter.
+- **A letter that takes ADR-024's ladder becomes Active at its first listened press, which is at Choose.** For a letter with a Reach level that is its first Choose press **[S, ADR-024]**. A rest letter and the two bump letters start at Choose **[D, ADR-024]** and become Active the same way. This is § Key States' rule unchanged, "the first counted keystroke creates the row", because Reach presses are not counted (below).
+- **While a step is at Reach, its new letter is not Active** **[A]**. Nothing that reads the Active set sees it: not the slots, the block plan, the session floor or Layer 2's unlock. That is ADR-024's "it cannot reach the bar, Known, the slots …". No new step can begin meanwhile, because ADR-010's first gate waits for the current step's ramp-up to end.
+
+#### Presses that are not attempts
+
+A press that is not an attempt creates no `key_stats` row, moves neither counter, appends no `key_attempts` row and adds no practice day. § First-Attempt Counting had two kinds. This amendment adds three, from ADR-024 and ADR-033.
+
+| Press | Why it is not an attempt | Where it is kept ([ADR-011](0011-persistence-and-state.md)) |
+|---|---|---|
+| Earlier than `HEARD_MIN_MS` after the letter was sent | It cannot be an answer to the letter (unchanged) | Nowhere |
+| A repeat of a key still down | It is not a new actuation (unchanged) | Nowhere |
+| A **predictable press**: the letter at Reach, or a letter asked again after a miss | The child could know the letter without hearing it **[S, ADR-024]** | Reach presses in `reach_presses`; a re-ask nowhere |
+| A press answering a **rest cue** | The cue asks by finger for a return, and is never counted, also when the rest key carries an Active letter **[S, ADR-024]** | Nowhere |
+| An **alignment landing**, or the key pressed to answer "which one do you want" | There is no wrong answer **[S, ADR-033]** | `landings`; the answer as a `rest_keys` row chosen `answer` |
+
+- **A listened press is an attempt, right or wrong**: a first press on a letter at Choose or Travel that is not a re-ask **[S, ADR-024]**. In general practice every first press is an attempt, as before. The 250 ms floor and the held-key rule apply to listened presses as to every other press.
+- **"What removes a pattern press is that it is wrong" now holds where it was meant to** **[A]**. ADR-024 measured the old Phases A and B as predictable (review findings E1 to E3), so their counted presses were the pattern presses § First-Attempt Counting worried about. Under the ladder, Choose and Travel are unpredictable by construction, and a press that is predictable on purpose is not counted. The dump's first-press accuracy by when the answer came keeps its job, read on listened presses.
+- **One counted press is still predictable** **[A]**. With a Choose set of two letters, in the first step and the one after it, the cap of two in a row (`MAX_SAME_IN_A_ROW`) makes the prompt after a double certain: about one prompt in three in the first step. ADR-024 kept the cap for #12h's ear and did not call that press predictable, and this amendment does not either. A cap of three would make it about one in seven.
+- **The introduction's guided presses are not covered here** **[A]**. ADR-024's objective 1 names them and leaves them to ADR-023. If the child is told which letter to press, they are predictable by the same reading. ADR-024 names only two predictable presses, and this amendment does not add a third. ADR-023's amendment says what they are.
+
+#### Known's speed term after the ladder
+
+- **The bar reads Known's baseline, as Phase C did.** ADR-024's one bar replaces Phase C's, at `STABLE_MAX_LATENCY_RATIO` (2.0) against the same baseline **[S, ADR-024]**. Read "the bar" wherever § Known has a speed term says "Phase C". A speed is read over `key_attempts`, which holds no predictable press, so a Reach press never enters one.
+- **`f` and `j` join every baseline from their first `SPEED_MIN_SAMPLE` (10) timed presses**, before they meet the floors **[S]**. This is unchanged, but the reason is new. "The two keys the fingers rest on" no longer picks them out, because under ADR-033 all eight fingers rest on keys. What does:
+  - they are the only rest letters fixed by position, so they are the same for every child and in every language;
+  - they are the first step under every ordering (ADR-032);
+  - both are in every Choose set (ADR-024), so they are timed first.
+
+  The first keys after them need something to be compared with, and only these two have timed presses early enough.
+- **The other rest letters are ordinary** **[S]**. They have a speed term, and they join the baseline once they meet the floors, as any key does. Rest letters are per child and can change; the root should not.
+- **`f` and `j` have a speed term of their own** **[S]**. Each is judged like any other key, against the baseline without itself: for `f`, that is `j` and every other key that meets the floors. Two reasons.
+  - The exemption was never argued. The 2026-10-04 spike compared which keys go *into* the baseline. Joining it early does not require being exempt from it, and the pool is not circular: a key joins it by meeting the floors, which read no baseline.
+  - ADR-033 makes `f` and `j` "ordinary letters at the ordinary Known bar" and retires the maintenance that watched them. Kept exempt, they would be the only keys whose speed nothing checks, while they are the keys the index fingers find first.
+- **What it costs** **[A]**.
+  - In the first steps `f` is compared with `j` alone, and `j` with `f`. A child whose one index finger is more than twice as slow as the other keeps that letter short of Known. It holds a slot, and the block plan gives it `SLOW_KEY_NEED` (ADR-024). With six slots the curriculum still moves on, and the comparison widens as other keys meet the floors.
+  - The flicker of a key near the bar (above) is about the same with a pool of one: the 2026-10-04 spike found 12.0% of evaluations at a ratio of 1.8 with `f j` alone, against 9.9% with twenty keys ([known-decay-accuracy-speed.md](../research/known-decay-accuracy-speed.md)).
+- **The bar still skips the two bump letters in their own step** **[S]**, as ADR-024 says. In the first step the only comparison it could make is one index finger against the other, and that step's job is to start. Known applies the term to `f` and `j`; the bar does not.
+
+#### The Anchor Gate is retired
+
+**[S, ADR-033]**, as a whole:
+
+- **The `anchor` rung** and its criterion, the six index-column keys at the anchor bar.
+- **The anchor bar**: `ANCHOR_MIN_ATTEMPTS` (25) and `ANCHOR_MIN_ACCURACY` (0.95). No key is held to a bar above Known's.
+- **The lifelong hold of `f` and `j`**, with its maintenance path. No return-drills are injected for a slipping `f` or `j`. A slipping bump letter is practised more through its need, as any key is ([ADR-024 § Steady-state drill generation](0024-drill-content-and-lesson-granularity.md#steady-state-drill-generation), step 2's note of 2026-10-10).
+- **The invariant the gate was owed**, "between two reach prompts of the same hand there is always an anchor prompt of that hand", went with ADR-024's property 2.
+
+The word stays: "the ADRs keep 'anchor' for the two bumps" **[S, ADR-033]**. In the code, `home_anchor_keys` (row 3, columns 4 and 7) stays as the bump letters.
+
+What § The Anchor Gate worked out about when a rung is evaluated carries over to `rest` below.
+
+#### The `rest` rung
+
+**The criterion** **[S, ADR-033]**: all eight fingers land on their rest keys at the first round of each of the last `REST_SETTLED_SESSION_STARTS` (5) sessions. The slug is `rest`, stored in `milestones` like any rung ([ADR-011 § The `rest` rung](0011-persistence-and-state.md#the-rest-rung)). This amendment settles how the criterion is read.
+
+- **One session start per day** **[S]**. The rung reads the last five local days that have a complete first round, and on each of them only the first session whose first round is complete. A session is one run of the program, so read as sessions, five restarts in one sitting would pass. ADR-033's reason for counting session starts is that the hands come to the keyboard cold, and that "ingrained takes longer than two days"; a restart minutes later is not cold. A session's day is the local day of its first round, the same local day `practice_days` uses (ADR-011). The number keeps its name: it counts session starts, one a day.
+- **A complete first round** has a landing for each of the eight fingers in round 1 **[S]**. A session whose round 1 was cut short is passed over, and a later session the same day can count. A day with no complete first round is passed over too, neither for nor against, so days away do not break the count.
+- **A first round passes** when each of its eight landings is validated and is on that finger's **current** rest key, the key `rest_keys` holds for the finger when the rung is checked **[S]**. For an index finger that is its bump. A hand whose bump press missed has its other landings not counted ([ADR-033 § The alignment](0033-rest-keys-and-keyboard-alignment.md#the-alignment)), so that round fails. A finger with no current rest key fails.
+  - **Why the current key, and not the key current at the time of the landing.** The rung certifies the position as it is now. If a finger changes key, the earlier days landed on the old key and the count restarts by itself. Judged against the key of the time, five days could straddle a change and certify a position that moved.
+  - **It also lets the first day count.** No finger has a key at round 1 of the first session, because a key is chosen after round 2. If round 1 landed where the finger later settled, that is the cold landing the rung asks for.
+  - The rung therefore does not need `replaced_at`. `rest_keys` keeps replaced keys anyway, as ADR-033's record.
+  - The earliest the rung can fire is the fifth day with a complete first round.
+- **Or: the full round retires** **[S]**. The rung also fires when every finger's current rest key has passed its own test, which is when ADR-033 retires the full round, whichever comes first.
+  - Without this the rung can become unreachable. Once the full round retires, the first round is only the two bump presses, so no later day has a complete first round, and the last five such days are fixed for good. A strong rest letter passes its test by being Known, not by landings. A finger that landed wrong on one of those days, with its letter Known, would let the round retire and leave the rung unearned forever.
+  - Retirement is ADR-033's judgement that the position is settled enough to stop checking it, and the rung accepts the same judgement.
+  - It is read from the store as every finger having a current `rest_keys` row with `passed_at`. What writes `passed_at` for a strong rest letter is session (7)'s, and the rung reads it as written **[A]**.
+- **No speed term and no accuracy bound.** The alignment is not timed **[S, ADR-033]**, and a landing has no wrong answer, only a key.
+- **When it is evaluated** **[A]**, as § The Anchor Gate worked out for `anchor`: on every check until it fires, and never again after, the `milestones` row being the one-time half. Its inputs change only when a first round is written or a rest key changes or passes, so a check at every block boundary costs one narrow read.
+- **It fires late and out of ladder order, routinely** **[A]**. It cannot fire before the fifth day, and `third` (8 Known letters in English) can come earlier. The rungs are one-time events with no order between them, and several on one check are returned in ladder order, `rest` first. Nothing in the engine breaks. The cost falls on the spoken story ([ADR-010 § Milestone Levels](0010-lesson-structure-and-progression.md#milestone-levels), "Narrative framing"), which tells the anchors first. ADR-010's amendment carries it.
+- **Never revoked, and not a gate.** A child who later lands elsewhere keeps the rung; a changed rest key is handled by ADR-033, not by withdrawing a milestone. Nothing waits for the rung, as nothing waited for the anchor rung (ADR-010).
+
+#### The ladder's first slot
+
+**Six rungs, `rest` first, and no rung at 1/6** **[S]**. The first rung certifies orientation, not coverage, which this ADR said of the anchor gate and is still true of `rest`. The old reason for having no 1/6 rung, that it would fire before the anchor gate's six keys were Known, no longer holds, because `rest` is not a count of keys. The new reason: a 1/6 rung would count letters and nothing else, and has no meaning of its own. Rung 2 is where words open (Layer 2 at 8 Active letters, ADR-010).
+
+| # | Slug | Criterion |
+|---|---|---|
+| 1 | `rest` | All eight fingers on their rest keys at the first round of each of the last five days, or the full round retired (§ The `rest` rung) |
+| 2–6 | `third` to `alphabet` | Unchanged |
+
+**Considered and not taken: a `sixth` rung** **[S]**, making seven: ⌊N / 6⌋ graphemes Known, 4 in English. It would bring the first celebration early, perhaps on day 2, where it is otherwise `rest` from day 5 or `third`. It was not taken because when the first celebration comes is a question for the spoken story and pacing (ADR-010, ADR-012), not for what the ladder certifies, and the early days are not silent: introductions and Layer 2's unlock are heard. **What would bring it back:** #12h finding the first celebration late. Adding a rung touches no stored data, because a slug is written only when its rung fires.
+
+#### What this amendment requires elsewhere
+
+None of these is made here, except where the row says so.
+
+| Where | What |
+|---|---|
+| Code, #12m session (4) | Goes: the `anchor` slug, `ANCHOR_CRITERION`, `anchor_reached`, `satisfied_rungs(anchor=...)`, `MilestoneDetector._anchor_reached`, `anchor_keys`, the two `ANCHOR_*` numbers, `DrillGenerator._anchor_drills`, `_anchor_slipping`, and `_bar`'s anchor case. Comes: the `rest` slug first in `LADDER`, its criterion as above, and the narrower read of first rounds with its index. `KeyStates._baseline` stops exempting the bump keys; `bump_keys` stays, for the early pool. Default tests pin the rung on the fake store and the fake clock: not on the fourth day, on the fifth; two sessions on one day count once; a cut-short round is passed over; a wrong landing restarts the count; a changed rest key restarts it; retirement fires it; and it is never evaluated again once fired. Tests that pin "a bump key has no speed term" change |
+| Code, #12m session (6) | The presses that are not attempts: Reach presses to `reach_presses`, re-asks and rest-cue presses nowhere, and the first Choose press as the one that makes a letter Active |
+| Code, #12m session (7) | Writes the landings, rest keys and `passed_at` the rung reads. Whether a weak rest key's own test, "passes when the landing is right at the first round of the last five sessions" (ADR-033 § The alignment), also reads days as the rung does is ADR-033's; put to the developer there |
+| [ADR-033](0033-rest-keys-and-keyboard-alignment.md) | Its status line and its ADR-027 row say this amendment is made, made with it. Three differences from its text, recorded here and in that row: the rung counts one session start a day; a landing is judged against the finger's current rest key; and the rung also fires when the full round retires. Dated notes in § Stage 0 is removed ("The rest position is the ladder's first rung") are owed; session (4), which builds the rung, makes them |
+| [ADR-024](0024-drill-content-and-lesson-granularity.md) | Its ADR-027 row says this is made, made with it. The bar's "skipped for the two bump letters" is unchanged and agrees. § Spaced re-exposure's "One slot, two triggers" and "The accuracy trigger needs a sample" still describe the anchor trigger retired here, with no dated note; session (4), which removes the trigger, adds one |
+| [ADR-010](0010-lesson-structure-and-progression.md) | Session (4)'s amendment: the first row of § Milestone Levels' table, which mirrors this ADR; the narrative note, now that the first rung fires late and often after `third`; and "Why 6" |
+| [ADR-011](0011-persistence-and-state.md) | A status-line note, made with this. § `rest_keys` says the rung needs replaced keys, and § `landings` says it reads the last five sessions; both read differently now, and dated notes are owed by session (4), which adds the narrower read. Session (4) also puts to the developer whether a first round's local day is computed when read, or stored when written as `practice_days` fixes its day |
+| [ADR-023](0023-key-introduction-protocol.md) | What the guided presses are, with its amendment. If the child is told the letter, they are predictable and not attempts |
+| [ADR-025](0025-configuration-system.md) | `ANCHOR_MIN_ATTEMPTS` and `ANCHOR_MIN_ACCURACY` removed, already in ADR-033's row |
+| [alpha-plan](../alpha-plan.md) | Session (4)'s bullets, corrected with this: `f` and `j` get a speed term; the rung is read by day against the current key. #12h's row, with this: the rung needs five days, not five sittings; `REST_SETTLED_SESSION_STARTS` is set to 2 in `config.py` on the laptop for the run and set back after it; test configs and staged databases are decided when the run sheet is written; and the run notes when the first celebration comes |

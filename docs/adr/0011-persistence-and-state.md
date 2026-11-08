@@ -4,7 +4,8 @@
 **Date:** 2026-05-17
 
 > Part of the [Takki architecture](../architecture.md).  
-> **Amended 2026-11-01 ([alpha-plan](../alpha-plan.md) #12m session 2):** the records [ADR-033](0033-rest-keys-and-keyboard-alignment.md) and [ADR-024](0024-drill-content-and-lesson-granularity.md#the-ramp-up-restated-four-objectives-and-a-ladder-of-three-levels) list, and practice days kept outside the window (review finding E4), in [§ Records for the alignment, the rest keys and the ladder](#records-for-the-alignment-the-rest-keys-and-the-ladder). The amendment ADR-033 asked of this ADR is made. The records exist in the store and nothing writes them yet; their writers are later #12m sessions.
+> **Amended 2026-11-01 ([alpha-plan](../alpha-plan.md) #12m session 2):** the records [ADR-033](0033-rest-keys-and-keyboard-alignment.md) and [ADR-024](0024-drill-content-and-lesson-granularity.md#the-ramp-up-restated-four-objectives-and-a-ladder-of-three-levels) list, and practice days kept outside the window (review finding E4), in [§ Records for the alignment, the rest keys and the ladder](#records-for-the-alignment-the-rest-keys-and-the-ladder). The amendment ADR-033 asked of this ADR is made. The records exist in the store and nothing writes them yet; their writers are later #12m sessions.  
+> **Noted 2026-11-08 ([alpha-plan](../alpha-plan.md) #12m, the ADR-027 session):** [ADR-027 § The `rest` rung](0027-key-and-accuracy-state-model.md#the-rest-rung) reads the first round of the last five *days*, one session a day, and judges each landing against the finger's *current* rest key. So § `landings`' "the last five sessions" and § `rest_keys`' "the `rest` rung will need [replaced keys]" no longer describe the rung. Dated notes in both are owed by #12m session (4), which adds the narrower read.
 
 ---
 
