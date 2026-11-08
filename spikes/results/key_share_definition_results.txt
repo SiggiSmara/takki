@@ -1,0 +1,98 @@
+Key-Share Definition Spike
+Python: 3.11.15   Platform: win32
+Floor: 2%   Layouts: en, de, is (product tables)
+
+================================================================================================
+  en: 321180 words in wordfreq, 0 with an upper-case letter
+================================================================================================
+  space's own share under +space: 18.3%
+
+  cell     key   presses     min3      own   +space    spike   class
+  (2, 1)  q       0.09%    0.09%    0.09%    0.07%    0.06%   weak
+  (3, 1)* a       8.29%    8.08%    8.29%    6.77%    8.30%   strong
+  (4, 1)  z       0.09%    0.10%    0.09%    0.07%    0.03%   weak
+  (2, 2)  w       1.96%    2.06%    1.96%    1.60%    2.37%   differs
+  (3, 2)* s       6.33%    6.33%    6.33%    5.17%    5.76%   strong
+  (4, 2)  x       0.19%    0.20%    0.19%    0.16%    0.15%   weak
+  (2, 3)  e      12.01%   12.68%   12.01%    9.81%   12.26%   strong
+  (3, 3)* d       3.65%    3.92%    3.65%    2.98%    3.56%   strong
+  (4, 3)  c       2.97%    3.23%    2.97%    2.42%    2.46%   strong
+  (2, 8)  i       7.35%    6.62%    7.35%    6.01%    6.96%   strong
+  (3, 8)* k       0.90%    0.97%    0.90%    0.74%    0.86%   weak
+  (2, 9)  o       7.93%    6.79%    7.93%    6.48%    8.56%   strong
+  (3, 9)* l       4.17%    4.56%    4.17%    3.41%    3.85%   strong
+  (2,10)  p       2.03%    2.14%    2.03%    1.66%    1.69%   differs
+  (* = a conventional rest cell)   cells whose strong/weak class differs: 2
+
+  order, by share  : f+j  e+o  a+l  t+i  s+n  r+h  d+u  c+m
+                    count rule equals the spike's interleave over the whole order: True
+
+  order, by ranking: f+j  e+n  a+l  t+o  s+i  r+h  d+u  c+m
+                    count rule equals the spike's interleave over the whole order: True
+
+  order, by ranking, left middle finger resting on e: f+j  t+n  e+l  r+o  a+i  d+h  s+u  c+m
+
+================================================================================================
+  de: 634502 words in wordfreq, 0 with an upper-case letter
+================================================================================================
+  space's own share under +space: 16.1%
+
+  cell     key   presses     min3      own   +space    spike   class
+  (2, 1)  q       0.02%    0.02%    0.02%    0.02%    0.01%   weak
+  (3, 1)* a       5.99%    5.90%    5.99%    5.03%    5.99%   strong
+  (4, 1)  y       0.13%    0.13%    0.13%    0.11%    0.04%   weak
+  (2, 2)  w       1.63%    1.66%    1.63%    1.37%    1.93%   weak
+  (3, 2)* s       6.75%    6.67%    6.75%    5.66%    6.76%   strong
+  (4, 2)  x       0.06%    0.06%    0.06%    0.05%    0.03%   weak
+  (2, 3)  e      15.86%   16.10%   15.86%   13.31%   16.02%   strong
+  (3, 3)* d       5.14%    5.18%    5.14%    4.32%    6.73%   strong
+  (4, 3)  c       3.13%    3.22%    3.13%    2.63%    3.09%   strong
+  (2, 8)  i       8.34%    8.09%    8.34%    7.00%    9.29%   strong
+  (3, 8)* k       1.37%    1.41%    1.37%    1.15%    0.99%   weak
+  (2, 9)  o       2.61%    2.54%    2.61%    2.19%    2.37%   strong
+  (3, 9)* l       3.62%    3.74%    3.62%    3.04%    3.04%   strong
+  (2,10)  p       0.85%    0.86%    0.85%    0.71%    0.48%   weak
+  (3,10)* ö       0.27%    0.27%    0.27%    0.22%    0.24%   weak
+  (1,11)  ß       0.00%    0.00%    0.00%    0.00%    0.00%   weak
+  (2,11)  ü       0.63%    0.65%    0.63%    0.53%    0.62%   weak
+  (3,11)  ä       0.47%    0.48%    0.47%    0.39%    0.32%   weak
+  (* = a conventional rest cell)   cells whose strong/weak class differs: 0
+
+  order, by share  : f+j  e+n  s+l  r+i  a+h  t+u  d+m  c+o
+                    count rule equals the spike's interleave over the whole order: True
+
+  order, by ranking: f+j  e+n  s+l  r+i  a+h  t+u  d+m  c+o
+                    count rule equals the spike's interleave over the whole order: True
+
+================================================================================================
+  is: 42304 words in wordfreq, 0 with an upper-case letter
+================================================================================================
+  space's own share under +space: 17.8%
+  dead-acute share: presses 6.0%  min3 4.0%  own 0.0%  +space 4.9%  spike 6.8%
+
+  cell     key   presses     min3      own   +space    spike   class
+  (2, 1)  q       0.00%    0.00%    0.00%    0.00%    0.00%   weak
+  (3, 1)* a      10.74%   10.26%   10.08%    8.83%   11.11%   strong
+  (4, 1)  z       0.01%    0.01%    0.01%    0.01%    0.00%   weak
+  (2, 2)  w       0.05%    0.06%    0.06%    0.04%    0.02%   weak
+  (3, 2)* s       5.17%    5.77%    5.87%    4.25%    4.73%   strong
+  (4, 2)  x       0.05%    0.05%    0.05%    0.04%    0.04%   weak
+  (2, 3)  e       7.34%    7.06%    7.66%    6.03%    8.30%   strong
+  (3, 3)* d       1.45%    1.63%    1.65%    1.19%    1.04%   weak
+  (4, 3)  c       0.13%    0.14%    0.15%    0.11%    0.05%   weak
+  (2, 8)  i       9.05%    9.04%    8.05%    7.43%    9.27%   strong
+  (3, 8)* k       2.93%    3.31%    3.33%    2.41%    2.73%   strong
+  (2, 9)  o       3.27%    2.34%    2.87%    2.68%    3.41%   strong
+  (3, 9)* l       4.12%    4.68%    4.68%    3.39%    3.57%   strong
+  (2,10)  p       0.67%    0.75%    0.76%    0.55%    0.47%   weak
+  (3,10)* æ       0.72%    0.81%    0.81%    0.59%    0.61%   weak
+  (4,10)  þ       1.28%    1.28%    1.46%    1.06%    1.68%   weak
+  (1,11)  ö       0.67%    0.76%    0.76%    0.55%    0.52%   weak
+  (2,11)  ð       3.37%    3.11%    3.83%    2.77%    3.68%   strong
+  (* = a conventional rest cell)   cells whose strong/weak class differs: 0
+
+  order, by share  : f+j  r+i  a+l  e+n  s+k  t+u  g+m  v+ð
+
+  order, by ranking: f+j  r+i  a+l  e+n  s+k  t+u  g+m  v+ð
+
+  Results written to C:\Users\smara\github\takki\spikes\results\key_share_definition_results.txt
