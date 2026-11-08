@@ -42,10 +42,27 @@ def _print_profile(conn: sqlite3.Connection, profile_id: int) -> bool:
 
 
 def _print_key_stats(conn: sqlite3.Connection, profile_id: int) -> None:
+    # `days` is every practice day of the key, which is what Known's days
+    # floor reads (ADR-027). The per-day table below shows only the window's.
+    # A database from just before `practice_days` (#12m session 2) is refused
+    # by the store and still dumped here, so the developer can see what it held
+    # before deleting it. One older than #12f still fails on missing columns.
+    has_days = (
+        conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'practice_days'"
+        ).fetchone()
+        is not None
+    )
+    days_sql = (
+        """(SELECT COUNT(*) FROM practice_days AS d
+            WHERE d.profile_id = s.profile_id AND d.key_char = s.key_char)"""
+        if has_days
+        else "'-'"
+    )
     rows = conn.execute(
-        """
-        SELECT key_char, attempt_count, correct_count, last_practised_at
-        FROM key_stats
+        f"""
+        SELECT key_char, attempt_count, correct_count, {days_sql}, last_practised_at
+        FROM key_stats AS s
         WHERE profile_id = ?
         ORDER BY key_char
         """,
@@ -55,16 +72,21 @@ def _print_key_stats(conn: sqlite3.Connection, profile_id: int) -> None:
     if not rows:
         print("  (none)")
         return
-    print(f"  {'key':<4} {'attempts':>8} {'correct':>8} {'accuracy':>9}  last_practised_at")
-    for key_char, attempts, correct, last_practised_at in rows:
+    header = f"  {'key':<4} {'attempts':>8} {'correct':>8} {'accuracy':>9} {'days':>5}"
+    print(f"{header}  last_practised_at")
+    for key_char, attempts, correct, days, last_practised_at in rows:
         accuracy = correct / attempts if attempts else 0.0
-        print(f"  {key_char:<4} {attempts:>8} {correct:>8} {accuracy:>8.1%}  {last_practised_at}")
+        print(
+            f"  {key_char:<4} {attempts:>8} {correct:>8} {accuracy:>8.1%} {days:>5}"
+            f"  {last_practised_at}"
+        )
 
 
 def _print_attempts_by_day(conn: sqlite3.Connection, profile_id: int) -> None:
-    # date(attempted_at, 'localtime') -- the same grouping window_stats() uses
-    # for distinct_days, so this dump agrees with what the engine counts. Stored
-    # timestamps are UTC (ADR-011) and a practice day is the child's own day.
+    # date(attempted_at, 'localtime'): the child's own day of each row in the
+    # window. Stored timestamps are UTC (ADR-011). These are the window's days
+    # only: Known counts every practice day of a key, from `practice_days`,
+    # which the window cannot evict (#12m session 2, E4).
     # `mean ms` is the time from the letter being sent, which is what the speed
     # term reads (ADR-011).
     rows = conn.execute(

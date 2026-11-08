@@ -4,7 +4,7 @@
 **Date:** 2026-05-17
 
 > Part of the [Takki architecture](../architecture.md).  
-> **Amendment pending from [ADR-033](0033-rest-keys-and-keyboard-alignment.md) (2026-10-10):** records for the keyboard alignment and for each finger's rest key. Not yet made here ([alpha-plan](../alpha-plan.md) #12m).
+> **Amended 2026-11-01 ([alpha-plan](../alpha-plan.md) #12m session 2):** the records [ADR-033](0033-rest-keys-and-keyboard-alignment.md) and [ADR-024](0024-drill-content-and-lesson-granularity.md#the-ramp-up-restated-four-objectives-and-a-ladder-of-three-levels) list, and practice days kept outside the window (review finding E4), in [§ Records for the alignment, the rest keys and the ladder](#records-for-the-alignment-the-rest-keys-and-the-ladder). The amendment ADR-033 asked of this ADR is made. The records exist in the store and nothing writes them yet; their writers are later #12m sessions.
 
 ---
 
@@ -57,12 +57,69 @@ CREATE TABLE key_stats (
 );
 
 CREATE TABLE introductions (
-    profile_id    INTEGER NOT NULL REFERENCES profiles(id),
-    key_char      TEXT    NOT NULL,
-    step          INTEGER NOT NULL,  -- per-profile ordinal: groups and orders steps
-    position      INTEGER NOT NULL,  -- 0-based; ADR-023 puts the left hand first
-    introduced_at TEXT    NOT NULL,  -- UTC, ISO-8601
+    profile_id      INTEGER NOT NULL REFERENCES profiles(id),
+    key_char        TEXT    NOT NULL,
+    step            INTEGER NOT NULL,  -- per-profile ordinal: groups and orders steps
+    position        INTEGER NOT NULL,  -- 0-based; ADR-023 puts the left hand first
+    introduced_at   TEXT    NOT NULL,  -- UTC, ISO-8601
+    stable_attempts INTEGER,           -- key_stats.attempt_count when ADR-024's bar was met; NULL = not yet
+    stable_at       TEXT,              -- UTC; NULL = not yet
     PRIMARY KEY (profile_id, key_char)
+);
+
+CREATE TABLE ramp_up_levels (          -- ADR-024's ladder; one row per run of a level
+    id                INTEGER PRIMARY KEY, -- the order begun
+    profile_id        INTEGER NOT NULL REFERENCES profiles(id),
+    key_char          TEXT    NOT NULL,
+    level             TEXT    NOT NULL,   -- "reach", "choose", "travel"
+    session_id        INTEGER NOT NULL REFERENCES sessions(id),  -- where the step reached it
+    started_presses   INTEGER NOT NULL,   -- the presses the level reads, counted at its start
+    started_at        TEXT    NOT NULL,   -- UTC
+    completed_presses INTEGER,            -- the same count when the letter met the level's rule
+    completed_at      TEXT,               -- UTC; NULL = not met in this run
+    UNIQUE (profile_id, key_char, level, session_id)
+);
+
+CREATE TABLE reach_presses (           -- predictable presses at Reach, apart from key_attempts
+    id         INTEGER PRIMARY KEY,
+    profile_id INTEGER NOT NULL REFERENCES profiles(id),
+    key_char   TEXT    NOT NULL,
+    correct    INTEGER NOT NULL,       -- 1 = first press right
+    pressed_at TEXT    NOT NULL        -- UTC
+);
+
+CREATE TABLE landings (                -- ADR-033's alignment, one row per landing
+    id         INTEGER PRIMARY KEY,
+    profile_id INTEGER NOT NULL REFERENCES profiles(id),
+    session_id INTEGER NOT NULL REFERENCES sessions(id),
+    round      INTEGER NOT NULL,       -- 1 = the session's first round
+    finger     TEXT    NOT NULL,       -- "L-pink" ... "R-pink" (COL_TO_FINGER)
+    key_row    INTEGER NOT NULL,       -- the cell pressed, never a character
+    key_col    INTEGER NOT NULL,
+    validated  INTEGER NOT NULL,       -- 1 = that hand's bump press this round was the bump
+    landed_at  TEXT    NOT NULL        -- UTC; no latency, the alignment is not timed
+);
+
+CREATE TABLE rest_keys (               -- one row per finger per key it has rested on
+    id          INTEGER PRIMARY KEY,
+    profile_id  INTEGER NOT NULL REFERENCES profiles(id),
+    finger      TEXT    NOT NULL,
+    key_row     INTEGER NOT NULL,
+    key_col     INTEGER NOT NULL,
+    chosen_by   TEXT    NOT NULL,      -- "landings", "answer", or "bump" for an index finger
+    chosen_at   TEXT    NOT NULL,      -- UTC
+    ready_at    TEXT,                  -- UTC; NULL = not ready
+    passed_at   TEXT,                  -- UTC; NULL = has not passed its session-start test
+    replaced_at TEXT                   -- UTC; NULL = the finger's current rest key
+);
+-- At most one current key per finger:
+-- UNIQUE INDEX ON rest_keys (profile_id, finger) WHERE replaced_at IS NULL
+
+CREATE TABLE practice_days (           -- every local day a key had an attempt
+    profile_id INTEGER NOT NULL REFERENCES profiles(id),
+    key_char   TEXT    NOT NULL,
+    day        TEXT    NOT NULL,       -- the child's local date, fixed when the attempt was written
+    PRIMARY KEY (profile_id, key_char, day)
 );
 
 CREATE TABLE ramp_up_phases (
@@ -79,7 +136,8 @@ CREATE TABLE ramp_up_phases (
 CREATE TABLE milestones (
     profile_id  INTEGER NOT NULL REFERENCES profiles(id),
     level       TEXT    NOT NULL,   -- slug: "anchor", "third", "half", "two_thirds",
-                                    -- "five_sixths", "alphabet", "diamond", "speed".
+                                    -- "five_sixths", "alphabet", "diamond", "speed";
+                                    -- "rest" (ADR-033) replaces "anchor" from #12m session 4.
                                     -- Never spoken; the name resolves via ADR-022 YAML.
     achieved_at TEXT    NOT NULL,   -- Rungs fired at one block boundary share a stamp.
                                     -- Read back by achieved_at, then rowid: the
@@ -106,6 +164,8 @@ CREATE TABLE letter_lengths (       -- one row per playback of a letter that ran
     length_ms   INTEGER NOT NULL,   -- from the letter being sent to its finish
     recorded_at TEXT    NOT NULL    -- UTC; when the row was written, at a block boundary
 );
+
+PRAGMA user_version = 1;            -- the schema's version (#12m session 2); a database below it is refused
 ```
 
 ### Timestamps are UTC
@@ -114,7 +174,7 @@ CREATE TABLE letter_lengths (       -- one row per playback of a letter that ran
 
 Two things forced it. Naive local strings are not an ordering — an hour repeats every autumn — and this schema is now read positionally by the derived ramp-up and trimmed by the same key, so an ordering that goes backwards is a correctness problem rather than a cosmetic one. And "the same instant" has to survive a machine moving timezone, which a child's laptop does.
 
-**The one place local time is still the meaning is a practice *day*.** ADR-027's Known criterion counts distinct practice days, and that is the child's day at the keyboard, not UTC's — an evening session either side of midnight UTC is one day. So `window_stats` groups by `date(attempted_at, 'localtime')`, and the fake mirrors it by converting rather than by slicing the string. Getting that wrong would move a Known gate by a day for anyone east or west of Greenwich.
+**The one place local time is still the meaning is a practice *day*.** ADR-027's Known criterion counts distinct practice days, and that is the child's day at the keyboard, not UTC's — an evening session either side of midnight UTC is one day. So `window_stats` groups by `date(attempted_at, 'localtime')`, and the fake mirrors it by converting rather than by slicing the string. Getting that wrong would move a Known gate by a day for anyone east or west of Greenwich. *(Since 2026-11-01, alpha-plan #12m session 2: the same conversion is made once, when the attempt is written, into `practice_days`, and `window_stats` counts that table's rows. The day is now the one in force at the write, not at the read. See "Practice days outside the window (E4)" below.)*
 
 Rows written before this rule are naive local. They are not migrated: Alpha data is disposable, and a converted timestamp would be a guess at the offset in force when it was written.
 
@@ -175,7 +235,7 @@ The `key_attempts` table is a rolling window: at most 200 rows per (profile_id, 
 
 **A length is taken on the main thread**, as the time from sending the letter to handling its `SpeechFinished` *(the same review)*. Work the loop does while a letter is ending makes that one sample longer: usually under a frame, and up to the pause at a block boundary. It matters most for a letter that cannot be cut, where a press overlaps the letter by design, and for a child who never adds a second playback. Accepted for now, since nothing in the engine reads `after_letter_ms`; filed in [roadmap § D](../roadmap.md#d-smaller-gaps-worth-a-line-in-the-relevant-adr).
 
-**No migration for `letter_lengths`, and no database is refused.** The table is added to a database that lacks it and starts empty, which the rule above fills.
+**No migration for `letter_lengths`, and no database is refused.** The table is added to a database that lacks it and starts empty, which the rule above fills. *(Since 2026-11-01, alpha-plan #12m session 2: a database from before #12l is refused all the same, by the schema version in § Records for the alignment, the rest keys and the ladder. A table missing from a database at the current version is still created when it is opened.)*
 
 **No migration, as on 2026-10-04 for `ramp_up_phases`.** A database without `after_letter_ms` is refused when it is opened. Its `latency_ms` values were counted from the end of the letter and floored at zero, and nothing in the row says which meaning a value has.
 
@@ -184,6 +244,110 @@ The `key_attempts` table is a rolling window: at most 200 rows per (profile_id, 
 **The window is ordered by `rowid`, not by `attempted_at`** *(2026-09-29.)* Both the ordered read and the trim order by insertion. A timestamp is not an ordering: a clock that steps backwards makes a later answer sort earlier, and then the derived ramp-up reads a child's answers in an order they never typed them in — measured, it can declare a ramp-up complete off a stretch that was never the last thirty answers. The trim was worse: with rows stamped ahead of the clock (a first boot in the wrong zone, a dead CMOS battery), every newly written row was the lexicographic oldest, so the trim deleted the row just written and the window froze. Insertion order is what every consumer actually means by "the child's answers, in order".
 
 **Migration is two `ALTER TABLE ... ADD COLUMN` statements** on `key_attempts`, both nullable, plus the two new tables. An existing profile keeps every row it has and has no latency or predecessor history for attempts recorded before the change — which is correct, because it does not. **There is no backfill of `introductions`**, and the consequence is stated rather than hidden: the first session after an upgrade has no step to resume, so it introduces a new key as it would have before #12d, once, and is correct from then on. Alpha's databases are development data and disposable; a pilot profile would need a backfill written, and it would have to guess at step boundaries `key_stats` does not record.
+
+### Records for the alignment, the rest keys and the ladder
+
+*(Amended 2026-11-01, alpha-plan #12m session 2. This is the amendment [ADR-033 § What must be recorded](0033-rest-keys-and-keyboard-alignment.md#what-must-be-recorded) and [ADR-024 § The ramp-up restated, "What must be recorded"](0024-drill-content-and-lesson-granularity.md#the-ramp-up-restated-four-objectives-and-a-ladder-of-three-levels) asked for. It also closes review finding E4 ([research/code-review-2026-10-06.md](../research/code-review-2026-10-06.md)). Marks: **[T]** pinned by a default test; **[A]** argued, not tested.)*
+
+All of this is one schema change, so a database is refused once and not once per record. The store can write and read every record below. **Nothing writes them yet.** The writers are later #12m sessions: the `rest` rung's criterion is session (4), the ladder is session (6) and the alignment is session (7). No engine code changed. `progress_dump` shows the practice days.
+
+**What holds for every record here.**
+
+- **Every timestamp is UTC.** It is checked on the way in and on the way out, as § Timestamps are UTC says, and the columns that stay NULL until their event are checked too **[T]**.
+- **Rows come back in the order written, never by the clock**, for the reason § The window is ordered by `rowid` gives **[T]**. The new tables have an explicit `id INTEGER PRIMARY KEY` and are ordered by it, because `VACUUM` may renumber the rowids of a table without one. The older tables (`key_attempts`, `letter_lengths`, `milestones`) are ordered by bare `rowid`; nothing in Takki runs `VACUUM`, so that is left as it is **[A]**.
+- **Landings and rest keys are stored by position and finger.** No character is stored. A finger is `COL_TO_FINGER`'s id (`L-pink` to `R-pink`), and a cell is the grid's row and column ([ADR-026 § Every cell of the grid](0026-platform-interface-abstraction.md#every-cell-of-the-grid)). Nothing in these tables is per language. **[T]** for what is stored. That the writers pass layout positions is theirs to keep **[A]**.
+- **The fake behaves as the real store.** Every new test runs against `SqliteStore` and `FakeStore` with the same assertions, except those about SQLite's own mechanics: the stamps read back, the transactions and rollbacks, the partial unique index, and opening a database. That matters because the writers will be tested on the fake.
+- **A landing or a level run must name the profile's own session.** Both stores refuse one that does not exist or that belongs to another profile, with `ValueError` **[T]**. The foreign key alone asks only that the session exists, and the `rest` rung reads one profile's sessions.
+- **These checks, and the check that a letter was introduced, are made by the store before it writes, not by the schema.** Takki has one connection, so nothing can write between a check and its write. A second writer is not supported. If one ever is, composite foreign keys would put the same rules in the schema; the review of this amendment suggested them **[A]**.
+- **A rest key for a profile that does not exist** is refused by both, by foreign key in SQLite and by a check in the fake, with `sqlite3.IntegrityError` **[T]**. A Reach press is refused earlier, for a letter that was never introduced, which a profile that does not exist cannot have **[T]**. The fake still does not check the profile on the records from before this amendment, as before **[A]**.
+- **The fake converts a stamp to its local day when the attempt is written**, where it used to do so when the days were read. On Windows that conversion raises `OSError` for a stamp before 1970, which SQLite accepts. The divergence is not new; it has moved from the read to the write. The fake converts before it writes anything, so such a stamp leaves no partial attempt **[A]**.
+- **A write-once refusal rolls back** the UPDATE it ran, so no transaction, and no lock, outlives the `ValueError`. That holds for `record_phase` as well, which had the same gap **[T]**. The five write-once events share one helper (`SqliteStore._write_once`). An INSERT that SQLite itself refuses (a CHECK or a foreign key) rolls back as well **[T]**.
+
+#### `landings`
+
+One row for each landing in ADR-033's alignment: profile, session, round, finger, the cell pressed, whether it was validated, and a UTC time **[T]**.
+
+- **No latency.** The alignment is not timed (ADR-033), so the table has no column for it.
+- **`round` starts at 1 in each session.** The `rest` rung reads the first round of each of the last five sessions, so the session is a column of its own and rounds are not numbered across sessions **[T]** for keeping sessions apart.
+- **`validated`** says whether that hand's bump press in the same round was on the bump. For the bump press itself, it says whether that press was the bump. A landing on a hand that was not validated is still written, with 0: the flag is what lets a reader leave it out, as ADR-033's "not counted" asks **[T]** for the round trip, **[A]** for the reading.
+- **What is not a landing has no row**: a press outside the finger's column, a press on a key that produces no character, and the key pressed in answer to "which one do you want", which is a rest key chosen `by answer` (below). That is the alignment's rule, session (7) **[A]**.
+- **A landing writes nothing else**: no `key_stats`, no `key_attempts`, no practice day **[T]**.
+- **The read is the profile's landings, in order.** At the cap of eight rounds that is at most 64 rows a session, and the table is never trimmed: about 32,000 rows after 500 sessions. The `rest` rung needs only round 1 of the last five sessions, so session (4), which writes that reader, adds a narrower read and its index **[A]**. The review of this amendment raised it.
+
+#### `rest_keys`
+
+One row per finger per key that finger has rested on. The finger's current key is the row with no `replaced_at`. SQLite also holds that to at most one per finger with a partial unique index **[T]**. Each of ADR-033's events has its own column: `chosen_at` with `chosen_by`, `ready_at`, `passed_at` and `replaced_at`. Each is written once **[T]**.
+
+- **`chosen_by`** is `landings` (two rounds in a row on the same key), `answer` (the finger was asked), or `bump`. **An index finger gets a row with `bump`.** Its key is not chosen, but it becomes ready and passes its session-start test like every other finger, and those events need a row to go in **[A]**. The Protocol's type allows only these three, which pyright checks at every call, and both stores refuse a fourth with `sqlite3.IntegrityError`: SQLite by a CHECK constraint, the fake by the same test **[T]**. Choosing the key a finger already has writes nothing, so it is not checked, in either store.
+- **Choosing the key a finger already has changes nothing.** The key keeps its events and how it was first chosen **[T]**. ADR-033 asks the question again of a ready finger that has wandered, and the child may answer with the key they had.
+- **Choosing a different key replaces the current one.** The old key gets `replaced_at`, the new one is added with `chosen_at`, both with the same stamp, in one transaction **[T]**, including a failure between the two writes, which leaves the old key current **[T, SQLite]**. The old key keeps its events. **The new key starts not ready and not passed**: ready and passed describe a key, and the new key has shown neither **[A]**.
+- **A ready or passed mark for a finger with no current key is refused** **[T]**.
+- **The store does not put the events in order.** A key can be marked passed before it is marked ready. ADR-033 does not say that a key must be ready to pass its session-start test, and session (7), which writes both, decides **[A]**.
+- **Replaced keys are kept** because ADR-033 asks for them, and because the `rest` rung will need them: it judges the first round of each of the last five sessions, and a session before a change has to be judged against the key that was current then **[A]**.
+
+#### The `rest` rung
+
+A row in `milestones` under the slug `rest`, stored and ordered like any rung **[T]**. That is the whole record. The criterion, the slug's constant and the place in the ladder where `rest` replaces `anchor` are session (4)'s. The `anchor` slug stays until then.
+
+#### The ladder: `ramp_up_levels`, the bar and `reach_presses`
+
+**`ramp_up_levels`** has one row per **run** of a level of a letter, with the level stored by name (`reach`, `choose`, `travel`; the Protocol's `Level` type allows only these, and both stores refuse another name **[T]**). A level the letter does not take has no row. It records the session the step reached the level in, the press count and time at that start, and the press count and time when the letter met the level's rule **[T]**. A run for a letter that was never introduced is refused, as the bar is **[T]**.
+
+- **Why a run, keyed by session.** ADR-024 starts Reach again after a restart, from nothing, for a member that had met Reach's rule as well, and keeps the earlier Reach as history. One write-once row per letter and level cannot hold two Reaches, and overwriting the row would lose the first. So `begin_level` is write-once within a session, and a begin in a new session is a new run **[T]**. `complete_level` names the run by its session, as the key does, and writes its completion once **[T]**. It is refused for a run never begun, including a Choose begun in an earlier session and completed under today's **[T]**. A run that never completed keeps `completed_at` NULL. Keying the run by session assumes that Reach begins at most once per step in a session: ADR-024 starts it again only after a restart. If the ladder ever restarts Reach within a session, the second begin is ignored, and the key has to change **[A]**.
+- **What the store does not enforce:** that Choose and Travel are begun once. They survive a restart (ADR-024), so the ladder begins them only when it has no record of them. A second begin in a later session would make a second run, and the store would accept it. `ramp_up_phases`'s `INSERT OR IGNORE` stopped this for phases. A store that does not know which level is which cannot both allow it for Reach and refuse it for the others. Session (6) keeps the rule and pins it **[A]**.
+- **The press counts** are lifetime counts, which no window can evict, and they bound a level's evidence as `ramp_up_phases.started_attempts` does. At Reach the count is the letter's `reach_presses` rows. At Choose and Travel it is the letter's `key_stats.attempt_count`. The store stores what it is handed, so this meaning is the writer's **[A]**.
+
+**The bar met is its own event**, in `introductions.stable_attempts` and `stable_at`, and not Travel's completion. It is written once, and refused for a letter that was never introduced **[T]**. It is on `introductions` because there is already one row per letter there, and "the current step is the newest `introductions` group whose members have not all met the bar" then reads one table **[A]**.
+
+**Reach presses are kept in `reach_presses`**, apart from `key_attempts` **[T]**. There is one row per Reach prompt, with whether its first press was right and a UTC time.
+
+- They are not timed. ADR-024 reads a predictable press for one thing, whether the child reaches the key reliably, and that is its correctness **[A]**.
+- They are never trimmed, and the attempt window does not reach them **[T]**. A Reach run is about ten to twenty rows, and ADR-033's open question (is a child with an unusual rest key slower to learn that finger's other keys?) wants all of them **[A]**.
+- They write no `key_stats` row, so they make no key Active, and they add no practice day **[T]**.
+- A press for a letter that was never introduced is refused, as a level run and the bar are **[T]**.
+
+**Two presses are not stored at all** **[A]**: the press that answers a rest cue (ADR-024: "the return is not measured"), and a re-ask after a miss ("nothing reads it").
+
+**`prev_char` after a rest cue holds the id of the finger the cue asked for**, for example `R-mid` **[A; the writer is session (6)]**.
+- It is not NULL, which means the first prompt of a session.
+- It is not the rest key's letter. The cue asks by finger, and a rest key may carry no letter.
+- A finger id contains `-` and is longer than one character, so it cannot be mistaken for a letter prompt.
+- Today `AttemptCounter` is the only writer of `prev_char`, and nothing in the engine reads it (found by searching the source on 2026-11-01).
+
+**`ramp_up_phases` stays as it is until session (6).** The code still runs the four phases, and they write it. Session (6) replaces the phases with the ladder. It then:
+- stops writing `ramp_up_phases`;
+- removes the table from the schema and the phase API (`begin_phase`, `record_phase`, `phase_records`, `PhaseRecord`);
+- moves `progress_dump`'s ramp-up table to the levels.
+
+A database that still has the old table is not refused: nothing reads it. So there is no second refusal **[A]**.
+
+`progress_dump` prints none of these records yet, except the practice days below. Printing them is session (8)'s, which is the dump tool's session.
+
+#### Practice days outside the window (E4)
+
+`practice_days` holds one row per key per local day on which the key had an attempt (a `key_attempts` row) **[T]**.
+
+- **It is written with the `key_attempts` row**, in `_append_attempt`. So `count_attempt` writes the count, the row and the day in one transaction, and `append_attempt` the row and the day: a failure at the day leaves none of them **[T]**.
+- **It is never trimmed.**
+
+**The day is fixed when it is written**: `date(attempted_at, 'localtime')` in the zone of that moment. Until now it was derived again at every read, in the zone of the read. Fixing it means that moving the machine to another zone does not split or merge days already lived **[T, POSIX only: the test sets the process timezone, which Windows cannot. It did not run in this session, which ran on the Windows laptop]**. A day is not a timestamp. It is the one place this ADR already says local time is the meaning.
+
+**The Known query reads the days from this table**, so `window_stats().distinct_days` is every practice day of the key. The attempt and correct counts are still the window's. A key with three earlier days and 200 presses today has four days, where reading the window gave it one. It stays Known **[T, both stores, and through `KeyStates`; both tests fail on the window count]**.
+
+- **The days floor, once met, stays met.** That is what [ADR-027](0027-key-and-accuracy-state-model.md) calls the days: "a fact about the calendar". The dose and the accuracy are still read over the window and can still fall **[A]**.
+- **Only an attempt makes a practice day**: a `key_attempts` row, written by `count_attempt` or `append_attempt`. A Reach press or a landing does not **[T]**.
+- **`DrillGenerator`'s "waiting for a day"** reads the same count, so a long day can no longer send a key back to waiting **[A]**.
+- **`progress_dump` shows the count** in its lifetime table, as `days` **[T]**. Its per-day table still groups the window, so it shows only the window's days.
+
+**No migration. A database from before this change is refused when it is opened**, with "this Takki database has schema version 0, older than this Takki's 1, and cannot be used; delete it" **[T]**. Opening it with the new tables simply created would be wrong. Its earlier days are only in its window, so an empty `practice_days` would count days only from then on, and its keys would read back with fewer days than they had. A backfill from the window would recover every day the old code counted, and none beyond them, with two `ALTER TABLE`s for `introductions`. It is not written because the developer decided there is no migration: only development machines hold such a database, and #12h starts from a new one, as it already must (the review of this amendment raised the backfill).
+
+- **The schema has a version**, in `PRAGMA user_version`, written in the same transaction as the tables. This change is version 1, and every database from before it reads 0. A database that has tables and a version below the store's is refused **[T]**. One above it, written by a newer Takki, is refused as well, and is not stamped back down, which would make the newer Takki refuse its own database **[T]**.
+- **The check runs before anything is written.** A refused database is left as it was found: without the new tables, and not even switched to WAL **[T]**. Whatever fails while the store opens, a refusal or a file that is not a database, the connection is closed, so the file the message says to delete is not held open **[T]**.
+- **It covers the two earlier refusals.** A database old enough for #12j's `ramp_up_phases` or #12f's `key_attempts` refusal is older than this change too, and is refused by this check, with the same message: **[T]** for #12j's table, and #12f's database is a version-0 database like any other. Their own checks (`SqliteStore._migrate`) could no longer fire for any real database and are removed. The paragraphs above that say those databases are refused remain true.
+- **A new database's schema is created in one transaction**, so a first launch killed part-way through leaves no tables and no version. Created table by table, it left some tables, and the next launch refused a new database as an old one **[T]**. The transaction is `IMMEDIATE`, so a second launch at the same moment waits for the first's lock rather than failing on it **[A]**.
+- **A database at the current version is opened without a transaction**, as before this change. The schema script then creates only a table that is missing, and takes no write lock, so opening does not fail while another connection is writing **[T]**.
+- **The next schema change that an older database cannot be opened under raises the version.** It does not need a check of its own. The review of this amendment suggested the version, in place of a check on whether `practice_days` existed.
+- **Nothing speaks the refusal.** It is a `RuntimeError` after the window and the mixer are up, as the earlier refusals were, and [roadmap § D](../roadmap.md#d-smaller-gaps-worth-a-line-in-the-relevant-adr) "Error surfacing for blind parents" has it. `progress_dump` can still read a database from just before this change, and shows `-` where the days would be **[T]**. One from before #12f or #12j still fails on its missing columns, as roadmap § D says.
 
 #### Deferred to Beta
 

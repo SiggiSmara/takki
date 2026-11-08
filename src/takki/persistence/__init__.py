@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Protocol
+from typing import Literal, Protocol
 
 
 def utc_stamp(value: str) -> str:
@@ -46,6 +46,9 @@ class KeyStat:
 class WindowStats:
     attempt_count: int
     correct_count: int
+    # Every local day the key was ever practised, not only the window's
+    # (ADR-011 `practice_days`): 200 presses in one day must not evict the
+    # key's earlier days (review of 2026-10-06, E4).
     distinct_days: int
 
 
@@ -92,6 +95,69 @@ class Introduction:
     step: int
     position: int
     introduced_at: str
+    # ADR-024's one bar, met once and never taken back: the lifetime attempt
+    # count and the time. None while the letter's ramp-up runs.
+    stable_attempts: int | None = None
+    stable_at: str | None = None
+
+
+# ADR-024's ladder, by name. A level a letter does not take has no record.
+Level = Literal["reach", "choose", "travel"]
+
+
+@dataclass(frozen=True)
+class LevelRecord:
+    """One run of one level of a letter's ramp-up (ADR-011 `ramp_up_levels`)."""
+
+    level: Level
+    # A run per session, because Reach starts again after a restart (ADR-024).
+    session_id: int
+    # The presses the level reads: Reach presses at Reach, counted attempts
+    # (`key_stats`) at Choose and Travel. Lifetime counts, so none is evicted.
+    started_presses: int
+    started_at: str
+    completed_presses: int | None = None
+    completed_at: str | None = None
+
+
+@dataclass(frozen=True)
+class ReachPress:
+    """A first press on a letter at Reach: predictable, so never an attempt (ADR-024)."""
+
+    correct: bool
+    pressed_at: str
+
+
+@dataclass(frozen=True)
+class Landing:
+    """One press of the keyboard alignment, by position and never by character (ADR-033)."""
+
+    session_id: int
+    round: int
+    finger: str
+    row: int
+    col: int
+    # Whether that hand's bump press in this round was on the bump.
+    validated: bool
+    landed_at: str
+
+
+# "bump" is an index finger's: the one rest key the child does not choose.
+ChosenBy = Literal["landings", "answer", "bump"]
+
+
+@dataclass(frozen=True)
+class RestKey:
+    """One finger's rest key, current or replaced (ADR-033 § What must be recorded)."""
+
+    finger: str
+    row: int
+    col: int
+    chosen_by: ChosenBy
+    chosen_at: str
+    ready_at: str | None = None
+    passed_at: str | None = None
+    replaced_at: str | None = None
 
 
 class Store(Protocol):
@@ -190,9 +256,105 @@ class Store(Protocol):
 
     def introductions(self, profile_id: int) -> list[Introduction]: ...
 
+    def record_stable(
+        self,
+        profile_id: int,
+        key_char: str,
+        attempts: int,
+        stable_at: str | None = None,
+    ) -> None:
+        """The letter met ADR-024's one bar. Write-once; refused for a letter never introduced."""
+        ...
+
+    def begin_level(
+        self,
+        profile_id: int,
+        key_char: str,
+        level: Level,
+        session_id: int,
+        presses: int,
+        started_at: str | None = None,
+    ) -> None:
+        """The step reached `level` in this session, which must be this profile's. Write-once."""
+        ...
+
+    def complete_level(
+        self,
+        profile_id: int,
+        key_char: str,
+        level: Level,
+        session_id: int,
+        presses: int,
+        completed_at: str | None = None,
+    ) -> None:
+        """The letter met `level`'s rule in that session's run. Write-once; refused if never begun."""
+        ...
+
+    def level_records(self, profile_id: int, key_char: str) -> list[LevelRecord]:
+        """Every run of every level of this letter, in the order begun."""
+        ...
+
+    def append_reach_press(
+        self,
+        profile_id: int,
+        key_char: str,
+        correct: bool,
+        pressed_at: str | None = None,
+    ) -> None: ...
+
+    def reach_presses(self, profile_id: int, key_char: str) -> list[ReachPress]:
+        """This letter's Reach presses, oldest first. Never trimmed."""
+        ...
+
+    def record_landing(
+        self,
+        profile_id: int,
+        session_id: int,
+        round: int,
+        finger: str,
+        row: int,
+        col: int,
+        validated: bool,
+        landed_at: str | None = None,
+    ) -> None: ...
+
+    def landings(self, profile_id: int) -> list[Landing]:
+        """Every landing, in the order pressed."""
+        ...
+
+    def choose_rest_key(
+        self,
+        profile_id: int,
+        finger: str,
+        row: int,
+        col: int,
+        chosen_by: ChosenBy,
+        chosen_at: str | None = None,
+    ) -> None:
+        """The finger's rest key is this cell. A different cell replaces the current key, which is kept."""
+        ...
+
+    def mark_rest_key_ready(
+        self, profile_id: int, finger: str, ready_at: str | None = None
+    ) -> None:
+        """The finger's current rest key became ready. Write-once; refused if it has none."""
+        ...
+
+    def mark_rest_key_passed(
+        self, profile_id: int, finger: str, passed_at: str | None = None
+    ) -> None:
+        """The finger's current rest key passed its session-start test. Write-once; refused if it has none."""
+        ...
+
+    def rest_keys(self, profile_id: int) -> list[RestKey]:
+        """Every rest key the profile has had, replaced ones included, in the order chosen."""
+        ...
+
     def key_stats(self, profile_id: int) -> dict[str, KeyStat]: ...
 
-    def window_stats(self, profile_id: int, key_char: str) -> WindowStats: ...
+    def window_stats(self, profile_id: int, key_char: str) -> WindowStats:
+        """The window's counts, and every practice day of the key (ADR-027's Known query)."""
+        ...
 
     def window_attempts(
         self, profile_id: int, key_char: str, limit: int | None = None

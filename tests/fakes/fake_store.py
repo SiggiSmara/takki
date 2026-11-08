@@ -1,14 +1,22 @@
+import sqlite3
 from collections.abc import Sequence
 from dataclasses import replace
 from datetime import UTC, datetime
+from typing import Literal, get_args
 
 from takki import config
 from takki.persistence import (
     Attempt,
+    ChosenBy,
     Introduction,
     KeyStat,
+    Landing,
+    Level,
+    LevelRecord,
     PhaseRecord,
     Profile,
+    ReachPress,
+    RestKey,
     WindowStats,
     utc_stamp,
 )
@@ -30,6 +38,12 @@ def _local_day(stamp: str) -> str:
     return datetime.fromisoformat(stamp).astimezone().date().isoformat()
 
 
+def _check_value(value: str, allowed: tuple[str, ...]) -> None:
+    # SqliteStore's CHECK constraint on the column.
+    if value not in allowed:
+        raise sqlite3.IntegrityError("CHECK constraint failed")
+
+
 class FakeStore:
     def __init__(
         self,
@@ -45,6 +59,12 @@ class FakeStore:
         self._introductions: dict[tuple[int, str], Introduction] = {}
         self._phases: dict[tuple[int, str, str], PhaseRecord] = {}
         self._key_attempts: dict[tuple[int, str], list[Attempt]] = {}
+        self._practice_days: dict[tuple[int, str], set[str]] = {}
+        # Each list in insertion order, which is SqliteStore's rowid order.
+        self._levels: dict[tuple[int, str], list[LevelRecord]] = {}
+        self._reach_presses: dict[tuple[int, str], list[ReachPress]] = {}
+        self._landings: dict[int, list[Landing]] = {}
+        self._rest_keys: dict[int, list[RestKey]] = {}
         self._milestones: dict[tuple[int, str], str] = {}
         self._letter_lengths: dict[tuple[int, str, str, float], list[int]] = {}
         self._cap = window_cap
@@ -195,6 +215,7 @@ class FakeStore:
         timeouts: int = 0,
     ) -> None:
         ts = _stamp(attempted_at)
+        day = _local_day(ts)
         key = (profile_id, key_char)
         if key not in self._key_attempts:
             self._key_attempts[key] = []
@@ -209,6 +230,9 @@ class FakeStore:
                 timeouts=timeouts,
             )
         )
+        # Fixed at the write, in the local zone of the moment, as SqliteStore's
+        # `date(?, 'localtime')` in its INSERT.
+        self._practice_days.setdefault(key, set()).add(day)
         if len(attempts) > self._cap:
             # Insertion order, which is what SqliteStore's ORDER BY rowid ASC
             # evicts. Evicting by timestamp would drop the row just written
@@ -228,12 +252,169 @@ class FakeStore:
             key=lambda i: (i.step, i.position),
         )
 
+    def record_stable(
+        self,
+        profile_id: int,
+        key_char: str,
+        attempts: int,
+        stable_at: str | None = None,
+    ) -> None:
+        ts = _stamp(stable_at)
+        self._check_introduced(profile_id, key_char)
+        intro = self._introductions[(profile_id, key_char)]
+        if intro.stable_at is None:
+            self._introductions[(profile_id, key_char)] = replace(
+                intro, stable_attempts=attempts, stable_at=ts
+            )
+
+    def begin_level(
+        self,
+        profile_id: int,
+        key_char: str,
+        level: Level,
+        session_id: int,
+        presses: int,
+        started_at: str | None = None,
+    ) -> None:
+        ts = _stamp(started_at)
+        self._check_session(profile_id, session_id)
+        self._check_introduced(profile_id, key_char)
+        _check_value(level, get_args(Level))
+        runs = self._levels.setdefault((profile_id, key_char), [])
+        # Write-once per session, as SqliteStore's ON CONFLICT DO NOTHING on its key.
+        if not any(r.level == level and r.session_id == session_id for r in runs):
+            runs.append(LevelRecord(level, session_id, presses, ts))
+
+    def complete_level(
+        self,
+        profile_id: int,
+        key_char: str,
+        level: Level,
+        session_id: int,
+        presses: int,
+        completed_at: str | None = None,
+    ) -> None:
+        ts = _stamp(completed_at)
+        runs = self._levels.get((profile_id, key_char), [])
+        run = next(
+            (i for i, r in enumerate(runs) if r.level == level and r.session_id == session_id),
+            None,
+        )
+        if run is None:
+            raise ValueError(f"level {level!r} of {key_char!r} was never begun in that session")
+        if runs[run].completed_presses is None:
+            runs[run] = replace(runs[run], completed_presses=presses, completed_at=ts)
+
+    def level_records(self, profile_id: int, key_char: str) -> list[LevelRecord]:
+        return list(self._levels.get((profile_id, key_char), []))
+
+    def append_reach_press(
+        self,
+        profile_id: int,
+        key_char: str,
+        correct: bool,
+        pressed_at: str | None = None,
+    ) -> None:
+        ts = _stamp(pressed_at)
+        self._check_introduced(profile_id, key_char)
+        self._reach_presses.setdefault((profile_id, key_char), []).append(ReachPress(correct, ts))
+
+    def reach_presses(self, profile_id: int, key_char: str) -> list[ReachPress]:
+        return list(self._reach_presses.get((profile_id, key_char), []))
+
+    def record_landing(
+        self,
+        profile_id: int,
+        session_id: int,
+        round: int,
+        finger: str,
+        row: int,
+        col: int,
+        validated: bool,
+        landed_at: str | None = None,
+    ) -> None:
+        ts = _stamp(landed_at)
+        self._check_session(profile_id, session_id)
+        self._landings.setdefault(profile_id, []).append(
+            Landing(session_id, round, finger, row, col, validated, ts)
+        )
+
+    def _check_session(self, profile_id: int, session_id: int) -> None:
+        if session_id not in self._sessions or self._sessions[session_id][0] != profile_id:
+            raise ValueError(f"session {session_id} is not profile {profile_id}'s")
+
+    def _check_introduced(self, profile_id: int, key_char: str) -> None:
+        if (profile_id, key_char) not in self._introductions:
+            raise ValueError(f"{key_char!r} was never introduced")
+
+    def _check_profile(self, profile_id: int) -> None:
+        # SqliteStore refuses a row for no profile by foreign key. The fake
+        # checks it only on the records added in #12m session 2.
+        if profile_id not in self._profiles:
+            raise sqlite3.IntegrityError("FOREIGN KEY constraint failed")
+
+    def landings(self, profile_id: int) -> list[Landing]:
+        return list(self._landings.get(profile_id, []))
+
+    def choose_rest_key(
+        self,
+        profile_id: int,
+        finger: str,
+        row: int,
+        col: int,
+        chosen_by: ChosenBy,
+        chosen_at: str | None = None,
+    ) -> None:
+        ts = _stamp(chosen_at)
+        current = self._current_rest_key(profile_id, finger)
+        if current is not None:
+            old = self._rest_keys[profile_id][current]
+            # The same cell again is no change and writes nothing, so SqliteStore's
+            # CHECK and foreign key are never reached; nor are these.
+            if (old.row, old.col) == (row, col):
+                return
+        self._check_profile(profile_id)
+        _check_value(chosen_by, get_args(ChosenBy))
+        keys = self._rest_keys.setdefault(profile_id, [])
+        if current is not None:
+            keys[current] = replace(keys[current], replaced_at=ts)
+        keys.append(RestKey(finger, row, col, chosen_by, ts))
+
+    def mark_rest_key_ready(
+        self, profile_id: int, finger: str, ready_at: str | None = None
+    ) -> None:
+        self._mark_rest_key(profile_id, finger, "ready_at", _stamp(ready_at))
+
+    def mark_rest_key_passed(
+        self, profile_id: int, finger: str, passed_at: str | None = None
+    ) -> None:
+        self._mark_rest_key(profile_id, finger, "passed_at", _stamp(passed_at))
+
+    def _current_rest_key(self, profile_id: int, finger: str) -> int | None:
+        keys = self._rest_keys.get(profile_id, [])
+        return next(
+            (i for i, k in enumerate(keys) if k.finger == finger and k.replaced_at is None), None
+        )
+
+    def _mark_rest_key(
+        self, profile_id: int, finger: str, field: Literal["ready_at", "passed_at"], ts: str
+    ) -> None:
+        current = self._current_rest_key(profile_id, finger)
+        if current is None:
+            raise ValueError(f"finger {finger!r} has no rest key")
+        keys = self._rest_keys[profile_id]
+        if getattr(keys[current], field) is None:
+            keys[current] = replace(keys[current], **{field: ts})
+
+    def rest_keys(self, profile_id: int) -> list[RestKey]:
+        return list(self._rest_keys.get(profile_id, []))
+
     def window_stats(self, profile_id: int, key_char: str) -> WindowStats:
         attempts = self._key_attempts.get((profile_id, key_char), [])
         return WindowStats(
             attempt_count=len(attempts),
             correct_count=sum(int(a.correct) for a in attempts),
-            distinct_days=len({_local_day(a.attempted_at) for a in attempts}),
+            distinct_days=len(self._practice_days.get((profile_id, key_char), set())),
         )
 
     def count_attempt(
@@ -248,8 +429,12 @@ class FakeStore:
         timeouts: int = 0,
     ) -> None:
         # Stamped once and checked before either write, so a refused stamp
-        # leaves nothing behind, as SqliteStore's one transaction does.
+        # leaves nothing behind, as SqliteStore's one transaction does. The
+        # day is converted first for the same reason. On Windows a stamp
+        # before 1970 cannot be converted, so the fake refuses one that
+        # SqliteStore accepts (ADR-011, #12m session 2).
         ts = _stamp(attempted_at)
+        _local_day(ts)
         self.upsert_key_stat(profile_id, key_char, correct, ts)
         self.append_attempt(
             profile_id, key_char, correct, ts, latency_ms, prev_char, after_letter_ms, timeouts

@@ -1,15 +1,21 @@
 import sqlite3
 from collections.abc import Sequence
 from datetime import UTC, datetime
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 from takki import config
 from takki.persistence import (
     Attempt,
+    ChosenBy,
     Introduction,
     KeyStat,
+    Landing,
+    Level,
+    LevelRecord,
     PhaseRecord,
     Profile,
+    ReachPress,
+    RestKey,
     WindowStats,
     utc_stamp,
 )
@@ -36,12 +42,74 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 
 CREATE TABLE IF NOT EXISTS introductions (
-    profile_id    INTEGER NOT NULL REFERENCES profiles(id),
-    key_char      TEXT    NOT NULL,
-    step          INTEGER NOT NULL,
-    position      INTEGER NOT NULL,
-    introduced_at TEXT    NOT NULL,
+    profile_id      INTEGER NOT NULL REFERENCES profiles(id),
+    key_char        TEXT    NOT NULL,
+    step            INTEGER NOT NULL,
+    position        INTEGER NOT NULL,
+    introduced_at   TEXT    NOT NULL,
+    stable_attempts INTEGER,
+    stable_at       TEXT,
     PRIMARY KEY (profile_id, key_char)
+);
+
+CREATE TABLE IF NOT EXISTS ramp_up_levels (
+    id                INTEGER PRIMARY KEY,
+    profile_id        INTEGER NOT NULL REFERENCES profiles(id),
+    key_char          TEXT    NOT NULL,
+    level             TEXT    NOT NULL CHECK (level IN ('reach', 'choose', 'travel')),
+    session_id        INTEGER NOT NULL REFERENCES sessions(id),
+    started_presses   INTEGER NOT NULL,
+    started_at        TEXT    NOT NULL,
+    completed_presses INTEGER,
+    completed_at      TEXT,
+    UNIQUE (profile_id, key_char, level, session_id)
+);
+
+CREATE TABLE IF NOT EXISTS reach_presses (
+    id         INTEGER PRIMARY KEY,
+    profile_id INTEGER NOT NULL REFERENCES profiles(id),
+    key_char   TEXT    NOT NULL,
+    correct    INTEGER NOT NULL,
+    pressed_at TEXT    NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_rp_profile_key ON reach_presses (profile_id, key_char);
+
+CREATE TABLE IF NOT EXISTS landings (
+    id         INTEGER PRIMARY KEY,
+    profile_id INTEGER NOT NULL REFERENCES profiles(id),
+    session_id INTEGER NOT NULL REFERENCES sessions(id),
+    round      INTEGER NOT NULL,
+    finger     TEXT    NOT NULL,
+    key_row    INTEGER NOT NULL,
+    key_col    INTEGER NOT NULL,
+    validated  INTEGER NOT NULL,
+    landed_at  TEXT    NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_landings_profile ON landings (profile_id);
+
+CREATE TABLE IF NOT EXISTS rest_keys (
+    id          INTEGER PRIMARY KEY,
+    profile_id  INTEGER NOT NULL REFERENCES profiles(id),
+    finger      TEXT    NOT NULL,
+    key_row     INTEGER NOT NULL,
+    key_col     INTEGER NOT NULL,
+    chosen_by   TEXT    NOT NULL CHECK (chosen_by IN ('landings', 'answer', 'bump')),
+    chosen_at   TEXT    NOT NULL,
+    ready_at    TEXT,
+    passed_at   TEXT,
+    replaced_at TEXT
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_rest_keys_current
+    ON rest_keys (profile_id, finger) WHERE replaced_at IS NULL;
+
+CREATE TABLE IF NOT EXISTS practice_days (
+    profile_id INTEGER NOT NULL REFERENCES profiles(id),
+    key_char   TEXT    NOT NULL,
+    day        TEXT    NOT NULL,
+    PRIMARY KEY (profile_id, key_char, day)
 );
 
 CREATE TABLE IF NOT EXISTS ramp_up_phases (
@@ -99,6 +167,19 @@ CREATE INDEX IF NOT EXISTS idx_ll_profile_key
 """
 
 
+# Raised by a schema change that an older database cannot be opened under.
+# 1: alpha-plan #12m session 2. Every database before it reads 0.
+_SCHEMA_VERSION = 1
+
+
+# A record of a letter's ramp-up needs the letter's introduction.
+_INTRODUCED = "SELECT 1 FROM introductions WHERE profile_id = ? AND key_char = ?"
+
+
+def _never_introduced(key_char: str) -> str:
+    return f"{key_char!r} was never introduced"
+
+
 def _now() -> str:
     # UTC. Every timestamp this module writes is UTC, and local time is a
     # presentation concern (ADR-011 § Timestamps are UTC): naive local strings
@@ -110,6 +191,10 @@ def _now() -> str:
 
 def _stamp(given: str | None) -> str:
     return _now() if given is None else utc_stamp(given)
+
+
+def _utc_or_none(value: object) -> str | None:
+    return None if value is None else utc_stamp(cast(str, value))
 
 
 def _row_to_profile(row: tuple[Any, ...]) -> Profile:
@@ -143,40 +228,55 @@ class SqliteStore:
         length_cap: int = config.LETTER_LENGTH_SAMPLE,
     ) -> None:
         self.conn = sqlite3.connect(path)
+        try:
+            self._open()
+        except BaseException:
+            # Refused, not a database, or killed mid-schema: the handle goes,
+            # so a file the message says to delete is not held open. The
+            # schema was uncommitted, so none of it stays.
+            self.conn.close()
+            raise
+        self._cap = window_cap
+        self._length_cap = length_cap
+
+    def _open(self) -> None:
+        # Before anything is written, so a refused database is left as found.
+        has_tables = self.conn.execute("SELECT 1 FROM sqlite_master LIMIT 1").fetchone()
+        version = cast(int, self.conn.execute("PRAGMA user_version").fetchone()[0])
+        if has_tables is not None and version < _SCHEMA_VERSION:
+            # ADR-011, alpha-plan #12m session 2: a key's practice days are
+            # kept outside the window from now on. An older database has them
+            # only in the window, so its keys would lose days they had. Every
+            # database an earlier refusal (#12j's phase table, #12f's latency)
+            # was for is older still, so this one check covers them.
+            raise RuntimeError(
+                f"this Takki database has schema version {version}, older than this Takki's "
+                f"{_SCHEMA_VERSION}, and cannot be used; delete it"
+            )
+        if version > _SCHEMA_VERSION:
+            # Opened, it would be stamped back down and then refused by the
+            # newer Takki that wrote it.
+            raise RuntimeError(
+                f"this Takki database has schema version {version}, newer than this Takki's "
+                f"{_SCHEMA_VERSION}, and cannot be used"
+            )
         # The engine writes key_attempts per keystroke mid-drill; WAL +
         # synchronous=NORMAL avoids an fsync stall on every keypress.
         self.conn.execute("PRAGMA journal_mode = WAL")
         self.conn.execute("PRAGMA synchronous = NORMAL")
         self.conn.execute("PRAGMA foreign_keys = ON")
-        self.conn.executescript(_SCHEMA)
-        self._migrate()
-        self._cap = window_cap
-        self._length_cap = length_cap
-
-    def _migrate(self) -> None:
-        phase_columns = {
-            cast(str, row[1])
-            for row in self.conn.execute("PRAGMA table_info(ramp_up_phases)").fetchall()
-        }
-        if "started_attempts" not in phase_columns:
-            # ADR-011, 2026-10-04: the table changed shape and old rows cannot
-            # say where a phase began. Said here, or it surfaces as a missing
-            # column at the first phase read, mid-session.
-            raise RuntimeError(
-                "this Takki database was written before 2026-10-04 and cannot be used; delete it"
-            )
-        attempt_columns = {
-            cast(str, row[1])
-            for row in self.conn.execute("PRAGMA table_info(key_attempts)").fetchall()
-        }
-        if "after_letter_ms" not in attempt_columns:
-            # ADR-011, alpha-plan #12f: `latency_ms` changed meaning (it now
-            # runs from the letter being sent, not from its end) and an old
-            # row cannot say which meaning its value has.
-            raise RuntimeError(
-                "this Takki database was written before alpha-plan #12f and cannot be used; "
-                "delete it"
-            )
+        if version == _SCHEMA_VERSION:
+            # Creates only a table that is missing, so an open of a current
+            # database takes no write lock while another connection writes.
+            self.conn.executescript(_SCHEMA)
+            return
+        # A new database: one transaction, with its version, so a first launch
+        # killed part-way leaves no tables rather than some, which the check
+        # above would refuse. IMMEDIATE so a second launch at the same moment
+        # waits for the first instead of failing on its lock.
+        self.conn.executescript(
+            f"BEGIN IMMEDIATE;\n{_SCHEMA}\nPRAGMA user_version = {_SCHEMA_VERSION};\nCOMMIT;"
+        )
 
     def create_profile(
         self,
@@ -344,20 +444,20 @@ class SqliteStore:
         # Write-once: a phase a child has passed stays passed (ADR-024 § A phase
         # completion is an event). `attempts_at` is the key's lifetime attempt
         # count at that moment, which no rolling window can evict.
-        ts = _stamp(completed_at)
-        cursor = self.conn.execute(
+        # A completion with no start has no evidence it could have been read
+        # from, so it is a caller's mistake and not a row to invent.
+        key = (profile_id, key_char, phase)
+        self._write_once(
             """
             UPDATE ramp_up_phases SET completed_attempts = ?, completed_at = ?
             WHERE profile_id = ? AND key_char = ? AND phase = ?
               AND completed_attempts IS NULL
             """,
-            (attempts_at, ts, profile_id, key_char, phase),
+            (attempts_at, _stamp(completed_at), *key),
+            "SELECT 1 FROM ramp_up_phases WHERE profile_id = ? AND key_char = ? AND phase = ?",
+            key,
+            f"phase {phase!r} of {key_char!r} was never begun",
         )
-        if cursor.rowcount == 0 and phase not in self.phase_records(profile_id, key_char):
-            # A completion with no start has no evidence it could have been
-            # read from, so it is a caller's mistake and not a row to invent.
-            raise ValueError(f"phase {phase!r} of {key_char!r} was never begun")
-        self.conn.commit()
 
     def phase_records(self, profile_id: int, key_char: str) -> dict[str, PhaseRecord]:
         rows = self.conn.execute(
@@ -383,17 +483,12 @@ class SqliteStore:
         after_letter_ms: int | None = None,
         timeouts: int = 0,
     ) -> None:
-        self._append_attempt(
-            profile_id,
-            key_char,
-            correct,
-            _stamp(attempted_at),
-            latency_ms,
-            prev_char,
-            after_letter_ms,
-            timeouts,
-        )
-        self.conn.commit()
+        ts = _stamp(attempted_at)
+        # The row and its practice day, both or neither.
+        with self.conn:
+            self._append_attempt(
+                profile_id, key_char, correct, ts, latency_ms, prev_char, after_letter_ms, timeouts
+            )
 
     def count_attempt(
         self,
@@ -443,6 +538,16 @@ class SqliteStore:
                 timeouts,
             ),
         )
+        # The child's local day, fixed when the press is written: the trim
+        # below must not take it away (ADR-011 `practice_days`).
+        self.conn.execute(
+            """
+            INSERT INTO practice_days (profile_id, key_char, day)
+            VALUES (?, ?, date(?, 'localtime'))
+            ON CONFLICT (profile_id, key_char, day) DO NOTHING
+            """,
+            (profile_id, key_char, ts),
+        )
         row = self.conn.execute(
             "SELECT COUNT(*) FROM key_attempts WHERE profile_id = ? AND key_char = ?",
             (profile_id, key_char),
@@ -475,7 +580,7 @@ class SqliteStore:
             cast(str, r[0]): KeyStat(
                 attempt_count=cast(int, r[1]),
                 correct_count=cast(int, r[2]),
-                last_practised_at=None if r[3] is None else utc_stamp(cast(str, r[3])),
+                last_practised_at=_utc_or_none(r[3]),
             )
             for r in rows
         }
@@ -483,7 +588,8 @@ class SqliteStore:
     def introductions(self, profile_id: int) -> list[Introduction]:
         rows = self.conn.execute(
             """
-            SELECT key_char, step, position, introduced_at FROM introductions
+            SELECT key_char, step, position, introduced_at, stable_attempts, stable_at
+            FROM introductions
             WHERE profile_id = ?
             ORDER BY step ASC, position ASC
             """,
@@ -495,6 +601,287 @@ class SqliteStore:
                 step=cast(int, r[1]),
                 position=cast(int, r[2]),
                 introduced_at=utc_stamp(cast(str, r[3])),
+                stable_attempts=cast(int | None, r[4]),
+                stable_at=_utc_or_none(r[5]),
+            )
+            for r in rows
+        ]
+
+    def record_stable(
+        self,
+        profile_id: int,
+        key_char: str,
+        attempts: int,
+        stable_at: str | None = None,
+    ) -> None:
+        key = (profile_id, key_char)
+        self._write_once(
+            """
+            UPDATE introductions SET stable_attempts = ?, stable_at = ?
+            WHERE profile_id = ? AND key_char = ? AND stable_at IS NULL
+            """,
+            (attempts, _stamp(stable_at), *key),
+            _INTRODUCED,
+            key,
+            _never_introduced(key_char),
+        )
+
+    def _write_once(
+        self,
+        update: str,
+        params: tuple[object, ...],
+        exists: str,
+        key: tuple[object, ...],
+        refusal: str,
+    ) -> None:
+        """Write an event's column once: again is no change, and with no row to go in is refused."""
+        # `with`: the UPDATE opens a transaction, and on any error, the refusal
+        # included, it is rolled back so that its lock does not outlive it.
+        with self.conn:
+            if self.conn.execute(update, params).rowcount == 0 and not self._exists(exists, key):
+                raise ValueError(refusal)
+
+    def _check_introduced(self, profile_id: int, key_char: str) -> None:
+        if not self._exists(_INTRODUCED, (profile_id, key_char)):
+            raise ValueError(_never_introduced(key_char))
+
+    def _exists(self, sql: str, params: tuple[object, ...]) -> bool:
+        return self.conn.execute(sql, params).fetchone() is not None
+
+    def _check_session(self, profile_id: int, session_id: int) -> None:
+        # The foreign key only asks that the session exists. The `rest` rung
+        # reads a profile's sessions, so another child's would be counted.
+        if not self._exists(
+            "SELECT 1 FROM sessions WHERE id = ? AND profile_id = ?", (session_id, profile_id)
+        ):
+            raise ValueError(f"session {session_id} is not profile {profile_id}'s")
+
+    def begin_level(
+        self,
+        profile_id: int,
+        key_char: str,
+        level: Level,
+        session_id: int,
+        presses: int,
+        started_at: str | None = None,
+    ) -> None:
+        ts = _stamp(started_at)
+        self._check_session(profile_id, session_id)
+        self._check_introduced(profile_id, key_char)
+        # `with`: a refused INSERT (the level's CHECK) rolls back, and no lock stays.
+        with self.conn:
+            self.conn.execute(
+                """
+                INSERT INTO ramp_up_levels
+                    (profile_id, key_char, level, session_id, started_presses, started_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT (profile_id, key_char, level, session_id) DO NOTHING
+                """,
+                (profile_id, key_char, level, session_id, presses, ts),
+            )
+
+    def complete_level(
+        self,
+        profile_id: int,
+        key_char: str,
+        level: Level,
+        session_id: int,
+        presses: int,
+        completed_at: str | None = None,
+    ) -> None:
+        key = (profile_id, key_char, level, session_id)
+        self._write_once(
+            """
+            UPDATE ramp_up_levels SET completed_presses = ?, completed_at = ?
+            WHERE profile_id = ? AND key_char = ? AND level = ? AND session_id = ?
+              AND completed_presses IS NULL
+            """,
+            (presses, _stamp(completed_at), *key),
+            """
+            SELECT 1 FROM ramp_up_levels
+            WHERE profile_id = ? AND key_char = ? AND level = ? AND session_id = ?
+            """,
+            key,
+            f"level {level!r} of {key_char!r} was never begun in that session",
+        )
+
+    def level_records(self, profile_id: int, key_char: str) -> list[LevelRecord]:
+        rows = self.conn.execute(
+            """
+            SELECT level, session_id, started_presses, started_at, completed_presses, completed_at
+            FROM ramp_up_levels
+            WHERE profile_id = ? AND key_char = ?
+            ORDER BY id
+            """,
+            (profile_id, key_char),
+        ).fetchall()
+        return [
+            LevelRecord(
+                level=cast(Level, r[0]),
+                session_id=cast(int, r[1]),
+                started_presses=cast(int, r[2]),
+                started_at=utc_stamp(cast(str, r[3])),
+                completed_presses=cast(int | None, r[4]),
+                completed_at=_utc_or_none(r[5]),
+            )
+            for r in rows
+        ]
+
+    def append_reach_press(
+        self,
+        profile_id: int,
+        key_char: str,
+        correct: bool,
+        pressed_at: str | None = None,
+    ) -> None:
+        ts = _stamp(pressed_at)
+        self._check_introduced(profile_id, key_char)
+        with self.conn:
+            self.conn.execute(
+                "INSERT INTO reach_presses (profile_id, key_char, correct, pressed_at)"
+                " VALUES (?, ?, ?, ?)",
+                (profile_id, key_char, int(correct), ts),
+            )
+
+    def reach_presses(self, profile_id: int, key_char: str) -> list[ReachPress]:
+        rows = self.conn.execute(
+            """
+            SELECT correct, pressed_at FROM reach_presses
+            WHERE profile_id = ? AND key_char = ?
+            ORDER BY id
+            """,
+            (profile_id, key_char),
+        ).fetchall()
+        return [ReachPress(bool(r[0]), utc_stamp(cast(str, r[1]))) for r in rows]
+
+    def record_landing(
+        self,
+        profile_id: int,
+        session_id: int,
+        round: int,
+        finger: str,
+        row: int,
+        col: int,
+        validated: bool,
+        landed_at: str | None = None,
+    ) -> None:
+        ts = _stamp(landed_at)
+        self._check_session(profile_id, session_id)
+        with self.conn:
+            self.conn.execute(
+                """
+                INSERT INTO landings
+                    (profile_id, session_id, round, finger, key_row, key_col, validated, landed_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (profile_id, session_id, round, finger, row, col, int(validated), ts),
+            )
+
+    def landings(self, profile_id: int) -> list[Landing]:
+        rows = self.conn.execute(
+            """
+            SELECT session_id, round, finger, key_row, key_col, validated, landed_at
+            FROM landings
+            WHERE profile_id = ?
+            ORDER BY id
+            """,
+            (profile_id,),
+        ).fetchall()
+        return [
+            Landing(
+                session_id=cast(int, r[0]),
+                round=cast(int, r[1]),
+                finger=cast(str, r[2]),
+                row=cast(int, r[3]),
+                col=cast(int, r[4]),
+                validated=bool(r[5]),
+                landed_at=utc_stamp(cast(str, r[6])),
+            )
+            for r in rows
+        ]
+
+    def choose_rest_key(
+        self,
+        profile_id: int,
+        finger: str,
+        row: int,
+        col: int,
+        chosen_by: ChosenBy,
+        chosen_at: str | None = None,
+    ) -> None:
+        ts = _stamp(chosen_at)
+        current = self.conn.execute(
+            """
+            SELECT key_row, key_col FROM rest_keys
+            WHERE profile_id = ? AND finger = ? AND replaced_at IS NULL
+            """,
+            (profile_id, finger),
+        ).fetchone()
+        if current is not None and tuple(current) == (row, col):
+            # The same key chosen again is no change, and its ready and passed
+            # events stand (ADR-033: a changed key starts afresh, a kept one does not).
+            return
+        # One transaction: a finger never has two current keys, or none between them.
+        with self.conn:
+            self.conn.execute(
+                """
+                UPDATE rest_keys SET replaced_at = ?
+                WHERE profile_id = ? AND finger = ? AND replaced_at IS NULL
+                """,
+                (ts, profile_id, finger),
+            )
+            self.conn.execute(
+                """
+                INSERT INTO rest_keys (profile_id, finger, key_row, key_col, chosen_by, chosen_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (profile_id, finger, row, col, chosen_by, ts),
+            )
+
+    def mark_rest_key_ready(
+        self, profile_id: int, finger: str, ready_at: str | None = None
+    ) -> None:
+        self._mark_rest_key(profile_id, finger, "ready_at", _stamp(ready_at))
+
+    def mark_rest_key_passed(
+        self, profile_id: int, finger: str, passed_at: str | None = None
+    ) -> None:
+        self._mark_rest_key(profile_id, finger, "passed_at", _stamp(passed_at))
+
+    def _mark_rest_key(
+        self, profile_id: int, finger: str, column: Literal["ready_at", "passed_at"], ts: str
+    ) -> None:
+        self._write_once(
+            f"""
+            UPDATE rest_keys SET {column} = ?
+            WHERE profile_id = ? AND finger = ? AND replaced_at IS NULL AND {column} IS NULL
+            """,
+            (ts, profile_id, finger),
+            "SELECT 1 FROM rest_keys WHERE profile_id = ? AND finger = ? AND replaced_at IS NULL",
+            (profile_id, finger),
+            f"finger {finger!r} has no rest key",
+        )
+
+    def rest_keys(self, profile_id: int) -> list[RestKey]:
+        rows = self.conn.execute(
+            """
+            SELECT finger, key_row, key_col, chosen_by, chosen_at, ready_at, passed_at, replaced_at
+            FROM rest_keys
+            WHERE profile_id = ?
+            ORDER BY id
+            """,
+            (profile_id,),
+        ).fetchall()
+        return [
+            RestKey(
+                finger=cast(str, r[0]),
+                row=cast(int, r[1]),
+                col=cast(int, r[2]),
+                chosen_by=cast(ChosenBy, r[3]),
+                chosen_at=utc_stamp(cast(str, r[4])),
+                ready_at=_utc_or_none(r[5]),
+                passed_at=_utc_or_none(r[6]),
+                replaced_at=_utc_or_none(r[7]),
             )
             for r in rows
         ]
@@ -503,13 +890,14 @@ class SqliteStore:
         row = self.conn.execute(
             """
             SELECT
-                COUNT(*)                             AS attempt_count,
-                SUM(correct)                         AS correct_count,
-                COUNT(DISTINCT date(attempted_at, 'localtime')) AS distinct_days
+                COUNT(*)     AS attempt_count,
+                SUM(correct) AS correct_count,
+                (SELECT COUNT(*) FROM practice_days
+                 WHERE profile_id = :profile AND key_char = :key) AS distinct_days
             FROM key_attempts
-            WHERE profile_id = ? AND key_char = ?
+            WHERE profile_id = :profile AND key_char = :key
             """,
-            (profile_id, key_char),
+            {"profile": profile_id, "key": key_char},
         ).fetchone()
         return WindowStats(
             attempt_count=cast(int, row[0]),

@@ -1,6 +1,6 @@
 # ADR-033: Rest Keys and the Keyboard Alignment
 
-**Status:** Accepted. Not yet implemented. Of the amendments it requires, ADR-026's is made (2026-11-01); the others are not.
+**Status:** Accepted. Not yet implemented. Of the amendments it requires, ADR-026's and ADR-011's are made (both 2026-11-01); the others are not.
 **Date:** 2026-10-10
 **Noted:** 2026-11-01 — alpha #13 answered § Work this ADR requires: the three Windows checks and the dead-key worry, from measurement. The answers are dated notes in that section, and none of them changes a decision here.
 
@@ -227,7 +227,7 @@ Each is a later session, one ADR per session.
 | [ADR-027](0027-key-and-accuracy-state-model.md) | First rung is the rest position; § The Anchor Gate retired, with the anchor bar and the lifelong hold on `f` and `j` |
 | [ADR-010](0010-lesson-structure-and-progression.md) | "Why 6"; the first-rung row of the milestone table and its narrative note |
 | [ADR-024](0024-drill-content-and-lesson-granularity.md) | Phase B's same-finger anchor is the rest key, and what stands in when that key has no Active letter; the ramp-up of a rest letter; Stage 0's own content removed; the alignment's time is outside pace and block length; the block plan holds no key to the anchor bar |
-| [ADR-011](0011-persistence-and-state.md) | The records in § What must be recorded; a landing has no latency |
+| [ADR-011](0011-persistence-and-state.md) | The records in § What must be recorded; a landing has no latency. **Done 2026-11-01** (alpha-plan #12m session 2): [§ Records for the alignment, the rest keys and the ladder](0011-persistence-and-state.md#records-for-the-alignment-the-rest-keys-and-the-ladder). The records are in the store; nothing writes them until sessions (4), (6) and (7) |
 | [ADR-028](0028-composite-input-and-keyboard-ownership.md), [ADR-005](0005-keyboard-handling.md) | A press in the alignment on a key that produces no character; a dead key as a rest key, with the key-capture decision |
 | [ADR-026](0026-platform-interface-abstraction.md) | `get_layout_positions()` returns non-letter cells. **Done 2026-11-01** (alpha-plan #12m session 1): [§ Every cell of the grid](0026-platform-interface-abstraction.md#every-cell-of-the-grid) |
 | [ADR-022](0022-localisation-strategy.md) | The alignment's strings: "press and let go", the "let go" instruction, finger guidance and non-letter key names |

@@ -340,7 +340,7 @@ None of these is made here, except where the row says so.
 
 | Document | What changes |
 |---|---|
-| [ADR-011](0011-persistence-and-state.md) | The records in "What must be recorded" |
+| [ADR-011](0011-persistence-and-state.md) | The records in "What must be recorded". **Done 2026-11-01** (alpha-plan #12m session 2): [§ Records for the alignment, the rest keys and the ladder](0011-persistence-and-state.md#records-for-the-alignment-the-rest-keys-and-the-ladder). Levels are `ramp_up_levels`, one row per run, keyed by session so that Reach can start again; the bar is `introductions.stable_at`; Reach presses are `reach_presses`; `prev_char` after a rest cue holds the cued finger's id; `ramp_up_phases` stays until session (6) |
 | [ADR-027](0027-key-and-accuracy-state-model.md) | § First-Attempt Counting: a predictable press is not an attempt, and a letter with a Reach level becomes Active at its first Choose press. § Known has a speed term: "Phase C of the ramp-up" becomes the bar |
 | [ADR-010](0010-lesson-structure-and-progression.md) | The first of the two gates, "the current step's ramp-up has ended", means the bar. Review finding E7's two sentences giving Known as a raw 90% are still owed |
 | [ADR-023](0023-key-introduction-protocol.md) | Objective 1 is its own: what the guided presses are, and the script telling the child about the rest cue |

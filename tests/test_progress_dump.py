@@ -106,8 +106,13 @@ class TestMain:
 
         assert "Profile: dev" in out
         assert "key_stats (lifetime)" in out
+        # `days` is the count Known reads, from `practice_days` (ADR-011, #12m
+        # session 2): `f`'s presses are 25 hours apart, two days in any zone.
+        assert (
+            "  f           2        1    50.0%     2  2026-09-19T09:02:00+00:00" in out.splitlines()
+        )
         assert "key_attempts by local calendar day" in out
-        # date(attempted_at, 'localtime') grouping — must agree with window_stats().
+        # date(attempted_at, 'localtime') grouping: the window's days, by the child's calendar.
         assert "2026-09-19" in out
         assert "2026-09-20" in out
         # The mean time from the letter being sent, how many answers were
@@ -143,3 +148,17 @@ class TestMain:
         _seed_db(db_path)
         _run(monkeypatch, "--db", str(db_path), "--profile", "999")
         assert "No profile with id=999" in capsys.readouterr().out
+
+    def test_a_database_from_before_practice_days_is_still_dumped(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        # The store refuses it (ADR-011, #12m session 2) and says to delete it,
+        # so the dump is how the developer sees what it held first.
+        db_path = tmp_path / "takki.sqlite"
+        profile_id = _seed_db(db_path)
+        with sqlite3.connect(db_path) as conn:
+            conn.execute("DROP TABLE practice_days")
+        conn.close()
+        _run(monkeypatch, "--db", str(db_path), "--profile", str(profile_id))
+        lines = capsys.readouterr().out.splitlines()
+        assert "  f           2        1    50.0%     -  2026-09-19T09:02:00+00:00" in lines

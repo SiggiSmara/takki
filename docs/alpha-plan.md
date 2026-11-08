@@ -88,6 +88,25 @@ Session-by-session breakdown of [Alpha](roadmap.md#alpha--internaldev-only). Seq
   - The table from SDL scan codes to set-1 (`SET1_TO_SDL` in `spikes/key_capture_source_spike.py`) is not in product code yet. It is #14's, or session 7's if #14 has not brought it in.
 - **Session 5 (the location rule):** on an ANSI keyboard, scan code 0x2B (`\`) sits in row 2 above Enter, but the grid puts it in row 3, where ISO keyboards have it. Windows cannot tell the two keyboards apart. Only a child whose right little finger rests on that key would be told a reach one row off.
 
+**From #12m session 2 (2026-11-01), for later #12m sessions.** The store now holds every record ADR-033 and ADR-024 ask for, and nothing writes them yet. [ADR-011 § Records for the alignment, the rest keys and the ladder](adr/0011-persistence-and-state.md#records-for-the-alignment-the-rest-keys-and-the-ladder) has the schema and the reasons. Its marks say what is tested and what is argued. Each later session finds its part there:
+- **Every session:** any database written before session 2 is refused when it is opened (schema version 0; ADR-011, "No migration"). Delete the development database on each machine before running Takki. #12h starts from a new one, as it already must.
+- **Session 4 (the `rest` rung):**
+  - The rung's record is a `milestones` row under the slug `rest`. The slug's constant, its place in `LADDER` and its criterion are session 4's.
+  - `Store.landings()` returns every landing. The rung needs round 1 of the last five sessions, so session 4 adds that narrower read and an index on `(profile_id, session_id, round)`.
+  - A session from before a rest key changed has to be judged against the key that was current then. `rest_keys` keeps replaced keys, with `replaced_at`, for that.
+- **Session 6 (the ladder):**
+  - The store does not stop Choose or Travel being begun twice in different sessions. Session 6 keeps that rule and pins it with a test.
+  - A level run is keyed by session, which assumes Reach begins at most once per step per session. ADR-024 starts it again only after a restart; if the ladder ever restarts Reach within a session, the key no longer fits.
+  - `prev_char` after a rest cue holds the cued finger's id.
+  - `ramp_up_phases`, the phase API (`begin_phase`, `record_phase`, `phase_records`, `PhaseRecord`) and `progress_dump`'s phase table go when the ladder replaces the phases.
+- **Session 7 (the alignment):**
+  - An index finger's rest key is written with `chosen_by = "bump"`.
+  - The key pressed in answer to "which one do you want" is a choice, not a landing.
+  - A landing and a level run must name the profile's own session.
+  - The store does not require a key to be ready before it passes its session-start test, and ADR-033 does not say it must be; session 7 decides.
+- **Session 8 (the dump tool):** `progress_dump` prints the practice days and nothing else of these records. The levels, the bar, Reach presses, landings and rest keys are still to be printed.
+- **The Linux box:** `TestPracticeDayIsLocal` sets the process timezone, which Windows cannot, so its new test (a practice day is fixed when it is written) did not run in session 2, which ran on the Windows laptop. CI's Linux job runs it.
+
 Sessions 7–10 are deliberately contiguous — five engine sessions (7, 8, 8b, 9, 10) in the same mental model, all Opus, all pure logic against the fakes that exist by then.
 
 **#12b was split into 12b-1 (prepare and automate) and 12b-2 (the hands-on run) on 2026-09-24**, once 12a closed. The protocol mixed checks a script can run with checks only a person can, and said what to verify without saying how or in what order. 12b-1 takes everything a machine can do and turns the rest into a playbook inside the protocol, so 12b-2 is only the part that needs a person at the keyboard.

@@ -58,6 +58,20 @@ WHERE profile_id = ? AND key_char = ?
 
 Known = `attempt_count ≥ 90 AND correct_count * 1.0 / attempt_count ≥ 0.90 AND distinct_days ≥ 2`.
 
+*(Amended 2026-11-01, alpha-plan #12m session 2, review finding E4 of [2026-10-06](../research/code-review-2026-10-06.md), decided by the developer on 2026-10-10: **the practice days are counted outside the window.** Read over the window, 200 presses of a key in one day took away its earlier days, so a Known key stopped being Known until the next day, and needed a slot again. The days are a fact about the calendar (the table below), and the window is built to forget. They are now kept in [ADR-011](0011-persistence-and-state.md)'s `practice_days`, one row per key per local day with an attempt, never trimmed, with the day fixed when the attempt is written. The query is:*
+
+```sql
+SELECT
+    COUNT(*)     AS attempt_count,
+    SUM(correct) AS correct_count,
+    (SELECT COUNT(*) FROM practice_days
+     WHERE profile_id = ? AND key_char = ?) AS distinct_days
+FROM key_attempts
+WHERE profile_id = ? AND key_char = ?
+```
+
+*The dose and the accuracy are still read over the window, and can still fall. The days floor, once met, stays met. Only an attempt (a `key_attempts` row) makes a practice day: a press that is not an attempt, such as ADR-024's predictable presses or ADR-033's landings, does not. ADR-011 § Records for the alignment, the rest keys and the ladder, "Practice days outside the window (E4)", has the tests.)*
+
 **Why ≥ 90 attempts:** 90 reps per key is the graphomotor research floor — below it, children in the 7–8 age band retain essentially nothing at 4–5 week follow-up. See [motor-learning-repetitions.md](../research/motor-learning-repetitions.md). Configurable: `config.KNOWN_MIN_ATTEMPTS`, with `config.KNOWN_MIN_ACCURACY` for the 0.90 accuracy floor (ADR-025).
 
 **Why ≥ 2 distinct practice days:** motor memory consolidates during sleep. A child who accumulates 90 attempts in one sitting has not yet had a sleep cycle to consolidate the skill. Two distinct calendar days guarantees at least one night between first and most recent practice. This is the minimum bar, not a high one — a child practicing on consecutive mornings clears it easily. The ≥ 2 floor is configurable: `config.KNOWN_MIN_DISTINCT_DAYS` (ADR-025). *(Noted 2026-10-04, alpha-plan #12f: the floor stands, and its reason is weaker than this paragraph says. The research read for #12f supports practice spread over days, and finds that in children the gain between sessions does not clearly depend on sleep: [known-decay-accuracy-speed.md](../research/known-decay-accuracy-speed.md) § 1b. Read "two days of practice", not "one night of sleep".)*
@@ -71,7 +85,7 @@ Known's three parts are three different kinds of thing, and only one of them was
 | Part | What it is | Since 2026-10-04 |
 |---|---|---|
 | `attempt_count ≥ KNOWN_MIN_ATTEMPTS` | A **dose**: the child has pressed the key that many times | Unchanged. Counted as rows in the window. Time does not undo a press |
-| `distinct_practice_days ≥ KNOWN_MIN_DISTINCT_DAYS` | A fact about the calendar | Unchanged |
+| `distinct_practice_days ≥ KNOWN_MIN_DISTINCT_DAYS` | A fact about the calendar | Unchanged. *(Since 2026-11-01, counted outside the window: § Known query, the note under it.)* |
 | accuracy `≥ KNOWN_MIN_ACCURACY` | An **estimate** | The lower confidence bound on the accuracy, over evidence that ages |
 
 **The bound.** The accuracy test was a raw proportion, and 81 correct of 90 passed it. The lower confidence bound on that (Wilson, `CONFIDENCE_Z` = 1, the measure [ADR-024](0024-drill-content-and-lesson-granularity.md)'s need has used since #12e) is 0.864: Known certified "probably above 86%" while the planner worked toward "surely above 90%". Known now asks the planner's question. The bars keep their values, and the test is stricter exactly where the evidence is thin:
