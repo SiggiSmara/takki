@@ -13,6 +13,7 @@ from takki.persistence import Store
 from takki.platform.layout import Layout, build_de, build_en, build_is
 from tests.fakes.fake_store import FakeStore
 from tests.fakes.fixed_list_source import FixedListSource
+from tests.sessions import session_for
 
 DAY1 = "2026-01-01T10:00:00+00:00"
 DAY2 = "2026-01-02T10:00:00+00:00"
@@ -44,7 +45,7 @@ def answer(store: Store, char: str, *, correct: int = 0, wrong: int = 0, day: st
     for i in range(correct + wrong):
         right = i < correct
         store.upsert_key_stat(1, char, right, day)
-        store.append_attempt(1, char, right, day)
+        store.append_attempt(1, session_for(store, 1, day), char, right, day)
 
 
 def states(store: Store) -> KeyStates:
@@ -197,12 +198,12 @@ class TestRoomForStep:
             for i in range(config.KNOWN_MIN_ATTEMPTS):
                 day = DAY1 if i % 2 == 0 else DAY2
                 store.upsert_key_stat(1, char, True, day)
-                store.append_attempt(1, char, True, day, ms)
+                store.append_attempt(1, session_for(store, 1, day), char, True, day, ms)
         assert states(store).known_keys() == set("ruvm")
         assert keys_in_progress(build_en(), states(store)) == {"d"}
         # Once its latest answers are within the ratio the slot is free again.
         for _ in range(config.SPEED_SAMPLE):
-            store.append_attempt(1, "d", True, DAY2, 1900)
+            store.append_attempt(1, session_for(store, 1, DAY2), "d", True, DAY2, 1900)
         assert keys_in_progress(build_en(), states(store)) == set()
 
     def test_a_member_that_is_already_active_is_not_counted_twice(self) -> None:

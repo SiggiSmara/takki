@@ -6,6 +6,7 @@ from takki.lesson.letter_lengths import LetterLengths
 from takki.persistence import Attempt, KeyStat, WindowStats
 from tests.fakes.fake_clock import FakeClock
 from tests.fakes.fake_store import FakeStore
+from tests.sessions import session_for
 
 
 class Harness:
@@ -15,7 +16,9 @@ class Harness:
         self.store = FakeStore()
         self.profile = self.store.create_profile("Alice")
         self.minute = 0
-        self.counter = AttemptCounter(self.store, self.profile.id, self.stamp)
+        self.counter = AttemptCounter(
+            self.store, self.profile.id, session_for(self.store, self.profile.id), self.stamp
+        )
 
     def stamp(self) -> str:
         ts = f"2026-01-01T10:{self.minute:02d}:00+00:00"
@@ -82,7 +85,8 @@ class TestOneWritePerAttempt:
                 super().bump_key_recency(*args, **kwargs)
 
         store = Spy()
-        counter = AttemptCounter(store, store.create_profile("Alice").id)
+        profile_id = store.create_profile("Alice").id
+        counter = AttemptCounter(store, profile_id, session_for(store, profile_id))
         counter.start_prompt("f")
         counter.press("j")
         counter.press("f")
@@ -207,7 +211,7 @@ class TestStoreTimestamps:
     def test_the_counter_leaves_timestamping_to_the_store_by_default(self) -> None:
         store = FakeStore()
         profile = store.create_profile("Alice")
-        counter = AttemptCounter(store, profile.id)
+        counter = AttemptCounter(store, profile.id, session_for(store, profile.id))
         counter.start_prompt("f")
         counter.press("f")
         stat = store.key_stats(profile.id)["f"]
@@ -215,15 +219,24 @@ class TestStoreTimestamps:
         assert stat.last_practised_at is not None
         assert store.window_stats(profile.id, "f") == WindowStats(1, 1, 1)
 
-    def test_attempts_land_on_the_day_they_were_typed(self) -> None:
+    def test_attempts_take_their_sessions_day_not_their_stamps(self) -> None:
+        # ADR-011 `sessions`: one session whose presses are a day apart is one
+        # practice day. A second session started on the later day is a second.
         store = FakeStore()
         profile = store.create_profile("Alice")
-        days = iter(["2026-01-01T10:00:00+00:00", "2026-01-02T10:00:00+00:00"])
-        counter = AttemptCounter(store, profile.id, lambda: next(days))
+        stamps = ["2026-01-01T10:00:00+00:00", "2026-01-02T10:00:00+00:00"]
+        first = store.start_session(profile.id, stamps[0])
+        days = iter(stamps)
+        counter = AttemptCounter(store, profile.id, first, lambda: next(days))
         for _ in range(2):
             counter.start_prompt("f")
             counter.press("f")
-        assert store.window_stats(profile.id, "f") == WindowStats(2, 2, 2)
+        assert store.window_stats(profile.id, "f") == WindowStats(2, 2, 1)
+        second = store.start_session(profile.id, stamps[1])
+        counter = AttemptCounter(store, profile.id, second, lambda: stamps[1])
+        counter.start_prompt("f")
+        counter.press("f")
+        assert store.window_stats(profile.id, "f") == WindowStats(3, 3, 2)
 
 
 LETTER_SECONDS = 1.2
@@ -238,7 +251,12 @@ class TimedHarness(Harness):
         self.clock = FakeClock()
         self.lengths = LetterLengths(self.store, self.profile.id, "voice", config.TTS_RATE)
         self.counter = AttemptCounter(
-            self.store, self.profile.id, self.stamp, self.clock, lengths=self.lengths
+            self.store,
+            self.profile.id,
+            session_for(self.store, self.profile.id),
+            self.stamp,
+            self.clock,
+            lengths=self.lengths,
         )
 
     def rows(self, key_char: str) -> list[Attempt]:
@@ -333,7 +351,9 @@ class TestLatency:
         profile = store.create_profile("Alice")
         clock = FakeClock()
         lengths = LetterLengths(store, profile.id, "voice", config.TTS_RATE)
-        counter = AttemptCounter(store, profile.id, None, clock, lengths=lengths)
+        counter = AttemptCounter(
+            store, profile.id, session_for(store, profile.id), None, clock, lengths=lengths
+        )
         for target in ("f", "j", "f"):
             counter.start_prompt(target)
             counter.letter_sent()
@@ -349,7 +369,16 @@ class TestLatency:
         # another letter's. Only a measured playback is a length now.
         h = TimedHarness()
         stamp = "2026-01-01T09:00:00+00:00"
-        h.store.append_attempt(h.profile.id, "f", True, stamp, 900, None, after_letter_ms=-300)
+        h.store.append_attempt(
+            h.profile.id,
+            session_for(h.store, h.profile.id, stamp),
+            "f",
+            True,
+            stamp,
+            900,
+            None,
+            after_letter_ms=-300,
+        )
         h.answer("f", 0.5)
         assert h.timing("f")[-1] == (500, None, 0)
 
@@ -582,7 +611,14 @@ class TestTooEarlyToHaveHeard:
 
     def test_the_floor_is_the_constructors_to_set(self) -> None:
         h = TimedHarness()
-        h.counter = AttemptCounter(h.store, h.profile.id, h.stamp, h.clock, heard_min_ms=600)
+        h.counter = AttemptCounter(
+            h.store,
+            h.profile.id,
+            session_for(h.store, h.profile.id),
+            h.stamp,
+            h.clock,
+            heard_min_ms=600,
+        )
         h.answer("f", 0.5)
         assert h.rows("f") == []
         h.answer("f", 0.6)

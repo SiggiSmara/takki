@@ -13,6 +13,7 @@ from takki.persistence import Attempt, PhaseRecord
 from takki.platform.layout import Layout, build_en
 from tests.fakes.fake_store import FakeStore
 from tests.fakes.fixed_list_source import FixedListSource
+from tests.sessions import session_for
 from tests.test_drills import EN_WORDS, Fixture, make_step
 
 THROUGH_A = "." * config.PHASE_A_STREAK
@@ -180,7 +181,7 @@ class TestRecordedPhases:
             progress.begin(member)
         for mark in pattern:
             store.upsert_key_stat(profile, name, mark == ".")
-            store.append_attempt(profile, name, mark == ".")
+            store.append_attempt(profile, session_for(store, profile), name, mark == ".")
 
     def test_a_fresh_member_is_in_phase_a_with_no_evidence(self) -> None:
         _, _, progress = self.progress()
@@ -274,7 +275,7 @@ class TestRecordedPhases:
         assert progress.advance(progress.member("d")) is True
         for mark in THROUGH_B + THROUGH_C:
             store.upsert_key_stat(profile, "d", mark == ".")
-            store.append_attempt(profile, "d", mark == ".")
+            store.append_attempt(profile, session_for(store, profile), "d", mark == ".")
         waiting = progress.member("d")
         assert (waiting.phase, waiting.begun, waiting.evidence) == (RampUpPhase.B, False, ())
         assert progress.advance(waiting) is False

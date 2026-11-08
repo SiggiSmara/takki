@@ -1,15 +1,14 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Literal, Protocol
 
 
 def utc_stamp(value: str) -> str:
     """`value` unchanged if it is a UTC instant as the store writes it; ValueError otherwise."""
     # The store's data contract, enforced on the way in and on the way out. A
-    # bare stamp is not rejected by SQLite: `date(x, 'localtime')` reads it as
-    # UTC, so a local time written by mistake would move a practice day
-    # silently.
+    # bare stamp is not rejected by SQLite, so a local time written by mistake
+    # would be read as UTC and shift every reading of it silently.
     parsed = datetime.fromisoformat(value)
     # One spelling only -- whole seconds and `+00:00`, what `_now()` writes --
     # because `milestones` is ordered by this text, and `Z` or a fraction of a
@@ -17,6 +16,23 @@ def utc_stamp(value: str) -> str:
     if parsed.utcoffset() != timedelta(0) or value != parsed.isoformat(timespec="seconds"):
         raise ValueError(f"timestamp is not UTC in the stored form: {value!r}")
     return value
+
+
+def next_practice_day(previous: tuple[int, str] | None, started_at: str) -> int:
+    """The practice-day number of a session starting at `started_at` (ADR-011 `sessions`).
+
+    `previous` is the profile's last session: its number and its start.
+    """
+    if previous is None:
+        return 1
+    number, previous_start = previous
+    # The one place local time is read, and nothing local is kept: two local
+    # dates in the zone of this moment, compared and dropped.
+    return number + (_local_date(started_at) != _local_date(previous_start))
+
+
+def _local_date(stamp: str) -> date:
+    return datetime.fromisoformat(stamp).astimezone().date()
 
 
 @dataclass(frozen=True)
@@ -46,7 +62,7 @@ class KeyStat:
 class WindowStats:
     attempt_count: int
     correct_count: int
-    # Every local day the key was ever practised, not only the window's
+    # Every practice day the key was ever practised on, not only the window's
     # (ADR-011 `practice_days`): 200 presses in one day must not evict the
     # key's earlier days (review of 2026-10-06, E4).
     distinct_days: int
@@ -179,7 +195,13 @@ class Store(Protocol):
 
     def list_profiles(self) -> list[Profile]: ...
 
-    def start_session(self, profile_id: int, started_at: str | None = None) -> int: ...
+    def start_session(self, profile_id: int, started_at: str | None = None) -> int:
+        """A new session, numbered with its practice day by `next_practice_day`."""
+        ...
+
+    def practice_days_by_session(self, profile_id: int) -> dict[int, int]:
+        """Each of the profile's sessions, by id, with its practice-day number."""
+        ...
 
     def end_session(self, session_id: int, ended_at: str | None = None) -> None: ...
 
@@ -201,6 +223,7 @@ class Store(Protocol):
     def append_attempt(
         self,
         profile_id: int,
+        session_id: int,
         key_char: str,
         correct: bool,
         attempted_at: str | None = None,
@@ -213,6 +236,7 @@ class Store(Protocol):
     def count_attempt(
         self,
         profile_id: int,
+        session_id: int,
         key_char: str,
         correct: bool,
         attempted_at: str | None = None,
@@ -221,7 +245,10 @@ class Store(Protocol):
         after_letter_ms: int | None = None,
         timeouts: int = 0,
     ) -> None:
-        """`upsert_key_stat` and `append_attempt` for one counted attempt, written together."""
+        """`upsert_key_stat` and `append_attempt` for one counted attempt, written together.
+
+        The session must be the profile's: the attempt's practice day is its number.
+        """
         # A ramp-up phase's evidence is the rows since the lifetime count at
         # its start (ADR-011), so a count without its row shifts that evidence
         # by one for good.

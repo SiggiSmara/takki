@@ -6,6 +6,7 @@ import pytest
 
 from takki import progress_dump
 from takki.persistence.sqlite_store import SqliteStore
+from tests.sessions import session_for
 
 
 def _seed_db(path: Path) -> int:
@@ -13,10 +14,23 @@ def _seed_db(path: Path) -> int:
     profile = store.create_profile("dev", "en", created_at="2026-09-19T09:00:00+00:00")
     store.upsert_key_stat(profile.id, "f", True, practised_at="2026-09-19T09:01:00+00:00")
     store.upsert_key_stat(profile.id, "f", False, practised_at="2026-09-19T09:02:00+00:00")
-    store.append_attempt(profile.id, "f", True, attempted_at="2026-09-19T09:01:00+00:00")
-    store.append_attempt(profile.id, "f", False, attempted_at="2026-09-19T09:02:00+00:00")
     store.append_attempt(
         profile.id,
+        session_for(store, profile.id, "2026-09-19T09:01:00+00:00"),
+        "f",
+        True,
+        attempted_at="2026-09-19T09:01:00+00:00",
+    )
+    store.append_attempt(
+        profile.id,
+        session_for(store, profile.id, "2026-09-19T09:02:00+00:00"),
+        "f",
+        False,
+        attempted_at="2026-09-19T09:02:00+00:00",
+    )
+    store.append_attempt(
+        profile.id,
+        session_for(store, profile.id, "2026-09-20T10:00:00+00:00"),
         "f",
         True,
         attempted_at="2026-09-20T10:00:00+00:00",
@@ -28,11 +42,39 @@ def _seed_db(path: Path) -> int:
     # first half (300 and 400 ms after it was sent), one in its second half,
     # and one that sat through two timeouts and so was not timed.
     day = "2026-09-20T10:01:00+00:00"
-    store.append_attempt(profile.id, "j", False, day, latency_ms=300, after_letter_ms=-900)
-    store.append_attempt(profile.id, "j", True, day, latency_ms=400, after_letter_ms=-800)
-    store.append_attempt(profile.id, "j", True, day, latency_ms=1100, after_letter_ms=-100)
-    store.append_attempt(profile.id, "j", True, day, latency_ms=700)
-    store.append_attempt(profile.id, "j", True, day, timeouts=2)
+    store.append_attempt(
+        profile.id,
+        session_for(store, profile.id, day),
+        "j",
+        False,
+        day,
+        latency_ms=300,
+        after_letter_ms=-900,
+    )
+    store.append_attempt(
+        profile.id,
+        session_for(store, profile.id, day),
+        "j",
+        True,
+        day,
+        latency_ms=400,
+        after_letter_ms=-800,
+    )
+    store.append_attempt(
+        profile.id,
+        session_for(store, profile.id, day),
+        "j",
+        True,
+        day,
+        latency_ms=1100,
+        after_letter_ms=-100,
+    )
+    store.append_attempt(
+        profile.id, session_for(store, profile.id, day), "j", True, day, latency_ms=700
+    )
+    store.append_attempt(
+        profile.id, session_for(store, profile.id, day), "j", True, day, timeouts=2
+    )
     store.mark_introduced(profile.id, ["f", "j"], introduced_at="2026-09-19T09:00:00+00:00")
     store.begin_phase(profile.id, "f", "A", 0, started_at="2026-09-19T09:00:00+00:00")
     store.record_phase(profile.id, "f", "A", 10, completed_at="2026-09-19T09:05:00+00:00")

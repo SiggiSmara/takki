@@ -22,6 +22,7 @@ class AttemptCounter:
         self,
         store: Store,
         profile_id: int,
+        session_id: int,
         now: Callable[[], str] | None = None,
         clock: Clock | None = None,
         heard_min_ms: int = config.HEARD_MIN_MS,
@@ -29,6 +30,8 @@ class AttemptCounter:
     ) -> None:
         self._store = store
         self._profile_id = profile_id
+        # Every attempt takes its practice day from the session (ADR-011).
+        self._session_id = session_id
         # Monotonic, for ADR-011's latency_ms. Separate from `now` above, which
         # is wall-clock and only stamps rows. None measures nothing, writes
         # NULL, which every bar treats as unmeasured, and applies no floor.
@@ -150,6 +153,7 @@ class AttemptCounter:
             )
             self._store.count_attempt(
                 self._profile_id,
+                self._session_id,
                 target,
                 correct,
                 ts,

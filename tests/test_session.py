@@ -20,7 +20,7 @@ from takki.lesson.drills import DrillGenerator
 from takki.lesson.introducer import KeyIntroducer, describe, introduction_sequence
 from takki.lesson.key_state import KeyStates
 from takki.lesson.rampup import RampUpProgress
-from takki.persistence import Attempt, PhaseRecord, Profile
+from takki.persistence import Attempt, PhaseRecord, Profile, WindowStats
 from takki.platform.layout import Grapheme, Layout, PhysicalKey, build_en
 from takki.session import Celebrant, InboundEvent, SessionLoop
 from tests.fakes.fake_clock import FakeClock
@@ -33,6 +33,7 @@ from tests.fakes.fake_tts import FakeTTSEngine
 from tests.fakes.fixed_list_source import FixedListSource
 from tests.fakes.scripted_key_stream import ScriptedKeyStream
 from tests.fakes.waiting_queue import install
+from tests.sessions import session_for
 
 EN_WORDS: dict[str, float] = {
     "the": 100.0,
@@ -107,7 +108,9 @@ class Harness:
         for name, count in (seed or {}).items():
             for _ in range(count):
                 self.store.upsert_key_stat(self.profile.id, name, True)
-                self.store.append_attempt(self.profile.id, name, True)
+                self.store.append_attempt(
+                    self.profile.id, session_for(self.store, self.profile.id), name, True
+                )
             # A key with a history was introduced under some voice, and that
             # is where its length was measured (ADR-011 § letter_lengths).
             self.store.append_letter_lengths(
@@ -289,6 +292,22 @@ class TestStartup:
         assert harness.stream.started is True
         assert harness.loop.running is True
         assert harness.store.sessions() == [(harness.profile.id, ANY_TS, None)]
+
+    def test_its_attempts_take_the_practice_day_of_the_session_it_opened(self) -> None:
+        # ADR-011 `sessions`, #12m session 4b. An earlier session on another
+        # date has one press of `f`; the loop's session is the second day, so
+        # `f` has two days only if the loop's presses went into its own.
+        store = FakeStore()
+        profile = store.create_profile("kid")
+        earlier = store.start_session(profile.id, "2026-01-01T10:00:00+00:00")
+        store.count_attempt(profile.id, earlier, "f", True, "2026-01-01T10:00:00+00:00")
+        harness = Harness(store=store, profile=profile)
+        harness.loop.start()
+        asked = harness.answer(4)
+        assert Counter(asked) == {"f": 2, "j": 2}
+        assert store.practice_days_by_session(profile.id) == {earlier: 1, earlier + 1: 2}
+        assert store.window_stats(profile.id, "f") == WindowStats(3, 3, 2)
+        assert store.window_stats(profile.id, "j") == WindowStats(2, 2, 1)
 
     def test_nothing_is_spoken_before_the_first_introduction(self) -> None:
         harness = Harness()
@@ -1781,7 +1800,7 @@ class TestIntroductionPacingAcrossSessions:
                 progress.begin(progress.member(name))
                 for _ in range(bar):
                     store.upsert_key_stat(profile.id, name, True)
-                    store.append_attempt(profile.id, name, True)
+                    store.append_attempt(profile.id, session_for(store, profile.id), name, True)
                 assert progress.advance(progress.member(name)) is True
 
         harness = Harness(store=store, profile=profile)
@@ -2003,7 +2022,9 @@ def finish(
         for name in step:
             for _ in range(config.KNOWN_MIN_ATTEMPTS):
                 store.upsert_key_stat(profile_id, name, True, DAY_ONE)
-                store.append_attempt(profile_id, name, True, DAY_ONE)
+                store.append_attempt(
+                    profile_id, session_for(store, profile_id, DAY_ONE), name, True, DAY_ONE
+                )
             began = 0
             for phase, attempts_at in marks.items():
                 store.begin_phase(profile_id, name, phase, began)
@@ -2011,7 +2032,9 @@ def finish(
                 began = attempts_at
             if name in known:
                 store.upsert_key_stat(profile_id, name, True, DAY_TWO)
-                store.append_attempt(profile_id, name, True, DAY_TWO)
+                store.append_attempt(
+                    profile_id, session_for(store, profile_id, DAY_TWO), name, True, DAY_TWO
+                )
 
 
 class TestSlots:

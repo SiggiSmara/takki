@@ -19,6 +19,7 @@ from takki.lesson.key_state import (
 )
 from takki.persistence import Attempt, Store, WindowStats
 from tests.fakes.fake_store import FakeStore
+from tests.sessions import session_for
 
 DAY1 = "2026-01-01T10:00:00+00:00"
 DAY2 = "2026-01-02T10:00:00+00:00"
@@ -32,9 +33,21 @@ def later(stamp: str, days: float) -> str:
 def stocked(store: Store, profile_id: int, key_char: str, *, correct: int, wrong: int) -> None:
     """Practise a key over two calendar days, correct attempts first."""
     for i in range(correct):
-        store.append_attempt(profile_id, key_char, True, DAY1 if i % 2 == 0 else DAY2)
+        store.append_attempt(
+            profile_id,
+            session_for(store, profile_id, DAY1 if i % 2 == 0 else DAY2),
+            key_char,
+            True,
+            DAY1 if i % 2 == 0 else DAY2,
+        )
     for i in range(wrong):
-        store.append_attempt(profile_id, key_char, False, DAY1 if i % 2 == 0 else DAY2)
+        store.append_attempt(
+            profile_id,
+            session_for(store, profile_id, DAY1 if i % 2 == 0 else DAY2),
+            key_char,
+            False,
+            DAY1 if i % 2 == 0 else DAY2,
+        )
 
 
 def window(attempts: int, correct: int, days: int, *, kept: float = 1.0) -> Evidence:
@@ -175,7 +188,13 @@ class TestDecay:
         p = store.create_profile("Alice")
         store.upsert_key_stat(p.id, "a", True, "1980-01-01T00:00:00+00:00")
         for _ in range(90):
-            store.append_attempt(p.id, "a", True, "1980-01-01T00:00:00+00:00")
+            store.append_attempt(
+                p.id,
+                session_for(store, p.id, "1980-01-01T00:00:00+00:00"),
+                "a",
+                True,
+                "1980-01-01T00:00:00+00:00",
+            )
         states = KeyStates(store, p.id, now=lambda: "2026-10-04T00:00:00+00:00")
         assert 0 < states.evidence("a").weight < 1e-100
         assert states.known_keys() == set()
@@ -238,7 +257,7 @@ class TestKeyStateDerivation:
         store = FakeStore()
         p = store.create_profile("Alice")
         store.upsert_key_stat(p.id, "a", True, DAY1)
-        store.append_attempt(p.id, "a", True, DAY1)
+        store.append_attempt(p.id, session_for(store, p.id, DAY1), "a", True, DAY1)
         assert KeyStates(store, p.id).state("a") is KeyState.ACTIVE
 
     def test_active_becomes_known_when_the_criterion_is_met(self) -> None:
@@ -248,7 +267,28 @@ class TestKeyStateDerivation:
         states = KeyStates(store, p.id, now=lambda: DAY2)
         stocked(store, p.id, "a", correct=89, wrong=0)
         assert states.state("a") is KeyState.ACTIVE
-        store.append_attempt(p.id, "a", True, DAY2)
+        store.append_attempt(p.id, session_for(store, p.id, DAY2), "a", True, DAY2)
+        assert states.state("a") is KeyState.KNOWN
+
+    def test_one_sitting_through_midnight_is_one_day_and_known_waits_for_a_second(
+        self,
+    ) -> None:
+        # #12m session 4b: the case the practice-day number was made for. One
+        # session whose presses run 24 hours on crosses a local midnight in
+        # every zone. Its presses are one practice day, so the days floor
+        # holds Known back until a session is started on another date.
+        store = FakeStore()
+        p = store.create_profile("Alice")
+        store.upsert_key_stat(p.id, "a", True, DAY1)
+        sitting = store.start_session(p.id, DAY1)
+        dose = config.KNOWN_MIN_ATTEMPTS
+        for i in range(dose):
+            store.append_attempt(p.id, sitting, "a", True, DAY1 if i < dose // 2 else DAY2)
+        states = KeyStates(store, p.id, now=lambda: DAY2)
+        assert store.window_stats(p.id, "a") == WindowStats(dose, dose, 1)
+        assert states.state("a") is KeyState.ACTIVE
+        store.append_attempt(p.id, store.start_session(p.id, DAY2), "a", True, DAY2)
+        assert store.window_stats(p.id, "a") == WindowStats(dose + 1, dose + 1, 2)
         assert states.state("a") is KeyState.KNOWN
 
     def test_known_is_recomputed_not_latched(self) -> None:
@@ -275,7 +315,7 @@ class TestKeyStateDerivation:
         returned = KeyStates(store, p.id, now=lambda: back)
         assert returned.state("a") is KeyState.ACTIVE
         for _ in range(7):
-            store.append_attempt(p.id, "a", True, back)
+            store.append_attempt(p.id, session_for(store, p.id, back), "a", True, back)
         assert returned.state("a") is KeyState.KNOWN
 
     def test_a_row_with_no_window_rows_is_active_not_known(self) -> None:
@@ -300,9 +340,9 @@ class TestRollingWindow:
         p = store.create_profile("Alice")
         store.upsert_key_stat(p.id, "a", False, DAY1)
         for _ in range(20):
-            store.append_attempt(p.id, "a", False, DAY1)
+            store.append_attempt(p.id, session_for(store, p.id, DAY1), "a", False, DAY1)
         for _ in range(90):
-            store.append_attempt(p.id, "a", True, DAY2)
+            store.append_attempt(p.id, session_for(store, p.id, DAY2), "a", True, DAY2)
         stats = store.window_stats(p.id, "a")
         assert stats == WindowStats(attempt_count=100, correct_count=90, distinct_days=2)
 
@@ -316,12 +356,12 @@ class TestRollingWindow:
         store.upsert_key_stat(p.id, "a", False, DAY1)
         states = KeyStates(store, p.id, KnownCriterion(min_distinct_days=1), now=lambda: DAY2)
         for _ in range(8):
-            store.append_attempt(p.id, "a", False, DAY2)
+            store.append_attempt(p.id, session_for(store, p.id, DAY2), "a", False, DAY2)
         for _ in range(92):
-            store.append_attempt(p.id, "a", True, DAY2)
+            store.append_attempt(p.id, session_for(store, p.id, DAY2), "a", True, DAY2)
         assert store.window_stats(p.id, "a") == WindowStats(100, 92, 1)
         assert states.state("a") is KeyState.ACTIVE
-        store.append_attempt(p.id, "a", True, DAY2)
+        store.append_attempt(p.id, session_for(store, p.id, DAY2), "a", True, DAY2)
         assert store.window_stats(p.id, "a") == WindowStats(100, 93, 1)
         assert states.state("a") is KeyState.KNOWN
 
@@ -329,7 +369,7 @@ class TestRollingWindow:
         store = FakeStore()
         p = store.create_profile("Alice")
         for _ in range(config.ATTEMPT_WINDOW + 5):
-            store.append_attempt(p.id, "a", True, DAY1)
+            store.append_attempt(p.id, session_for(store, p.id, DAY1), "a", True, DAY1)
         assert store.window_stats(p.id, "a").attempt_count == config.ATTEMPT_WINDOW
 
 
@@ -398,6 +438,7 @@ def practised(
     for i in range(presses):
         store.append_attempt(
             profile_id,
+            session_for(store, profile_id, DAY1 if i % 2 == 0 else DAY2),
             key_char,
             True,
             DAY1 if i % 2 == 0 else DAY2,
@@ -452,7 +493,7 @@ class TestHeld:
         states = KeyStates(store, profile.id, now=lambda: DAY2)
         with states.held(), states.held():
             assert states.known_keys() == set()
-        store.append_attempt(profile.id, "d", True, DAY2)
+        store.append_attempt(profile.id, session_for(store, profile.id, DAY2), "d", True, DAY2)
         assert states.known_keys() == {"d"}
 
 

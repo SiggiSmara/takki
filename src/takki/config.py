@@ -128,7 +128,7 @@ SLOW_KEY_NEED = 5
 # ADR-027 § The `rest` rung: all eight fingers land on their rest keys at the
 # first round of this many days, one session start a day (ADR-033). The name
 # is ADR-033's: it counts session starts, and only the first complete one of
-# each local day.
+# each practice day (ADR-011 `sessions`).
 REST_SETTLED_SESSION_STARTS = 5
 
 # ADR-010 § Progression Rules. The gate on *when* a new key is introduced, as

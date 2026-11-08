@@ -6,7 +6,8 @@
 > Part of the [Takki architecture](../architecture.md).  
 > **Amended 2026-11-01 ([alpha-plan](../alpha-plan.md) #12m session 2):** the records [ADR-033](0033-rest-keys-and-keyboard-alignment.md) and [ADR-024](0024-drill-content-and-lesson-granularity.md#the-ramp-up-restated-four-objectives-and-a-ladder-of-three-levels) list, and practice days kept outside the window (review finding E4), in [§ Records for the alignment, the rest keys and the ladder](#records-for-the-alignment-the-rest-keys-and-the-ladder). The amendment ADR-033 asked of this ADR is made. The records exist in the store and nothing writes them yet; their writers are later #12m sessions.  
 > **Noted 2026-11-08 ([alpha-plan](../alpha-plan.md) #12m, the ADR-027 session):** [ADR-027 § The `rest` rung](0027-key-and-accuracy-state-model.md#the-rest-rung) reads the first round of the last five *days*, one session a day, and judges each landing against the finger's *current* rest key. So § `landings`' "the last five sessions" and § `rest_keys`' "the `rest` rung will need [replaced keys]" no longer describe the rung. Dated notes in both are owed by #12m session (4), which adds the narrower read.  
-> **Amended 2026-11-08 ([alpha-plan](../alpha-plan.md) #12m session 4):** the `rest` rung's read, `first_round_landings`, and its index, with the dated notes owed above. No schema version change: an index is all that was added. The developer stated the rule that **the database holds UTC only**; `practice_days.day` is the one stored local value, and the next #12m session replaces it with a practice-day number on each session. See § Practice days outside the window.
+> **Amended 2026-11-08 ([alpha-plan](../alpha-plan.md) #12m session 4):** the `rest` rung's read, `first_round_landings`, and its index, with the dated notes owed above. No schema version change: an index is all that was added. The developer stated the rule that **the database holds UTC only**; `practice_days.day` is the one stored local value, and the next #12m session replaces it with a practice-day number on each session. See § Practice days outside the window.  
+> **Amended 2026-11-08 ([alpha-plan](../alpha-plan.md) #12m session 4b):** the practice-day number. Each session carries one, set when it starts; `practice_days` is keyed by it; the `rest` rung reads it. Nothing local is stored any more. Schema version 2. See [§ The practice-day number](#the-practice-day-number).
 
 ---
 
@@ -43,10 +44,11 @@ CREATE TABLE profiles (
 );
 
 CREATE TABLE sessions (
-    id          INTEGER PRIMARY KEY,
-    profile_id  INTEGER NOT NULL REFERENCES profiles(id),
-    started_at  TEXT    NOT NULL,
-    ended_at    TEXT                -- NULL while session is in progress
+    id           INTEGER PRIMARY KEY,
+    profile_id   INTEGER NOT NULL REFERENCES profiles(id),
+    started_at   TEXT    NOT NULL,
+    ended_at     TEXT,              -- NULL while session is in progress
+    practice_day INTEGER NOT NULL   -- the profile's practice-day number, set at the start (#12m 4b)
 );
 
 CREATE TABLE key_stats (
@@ -117,11 +119,11 @@ CREATE TABLE rest_keys (               -- one row per finger per key it has rest
 -- At most one current key per finger:
 -- UNIQUE INDEX ON rest_keys (profile_id, finger) WHERE replaced_at IS NULL
 
-CREATE TABLE practice_days (           -- every local day a key had an attempt
-    profile_id INTEGER NOT NULL REFERENCES profiles(id),
-    key_char   TEXT    NOT NULL,
-    day        TEXT    NOT NULL,       -- the child's local date, fixed when the attempt was written
-    PRIMARY KEY (profile_id, key_char, day)
+CREATE TABLE practice_days (           -- every practice day a key had an attempt
+    profile_id   INTEGER NOT NULL REFERENCES profiles(id),
+    key_char     TEXT    NOT NULL,
+    practice_day INTEGER NOT NULL,     -- the number of the session the attempt was made in
+    PRIMARY KEY (profile_id, key_char, practice_day)
 );
 
 CREATE TABLE ramp_up_phases (
@@ -167,7 +169,7 @@ CREATE TABLE letter_lengths (       -- one row per playback of a letter that ran
     recorded_at TEXT    NOT NULL    -- UTC; when the row was written, at a block boundary
 );
 
-PRAGMA user_version = 1;            -- the schema's version (#12m session 2); a database below it is refused
+PRAGMA user_version = 2;            -- the schema's version (1: #12m session 2; 2: session 4b); a database below it is refused
 ```
 
 ### Timestamps are UTC
@@ -176,7 +178,7 @@ PRAGMA user_version = 1;            -- the schema's version (#12m session 2); a 
 
 Two things forced it. Naive local strings are not an ordering — an hour repeats every autumn — and this schema is now read positionally by the derived ramp-up and trimmed by the same key, so an ordering that goes backwards is a correctness problem rather than a cosmetic one. And "the same instant" has to survive a machine moving timezone, which a child's laptop does.
 
-**The one place local time is still the meaning is a practice *day*.** ADR-027's Known criterion counts distinct practice days, and that is the child's day at the keyboard, not UTC's — an evening session either side of midnight UTC is one day. So `window_stats` groups by `date(attempted_at, 'localtime')`, and the fake mirrors it by converting rather than by slicing the string. Getting that wrong would move a Known gate by a day for anyone east or west of Greenwich. *(Since 2026-11-01, alpha-plan #12m session 2: the same conversion is made once, when the attempt is written, into `practice_days`, and `window_stats` counts that table's rows. The day is now the one in force at the write, not at the read. See "Practice days outside the window (E4)" below.)*
+**The one place local time is still the meaning is a practice *day*.** ADR-027's Known criterion counts distinct practice days, and that is the child's day at the keyboard, not UTC's — an evening session either side of midnight UTC is one day. So `window_stats` groups by `date(attempted_at, 'localtime')`, and the fake mirrors it by converting rather than by slicing the string. Getting that wrong would move a Known gate by a day for anyone east or west of Greenwich. *(Since 2026-11-01, alpha-plan #12m session 2: the same conversion is made once, when the attempt is written, into `practice_days`, and `window_stats` counts that table's rows. The day is now the one in force at the write, not at the read. See "Practice days outside the window (E4)" below.)* *(Since 2026-11-08, #12m session 4b: no local value is stored. A practice day is a number on each session, set when the session starts, and that comparison of two local dates is the only place local time is read. See [§ The practice-day number](#the-practice-day-number).)*
 
 Rows written before this rule are naive local. They are not migrated: Alpha data is disposable, and a converted timestamp would be a guess at the offset in force when it was written.
 
@@ -262,7 +264,7 @@ All of this is one schema change, so a database is refused once and not once per
 - **A landing or a level run must name the profile's own session.** Both stores refuse one that does not exist or that belongs to another profile, with `ValueError` **[T]**. The foreign key alone asks only that the session exists, and the `rest` rung reads one profile's sessions.
 - **These checks, and the check that a letter was introduced, are made by the store before it writes, not by the schema.** Takki has one connection, so nothing can write between a check and its write. A second writer is not supported. If one ever is, composite foreign keys would put the same rules in the schema; the review of this amendment suggested them **[A]**.
 - **A rest key for a profile that does not exist** is refused by both, by foreign key in SQLite and by a check in the fake, with `sqlite3.IntegrityError` **[T]**. A Reach press is refused earlier, for a letter that was never introduced, which a profile that does not exist cannot have **[T]**. The fake still does not check the profile on the records from before this amendment, as before **[A]**.
-- **The fake converts a stamp to its local day when the attempt is written**, where it used to do so when the days were read. On Windows that conversion raises `OSError` for a stamp before 1970, which SQLite accepts. The divergence is not new; it has moved from the read to the write. The fake converts before it writes anything, so such a stamp leaves no partial attempt **[A]**.
+- **The fake converts a stamp to its local day when the attempt is written**, where it used to do so when the days were read. On Windows that conversion raises `OSError` for a stamp before 1970, which SQLite accepts. The divergence is not new; it has moved from the read to the write. The fake converts before it writes anything, so such a stamp leaves no partial attempt **[A]**. *(2026-11-08, #12m session 4b: no longer so. Neither store converts an attempt's stamp. Both compare local dates at `start_session`, through the same function, so they now agree there too, and both raise `OSError` for such a start on Windows; [§ The practice-day number](#the-practice-day-number).)*
 - **A write-once refusal rolls back** the UPDATE it ran, so no transaction, and no lock, outlives the `ValueError`. That holds for `record_phase` as well, which had the same gap **[T]**. The five write-once events share one helper (`SqliteStore._write_once`). An INSERT that SQLite itself refuses (a CHECK or a foreign key) rolls back as well **[T]**.
 
 #### `landings`
@@ -275,7 +277,7 @@ One row for each landing in ADR-033's alignment: profile, session, round, finger
 - **What is not a landing has no row**: a press outside the finger's column, a press on a key that produces no character, and the key pressed in answer to "which one do you want", which is a rest key chosen `by answer` (below). That is the alignment's rule, session (7) **[A]**.
 - **A landing writes nothing else**: no `key_stats`, no `key_attempts`, no practice day **[T]**.
 - **The read is the profile's landings, in order.** At the cap of eight rounds that is at most 64 rows a session, and the table is never trimmed: about 32,000 rows after 500 sessions. The `rest` rung needs only round 1 of the last five sessions, so session (4), which writes that reader, adds a narrower read and its index **[A]**. The review of this amendment raised it.
-- *(2026-11-08, #12m session 4.)* **The rung reads round 1 of the last five *days*, one session a day, and judges each landing against the finger's *current* rest key** ([ADR-027 § The `rest` rung](0027-key-and-accuracy-state-model.md#the-rest-rung)), not "the last five sessions" as the bullets above say. **The narrower read is `first_round_landings`**: every round-1 landing of the profile, in the order pressed, on both stores **[T]**. It returns all of them, not five days' worth, because which days count is decided by the rung after converting each stamp to its local day; that is at most eight rows a session, about 4,000 after 500 sessions, read until the rung fires and never after **[A]**. **The index is `landings (profile_id, round)`**, which serves `WHERE profile_id = ? AND round = 1 ORDER BY id` with no sort, since equal keys sit in rowid order **[T, the query plan]**. The session-2 note proposed `(profile_id, session_id, round)`, which does not serve a read of round 1 across sessions. The old `(profile_id)` index stays for `landings()`, which reads every round in `id` order and would need a sort from the new one; a landing is at most 64 inserts a session, so the second index costs nothing measurable **[A]**. Adding an index is not a change an older database cannot open under, so the version stays 1, and a version-1 database gains the index when opened **[T]**. **The day of a round is not stored**: it is computed from `landed_at` when read (the developer's rule above), until the practice-day number replaces it.
+- *(2026-11-08, #12m session 4.)* **The rung reads round 1 of the last five *days*, one session a day, and judges each landing against the finger's *current* rest key** ([ADR-027 § The `rest` rung](0027-key-and-accuracy-state-model.md#the-rest-rung)), not "the last five sessions" as the bullets above say. **The narrower read is `first_round_landings`**: every round-1 landing of the profile, in the order pressed, on both stores **[T]**. It returns all of them, not five days' worth, because which days count is decided by the rung after converting each stamp to its local day; that is at most eight rows a session, about 4,000 after 500 sessions, read until the rung fires and never after **[A]**. **The index is `landings (profile_id, round)`**, which serves `WHERE profile_id = ? AND round = 1 ORDER BY id` with no sort, since equal keys sit in rowid order **[T, the query plan]**. The session-2 note proposed `(profile_id, session_id, round)`, which does not serve a read of round 1 across sessions. The old `(profile_id)` index stays for `landings()`, which reads every round in `id` order and would need a sort from the new one; a landing is at most 64 inserts a session, so the second index costs nothing measurable **[A]**. Adding an index is not a change an older database cannot open under, so the version stays 1, and a version-1 database gains the index when opened **[T]**. **The day of a round is not stored**: it is computed from `landed_at` when read (the developer's rule above), until the practice-day number replaces it. *(Replaced 2026-11-08 in #12m session 4b: a round's day is its session's practice-day number, read through `practice_days_by_session`, and `landed_at` plays no part in it **[T]**.)*
 
 #### `rest_keys`
 
@@ -328,7 +330,7 @@ A database that still has the old table is not refused: nothing reads it. So the
 
 #### Practice days outside the window (E4)
 
-`practice_days` holds one row per key per local day on which the key had an attempt (a `key_attempts` row) **[T]**.
+`practice_days` holds one row per key per local day on which the key had an attempt (a `key_attempts` row) **[T]**. *(Since 2026-11-08, #12m session 4b: per practice day, the number of the session the attempt was made in. The paragraph "The day is fixed when it is written" below describes version 1; [§ The practice-day number](#the-practice-day-number) replaces it.)*
 
 - **It is written with the `key_attempts` row**, in `_append_attempt`. So `count_attempt` writes the count, the row and the day in one transaction, and `append_attempt` the row and the day: a failure at the day leaves none of them **[T]**.
 - **It is never trimmed.**
@@ -353,6 +355,40 @@ A database that still has the old table is not refused: nothing reads it. So the
 - **A database at the current version is opened without a transaction**, as before this change. The schema script then creates only a table that is missing, and takes no write lock, so opening does not fail while another connection is writing **[T]**.
 - **The next schema change that an older database cannot be opened under raises the version.** It does not need a check of its own. The review of this amendment suggested the version, in place of a check on whether `practice_days` existed.
 - **Nothing speaks the refusal.** It is a `RuntimeError` after the window and the mixer are up, as the earlier refusals were, and [roadmap § D](../roadmap.md#d-smaller-gaps-worth-a-line-in-the-relevant-adr) "Error surfacing for blind parents" has it. `progress_dump` can still read a database from just before this change, and shows `-` where the days would be **[T]**. One from before #12f or #12j still fails on its missing columns, as roadmap § D says.
+
+#### The practice-day number
+
+*(Amended 2026-11-08, alpha-plan #12m session 4b. Marks as above: **[T]** pinned by a default test; **[A]** argued, not tested; **[D]** decided by the developer in the session.)*
+
+The developer's rule, stated in session (4): **the database holds UTC only**, because mixing UTC and local time has led to trouble before. `practice_days.day` was the one stored local value, and the `rest` rung read its day from a UTC stamp in the zone of the read. Both are replaced by one running integer.
+
+**Each session carries the profile's practice-day number**, `sessions.practice_day`, written by `start_session` on both stores **[T]**:
+
+- 1 for a profile's first session;
+- otherwise the previous session's number, plus one when the local date now differs from the local date of the previous session's start, both read at that moment.
+
+Only the number is stored. The comparison is `next_practice_day`, one function both stores call, so they agree by construction **[T]** for the numbers on both.
+
+- **The previous session is the last one written**, by `id`, never the latest by the clock. A clock set back is a new date like any other, so the number only goes up **[T]**. **A date earlier than the previous session's adds a day as a later one does** **[D]**: what matters is that the child practised on two days, and a clock corrected backwards or a move west across midnight is a corner case. Adding a day only for a later date would be worse: a clock once set a year ahead and then corrected would add no day until the calendar caught up. Raised by the session's review.
+- **Days away add one.** It counts the days the child practised, not the calendar days between them **[T]**.
+- **Each profile counts its own days** **[T]**.
+- **It is compared with the previous session's start, not its end** **[D]**. Compared with the end, a restart just after midnight would stay on the same day, and a sitting that ended after midnight would merge the next morning into it. Compared with the start, a restart just after local midnight is a new day, which could count a day with no night in it. The developer accepted that: children are not at the keyboard around midnight. A start is also always there, where `ended_at` stays NULL after a crash **[A]**.
+- **The zone is the one in force when the session starts.** Moving the machine to another zone changes no number already given. The next start compares in the new zone **[T, POSIX only, as before]**. A move can therefore merge or split one day at the move, which is the corner the developer accepted for a permanent move in session (4) **[A]**.
+- **No index on `sessions`.** The previous session is read with `ORDER BY id DESC LIMIT 1` over one profile's sessions: one row per run of the program, a few hundred after a year **[A]**.
+
+**An attempt's practice day is its session's.** `append_attempt` and `count_attempt` take the session after the profile, as `record_landing` does, and write the session's number into `practice_days`, keyed by (profile, key, number), in the same transaction as the row **[T]**. The stamp of the press plays no part **[T]**. Both stores refuse a session that does not exist or is another profile's, with `ValueError`, before anything is written, as they do for a landing **[T]**. `AttemptCounter` takes the session, and the session loop builds it in `start`, right after writing the session row, so the loop's attempts land in that session **[T]**.
+
+**What changes in meaning: one sitting that runs past midnight is one practice day.** Known's two days are meant to have a night between them ([ADR-027](0027-key-and-accuracy-state-model.md#bronze-criterion), "sleep is the motor consolidation mechanism"), so that is the wanted reading. Pinned with exact counts **[T]**:
+- on both stores, a session from 23:30 to 00:30 in `Europe/London` is one day, and a session the next morning is the second (POSIX only);
+- through `KeyStates`, the full dose in one session whose presses run 24 hours, which crosses a local midnight in every zone, is one day and Active, and one press in a session started the next day makes it Known (runs everywhere).
+
+**A session left open overnight is one practice day** **[D]**. A lid shut at 20:00 with Takki paused and opened at 08:00 is one session, so the morning's practice adds no day. The developer accepted this: the error only ever delays Known by a sitting, and never counts a day without a night. Ending a session on a long pause, so that the morning is a session of its own, changes what a session start means to the alignment (ADR-033), to Reach (ADR-024) and to a resume (ADR-012), and is left to #12m session (7), which adds the loop's alignment state ([alpha-plan](../alpha-plan.md), "From #12m session (4b)").
+
+**The `rest` rung reads a round's day from its session's number**, through `practice_days_by_session` (each of the profile's sessions, by id, with its number) **[T]**. The rung's rules do not change. A round 1 stamped a day after its session started is the start's day **[T]**.
+
+**`progress_dump`** is unchanged **[D]**. Its lifetime table's `days` counts `practice_days` rows, so it shows the numbers. Its per-day table still groups the window by `date(attempted_at, 'localtime')` when read, which is allowed (local time is a presentation concern), and shows calendar days, so a session left open overnight is one practice day there and two rows. Grouping by practice day would need the session on each `key_attempts` row. Both are #12m session (8)'s, the dump tool's.
+
+**Schema version 2. Every older database is refused**, with "schema version 1, older than this Takki's 2 … delete it", and left as found **[T]**. No migration: the developer decided in session 2 that none is written for development databases, and a version-1 database's days are local dates fixed in whatever zone they were written in. Delete the development database on each machine: the dev box had none on 2026-11-08; the laptop's must go before Takki runs there again.
 
 #### Deferred to Beta
 

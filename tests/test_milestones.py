@@ -30,6 +30,7 @@ from takki.platform.layout import (
 )
 from tests.conftest import needs_tzset
 from tests.fakes.fake_store import FakeStore
+from tests.sessions import session_for
 
 
 def known(layout: Layout, count: int) -> set[str]:
@@ -187,7 +188,7 @@ def practise(store: Store, profile_id: int, char: str, window: WindowStats = KNO
         day = DAY1 if window.distinct_days == 1 or i % 2 == 0 else DAY2
         correct = i < window.correct_count
         store.upsert_key_stat(profile_id, char, correct, day)
-        store.append_attempt(profile_id, char, correct, day)
+        store.append_attempt(profile_id, session_for(store, profile_id, day), char, correct, day)
 
 
 def states(store: Store, profile_id: int = 1) -> KeyStates:
@@ -238,12 +239,12 @@ class TestFiringOnce:
             for i in range(config.KNOWN_MIN_ATTEMPTS):
                 day = DAY1 if i % 2 == 0 else DAY2
                 store.upsert_key_stat(1, char, True, day)
-                store.append_attempt(1, char, True, day, ms)
+                store.append_attempt(1, session_for(store, 1, day), char, True, day, ms)
         found = detector(store, layout)
         assert states(store).slow_keys() == {eight[0]}
         assert found.check() == ()
         for _ in range(config.SPEED_SAMPLE):
-            store.append_attempt(1, eight[0], True, DAY2, 1000)
+            store.append_attempt(1, session_for(store, 1, DAY2), eight[0], True, DAY2, 1000)
         assert found.check() == ("third",)
 
     def test_the_rung_sequence_of_a_full_english_walk(self) -> None:
@@ -311,7 +312,7 @@ class TestNeverRevoked:
         # 81.8%, under the Known floor. The Known count drops to 12, one under
         # `half` -- ADR-027 § Key States: milestones are never reverted.
         for _ in range(20):
-            store.append_attempt(1, "a", False, DAY2)
+            store.append_attempt(1, session_for(store, 1, DAY2), "a", False, DAY2)
         assert satisfied_rungs(layout, states(store).known_keys()) == ("third",)
         assert found.check() == ()
         assert store.achieved_milestones(1) == ["third", "half"]
@@ -618,52 +619,66 @@ class TestRestRung:
         )
 
 
-@needs_tzset
-class TestRestRungDayIsLocal:
-    """Decided 2026-11-08: a round's day is its UTC stamp's local day, read when checked."""
+class TestRestRungDayIsTheSessions:
+    """#12m session 4b: a round's day is its session's practice-day number, set at its start."""
 
-    # Three days at noon UTC, then two sessions at 10:30 and 11:30 UTC: one day
-    # at Greenwich, either side of midnight in Auckland (UTC+13 in February).
-    @pytest.mark.parametrize(("zone", "fired"), [("UTC", ()), ("Pacific/Auckland", (REST,))])
-    def test_two_sessions_are_one_day_or_two_by_the_local_calendar(
-        self, timezone: Callable[[str], None], zone: str, fired: tuple[str, ...]
-    ) -> None:
-        timezone(zone)
+    def test_a_round_landed_a_day_after_its_session_started_is_the_starts_day(self) -> None:
+        # Four days, then a fifth session started on day 4 whose round 1 is
+        # stamped on day 5 (a lid shut overnight between the start and the
+        # round). The session is day 4's second and adds nothing; read by its
+        # landings it would be day 5 and fire the rung.
         store = RecordingStore()
         seat(store, 1)
-        for day in range(1, 4):
-            first_round(store, 1, day)
-        for stamp in ("2026-02-10T10:30:00+00:00", "2026-02-10T11:30:00+00:00"):
-            session = store.start_session(1, stamp)
-            for finger, (row, col) in REST_POSITION.items():
-                store.record_landing(1, session, 1, finger, row, col, True, stamp)
-        assert detector(store, build_en()).check() == fired
-
-    def test_a_round_1_that_crosses_midnight_is_the_day_it_began(
-        self, timezone: Callable[[str], None]
-    ) -> None:
-        # ADR-027, "Built: how a day is read": a session's day is that of its
-        # round 1's first landing. Four days at noon, then a restart on day 4
-        # at 23:59:58 whose round ends on day 5. Read by its first landing it
-        # is a second session on day 4 and adds nothing; read by its last it
-        # would be day 5 and fire the rung.
-        timezone("UTC")
-        store = RecordingStore()
-        seat(store, 1)
-        check = self.found_check(store)
+        check = detector(store, build_en()).check
         for day in range(1, 5):
             first_round(store, 1, day)
-        start = datetime(2026, 2, 4, 23, 59, 58)
-        session = store.start_session(1, start.isoformat() + "+00:00")
-        for index, (finger, (row, col)) in enumerate(REST_POSITION.items()):
-            stamp = (start + timedelta(seconds=index)).isoformat() + "+00:00"
-            store.record_landing(1, session, 1, finger, row, col, True, stamp)
+        session = store.start_session(1, noon(4, 30))
+        for finger, (row, col) in REST_POSITION.items():
+            store.record_landing(1, session, 1, finger, row, col, True, noon(5))
+        assert store.practice_days_by_session(1) == {1: 1, 2: 2, 3: 3, 4: 4, 5: 4}
         assert check() == ()
         first_round(store, 1, 5)
         assert check() == (REST,)
 
-    def found_check(self, store: Store) -> Callable[[], tuple[str, ...]]:
-        return detector(store, build_en()).check
+
+@needs_tzset
+class TestRestRungDayIsDecidedAtSessionStart:
+    """The zone in force when each session started decides its day; the zone at the check does not."""
+
+    # Three days at noon UTC, then two sessions at 10:30 and 11:30 UTC: one day
+    # at Greenwich, either side of midnight in Auckland (UTC+13 in February).
+    SPLIT = ("2026-02-10T10:30:00+00:00", "2026-02-10T11:30:00+00:00")
+
+    def sessions(self, store: Store) -> None:
+        for day in range(1, 4):
+            first_round(store, 1, day)
+        for stamp in self.SPLIT:
+            session = store.start_session(1, stamp)
+            for finger, (row, col) in REST_POSITION.items():
+                store.record_landing(1, session, 1, finger, row, col, True, stamp)
+
+    @pytest.mark.parametrize(
+        ("started_in", "checked_in", "fired"),
+        [
+            ("UTC", "UTC", ()),
+            ("Pacific/Auckland", "Pacific/Auckland", (REST,)),
+            ("Pacific/Auckland", "UTC", (REST,)),
+            ("UTC", "Pacific/Auckland", ()),
+        ],
+    )
+    def test_two_sessions_are_one_day_or_two_by_the_calendar_where_they_started(
+        self,
+        timezone: Callable[[str], None],
+        started_in: str,
+        checked_in: str,
+        fired: tuple[str, ...],
+    ) -> None:
+        timezone(started_in)
+        store = RecordingStore()
+        seat(store, 1)
+        self.sessions(store)
+        timezone(checked_in)
+        assert detector(store, build_en()).check() == fired
 
 
 class TestOtherLayouts:

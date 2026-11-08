@@ -8,9 +8,8 @@ store holds. `satisfied_rungs` is a rolling query that can go down again.
 ADR-027 § Key States calls a milestone.
 """
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from collections.abc import Set as AbstractSet
-from datetime import datetime
 
 from takki import config
 from takki.lesson.key_state import KeyStates
@@ -70,23 +69,18 @@ def satisfied_rungs(
     return tuple(earned)
 
 
-def local_day(stamp: str) -> str:
-    """The local calendar day of a UTC stamp, in the machine's zone now."""
-    # Read, never stored (decided 2026-11-08): the database holds UTC only. A
-    # machine moved to another zone moves the days already lived with it.
-    return datetime.fromisoformat(stamp).astimezone().date().isoformat()
-
-
 def rest_reached(
     first_rounds: Sequence[Landing],
     rest_keys: Sequence[RestKey],
+    practice_days: Mapping[int, int],
     days: int = config.REST_SETTLED_SESSION_STARTS,
 ) -> bool:
     """ADR-027 § The `rest` rung — settled on `days` days, or the full round retired.
 
-    `first_rounds` is every landing of a round 1, in the order pressed, and
-    `rest_keys` every rest key the profile has had. Only the current keys are
-    read: a landing is judged against the key its finger has now.
+    `first_rounds` is every landing of a round 1, in the order pressed,
+    `rest_keys` every rest key the profile has had, and `practice_days` each
+    session's practice-day number. Only the current keys are read: a landing
+    is judged against the key its finger has now.
     """
     current = {key.finger: key for key in rest_keys if key.replaced_at is None}
     # The full round retires when every rest key has passed its own test, and
@@ -99,11 +93,11 @@ def rest_reached(
         rounds.setdefault(landing.session_id, []).append(landing)
     # One session start a day: a restart minutes later is not a cold start.
     # A round 1 cut short is passed over, and a later one the same day counts.
-    # A session's day is that of its round 1's first landing.
-    starts: dict[str, list[Landing]] = {}
-    for landings in rounds.values():
+    # A session's day is its practice-day number, fixed when it started.
+    starts: dict[int, list[Landing]] = {}
+    for session_id, landings in rounds.items():
         if {landing.finger for landing in landings} >= FINGERS:
-            starts.setdefault(local_day(landings[0].landed_at), landings)
+            starts.setdefault(practice_days[session_id], landings)
     latest = sorted(starts)[-days:]
     return len(latest) == days and all(_settled(starts[day], current) for day in latest)
 
@@ -192,4 +186,5 @@ class MilestoneDetector:
         return rest_reached(
             self._store.first_round_landings(self._profile_id),
             self._store.rest_keys(self._profile_id),
+            self._store.practice_days_by_session(self._profile_id),
         )

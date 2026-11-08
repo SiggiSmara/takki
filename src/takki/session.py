@@ -131,7 +131,8 @@ class SessionLoop:
         self._max_keys_in_progress = max_keys_in_progress
         self._states = KeyStates(store, profile_id, now=now, bump_keys=home_anchor_keys(layout))
         self._lengths = LetterLengths(store, profile_id, voice, rate)
-        self._attempts = AttemptCounter(store, profile_id, now, clock, lengths=self._lengths)
+        # Made in `start`, which writes the session row its attempts belong to.
+        self._attempts: AttemptCounter
         self._speaker = Speaker(speech, letters, clock)
         # The gate speaks through the same Speaker the loop does: one object
         # knows what is audible, so the loop can hold a prompt behind a pause
@@ -183,6 +184,14 @@ class SessionLoop:
         """
         warm(self._source, self._layout)
         self._session_id = self._store.start_session(self._profile_id)
+        self._attempts = AttemptCounter(
+            self._store,
+            self._profile_id,
+            self._session_id,
+            self._now,
+            self._clock,
+            lengths=self._lengths,
+        )
         self._introducer = KeyIntroducer(self._layout, self._source, self._states, self._strategy)
         self._drills = DrillGenerator(
             self._layout,

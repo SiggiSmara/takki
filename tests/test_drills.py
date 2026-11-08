@@ -31,6 +31,7 @@ from takki.platform.layout import Layout, build_en, build_is
 from tests.fakes.fake_clock import FakeClock
 from tests.fakes.fake_store import FakeStore
 from tests.fakes.fixed_list_source import FixedListSource
+from tests.sessions import session_for
 
 # Real English words so the bigram pool is a real one, weighted so the drill
 # content is decided by this table and not by a corpus.
@@ -116,7 +117,9 @@ class Fixture:
         for index in range(attempts):
             correct = index >= wrong
             self.store.upsert_key_stat(self.profile, grapheme, correct)
-            self.store.append_attempt(self.profile, grapheme, correct)
+            self.store.append_attempt(
+                self.profile, session_for(self.store, self.profile), grapheme, correct
+            )
 
     def attempt(self, grapheme: str, correct: bool, *, latency_ms: int | None = None) -> None:
         # The store first, then the generator -- the order the session loop uses
@@ -125,7 +128,13 @@ class Fixture:
         # from these rows, so a generator told about an attempt that was never
         # written would read the window as one attempt short.
         self.store.upsert_key_stat(self.profile, grapheme, correct)
-        self.store.append_attempt(self.profile, grapheme, correct, latency_ms=latency_ms)
+        self.store.append_attempt(
+            self.profile,
+            session_for(self.store, self.profile),
+            grapheme,
+            correct,
+            latency_ms=latency_ms,
+        )
         self.generator.record_attempt(grapheme, correct)
 
     def answer(
@@ -358,7 +367,9 @@ class TestPairAdvancesTogether:
         press(fixture, "d", config.PHASE_A_STREAK)
         for _ in range(config.PHASE_A_STREAK):
             fixture.store.upsert_key_stat(fixture.profile, "k", True)
-            fixture.store.append_attempt(fixture.profile, "k", True)
+            fixture.store.append_attempt(
+                fixture.profile, session_for(fixture.store, fixture.profile), "k", True
+            )
         assert fixture.progress.advance(fixture.progress.member("k")) is True
         assert "B" not in fixture.store.phase_records(fixture.profile, "k")
 
@@ -722,7 +733,13 @@ class TestNeedFromTheStore:
         for index in range(config.KNOWN_MIN_ATTEMPTS):
             stamp = stamps[index % len(stamps)]
             fixture.store.upsert_key_stat(fixture.profile, "f", True, stamp)
-            fixture.store.append_attempt(fixture.profile, "f", True, stamp)
+            fixture.store.append_attempt(
+                fixture.profile,
+                session_for(fixture.store, fixture.profile, stamp),
+                "f",
+                True,
+                stamp,
+            )
         return fixture
 
     def need(self, fixture: Fixture) -> int:
@@ -858,7 +875,13 @@ class TestSteadyPlan:
             for index in range(config.KNOWN_MIN_ATTEMPTS):
                 stamp = stamps[index % 2]
                 fixture.store.upsert_key_stat(fixture.profile, name, index >= 5, stamp)
-                fixture.store.append_attempt(fixture.profile, name, index >= 5, stamp)
+                fixture.store.append_attempt(
+                    fixture.profile,
+                    session_for(fixture.store, fixture.profile, stamp),
+                    name,
+                    index >= 5,
+                    stamp,
+                )
         evidence = fixture.states.evidence("f")
         assert presses_needed(evidence, config.KNOWN_MIN_ACCURACY) == 0
         assert presses_needed(evidence, STRICT_BAR) > 0
@@ -879,7 +902,13 @@ class TestSteadyPlan:
         for index in range(config.KNOWN_MIN_ATTEMPTS):
             stamp = stamps[index % len(stamps)]
             fixture.store.upsert_key_stat(fixture.profile, "f", True, stamp)
-            fixture.store.append_attempt(fixture.profile, "f", True, stamp)
+            fixture.store.append_attempt(
+                fixture.profile,
+                session_for(fixture.store, fixture.profile, stamp),
+                "f",
+                True,
+                stamp,
+            )
         for name in "jruvm":
             fixture.activate(name)
         assert 5 * cap(FIRST_SLOTS, len(ANCHOR_SIX)) > FIRST_SLOTS
@@ -903,7 +932,14 @@ class TestSteadyPlan:
             for index in range(config.KNOWN_MIN_ATTEMPTS):
                 stamp = stamps[index % 2]
                 fixture.store.upsert_key_stat(fixture.profile, name, True, stamp)
-                fixture.store.append_attempt(fixture.profile, name, True, stamp, ms)
+                fixture.store.append_attempt(
+                    fixture.profile,
+                    session_for(fixture.store, fixture.profile, stamp),
+                    name,
+                    True,
+                    stamp,
+                    ms,
+                )
         assert fixture.states.slow_keys() == ({"d"} if slow else set())
         counts = Counter(unit[0] for unit in fixture.generator.next_block().units)
         assert sum(counts.values()) == FIRST_SLOTS
@@ -1063,7 +1099,13 @@ class TestNoAnchorMaintenance:
             for index in range(config.KNOWN_MIN_ATTEMPTS):
                 stamp = stamps[index % 2]
                 fixture.store.upsert_key_stat(fixture.profile, name, True, stamp)
-                fixture.store.append_attempt(fixture.profile, name, True, stamp)
+                fixture.store.append_attempt(
+                    fixture.profile,
+                    session_for(fixture.store, fixture.profile, stamp),
+                    name,
+                    True,
+                    stamp,
+                )
         units = fixture.generator.next_block().units
         assert len(units) == FIRST_SLOTS
         assert all(len(set(unit)) == 1 for unit in units)

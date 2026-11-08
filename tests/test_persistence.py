@@ -26,6 +26,7 @@ from takki.persistence import (
 from takki.persistence.sqlite_store import SqliteStore
 from tests.conftest import needs_tzset
 from tests.fakes.fake_store import FakeStore
+from tests.sessions import session_for
 
 
 @pytest.fixture()
@@ -90,8 +91,12 @@ WRITES: dict[str, Callable[[Store, int, str], object]] = {
         s.begin_phase(pid, "f", "A", 0),
         s.record_phase(pid, "f", "A", 10, completed_at=at),
     ),
-    "append_attempt": lambda s, pid, at: s.append_attempt(pid, "f", True, attempted_at=at),
-    "count_attempt": lambda s, pid, at: s.count_attempt(pid, "f", True, attempted_at=at),
+    "append_attempt": lambda s, pid, at: s.append_attempt(
+        pid, s.start_session(pid), "f", True, attempted_at=at
+    ),
+    "count_attempt": lambda s, pid, at: s.count_attempt(
+        pid, s.start_session(pid), "f", True, attempted_at=at
+    ),
     "record_milestone": lambda s, pid, at: s.record_milestone(pid, "anchor", achieved_at=at),
     "append_letter_lengths": lambda s, pid, at: s.append_letter_lengths(
         pid, "voice", 1.0, [("f", 450)], recorded_at=at
@@ -139,7 +144,7 @@ class TestUtcStamp:
 
     def test_what_the_stores_write_by_default_passes(self, any_store: Store) -> None:
         p = any_store.create_profile("Alice", "en")
-        any_store.append_attempt(p.id, "f", True)
+        any_store.append_attempt(p.id, session_for(any_store, p.id), "f", True)
         assert utc_stamp(p.created_at) == p.created_at
         (attempt,) = any_store.window_attempts(p.id, "f")
         assert utc_stamp(attempt.attempted_at) == attempt.attempted_at
@@ -180,7 +185,9 @@ class TestOnlyUtcIsStored:
     def test_a_refused_attempt_leaves_no_row(self, any_store: Store) -> None:
         p = any_store.create_profile("Alice", "en")
         with pytest.raises(ValueError):
-            any_store.append_attempt(p.id, "f", True, attempted_at=NOT_UTC[0])
+            any_store.append_attempt(
+                p.id, any_store.start_session(p.id), "f", True, attempted_at=NOT_UTC[0]
+            )
         assert any_store.window_attempts(p.id, "f") == []
         assert any_store.window_stats(p.id, "f") == WindowStats(0, 0, 0)
 
@@ -215,7 +222,8 @@ class TestOnlyUtcIsReadBack:
         pid = self.bare(store)
         bare = NOT_UTC[0]
         store.conn.execute(
-            "INSERT INTO sessions (id, profile_id, started_at) VALUES (7, ?, ?)", (pid, bare)
+            "INSERT INTO sessions (id, profile_id, started_at, practice_day) VALUES (7, ?, ?, 1)",
+            (pid, bare),
         )
         store.conn.execute(
             "INSERT INTO ramp_up_levels (profile_id, key_char, level, session_id,"
@@ -277,35 +285,147 @@ class TestOnlyUtcIsReadBack:
                 read()
 
 
-@needs_tzset
-class TestPracticeDayIsLocal:
-    """ADR-011: stored in UTC, but a practice day is the child's local day."""
+class TestThePracticeDayNumber:
+    """ADR-011 `sessions`, #12m session 4b: each session's practice day, set when it starts."""
 
-    # 09:00 and 17:00 UTC: one day at Greenwich, either side of midnight in
-    # Auckland (UTC+13 in January), and one day again in Los Angeles.
+    def test_a_profiles_first_session_is_day_one_and_a_new_date_adds_one(
+        self, any_store: Store
+    ) -> None:
+        # A day apart in UTC is a day apart in every zone. Equal stamps are one
+        # local date in every zone.
+        p = any_store.create_profile("Alice", "en")
+        for stamp in (
+            "2026-01-01T10:00:00+00:00",
+            "2026-01-01T10:00:00+00:00",
+            "2026-01-02T10:00:00+00:00",
+            "2026-01-05T10:00:00+00:00",
+            "2026-01-05T10:00:00+00:00",
+        ):
+            any_store.start_session(p.id, stamp)
+        # Days away add one, not the days between: it counts days practised.
+        assert any_store.practice_days_by_session(p.id) == {1: 1, 2: 1, 3: 2, 4: 3, 5: 3}
+
+    def test_each_profile_counts_its_own_days(self, any_store: Store) -> None:
+        a = any_store.create_profile("Alice", "en")
+        b = any_store.create_profile("Bob", "en")
+        any_store.start_session(a.id, "2026-01-01T10:00:00+00:00")
+        any_store.start_session(a.id, "2026-01-02T10:00:00+00:00")
+        any_store.start_session(b.id, "2026-01-03T10:00:00+00:00")
+        any_store.start_session(a.id, "2026-01-03T10:00:00+00:00")
+        assert any_store.practice_days_by_session(a.id) == {1: 1, 2: 2, 4: 3}
+        assert any_store.practice_days_by_session(b.id) == {3: 1}
+
+    def test_the_previous_session_is_the_last_written_not_the_latest_by_the_clock(
+        self, any_store: Store
+    ) -> None:
+        # A clock set back is a new date like any other, and the number still
+        # only goes up (ADR-011 § The window is ordered by `rowid`).
+        p = any_store.create_profile("Alice", "en")
+        any_store.start_session(p.id, "2026-01-05T10:00:00+00:00")
+        any_store.start_session(p.id, "2026-01-01T10:00:00+00:00")
+        any_store.start_session(p.id, "2026-01-01T10:00:00+00:00")
+        assert any_store.practice_days_by_session(p.id) == {1: 1, 2: 2, 3: 2}
+
+    def test_an_attempt_takes_its_sessions_day(self, any_store: Store) -> None:
+        # The stamp of the press plays no part: a press a day after its
+        # session started is still that session's day.
+        p = any_store.create_profile("Alice", "en")
+        first = any_store.start_session(p.id, "2026-01-01T10:00:00+00:00")
+        any_store.count_attempt(p.id, first, "f", True, "2026-01-01T10:00:00+00:00")
+        any_store.count_attempt(p.id, first, "f", True, "2026-01-02T11:00:00+00:00")
+        assert any_store.window_stats(p.id, "f") == WindowStats(2, 2, 1)
+        second = any_store.start_session(p.id, "2026-01-02T12:00:00+00:00")
+        any_store.append_attempt(p.id, second, "f", True, "2026-01-02T12:00:00+00:00")
+        assert any_store.window_stats(p.id, "f") == WindowStats(3, 3, 2)
+
+    def test_an_attempt_in_another_profiles_session_is_refused_and_leaves_nothing(
+        self, any_store: Store
+    ) -> None:
+        # As a landing is: its day would be another child's (ADR-011).
+        a = any_store.create_profile("Alice", "en")
+        b = any_store.create_profile("Bob", "en")
+        theirs = any_store.start_session(b.id)
+        with pytest.raises(ValueError, match="is not profile"):
+            any_store.count_attempt(a.id, theirs, "f", True)
+        with pytest.raises(ValueError, match="is not profile"):
+            any_store.append_attempt(a.id, theirs, "f", True)
+        with pytest.raises(ValueError, match="is not profile"):
+            any_store.append_attempt(a.id, theirs + 1, "f", True)
+        assert any_store.key_stats(a.id) == {}
+        assert any_store.window_attempts(a.id, "f") == []
+        assert any_store.window_stats(a.id, "f") == WindowStats(0, 0, 0)
+
+
+@needs_tzset
+class TestThePracticeDayIsDecidedAtSessionStart:
+    """The one read of local time: two local dates, compared when a session starts."""
+
+    # 09:00 and 17:00 UTC: one date at Greenwich, either side of midnight in
+    # Auckland (UTC+13 in January), and one date again in Los Angeles.
     @pytest.mark.parametrize(
-        ("zone", "days"), [("UTC", 1), ("Pacific/Auckland", 2), ("America/Los_Angeles", 1)]
+        ("zone", "numbers"),
+        [
+            ("UTC", {1: 1, 2: 1}),
+            ("Pacific/Auckland", {1: 1, 2: 2}),
+            ("America/Los_Angeles", {1: 1, 2: 1}),
+        ],
     )
-    def test_the_same_two_instants_are_counted_by_the_local_calendar(
-        self, any_store: Store, timezone: Callable[[str], None], zone: str, days: int
+    def test_two_starts_are_compared_by_the_local_calendar(
+        self,
+        any_store: Store,
+        timezone: Callable[[str], None],
+        zone: str,
+        numbers: dict[int, int],
     ) -> None:
         timezone(zone)
         p = any_store.create_profile("Alice", "en")
-        any_store.append_attempt(p.id, "a", True, attempted_at="2026-01-01T09:00:00+00:00")
-        any_store.append_attempt(p.id, "a", True, attempted_at="2026-01-01T17:00:00+00:00")
-        assert any_store.window_stats(p.id, "a").distinct_days == days
+        for stamp in ("2026-01-01T09:00:00+00:00", "2026-01-01T17:00:00+00:00"):
+            session = any_store.start_session(p.id, stamp)
+            any_store.append_attempt(p.id, session, "a", True, stamp)
+        assert any_store.practice_days_by_session(p.id) == numbers
+        assert any_store.window_stats(p.id, "a").distinct_days == len(set(numbers.values()))
 
-    def test_a_day_is_the_one_lived_when_the_press_was_written(
+    def test_one_sitting_past_local_midnight_is_one_practice_day(
         self, any_store: Store, timezone: Callable[[str], None]
     ) -> None:
-        # ADR-011, #12m session 2: the day is fixed at the write. Moving the
-        # machine to another zone does not split or merge days already lived.
+        # The case the number was made for (#12m session 4b): 23:30 to 00:30
+        # local in one session. Fixed at the write, these were two days.
+        timezone("Europe/London")
+        p = any_store.create_profile("Alice", "en")
+        session = any_store.start_session(p.id, "2026-01-01T23:30:00+00:00")
+        for stamp in (
+            "2026-01-01T23:30:00+00:00",
+            "2026-01-01T23:59:59+00:00",
+            "2026-01-02T00:00:00+00:00",
+            "2026-01-02T00:30:00+00:00",
+        ):
+            any_store.count_attempt(p.id, session, "f", True, stamp)
+        assert any_store.practice_days_by_session(p.id) == {session: 1}
+        assert any_store.window_stats(p.id, "f") == WindowStats(4, 4, 1)
+        # A session started the next morning is the second day.
+        morning = any_store.start_session(p.id, "2026-01-02T09:00:00+00:00")
+        any_store.count_attempt(p.id, morning, "f", True, "2026-01-02T09:00:00+00:00")
+        assert any_store.practice_days_by_session(p.id) == {session: 1, morning: 2}
+        assert any_store.window_stats(p.id, "f") == WindowStats(5, 5, 2)
+
+    def test_numbers_already_given_do_not_move_with_the_zone(
+        self, any_store: Store, timezone: Callable[[str], None]
+    ) -> None:
+        # Only the number is stored, so moving the machine changes no day
+        # already lived. The next start compares in the zone of its moment.
         timezone("UTC")
         p = any_store.create_profile("Alice", "en")
-        any_store.append_attempt(p.id, "a", True, attempted_at="2026-01-01T09:00:00+00:00")
-        any_store.append_attempt(p.id, "a", True, attempted_at="2026-01-01T17:00:00+00:00")
+        for stamp in ("2026-01-01T09:00:00+00:00", "2026-01-01T17:00:00+00:00"):
+            session = any_store.start_session(p.id, stamp)
+            any_store.append_attempt(p.id, session, "a", True, stamp)
         timezone("Pacific/Auckland")
+        assert any_store.practice_days_by_session(p.id) == {1: 1, 2: 1}
         assert any_store.window_stats(p.id, "a").distinct_days == 1
+        # 17:00 and 18:00 UTC are both 2 January in Auckland: the same date.
+        any_store.start_session(p.id, "2026-01-01T18:00:00+00:00")
+        # 11:00 UTC on 2 January is 3 January in Auckland: a new one.
+        any_store.start_session(p.id, "2026-01-02T11:00:00+00:00")
+        assert any_store.practice_days_by_session(p.id) == {1: 1, 2: 1, 3: 1, 4: 2}
 
 
 class TestPracticeDaysOutlastTheWindow:
@@ -322,9 +442,9 @@ class TestPracticeDaysOutlastTheWindow:
         store = any_store
         p = store.create_profile("Alice", "en")
         for stamp in self.EARLIER:
-            store.count_attempt(p.id, "f", True, stamp)
+            store.count_attempt(p.id, session_for(store, p.id, stamp), "f", True, stamp)
         for _ in range(config.ATTEMPT_WINDOW):
-            store.count_attempt(p.id, "f", True, self.TODAY)
+            store.count_attempt(p.id, session_for(store, p.id, self.TODAY), "f", True, self.TODAY)
         # Every row of the window is today's; the three earlier days are evicted
         # from it and still counted. Read over the window, this was 1.
         assert {a.attempted_at for a in store.window_attempts(p.id, "f")} == {self.TODAY}
@@ -340,9 +460,9 @@ class TestPracticeDaysOutlastTheWindow:
         p = store.create_profile("Alice", "en")
         states = KeyStates(store, p.id, now=lambda: self.TODAY)
         for stamp in self.EARLIER:
-            store.count_attempt(p.id, "f", True, stamp)
+            store.count_attempt(p.id, session_for(store, p.id, stamp), "f", True, stamp)
         for _ in range(config.ATTEMPT_WINDOW):
-            store.count_attempt(p.id, "f", True, self.TODAY)
+            store.count_attempt(p.id, session_for(store, p.id, self.TODAY), "f", True, self.TODAY)
         assert states.state("f") is KeyState.KNOWN
 
     def test_presses_that_are_not_attempts_add_no_day(self, any_store: Store) -> None:
@@ -358,10 +478,18 @@ class TestPracticeDaysOutlastTheWindow:
     def test_days_belong_to_one_profile_and_one_key(self, any_store: Store) -> None:
         a = any_store.create_profile("Alice", "en")
         b = any_store.create_profile("Bob", "en")
-        any_store.append_attempt(a.id, "f", True, self.EARLIER[0])
-        any_store.append_attempt(a.id, "f", True, self.EARLIER[1])
-        any_store.append_attempt(a.id, "j", True, self.EARLIER[2])
-        any_store.append_attempt(b.id, "f", True, self.EARLIER[2])
+        any_store.append_attempt(
+            a.id, session_for(any_store, a.id, self.EARLIER[0]), "f", True, self.EARLIER[0]
+        )
+        any_store.append_attempt(
+            a.id, session_for(any_store, a.id, self.EARLIER[1]), "f", True, self.EARLIER[1]
+        )
+        any_store.append_attempt(
+            a.id, session_for(any_store, a.id, self.EARLIER[2]), "j", True, self.EARLIER[2]
+        )
+        any_store.append_attempt(
+            b.id, session_for(any_store, b.id, self.EARLIER[2]), "f", True, self.EARLIER[2]
+        )
         assert any_store.window_stats(a.id, "f").distinct_days == 2
         assert any_store.window_stats(a.id, "j").distinct_days == 1
         assert any_store.window_stats(b.id, "f").distinct_days == 1
@@ -506,7 +634,13 @@ class TestKeyStats:
 class TestKeyAttempts:
     def test_append_single(self, store: SqliteStore) -> None:
         p = store.create_profile("Alice", "en")
-        store.append_attempt(p.id, "a", True, attempted_at="2026-01-01T10:00:00+00:00")
+        store.append_attempt(
+            p.id,
+            session_for(store, p.id, "2026-01-01T10:00:00+00:00"),
+            "a",
+            True,
+            attempted_at="2026-01-01T10:00:00+00:00",
+        )
         stats = store.window_stats(p.id, "a")
         assert stats.attempt_count == 1
         assert stats.correct_count == 1
@@ -515,7 +649,13 @@ class TestKeyAttempts:
         store = SqliteStore(":memory:", window_cap=5)
         p = store.create_profile("Alice", "en")
         for i in range(7):
-            store.append_attempt(p.id, "a", True, attempted_at=f"2026-01-01T{i:02d}:00:00+00:00")
+            store.append_attempt(
+                p.id,
+                session_for(store, p.id, f"2026-01-01T{i:02d}:00:00+00:00"),
+                "a",
+                True,
+                attempted_at=f"2026-01-01T{i:02d}:00:00+00:00",
+            )
         stats = store.window_stats(p.id, "a")
         assert stats.attempt_count == 5
 
@@ -523,10 +663,22 @@ class TestKeyAttempts:
         store = SqliteStore(":memory:", window_cap=5)
         p = store.create_profile("Alice", "en")
         # First row (to be evicted): wrong
-        store.append_attempt(p.id, "a", False, attempted_at="2026-01-01T00:00:00+00:00")
+        store.append_attempt(
+            p.id,
+            session_for(store, p.id, "2026-01-01T00:00:00+00:00"),
+            "a",
+            False,
+            attempted_at="2026-01-01T00:00:00+00:00",
+        )
         # Next 5 rows (all correct): these become the window
         for i in range(1, 6):
-            store.append_attempt(p.id, "a", True, attempted_at=f"2026-01-01T{i:02d}:00:00+00:00")
+            store.append_attempt(
+                p.id,
+                session_for(store, p.id, f"2026-01-01T{i:02d}:00:00+00:00"),
+                "a",
+                True,
+                attempted_at=f"2026-01-01T{i:02d}:00:00+00:00",
+            )
         stats = store.window_stats(p.id, "a")
         assert stats.attempt_count == 5
         assert stats.correct_count == 5  # wrong row was evicted
@@ -535,7 +687,13 @@ class TestKeyAttempts:
         store = SqliteStore(":memory:", window_cap=3)
         p = store.create_profile("Alice", "en")
         for i in range(5):
-            store.append_attempt(p.id, "a", True, attempted_at=f"2026-01-0{i + 1}T10:00:00+00:00")
+            store.append_attempt(
+                p.id,
+                session_for(store, p.id, f"2026-01-0{i + 1}T10:00:00+00:00"),
+                "a",
+                True,
+                attempted_at=f"2026-01-0{i + 1}T10:00:00+00:00",
+            )
         rows = store.conn.execute(
             "SELECT attempted_at FROM key_attempts WHERE profile_id = ? AND key_char = ? ORDER BY attempted_at",
             (p.id, "a"),
@@ -551,8 +709,20 @@ class TestKeyAttempts:
         store = SqliteStore(":memory:", window_cap=3)
         p = store.create_profile("Alice", "en")
         for i in range(4):
-            store.append_attempt(p.id, "a", True, attempted_at=f"2026-01-0{i + 1}T10:00:00+00:00")
-            store.append_attempt(p.id, "b", True, attempted_at=f"2026-01-0{i + 1}T11:00:00+00:00")
+            store.append_attempt(
+                p.id,
+                session_for(store, p.id, f"2026-01-0{i + 1}T10:00:00+00:00"),
+                "a",
+                True,
+                attempted_at=f"2026-01-0{i + 1}T10:00:00+00:00",
+            )
+            store.append_attempt(
+                p.id,
+                session_for(store, p.id, f"2026-01-0{i + 1}T11:00:00+00:00"),
+                "b",
+                True,
+                attempted_at=f"2026-01-0{i + 1}T11:00:00+00:00",
+            )
         assert store.window_stats(p.id, "a").attempt_count == 3
         assert store.window_stats(p.id, "b").attempt_count == 3
 
@@ -567,28 +737,83 @@ class TestWindowStats:
 
     def test_attempt_and_correct_counts(self, store: SqliteStore) -> None:
         p = store.create_profile("Alice", "en")
-        store.append_attempt(p.id, "a", True, attempted_at="2026-01-01T10:00:00+00:00")
-        store.append_attempt(p.id, "a", False, attempted_at="2026-01-01T10:01:00+00:00")
-        store.append_attempt(p.id, "a", True, attempted_at="2026-01-01T10:02:00+00:00")
+        store.append_attempt(
+            p.id,
+            session_for(store, p.id, "2026-01-01T10:00:00+00:00"),
+            "a",
+            True,
+            attempted_at="2026-01-01T10:00:00+00:00",
+        )
+        store.append_attempt(
+            p.id,
+            session_for(store, p.id, "2026-01-01T10:01:00+00:00"),
+            "a",
+            False,
+            attempted_at="2026-01-01T10:01:00+00:00",
+        )
+        store.append_attempt(
+            p.id,
+            session_for(store, p.id, "2026-01-01T10:02:00+00:00"),
+            "a",
+            True,
+            attempted_at="2026-01-01T10:02:00+00:00",
+        )
         stats = store.window_stats(p.id, "a")
         assert stats.attempt_count == 3
         assert stats.correct_count == 2
 
     # The instants are chosen so the answer is the same in every timezone: a
-    # minute apart is one local day, 24 hours apart is two. What "local day"
-    # means is pinned separately, in TestPracticeDayIsLocal.
+    # minute apart is one local date, 24 hours apart is two, and `session_for`
+    # starts a session for each date. How a session's day is decided is pinned
+    # in TestThePracticeDayNumber and TestThePracticeDayIsDecidedAtSessionStart.
     def test_distinct_days_same_day(self, any_store: Store) -> None:
         p = any_store.create_profile("Alice", "en")
-        any_store.append_attempt(p.id, "a", True, attempted_at="2026-01-01T10:00:00+00:00")
-        any_store.append_attempt(p.id, "a", True, attempted_at="2026-01-01T10:01:00+00:00")
+        any_store.append_attempt(
+            p.id,
+            session_for(any_store, p.id, "2026-01-01T10:00:00+00:00"),
+            "a",
+            True,
+            attempted_at="2026-01-01T10:00:00+00:00",
+        )
+        any_store.append_attempt(
+            p.id,
+            session_for(any_store, p.id, "2026-01-01T10:01:00+00:00"),
+            "a",
+            True,
+            attempted_at="2026-01-01T10:01:00+00:00",
+        )
         assert any_store.window_stats(p.id, "a").distinct_days == 1
 
     def test_distinct_days_across_calendar_days(self, any_store: Store) -> None:
         p = any_store.create_profile("Alice", "en")
-        any_store.append_attempt(p.id, "a", True, attempted_at="2026-01-01T10:00:00+00:00")
-        any_store.append_attempt(p.id, "a", True, attempted_at="2026-01-01T10:01:00+00:00")
-        any_store.append_attempt(p.id, "a", False, attempted_at="2026-01-02T10:00:00+00:00")
-        any_store.append_attempt(p.id, "a", True, attempted_at="2026-01-03T10:00:00+00:00")
+        any_store.append_attempt(
+            p.id,
+            session_for(any_store, p.id, "2026-01-01T10:00:00+00:00"),
+            "a",
+            True,
+            attempted_at="2026-01-01T10:00:00+00:00",
+        )
+        any_store.append_attempt(
+            p.id,
+            session_for(any_store, p.id, "2026-01-01T10:01:00+00:00"),
+            "a",
+            True,
+            attempted_at="2026-01-01T10:01:00+00:00",
+        )
+        any_store.append_attempt(
+            p.id,
+            session_for(any_store, p.id, "2026-01-02T10:00:00+00:00"),
+            "a",
+            False,
+            attempted_at="2026-01-02T10:00:00+00:00",
+        )
+        any_store.append_attempt(
+            p.id,
+            session_for(any_store, p.id, "2026-01-03T10:00:00+00:00"),
+            "a",
+            True,
+            attempted_at="2026-01-03T10:00:00+00:00",
+        )
         stats = any_store.window_stats(p.id, "a")
         assert stats.attempt_count == 4
         assert stats.correct_count == 3
@@ -597,9 +822,27 @@ class TestWindowStats:
     def test_stats_isolated_per_profile(self, store: SqliteStore) -> None:
         a = store.create_profile("Alice", "en")
         b = store.create_profile("Bob", "en")
-        store.append_attempt(a.id, "a", True, attempted_at="2026-01-01T10:00:00+00:00")
-        store.append_attempt(a.id, "a", True, attempted_at="2026-01-01T10:01:00+00:00")
-        store.append_attempt(b.id, "a", False, attempted_at="2026-01-01T10:00:00+00:00")
+        store.append_attempt(
+            a.id,
+            session_for(store, a.id, "2026-01-01T10:00:00+00:00"),
+            "a",
+            True,
+            attempted_at="2026-01-01T10:00:00+00:00",
+        )
+        store.append_attempt(
+            a.id,
+            session_for(store, a.id, "2026-01-01T10:01:00+00:00"),
+            "a",
+            True,
+            attempted_at="2026-01-01T10:01:00+00:00",
+        )
+        store.append_attempt(
+            b.id,
+            session_for(store, b.id, "2026-01-01T10:00:00+00:00"),
+            "a",
+            False,
+            attempted_at="2026-01-01T10:00:00+00:00",
+        )
         assert store.window_stats(a.id, "a").attempt_count == 2
         assert store.window_stats(b.id, "a").attempt_count == 1
         assert store.window_stats(b.id, "a").correct_count == 0
@@ -665,7 +908,13 @@ class TestKeyStatsRead:
 
     def test_window_rows_alone_do_not_make_a_key_active(self, any_store: Store) -> None:
         p = any_store.create_profile("Alice", "en")
-        any_store.append_attempt(p.id, "f", True, attempted_at="2026-01-01T10:00:00+00:00")
+        any_store.append_attempt(
+            p.id,
+            session_for(any_store, p.id, "2026-01-01T10:00:00+00:00"),
+            "f",
+            True,
+            attempted_at="2026-01-01T10:00:00+00:00",
+        )
         assert any_store.key_stats(p.id) == {}
 
     def test_isolated_per_profile(self, any_store: Store) -> None:
@@ -684,9 +933,27 @@ class TestEvictionParity:
         # monotonic: an NTP correction or a manual fix steps it back.
         store = any_store
         p = store.create_profile("Alice", "en")
-        store.append_attempt(p.id, "f", False, attempted_at="2026-01-01T02:30:00+00:00")
-        store.append_attempt(p.id, "f", True, attempted_at="2026-01-01T01:30:00+00:00")
-        store.append_attempt(p.id, "f", True, attempted_at="2026-01-01T03:00:00+00:00")
+        store.append_attempt(
+            p.id,
+            session_for(store, p.id, "2026-01-01T02:30:00+00:00"),
+            "f",
+            False,
+            attempted_at="2026-01-01T02:30:00+00:00",
+        )
+        store.append_attempt(
+            p.id,
+            session_for(store, p.id, "2026-01-01T01:30:00+00:00"),
+            "f",
+            True,
+            attempted_at="2026-01-01T01:30:00+00:00",
+        )
+        store.append_attempt(
+            p.id,
+            session_for(store, p.id, "2026-01-01T03:00:00+00:00"),
+            "f",
+            True,
+            attempted_at="2026-01-01T03:00:00+00:00",
+        )
         assert store.window_stats(p.id, "f") == WindowStats(3, 2, 1)
 
     def test_eviction_drops_the_first_to_arrive_not_the_oldest_stamp(self) -> None:
@@ -702,9 +969,27 @@ class TestEvictionParity:
         stores: list[Store] = [SqliteStore(":memory:", window_cap=2), FakeStore(window_cap=2)]
         for store in stores:
             p = store.create_profile("Alice", "en")
-            store.append_attempt(p.id, "f", True, attempted_at="2026-01-01T02:00:00+00:00")
-            store.append_attempt(p.id, "f", False, attempted_at="2026-01-01T01:00:00+00:00")
-            store.append_attempt(p.id, "f", True, attempted_at="2026-01-01T03:00:00+00:00")
+            store.append_attempt(
+                p.id,
+                session_for(store, p.id, "2026-01-01T02:00:00+00:00"),
+                "f",
+                True,
+                attempted_at="2026-01-01T02:00:00+00:00",
+            )
+            store.append_attempt(
+                p.id,
+                session_for(store, p.id, "2026-01-01T01:00:00+00:00"),
+                "f",
+                False,
+                attempted_at="2026-01-01T01:00:00+00:00",
+            )
+            store.append_attempt(
+                p.id,
+                session_for(store, p.id, "2026-01-01T03:00:00+00:00"),
+                "f",
+                True,
+                attempted_at="2026-01-01T03:00:00+00:00",
+            )
             # The 02:00 row arrived first and goes, though 01:00 is the older stamp.
             assert [row.correct for row in store.window_attempts(p.id, "f")] == [False, True]
 
@@ -766,8 +1051,24 @@ class TestWindowAttempts:
 
     def test_rows_come_back_oldest_first_with_their_columns(self, any_store: Store) -> None:
         pid = any_store.create_profile("Alice").id
-        any_store.append_attempt(pid, "f", True, "2026-09-29T10:00:00+00:00", 120, None)
-        any_store.append_attempt(pid, "f", False, "2026-09-29T10:00:01+00:00", None, "j")
+        any_store.append_attempt(
+            pid,
+            session_for(any_store, pid, "2026-09-29T10:00:00+00:00"),
+            "f",
+            True,
+            "2026-09-29T10:00:00+00:00",
+            120,
+            None,
+        )
+        any_store.append_attempt(
+            pid,
+            session_for(any_store, pid, "2026-09-29T10:00:01+00:00"),
+            "f",
+            False,
+            "2026-09-29T10:00:01+00:00",
+            None,
+            "j",
+        )
         rows = any_store.window_attempts(pid, "f")
         assert [(r.correct, r.latency_ms, r.prev_char) for r in rows] == [
             (True, 120, None),
@@ -781,10 +1082,21 @@ class TestWindowAttempts:
         # negative latency, beside the length it was timed against.
         pid = any_store.create_profile("Alice").id
         stamp = "2026-10-04T10:00:00+00:00"
-        any_store.append_attempt(pid, "f", True, stamp, 1020, "j", after_letter_ms=-180)
-        any_store.append_attempt(pid, "f", True, stamp, 400)
-        any_store.append_attempt(pid, "f", True, stamp, timeouts=2)
-        any_store.append_attempt(pid, "f", False, stamp)
+        any_store.append_attempt(
+            pid,
+            session_for(any_store, pid, stamp),
+            "f",
+            True,
+            stamp,
+            1020,
+            "j",
+            after_letter_ms=-180,
+        )
+        any_store.append_attempt(pid, session_for(any_store, pid, stamp), "f", True, stamp, 400)
+        any_store.append_attempt(
+            pid, session_for(any_store, pid, stamp), "f", True, stamp, timeouts=2
+        )
+        any_store.append_attempt(pid, session_for(any_store, pid, stamp), "f", False, stamp)
         rows = any_store.window_attempts(pid, "f")
         assert [(r.latency_ms, r.after_letter_ms, r.timeouts) for r in rows] == [
             (1020, -180, 0),
@@ -798,7 +1110,13 @@ class TestWindowAttempts:
         # the wrong order is a different streak.
         pid = any_store.create_profile("Alice").id
         for correct in (True, False, True, True):
-            any_store.append_attempt(pid, "f", correct, "2026-09-29T10:00:00+00:00")
+            any_store.append_attempt(
+                pid,
+                session_for(any_store, pid, "2026-09-29T10:00:00+00:00"),
+                "f",
+                correct,
+                "2026-09-29T10:00:00+00:00",
+            )
         assert [r.correct for r in any_store.window_attempts(pid, "f")] == [
             True,
             False,
@@ -815,7 +1133,13 @@ class TestWindowAttempts:
         # (ADR-024 § Ramp-up variability), and none of the ones before.
         pid = any_store.create_profile("Alice").id
         for correct in (True, True, False, True, False):
-            any_store.append_attempt(pid, "f", correct, "2026-09-29T10:00:00+00:00")
+            any_store.append_attempt(
+                pid,
+                session_for(any_store, pid, "2026-09-29T10:00:00+00:00"),
+                "f",
+                correct,
+                "2026-09-29T10:00:00+00:00",
+            )
         assert [r.correct for r in any_store.window_attempts(pid, "f", limit=2)] == [True, False]
         assert len(any_store.window_attempts(pid, "f", limit=9)) == 5
         assert any_store.window_attempts(pid, "f", limit=0) == []
@@ -828,8 +1152,19 @@ class TestCountedAttempt:
 
     def test_it_writes_the_count_and_the_row_with_one_stamp(self, any_store: Store) -> None:
         pid = any_store.create_profile("Alice").id
-        any_store.count_attempt(pid, "f", True, self.STAMP, 400, "j", after_letter_ms=-50)
-        any_store.count_attempt(pid, "f", False, self.STAMP, timeouts=1)
+        any_store.count_attempt(
+            pid,
+            session_for(any_store, pid, self.STAMP),
+            "f",
+            True,
+            self.STAMP,
+            400,
+            "j",
+            after_letter_ms=-50,
+        )
+        any_store.count_attempt(
+            pid, session_for(any_store, pid, self.STAMP), "f", False, self.STAMP, timeouts=1
+        )
         assert any_store.key_stats(pid) == {"f": KeyStat(2, 1, self.STAMP)}
         rows = any_store.window_attempts(pid, "f")
         assert rows == [
@@ -839,8 +1174,15 @@ class TestCountedAttempt:
 
     def test_a_refused_stamp_leaves_neither(self, any_store: Store) -> None:
         pid = any_store.create_profile("Alice").id
+        session = any_store.start_session(pid)
         with pytest.raises(ValueError):
-            any_store.count_attempt(pid, "f", True, "2026-10-07T10:00:00")
+            any_store.count_attempt(
+                pid,
+                session,
+                "f",
+                True,
+                "2026-10-07T10:00:00",
+            )
         assert any_store.key_stats(pid) == {}
         assert any_store.window_attempts(pid, "f") == []
 
@@ -854,7 +1196,7 @@ class TestCountedAttempt:
         store = Killed(":memory:")
         pid = store.create_profile("Alice").id
         with pytest.raises(RuntimeError, match="killed"):
-            store.count_attempt(pid, "f", True, self.STAMP)
+            store.count_attempt(pid, session_for(store, pid, self.STAMP), "f", True, self.STAMP)
         assert store.key_stats(pid) == {}
         assert store.window_attempts(pid, "f") == []
 
@@ -863,10 +1205,11 @@ class TestCountedAttempt:
         # same transaction, so neither can stand without the other.
         store = SqliteStore(":memory:")
         pid = store.create_profile("Alice").id
+        session = store.start_session(pid, self.STAMP)
         with failing_on(store, "INTO practice_days"), pytest.raises(RuntimeError, match="killed"):
-            store.count_attempt(pid, "f", True, self.STAMP)
+            store.count_attempt(pid, session, "f", True, self.STAMP)
         with failing_on(store, "INTO practice_days"), pytest.raises(RuntimeError, match="killed"):
-            store.append_attempt(pid, "f", True, self.STAMP)
+            store.append_attempt(pid, session, "f", True, self.STAMP)
         assert store.key_stats(pid) == {}
         assert store.window_attempts(pid, "f") == []
         assert store.window_stats(pid, "f") == WindowStats(0, 0, 0)
@@ -1431,8 +1774,8 @@ class TestMigration:
     def test_a_current_database_gains_the_first_round_index_and_is_not_refused(
         self, tmp_path: Path
     ) -> None:
-        # #12m session 4 added an index and no column, so the version stays 1
-        # and a database from session 2 or 3 opens and gains it.
+        # #12m session 4 added an index and no column, so it did not raise the
+        # version, and a current database without the index opens and gains it.
         path = str(tmp_path / "takki.sqlite")
         SqliteStore(path).conn.close()
         old = sqlite3.connect(path)
@@ -1445,7 +1788,7 @@ class TestMigration:
             for row in store.conn.execute("SELECT name FROM sqlite_master WHERE type = 'index'")
         }
         assert "idx_landings_round" in names
-        assert store.conn.execute("PRAGMA user_version").fetchone()[0] == 1
+        assert store.conn.execute("PRAGMA user_version").fetchone()[0] == 2
 
     def test_a_database_with_the_old_phase_table_is_refused_at_open(self, tmp_path: Path) -> None:
         # ADR-011, 2026-10-04: `ramp_up_phases` changed shape with no migration.
@@ -1485,17 +1828,44 @@ class TestMigration:
             tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master")}
         assert "practice_days" not in tables
 
+    def test_a_database_with_stored_local_days_is_refused_at_open(self, tmp_path: Path) -> None:
+        # ADR-011, #12m session 4b: version 1 stored each practice day as a
+        # local date. No migration: its days cannot be numbered after the fact.
+        path = str(tmp_path / "takki.sqlite")
+        old = sqlite3.connect(path)
+        old.executescript("""
+            CREATE TABLE sessions (
+                id INTEGER PRIMARY KEY, profile_id INTEGER NOT NULL,
+                started_at TEXT NOT NULL, ended_at TEXT
+            );
+            CREATE TABLE practice_days (
+                profile_id INTEGER NOT NULL, key_char TEXT NOT NULL, day TEXT NOT NULL,
+                PRIMARY KEY (profile_id, key_char, day)
+            );
+            PRAGMA user_version = 1;
+        """)
+        old.commit()
+        old.close()
+        with pytest.raises(
+            RuntimeError, match=r"schema version 1, older than this Takki's 2.*delete it"
+        ):
+            SqliteStore(path)
+        with closing(sqlite3.connect(path)) as conn:
+            columns = [r[1] for r in conn.execute("PRAGMA table_info(sessions)")]
+            assert conn.execute("PRAGMA user_version").fetchone() == (1,)
+        assert columns == ["id", "profile_id", "started_at", "ended_at"]
+
     def test_a_database_from_a_newer_takki_is_refused_and_not_restamped(
         self, tmp_path: Path
     ) -> None:
         path = str(tmp_path / "takki.sqlite")
         SqliteStore(path).conn.close()
         with closing(sqlite3.connect(path)) as conn:
-            conn.execute("PRAGMA user_version = 2")
-        with pytest.raises(RuntimeError, match="schema version 2, newer"):
+            conn.execute("PRAGMA user_version = 3")
+        with pytest.raises(RuntimeError, match="schema version 3, newer"):
             SqliteStore(path)
         with closing(sqlite3.connect(path)) as conn:
-            assert conn.execute("PRAGMA user_version").fetchone() == (2,)
+            assert conn.execute("PRAGMA user_version").fetchone() == (3,)
 
     def test_a_file_that_is_not_a_database_is_not_held_open(self, tmp_path: Path) -> None:
         # A file the error says to delete must be deletable while Takki runs.
@@ -1519,7 +1889,7 @@ class TestMigration:
         path = str(tmp_path / "takki.sqlite")
         SqliteStore(path).conn.close()
         store = SqliteStore(path)
-        assert store.conn.execute("PRAGMA user_version").fetchone() == (1,)
+        assert store.conn.execute("PRAGMA user_version").fetchone() == (2,)
         store.conn.close()
 
     def test_a_first_open_that_fails_leaves_no_tables(

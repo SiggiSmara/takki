@@ -18,6 +18,7 @@ from takki.persistence import (
     ReachPress,
     RestKey,
     WindowStats,
+    next_practice_day,
     utc_stamp,
 )
 
@@ -29,13 +30,6 @@ def _now() -> str:
 
 def _stamp(given: str | None) -> str:
     return _now() if given is None else utc_stamp(given)
-
-
-def _local_day(stamp: str) -> str:
-    """The local calendar day of a UTC stamp — SQLite's `date(x, 'localtime')`."""
-    # A practice day is the child's day, not UTC's (ADR-027 § Known). Parity
-    # with the real store matters here, since `distinct_days` gates Known.
-    return datetime.fromisoformat(stamp).astimezone().date().isoformat()
 
 
 def _check_value(value: str, allowed: tuple[str, ...]) -> None:
@@ -54,12 +48,13 @@ class FakeStore:
         self._profiles: dict[int, Profile] = {}
         self._next_profile_id = 1
         self._sessions: dict[int, tuple[int, str, str | None]] = {}
+        self._session_days: dict[int, int] = {}
         self._next_session_id = 1
         self._key_stats: dict[tuple[int, str], tuple[int, int, str | None]] = {}
         self._introductions: dict[tuple[int, str], Introduction] = {}
         self._phases: dict[tuple[int, str, str], PhaseRecord] = {}
         self._key_attempts: dict[tuple[int, str], list[Attempt]] = {}
-        self._practice_days: dict[tuple[int, str], set[str]] = {}
+        self._practice_days: dict[tuple[int, str], set[int]] = {}
         # Each list in insertion order, which is SqliteStore's rowid order.
         self._levels: dict[tuple[int, str], list[LevelRecord]] = {}
         self._reach_presses: dict[tuple[int, str], list[ReachPress]] = {}
@@ -108,10 +103,21 @@ class FakeStore:
 
     def start_session(self, profile_id: int, started_at: str | None = None) -> int:
         ts = _stamp(started_at)
+        # The previous session by id, as SqliteStore's ORDER BY id DESC.
+        mine = [key for key in sorted(self._sessions) if self._sessions[key][0] == profile_id]
+        previous = None if not mine else (self._session_days[mine[-1]], self._sessions[mine[-1]][1])
         session_id = self._next_session_id
+        self._session_days[session_id] = next_practice_day(previous, ts)
         self._sessions[session_id] = (profile_id, ts, None)
         self._next_session_id += 1
         return session_id
+
+    def practice_days_by_session(self, profile_id: int) -> dict[int, int]:
+        return {
+            key: self._session_days[key]
+            for key in sorted(self._sessions)
+            if self._sessions[key][0] == profile_id
+        }
 
     def end_session(self, session_id: int, ended_at: str | None = None) -> None:
         ts = _stamp(ended_at)
@@ -206,6 +212,7 @@ class FakeStore:
     def append_attempt(
         self,
         profile_id: int,
+        session_id: int,
         key_char: str,
         correct: bool,
         attempted_at: str | None = None,
@@ -215,7 +222,7 @@ class FakeStore:
         timeouts: int = 0,
     ) -> None:
         ts = _stamp(attempted_at)
-        day = _local_day(ts)
+        self._check_session(profile_id, session_id)
         key = (profile_id, key_char)
         if key not in self._key_attempts:
             self._key_attempts[key] = []
@@ -230,9 +237,7 @@ class FakeStore:
                 timeouts=timeouts,
             )
         )
-        # Fixed at the write, in the local zone of the moment, as SqliteStore's
-        # `date(?, 'localtime')` in its INSERT.
-        self._practice_days.setdefault(key, set()).add(day)
+        self._practice_days.setdefault(key, set()).add(self._session_days[session_id])
         if len(attempts) > self._cap:
             # Insertion order, which is what SqliteStore's ORDER BY rowid ASC
             # evicts. Evicting by timestamp would drop the row just written
@@ -423,6 +428,7 @@ class FakeStore:
     def count_attempt(
         self,
         profile_id: int,
+        session_id: int,
         key_char: str,
         correct: bool,
         attempted_at: str | None = None,
@@ -431,16 +437,21 @@ class FakeStore:
         after_letter_ms: int | None = None,
         timeouts: int = 0,
     ) -> None:
-        # Stamped once and checked before either write, so a refused stamp
-        # leaves nothing behind, as SqliteStore's one transaction does. The
-        # day is converted first for the same reason. On Windows a stamp
-        # before 1970 cannot be converted, so the fake refuses one that
-        # SqliteStore accepts (ADR-011, #12m session 2).
+        # Stamped and the session checked before either write, so a refusal
+        # leaves nothing behind, as SqliteStore's one transaction does.
         ts = _stamp(attempted_at)
-        _local_day(ts)
+        self._check_session(profile_id, session_id)
         self.upsert_key_stat(profile_id, key_char, correct, ts)
         self.append_attempt(
-            profile_id, key_char, correct, ts, latency_ms, prev_char, after_letter_ms, timeouts
+            profile_id,
+            session_id,
+            key_char,
+            correct,
+            ts,
+            latency_ms,
+            prev_char,
+            after_letter_ms,
+            timeouts,
         )
 
     def window_attempts(

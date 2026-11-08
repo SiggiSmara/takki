@@ -17,6 +17,7 @@ from takki.persistence import (
     ReachPress,
     RestKey,
     WindowStats,
+    next_practice_day,
     utc_stamp,
 )
 
@@ -35,10 +36,11 @@ CREATE TABLE IF NOT EXISTS profiles (
 );
 
 CREATE TABLE IF NOT EXISTS sessions (
-    id          INTEGER PRIMARY KEY,
-    profile_id  INTEGER NOT NULL REFERENCES profiles(id),
-    started_at  TEXT    NOT NULL,
-    ended_at    TEXT
+    id           INTEGER PRIMARY KEY,
+    profile_id   INTEGER NOT NULL REFERENCES profiles(id),
+    started_at   TEXT    NOT NULL,
+    ended_at     TEXT,
+    practice_day INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS introductions (
@@ -110,10 +112,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_rest_keys_current
     ON rest_keys (profile_id, finger) WHERE replaced_at IS NULL;
 
 CREATE TABLE IF NOT EXISTS practice_days (
-    profile_id INTEGER NOT NULL REFERENCES profiles(id),
-    key_char   TEXT    NOT NULL,
-    day        TEXT    NOT NULL,
-    PRIMARY KEY (profile_id, key_char, day)
+    profile_id   INTEGER NOT NULL REFERENCES profiles(id),
+    key_char     TEXT    NOT NULL,
+    practice_day INTEGER NOT NULL,
+    PRIMARY KEY (profile_id, key_char, practice_day)
 );
 
 CREATE TABLE IF NOT EXISTS ramp_up_phases (
@@ -173,7 +175,8 @@ CREATE INDEX IF NOT EXISTS idx_ll_profile_key
 
 # Raised by a schema change that an older database cannot be opened under.
 # 1: alpha-plan #12m session 2. Every database before it reads 0.
-_SCHEMA_VERSION = 1
+# 2: #12m session 4b, the practice-day number in place of a stored local date.
+_SCHEMA_VERSION = 2
 
 
 # A record of a letter's ramp-up needs the letter's introduction.
@@ -248,11 +251,11 @@ class SqliteStore:
         has_tables = self.conn.execute("SELECT 1 FROM sqlite_master LIMIT 1").fetchone()
         version = cast(int, self.conn.execute("PRAGMA user_version").fetchone()[0])
         if has_tables is not None and version < _SCHEMA_VERSION:
-            # ADR-011, alpha-plan #12m session 2: a key's practice days are
-            # kept outside the window from now on. An older database has them
-            # only in the window, so its keys would lose days they had. Every
-            # database an earlier refusal (#12j's phase table, #12f's latency)
-            # was for is older still, so this one check covers them.
+            # ADR-011: no migration. Version 2 (#12m session 4b) numbers practice
+            # days where version 1 stored local dates, and a version-0 database
+            # kept its days only in the window (session 2). Every database an
+            # earlier refusal (#12j's phase table, #12f's latency) was for is
+            # older still, so this one check covers them.
             raise RuntimeError(
                 f"this Takki database has schema version {version}, older than this Takki's "
                 f"{_SCHEMA_VERSION}, and cannot be used; delete it"
@@ -332,12 +335,33 @@ class SqliteStore:
 
     def start_session(self, profile_id: int, started_at: str | None = None) -> int:
         ts = _stamp(started_at)
+        # The previous session by id, the order written, never by the clock.
+        previous = self.conn.execute(
+            """
+            SELECT practice_day, started_at FROM sessions
+            WHERE profile_id = ? ORDER BY id DESC LIMIT 1
+            """,
+            (profile_id,),
+        ).fetchone()
+        day = next_practice_day(
+            None
+            if previous is None
+            else (cast(int, previous[0]), utc_stamp(cast(str, previous[1]))),
+            ts,
+        )
         cur = self.conn.execute(
-            "INSERT INTO sessions (profile_id, started_at) VALUES (?, ?)",
-            (profile_id, ts),
+            "INSERT INTO sessions (profile_id, started_at, practice_day) VALUES (?, ?, ?)",
+            (profile_id, ts, day),
         )
         self.conn.commit()
         return cast(int, cur.lastrowid)
+
+    def practice_days_by_session(self, profile_id: int) -> dict[int, int]:
+        rows = self.conn.execute(
+            "SELECT id, practice_day FROM sessions WHERE profile_id = ? ORDER BY id",
+            (profile_id,),
+        ).fetchall()
+        return {cast(int, r[0]): cast(int, r[1]) for r in rows}
 
     def end_session(self, session_id: int, ended_at: str | None = None) -> None:
         ts = _stamp(ended_at)
@@ -479,6 +503,7 @@ class SqliteStore:
     def append_attempt(
         self,
         profile_id: int,
+        session_id: int,
         key_char: str,
         correct: bool,
         attempted_at: str | None = None,
@@ -488,15 +513,25 @@ class SqliteStore:
         timeouts: int = 0,
     ) -> None:
         ts = _stamp(attempted_at)
+        self._check_session(profile_id, session_id)
         # The row and its practice day, both or neither.
         with self.conn:
             self._append_attempt(
-                profile_id, key_char, correct, ts, latency_ms, prev_char, after_letter_ms, timeouts
+                profile_id,
+                session_id,
+                key_char,
+                correct,
+                ts,
+                latency_ms,
+                prev_char,
+                after_letter_ms,
+                timeouts,
             )
 
     def count_attempt(
         self,
         profile_id: int,
+        session_id: int,
         key_char: str,
         correct: bool,
         attempted_at: str | None = None,
@@ -506,16 +541,26 @@ class SqliteStore:
         timeouts: int = 0,
     ) -> None:
         ts = _stamp(attempted_at)
+        self._check_session(profile_id, session_id)
         # One transaction: both are committed or neither is.
         with self.conn:
             self._upsert_key_stat(profile_id, key_char, correct, ts)
             self._append_attempt(
-                profile_id, key_char, correct, ts, latency_ms, prev_char, after_letter_ms, timeouts
+                profile_id,
+                session_id,
+                key_char,
+                correct,
+                ts,
+                latency_ms,
+                prev_char,
+                after_letter_ms,
+                timeouts,
             )
 
     def _append_attempt(
         self,
         profile_id: int,
+        session_id: int,
         key_char: str,
         correct: bool,
         ts: str,
@@ -542,15 +587,15 @@ class SqliteStore:
                 timeouts,
             ),
         )
-        # The child's local day, fixed when the press is written: the trim
-        # below must not take it away (ADR-011 `practice_days`).
+        # The session's practice day, kept outside the window: the trim below
+        # must not take it away (ADR-011 `practice_days`).
         self.conn.execute(
             """
-            INSERT INTO practice_days (profile_id, key_char, day)
-            VALUES (?, ?, date(?, 'localtime'))
-            ON CONFLICT (profile_id, key_char, day) DO NOTHING
+            INSERT INTO practice_days (profile_id, key_char, practice_day)
+            SELECT ?, ?, practice_day FROM sessions WHERE id = ?
+            ON CONFLICT (profile_id, key_char, practice_day) DO NOTHING
             """,
-            (profile_id, key_char, ts),
+            (profile_id, key_char, session_id),
         )
         row = self.conn.execute(
             "SELECT COUNT(*) FROM key_attempts WHERE profile_id = ? AND key_char = ?",
