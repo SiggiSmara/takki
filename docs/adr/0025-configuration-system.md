@@ -5,6 +5,7 @@
 
 > Part of the [Takki architecture](../architecture.md).  
 > **Amendment pending from [ADR-033](0033-rest-keys-and-keyboard-alignment.md) (2026-10-10):** the keyboard alignment's numbers, `ANCHOR_MIN_ATTEMPTS` and `ANCHOR_MIN_ACCURACY` removed, and rest keys as per-profile state. Not yet made here ([alpha-plan](../alpha-plan.md) #12m).
+> **Amended 2026-11-08 ([alpha-plan](../alpha-plan.md) #12m session 4), in part:** the anchor bar's two numbers are removed, `REST_SETTLED_SESSION_STARTS` is added, and rest keys are recorded as per-profile state, not configuration. ADR-033's other numbers arrive with the sessions that build them: § Amended 2026-11-08, below.
 
 ---
 
@@ -119,6 +120,9 @@ LETTER_LENGTH_SAMPLE    = 10     # full playbacks a letter's usual length is the
 # Introduction gate (ADR-010 § The introduction gate is slots)
 MAX_KEYS_IN_PROGRESS    = 6      # keys Active but not yet Known; raise per child
 
+# Rest keys (ADR-033, ADR-027 § The `rest` rung)
+REST_SETTLED_SESSION_STARTS = 5  # days, one session start each, the `rest` rung reads
+
 # Voice
 TTS_RATE          = 1.0
 PUSH_TO_TALK_MODE = "press_release"   # "press_release" or "hold"
@@ -153,7 +157,14 @@ The binding is chosen against a constraint the other three do not have: this key
 
 **Amended 2026-10-04 (alpha-plan #12f). The speed term's four keys, and `PHASE_C_MAX_LATENCY_RATIO`.**
 
-`KNOWN_MAX_LATENCY_RATIO`, `SPEED_SAMPLE`, `SPEED_MIN_SAMPLE` and `SLOW_KEY_NEED` belong to [ADR-027 § Known has a speed term](0027-key-and-accuracy-state-model.md#known-has-a-speed-term). The ratio and the half-life are constructor arguments of `KeyStates`, not fields of `KnownCriterion`: they say how evidence is read, and the same evidence is judged against both Known's criterion and the anchor rung's. The later tiers override them by construction, like the floors. None of the four comes from the literature; they are listed so that #12h and a pilot can move them without a code change. `PHASE_C_MAX_LATENCY_RATIO` goes from 1.5 to 2.0 with the change of what it is a ratio of ([ADR-024](0024-drill-content-and-lesson-granularity.md), "Latency, and only in the last bar"): the two ratios are separate keys with one default.
+`KNOWN_MAX_LATENCY_RATIO`, `SPEED_SAMPLE`, `SPEED_MIN_SAMPLE` and `SLOW_KEY_NEED` belong to [ADR-027 § Known has a speed term](0027-key-and-accuracy-state-model.md#known-has-a-speed-term). The ratio and the half-life are constructor arguments of `KeyStates`, not fields of `KnownCriterion`: they say how evidence is read, and the same evidence is judged against both Known's criterion and the anchor rung's *(the anchor rung is retired since 2026-11-08; Known's criterion is now the only one)*. The later tiers override them by construction, like the floors. None of the four comes from the literature; they are listed so that #12h and a pilot can move them without a code change. `PHASE_C_MAX_LATENCY_RATIO` goes from 1.5 to 2.0 with the change of what it is a ratio of ([ADR-024](0024-drill-content-and-lesson-granularity.md), "Latency, and only in the last bar"): the two ratios are separate keys with one default.
+
+**Amended 2026-11-08 (alpha-plan #12m session 4). The anchor bar's numbers go; `REST_SETTLED_SESSION_STARTS` comes.** This is the part of [ADR-033 § Amendments this ADR requires](0033-rest-keys-and-keyboard-alignment.md#amendments-this-adr-requires) that session 4 builds.
+
+- **`ANCHOR_MIN_ATTEMPTS` (25) and `ANCHOR_MIN_ACCURACY` (0.95) are removed** from `config.py`, with the anchor rung and the lifelong hold of `f` and `j` they configured ([ADR-027 § The Anchor Gate is retired](0027-key-and-accuracy-state-model.md#the-anchor-gate-is-retired)). This listing never carried them, so nothing above changes for them.
+- **`REST_SETTLED_SESSION_STARTS` (5) is added.** It is how many days, one session start each, the `rest` rung reads ([ADR-027 § The `rest` rung](0027-key-and-accuracy-state-model.md#the-rest-rung)). The name is ADR-033's and says what is counted: session starts, the first complete one of each local day. Like Known's floors it is not a parent's preference; it is listed so that a run can shorten it, as #12h does on the laptop (set to 2, and set back before anything is committed).
+- **ADR-033's other numbers** (`REST_LETTER_MIN_SHARE`, `ALIGNMENT_MAX_ROUNDS`, `REST_CHOSEN_ROUNDS`, `REST_READY_ROUNDS`, `REST_CHANGE_ROUNDS`) are added by the #12m sessions that read them, (5) and (7). A constant nothing reads is not listed. ADR-033's own `MAX_KEYS_IN_PROGRESS` row keeps the 6 above, on a new reason ([ADR-010](0010-lesson-structure-and-progression.md), "Why 6, since Stage 0 went").
+- **Rest keys are per-profile state, not configuration.** They live in [ADR-011](0011-persistence-and-state.md)'s `rest_keys` and are found by the alignment, not set by a parent. They are not a field of the per-profile tier and are not in `takki_config.yaml`.
 
 **Amended 2026-10-06 (alpha-plan #12l). `LETTER_LENGTH_SAMPLE`, and `TTS_RATE` in the compiled defaults.**
 

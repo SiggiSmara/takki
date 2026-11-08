@@ -1,7 +1,7 @@
 """Read-only progress dump (alpha session #12a-0, item 2).
 
 Alpha passes no `celebrant` (ADR-012) -- every milestone rung is silent, so
-SQLite is the only place ADR-027's anchor gate is observable. Opens the
+SQLite is the only place ADR-027's milestone ladder is observable. Opens the
 database with sqlite3's `mode=ro` URI, which refuses writes at the file
 level: this tool cannot corrupt what it reads.
 

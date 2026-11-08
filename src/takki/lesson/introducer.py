@@ -23,47 +23,23 @@ from takki.platform.layout import (
 HOME_ROW = 3
 DIRECT = "direct"
 
-# ADR-032 § What this changes in the engine item 3: the only two values a step
-# can carry. Phase 1 and Phase 2 are Ordering A's internal structure, so they
-# are not values of a field every ordering shares.
-STAGE_0 = 0
-CURRICULUM = 1
-
-# ADR-023 § Stage 0 and ADR-027 § The Anchor Gate name the same six keys, and
-# both name them by position: (2,4) (3,4) (4,4) and (2,7) (3,7) (4,7), the two
-# index home columns. Never a letter list -- German already differs at column 6
-# and a layout session 12 reads may differ further out.
+# The two keys with the tactile bumps, by position: row 3, columns 4 and 7,
+# `f j` on QWERTY. ADR-033 keeps "anchor" for them. Never a letter list --
+# German already differs at column 6 and other layouts may differ further out.
 ANCHOR_COLUMNS: tuple[int, ...] = (4, 7)
-# Home first: it carries the tactile bump and is the key every other position
-# in the stage is described against. Then the reach up, then the reach down.
-ANCHOR_ROWS: tuple[int, ...] = (HOME_ROW, 2, 4)
 
 # ADR-023 § Phase 1: symmetric pairs by physical column, left member first.
-# Column 4/7 stays in the table: the strategy is the complete home-row-fill
-# order in its own right, and Stage 0 removes that pair by handing its keys
-# over as already-had, not by the strategy knowing Stage 0 exists.
+# With Stage 0 gone (ADR-033), the first pair is the bump letters, which is
+# ADR-033's first step under every ordering.
 _PHASE1_COLUMN_PAIRS: tuple[tuple[int, int], ...] = ((4, 7), (3, 8), (2, 9), (1, 10), (5, 6))
 
 
-def anchor_keys(layout: Layout) -> tuple[str, ...]:
-    """Stage 0's six keys, in introduction order: f j r u v m on QWERTY."""
-    # Indexed unguarded, unlike phase1_slots' `if col in by_col`. That guard
-    # implements an ADR-023 rule -- a home-row column with no letter gives a
-    # solo step -- and there is no matching rule here: a Stage 0 of five keys
-    # is not Stage 0, and a five-key anchor gate would quietly weaken ADR-027's
-    # first rung. A layout that cannot supply these six positions is a broken
-    # premise, so it fails loudly. Session 12 is where a real layout first
-    # arrives; see its alpha-plan row.
-    by_pos = letters_by_position(layout)
-    return tuple(by_pos[(row, col)] for row in ANCHOR_ROWS for col in ANCHOR_COLUMNS)
-
-
 def home_anchor_keys(layout: Layout) -> tuple[str, ...]:
-    """The two tactile-bump home keys — `f` and `j` on QWERTY.
+    """The two bump letters — `f` and `j` on QWERTY.
 
-    ADR-027 § The Anchor Gate holds these two, and only these two, to
-    ANCHOR_MIN_ACCURACY for the life of the profile. The other four Stage 0
-    keys are reaches away from them, not landmarks in their own right.
+    Indexed unguarded: a layout with no letter on a bump is a broken premise
+    for every ordering (ADR-032 § No Stage 0 above the orderings), so it fails
+    loudly rather than open the curriculum somewhere else.
     """
     by_pos = letters_by_position(layout)
     return tuple(by_pos[(HOME_ROW, col)] for col in ANCHOR_COLUMNS)
@@ -132,11 +108,6 @@ class KeyIntroduction:
 class IntroductionStep:
     """One introduction step: one or two graphemes, left-hand member first.
 
-    `stage` is 0 for Stage 0 (ADR-023 § Stage 0 -- anchor establishment) and 1
-    for the curriculum below it. It is not the ordering's phase: ADR-032 § What
-    this changes in the engine item 3 -- Phase 1 and Phase 2 belong to Ordering
-    A, and a field every ordering shares must not claim them.
-
     Two graphemes stay in one step because every consumer of the boundary
     treats the pair as a unit -- ADR-028's Phase A interleaves L-R-L-R, Phase B
     alternates four ways, the composite branch is chosen by looking at both
@@ -144,7 +115,6 @@ class IntroductionStep:
     coverage gain.
     """
 
-    stage: int
     keys: tuple[KeyIntroduction, ...]
 
 
@@ -152,12 +122,11 @@ class IntroductionStep:
 class IntroductionSlot:
     """One step's worth of grapheme names, before the keys are worked out."""
 
-    stage: int
     keys: tuple[str, ...]
 
 
 class IntroductionStrategy(Protocol):
-    """The introduction order *below* Stage 0 (ADR-032 § Decision 2).
+    """The introduction order (ADR-032 § Decision 2).
 
     Returns every remaining slot in order as grapheme names, left-hand member
     first, and returns nothing that is already in `had`. Filtering is the
@@ -213,7 +182,7 @@ DEFAULT_STRATEGY: IntroductionStrategy = home_row_fill
 
 
 class KeyIntroducer:
-    """The introduction sequence for one profile: Stage 0, then a strategy."""
+    """The introduction sequence for one profile, in its strategy's order."""
 
     def __init__(
         self,
@@ -290,38 +259,14 @@ def introduction_sequence(
     # different questions (what has been taught, what can be pointed at) and
     # come apart the moment a language has a composite in it.
     struck = _keys_behind(layout, introduced)
-    steps: list[IntroductionStep] = []
-    for slot in _stage0_slots(layout, introduced):
-        steps.append(_build_step(layout, slot, introduced, struck))
-    # Stage 0's keys are ordinary curriculum keys as well -- f and j open the
-    # default strategy's Phase 1, r v u m are Phase 2 keys -- so the strategy
-    # is handed them in `had` and skips them. It is called after the loop
-    # above, which is what puts them there.
-    for slot in strategy(layout, source, introduced):
-        steps.append(_build_step(layout, slot, introduced, struck))
-    return steps
+    return [
+        _build_step(layout, slot, introduced, struck)
+        for slot in strategy(layout, source, introduced)
+    ]
 
 
 def _keys_behind(layout: Layout, graphemes: AbstractSet[str]) -> set[str]:
     return {key for name in graphemes for key in layout.graphemes[name].prereq_keys}
-
-
-def _stage0_slots(layout: Layout, had: AbstractSet[str]) -> list[IntroductionSlot]:
-    """ADR-023 § Stage 0 — one row of the two index columns per step.
-
-    Each step is a symmetric pair by physical position, exactly as Phase 1
-    pairs are, so nothing downstream needs a second shape for the stage: the
-    left-hand member is first and ADR-028's pair ramp-up reads off the step
-    unchanged. What marks the stage is `stage`, which the drill generator
-    needs anyway to pick Stage 0's own content.
-    """
-    by_pos = letters_by_position(layout)
-    slots: list[IntroductionSlot] = []
-    for row in ANCHOR_ROWS:
-        pending = tuple(name for col in ANCHOR_COLUMNS if (name := by_pos[(row, col)]) not in had)
-        if pending:
-            slots.append(IntroductionSlot(STAGE_0, pending))
-    return slots
 
 
 def phase1_slots(layout: Layout, had: AbstractSet[str]) -> list[IntroductionSlot]:
@@ -342,11 +287,11 @@ def phase1_slots(layout: Layout, had: AbstractSet[str]) -> list[IntroductionSlot
         paired.update(members)
         pending = tuple(name for name in members if name not in had)
         if pending:
-            slots.append(IntroductionSlot(CURRICULUM, pending))
+            slots.append(IntroductionSlot(pending))
     # ADR-023's "remaining row-3 letters solo" tail, outward by column so each
     # one anchors to the key introduced immediately before it.
     tail = (by_col[col] for col in sorted(by_col) if by_col[col] not in paired)
-    slots.extend(IntroductionSlot(CURRICULUM, (name,)) for name in tail if name not in had)
+    slots.extend(IntroductionSlot((name,)) for name in tail if name not in had)
     return slots
 
 
@@ -371,15 +316,15 @@ def phase2_slots(
             # and the eligibility gate can never open. ADR-032 § Decision 1
             # rule 1 assumes a composite's base *is* a letter the child is
             # taught; a layout that breaks the assumption is a broken premise,
-            # and fails loudly for the same reason anchor_keys does -- silently
-            # dropping letters from a curriculum is the failure nobody notices.
+            # and fails loudly: silently dropping letters from a curriculum is
+            # the failure nobody notices.
             # Reachable only from session 12's real layout data.
             stuck = sorted(pools["L"] + pools["R"])
             raise ValueError(
                 f"composites whose base letter is not a grapheme of this layout: {stuck}"
             )
         running.update(leaders)
-        slots.append(IntroductionSlot(CURRICULUM, leaders))
+        slots.append(IntroductionSlot(leaders))
     return slots
 
 
@@ -403,7 +348,7 @@ def _build_step(
         # left-hand one the child has just been told about.
         introduced.add(name)
         struck.update(layout.graphemes[name].prereq_keys)
-    return IntroductionStep(slot.stage, tuple(introductions))
+    return IntroductionStep(tuple(introductions))
 
 
 def resume_step(
@@ -414,11 +359,10 @@ def resume_step(
     # clauses are derived from it. The step's own members are taken out, so a
     # caller handing over everything introduced gets no member located against
     # its own pair.
-    stage = STAGE_0 if set(graphemes) <= set(anchor_keys(layout)) else CURRICULUM
     members = tuple(name for name in graphemes if name in layout.graphemes)
     introduced = {name for name in had if name in layout.graphemes} - set(members)
     struck = _keys_behind(layout, introduced)
-    return _build_step(layout, IntroductionSlot(stage, members), introduced, struck)
+    return _build_step(layout, IntroductionSlot(members), introduced, struck)
 
 
 def _introduce(

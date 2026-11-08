@@ -98,9 +98,9 @@ def bar_met(
         return False
     # Speed, read the way Known reads it and against the same baseline
     # (ADR-027 § Known has a speed term). No baseline, no bar -- by design: the
-    # bump keys have none, and a term that failed closed would hold Stage 0
-    # behind a measurement that cannot be made. A stretch with too few timed
-    # answers is the same.
+    # generator hands the bump letters none in their own step, and a term that
+    # failed closed would hold the first step behind a measurement that cannot
+    # be made. A stretch with too few timed answers is the same.
     observed = key_speed(recent)
     if baseline is None or observed is None:
         return True

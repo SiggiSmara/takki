@@ -123,13 +123,15 @@ class KeyStates:
         self._store = store
         self._profile_id = profile_id
         self._criterion = criterion
-        # How evidence is read, not a bar a key is held to: the same weighed
-        # evidence is judged against Known's criterion and the anchor rung's.
+        # How evidence is read, not a bar a key is held to.
         self._half_life_days = half_life_days
         self._max_latency_ratio = max_latency_ratio
-        # The two keys with a bump, `f` and `j` on every layout Takki has. They
-        # are in the speed baseline from their first presses and have no speed
-        # term of their own: something has to be the root of the comparison.
+        # The two bump letters, `f` and `j` on every layout Takki has. They are
+        # the root of the speed baseline: in its pool from their first timed
+        # presses, before they meet the floors, because the first keys after
+        # them need something to be compared with. Each is still judged like
+        # any key, against the baseline without itself (ADR-027 § Known's
+        # speed term after the ladder).
         self._bump_keys = frozenset(bump_keys)
         self._held: dict[str, tuple[Evidence, float | None]] | None = None
         # Wall-clock UTC in the store's form, as `AttemptCounter` takes it.
@@ -220,8 +222,6 @@ class KeyStates:
         # every *other* key that meets the floors, each counted once by its own
         # median. Whether those keys pass their own speed test is not asked;
         # asking would make Known depend on Known.
-        if key_char in self._bump_keys:
-            return None
         pool = [
             speed
             for name, (evidence, speed) in survey.items()

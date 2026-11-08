@@ -1,4 +1,30 @@
+import os
+import time
+from collections.abc import Callable, Iterator
+
 import pytest
+
+# POSIX only: Windows has no way to change a running process's timezone.
+_tzset: Callable[[], None] | None = getattr(time, "tzset", None)
+needs_tzset = pytest.mark.skipif(_tzset is None, reason="the process timezone cannot be set here")
+
+
+@pytest.fixture()
+def timezone() -> Iterator[Callable[[str], None]]:
+    assert _tzset is not None
+    apply = _tzset
+    before = os.environ.get("TZ")
+
+    def use(name: str) -> None:
+        os.environ["TZ"] = name
+        apply()
+
+    yield use
+    if before is None:
+        del os.environ["TZ"]
+    else:
+        os.environ["TZ"] = before
+    apply()
 
 
 @pytest.fixture(autouse=True)

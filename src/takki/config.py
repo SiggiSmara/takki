@@ -125,19 +125,17 @@ SPEED_MIN_SAMPLE = 10
 # it would hold its slot (ADR-010) without ever being practised.
 SLOW_KEY_NEED = 5
 
-# ADR-027 § The Anchor Gate. The first milestone rung's bar for the six index
-# home-column keys: shorter than the general Known floor and stricter on
-# accuracy, because a child who is only 90% sure where home is has no anchor.
-# The distinct-day floor is shared with Known -- consolidation is the same
-# mechanism either way. Anchor accuracy is also maintained for the life of the
-# profile: falling below ANCHOR_MIN_ACCURACY on f or j re-injects return-drills.
-ANCHOR_MIN_ATTEMPTS = 25
-ANCHOR_MIN_ACCURACY = 0.95
+# ADR-027 § The `rest` rung: all eight fingers land on their rest keys at the
+# first round of this many days, one session start a day (ADR-033). The name
+# is ADR-033's: it counts session starts, and only the first complete one of
+# each local day.
+REST_SETTLED_SESSION_STARTS = 5
 
 # ADR-010 § Progression Rules. The gate on *when* a new key is introduced, as
 # opposed to which one: the most keys a child may have Active but not yet
-# Known. Every key that becomes Known frees a slot. Six is Stage 0's six keys,
-# so a first day can still cover all of Stage 0. Meant to be raised per child
+# Known. Every key that becomes Known frees a slot. Six is three steps of one
+# letter per hand on a first day, which is what ADR-033's spike ran; it has no
+# derivation beyond that and is tuned by ear. Meant to be raised per child
 # -- a keen one, or one who already knows the keyboard -- once ADR-025's
 # per-profile tier exists.
 MAX_KEYS_IN_PROGRESS = 6

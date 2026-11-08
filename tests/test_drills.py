@@ -18,8 +18,6 @@ from takki.lesson.drills import (
     presses_needed,
 )
 from takki.lesson.introducer import (
-    CURRICULUM,
-    STAGE_0,
     IntroductionStep,
     KeyIntroduction,
     base_key,
@@ -51,7 +49,11 @@ EN_WORDS: dict[str, float] = {
     "just": 10.0,
 }
 
+# Six Active letters to drill around: the bump letters and the keys above and
+# below them. Since ADR-033 they are ordinary letters; the set is only a fixture.
 ANCHOR_SIX = "fjruvm"
+# A bar stricter than Known's, to show the need arithmetic holds for any bar.
+STRICT_BAR = 0.95
 
 
 def member(layout: Layout, name: str) -> KeyIntroduction:
@@ -69,8 +71,8 @@ def member(layout: Layout, name: str) -> KeyIntroduction:
     )
 
 
-def make_step(layout: Layout, *names: str, stage: int = CURRICULUM) -> IntroductionStep:
-    return IntroductionStep(stage, tuple(member(layout, name) for name in names))
+def make_step(layout: Layout, *names: str) -> IntroductionStep:
+    return IntroductionStep(tuple(member(layout, name) for name in names))
 
 
 class Fixture:
@@ -280,17 +282,17 @@ class TestPairAdvancesTogether:
     """
 
     @pytest.mark.parametrize(
-        ("pair", "stage", "active"),
-        [(("d", "k"), CURRICULUM, ANCHOR_SIX), (("f", "j"), STAGE_0, "")],
+        ("pair", "active"),
+        [(("d", "k"), ANCHOR_SIX), (("f", "j"), "")],
     )
     def test_a_member_ahead_of_its_partner_records_nothing_while_it_waits(
-        self, pair: tuple[str, str], stage: int, active: str
+        self, pair: tuple[str, str], active: str
     ) -> None:
         # The review's own scenario: one member right every time, the other
         # wrong every time, for eight blocks.
         fixture = Fixture(active=active)
         ahead, behind = pair
-        fixture.generator.begin_step(make_step(fixture.layout, *pair, stage=stage))
+        fixture.generator.begin_step(make_step(fixture.layout, *pair))
         began_at = fixture.store.key_stats(fixture.profile).get(ahead)
         start = began_at.attempt_count if began_at is not None else 0
         for _ in range(8):
@@ -424,11 +426,14 @@ class TestPhaseCAndD:
         assert fixture.generator.ramp_up is None
 
     def test_the_bump_keys_own_ramp_up_has_no_speed_term(self) -> None:
-        # Stage 0's first step: `f` nine times slower than `j` and through.
+        # The first step: `f` nine times slower than `j` and through. Known
+        # now gives `f` a baseline, `j`'s (ADR-027, 2026-11-08), so this is the
+        # generator skipping the term for the bump letters, as ADR-024's bar does.
         fixture = Fixture()
         self._into_phase_c(fixture, "f", "j")
         press(fixture, "j", config.PHASE_C_ATTEMPTS, latency_ms=1000)
         press(fixture, "f", config.PHASE_C_ATTEMPTS, latency_ms=9000)
+        assert fixture.states.speed_baseline("f") == 1000
         assert fixture.generator.ramp_up is None
 
     def test_every_phase_c_unit_carries_a_new_letter(self) -> None:
@@ -522,22 +527,23 @@ class TestComposites:
         }
 
 
-class TestStageZero:
+class TestFirstSteps:
+    """ADR-033: no Stage 0. The first steps take the ordinary ramp-up."""
+
     def steps(self) -> tuple[Layout, WordSource, list[IntroductionStep]]:
         layout = build_en()
         source = FixedListSource(EN_WORDS)
         return layout, source, introduction_sequence(layout, source)[:3]
 
-    def test_the_stage_is_three_pairs(self) -> None:
+    def test_the_first_step_is_the_bump_letters(self) -> None:
         _, _, steps = self.steps()
-        assert [step.stage for step in steps] == [STAGE_0] * 3
         assert [[k.grapheme for k in step.keys] for step in steps] == [
             ["f", "j"],
-            ["r", "u"],
-            ["v", "m"],
+            ["d", "k"],
+            ["s", "l"],
         ]
 
-    def test_home_pair_alternates_the_two_anchors(self) -> None:
+    def test_the_bump_pair_alternates_the_two_bump_letters(self) -> None:
         layout, source, steps = self.steps()
         fixture = Fixture(layout, source)
         fixture.generator.begin_step(steps[0])
@@ -546,31 +552,18 @@ class TestStageZero:
             ("j",): config.PHASE_A_STREAK,
         }
 
-    @pytest.mark.parametrize(
-        ("index", "active", "expected"),
-        [
-            (1, "fj", ("f", "r", "j", "u")),
-            (2, "fjru", ("f", "v", "j", "m")),
-        ],
-    )
-    def test_each_reach_alternates_with_its_own_column_anchor(
-        self, index: int, active: str, expected: tuple[str, ...]
-    ) -> None:
-        # ADR-027 § The Anchor Gate: the stage alternates the anchor with its
-        # own column reaches, which is what makes plain first-press accuracy a
-        # valid return-to-anchor measure. Ordinary Phase A repetition here
-        # would silently invalidate the ladder's first rung.
-        layout, source, steps = self.steps()
-        fixture = Fixture(layout, source, active=active)
-        fixture.generator.begin_step(steps[index])
-        block = fixture.generator.next_block()
-        left, right = expected[:2], expected[2:]
-        assert Counter(frozenset(unit) for unit in block.units) == {
-            frozenset(left): len(block.units) // 2,
-            frozenset(right): len(block.units) // 2,
+    def test_r_and_u_take_the_ordinary_phase_a_and_not_stage_0s_alternation(self) -> None:
+        # Stage 0 gave `r u` the anchors in Phase A (`f r`, `j u`). Ordinary
+        # Phase A is each new letter on its own, as for any pair.
+        layout, source, _ = self.steps()
+        fixture = Fixture(layout, source, active="fj")
+        fixture.generator.begin_step(make_step(layout, "r", "u"))
+        assert Counter(fixture.generator.next_block().units) == {
+            ("r",): config.PHASE_A_STREAK,
+            ("u",): config.PHASE_A_STREAK,
         }
 
-    def test_no_stage_zero_block_ever_repeats_a_prompt(self) -> None:
+    def test_no_first_step_block_ever_repeats_a_prompt(self) -> None:
         layout, source, steps = self.steps()
         active = ""
         for step in steps:
@@ -648,12 +641,12 @@ class TestAccuracyBound:
 
 class TestPressesNeeded:
     def test_a_key_fresh_from_its_ramp_up_needs_the_rest_of_known_s_floor(self) -> None:
-        need = presses_needed(stats(RAMP_UP_PRESSES, RAMP_UP_PRESSES), config.ANCHOR_MIN_ACCURACY)
+        need = presses_needed(stats(RAMP_UP_PRESSES, RAMP_UP_PRESSES), STRICT_BAR)
         assert need == config.KNOWN_MIN_ATTEMPTS - RAMP_UP_PRESSES
 
     def test_a_perfect_key_at_the_floor_needs_nothing(self) -> None:
         floor = config.KNOWN_MIN_ATTEMPTS
-        assert presses_needed(stats(floor, floor), config.ANCHOR_MIN_ACCURACY) == 0
+        assert presses_needed(stats(floor, floor), STRICT_BAR) == 0
 
     # The grid includes the case #12e was made for -- a key well past Known's
     # floor that is still missing its bar, which a count rule would call done --
@@ -667,7 +660,7 @@ class TestPressesNeeded:
             if wrong <= attempts
         ],
     )
-    @pytest.mark.parametrize("bar", [config.KNOWN_MIN_ACCURACY, config.ANCHOR_MIN_ACCURACY])
+    @pytest.mark.parametrize("bar", [config.KNOWN_MIN_ACCURACY, STRICT_BAR])
     def test_need_is_the_larger_shortfall_and_exactly_enough(
         self, attempts: int, wrong: int, bar: float
     ) -> None:
@@ -688,7 +681,7 @@ class TestPressesNeeded:
         ("attempts", "wrong"), [(90, 0), (90, 5), (150, 6), (200, 0), (200, 4)]
     )
     @pytest.mark.parametrize("half_lives", [0.0, 0.1, 1.0, 2.0, 4.0, 6.0, 12.0])
-    @pytest.mark.parametrize("bar", [config.KNOWN_MIN_ACCURACY, config.ANCHOR_MIN_ACCURACY])
+    @pytest.mark.parametrize("bar", [config.KNOWN_MIN_ACCURACY, STRICT_BAR])
     def test_need_after_time_away_is_exactly_enough_to_restore_the_bound(
         self, attempts: int, wrong: int, half_lives: float, bar: float
     ) -> None:
@@ -733,7 +726,7 @@ class TestNeedFromTheStore:
         return fixture
 
     def need(self, fixture: Fixture) -> int:
-        return presses_needed(fixture.states.evidence("f"), config.ANCHOR_MIN_ACCURACY)
+        return presses_needed(fixture.states.evidence("f"), config.KNOWN_MIN_ACCURACY)
 
     def test_a_key_at_its_bar_has_no_need_after_a_long_weekend(self) -> None:
         assert self.need(self.practised("2026-01-05T10:00:00+00:00")) == 0
@@ -743,7 +736,7 @@ class TestNeedFromTheStore:
         # More than nothing, and less than confirming a key never seen: the old
         # presses still count for something.
         from_nothing = presses_needed(
-            Evidence(config.KNOWN_MIN_ATTEMPTS, 2, 0.0, 0.0), config.ANCHOR_MIN_ACCURACY
+            Evidence(config.KNOWN_MIN_ATTEMPTS, 2, 0.0, 0.0), config.KNOWN_MIN_ACCURACY
         )
         assert 0 < need < from_nothing
 
@@ -836,7 +829,7 @@ class TestPlanTargets:
 
 
 class TestSteadyPlan:
-    def test_stage_0_keys_fresh_from_their_ramp_up_get_the_block(self) -> None:
+    def test_keys_fresh_from_their_ramp_up_get_the_block(self) -> None:
         # f j r u are at Known's floor and perfect; v and m have just finished
         # their ramp-up. The two new keys take the cap each, and what is left
         # goes round the other four.
@@ -853,11 +846,11 @@ class TestSteadyPlan:
         assert sum(rest) == FIRST_SLOTS - 2 * limit
         assert max(rest) - min(rest) <= 1
 
-    def test_a_stage_0_key_is_planned_against_the_anchor_bar(self) -> None:
-        # Alpha-plan #12f. Five early misses in ninety presses over two days
-        # is past Known's 90% and short of the anchor's 95%, so f and j still
-        # have need and d, k, s and l have none: the two take the cap and the
-        # rest share what is left.
+    def test_the_bump_letters_are_planned_against_known_s_bar_like_any_key(self) -> None:
+        # ADR-033 retires the anchor bar. Five early misses in ninety presses
+        # over two days is past Known's 90%, and was short of the anchor's 95%:
+        # f and j now have no need, like d k s l, and the block goes round all
+        # six evenly.
         letters = "fjdksl"
         stamps = ["2026-01-01T10:00:00+00:00", "2026-01-02T10:00:00+00:00"]
         fixture = Fixture(source=doubles(letters), now=stamps[1])
@@ -868,13 +861,11 @@ class TestSteadyPlan:
                 fixture.store.append_attempt(fixture.profile, name, index >= 5, stamp)
         evidence = fixture.states.evidence("f")
         assert presses_needed(evidence, config.KNOWN_MIN_ACCURACY) == 0
-        assert presses_needed(evidence, config.ANCHOR_MIN_ACCURACY) > 0
-        limit = cap(FIRST_SLOTS, len(letters))
+        assert presses_needed(evidence, STRICT_BAR) > 0
         counts = Counter(unit[0] for unit in fixture.generator.next_block().units)
-        assert counts["f"] == counts["j"] == limit
-        rest = [counts[name] for name in "dksl"]
-        assert sum(rest) == FIRST_SLOTS - 2 * limit
-        assert max(rest) - min(rest) <= 1
+        assert sum(counts.values()) == FIRST_SLOTS
+        shares = [counts[name] for name in letters]
+        assert max(shares) - min(shares) <= 1
 
     @pytest.mark.parametrize(("days", "planned"), [(1, 1), (2, 0)])
     def test_a_key_that_lacks_only_its_second_day_is_planned_once(
@@ -1023,113 +1014,61 @@ class TestStarvationRegression:
         assert shares["j"] * 4 >= len(prompts)
 
 
-class TestAnchorMaintenance:
-    # Doubles only, so the one unit that is a reach followed by its anchor can
-    # only have come from the maintenance path.
+class TestNoAnchorMaintenance:
+    """ADR-027 2026-11-08: the lifelong hold of `f` and `j` is retired.
+
+    A slipping bump letter is practised more through its need, as any key is,
+    and carried by the language's bigrams: no reach-then-anchor return-drill.
+    """
+
+    # Doubles only, so a unit that is a reach followed by its bump letter could
+    # only come from the retired maintenance path.
     def fixture(self) -> Fixture:
         fixture = Fixture(source=doubles(ANCHOR_SIX + "dk"), seed=5)
         for name in ANCHOR_SIX + "dk":
             fixture.activate(name, attempts=config.KNOWN_MIN_ATTEMPTS)
         return fixture
 
-    def return_drills(self, units: tuple[tuple[str, ...], ...]) -> list[tuple[str, ...]]:
-        reaches = {"f": ("r", "v"), "j": ("u", "m")}
-        return [u for u in units if len(u) == 2 and u[0] in reaches.get(u[1], ())]
-
     def slipping(self, *graphemes: str) -> Fixture:
         fixture = self.fixture()
         for grapheme in graphemes:
-            # Well past ANCHOR_MIN_ATTEMPTS, well under ANCHOR_MIN_ACCURACY.
+            # Past the old anchor sample (25), and under its 95% bar by far.
             press(fixture, grapheme, 40, correct=False)
         return fixture
 
-    def test_the_bump_keys_are_the_maintained_ones(self) -> None:
-        assert home_anchor_keys(build_en()) == ("f", "j")
-
-    def test_a_slipping_anchor_gets_one_return_drill_in_a_block_of_the_same_length(self) -> None:
-        units = self.slipping("f").generator.next_block().units
-        assert [unit[1] for unit in self.return_drills(units)] == ["f"]
+    # 15 slots, a cap of 5. Every key waits for its second day and gets one
+    # slot; a slipping key takes the rest up to the cap. Two slipping keys
+    # share the seven left in name order, so `j` stops one short of `f`.
+    @pytest.mark.parametrize(
+        "planned", [{"f": 5}, {"j": 5}, {"f": 5, "j": 4}, {"d": 5}], ids=["f", "j", "fj", "d"]
+    )
+    def test_a_slipping_key_is_planned_by_need_alone(self, planned: dict[str, int]) -> None:
+        assert (FIRST_SLOTS, cap(FIRST_SLOTS, len(ANCHOR_SIX + "dk"))) == (15, 5)
+        units = self.slipping(*planned).generator.next_block().units
         assert len(units) == FIRST_SLOTS
+        assert all(len(set(unit)) == 1 for unit in units)
+        counts = Counter(unit[0] for unit in units)
+        assert {name: counts[name] for name in planned} == planned
+        rest = [counts[name] for name in ANCHOR_SIX + "dk" if name not in planned]
+        assert sum(rest) == FIRST_SLOTS - sum(planned.values())
+        assert min(rest) >= 1 and max(rest) - min(rest) <= 1
 
-    def test_both_anchors_slipping_take_one_slot_each(self) -> None:
-        units = self.slipping("f", "j").generator.next_block().units
-        assert sorted(unit[1] for unit in self.return_drills(units)) == ["f", "j"]
-        assert len(units) == FIRST_SLOTS
-
-    def test_the_second_anchor_slipping_alone_gets_its_drill(self) -> None:
-        units = self.slipping("j").generator.next_block().units
-        assert [unit[1] for unit in self.return_drills(units)] == ["j"]
-
-    def test_an_anchor_with_no_reach_does_not_cost_the_other_its_drill(self) -> None:
-        # Neither r nor v is Active, so nothing in f's column can be drilled
-        # back to it. j still has u and m.
-        letters = "fjumdk"
-        fixture = Fixture(source=doubles(letters), seed=5)
-        for name in letters:
-            fixture.activate(name, attempts=config.KNOWN_MIN_ATTEMPTS)
-        for name in "fj":
-            press(fixture, name, 40, correct=False)
-        units = fixture.generator.next_block().units
-        assert [unit[1] for unit in self.return_drills(units)] == ["j"]
-
-    def test_a_slipping_ordinary_key_gets_no_return_drill(self) -> None:
-        assert self.return_drills(self.slipping("d").generator.next_block().units) == []
-
-    def test_an_anchor_above_the_bar_gets_nothing(self) -> None:
-        fixture = self.fixture()
-        press(fixture, "f", 1, correct=False)
-        evidence = fixture.states.evidence("f")
-        assert accuracy_bound(evidence.correct, evidence.weight) >= config.ANCHOR_MIN_ACCURACY
-        assert self.return_drills(fixture.generator.next_block().units) == []
-
-    def test_slipping_is_read_off_the_bound_and_not_the_raw_share(self) -> None:
-        # alpha-plan #12f, raised by both of its reviews: 90 of 93 is 96.8%,
-        # over the bar as a share, and its bound is under it. The rung and the
-        # block plan read the bound, and the return-drill did not.
-        fixture = self.fixture()
-        press(fixture, "f", 3, correct=False)
-        stats_f = fixture.store.window_stats(fixture.profile, "f")
-        assert stats_f.correct_count / stats_f.attempt_count >= config.ANCHOR_MIN_ACCURACY
-        evidence = fixture.states.evidence("f")
-        assert accuracy_bound(evidence.correct, evidence.weight) < config.ANCHOR_MIN_ACCURACY
-        units = fixture.generator.next_block().units
-        assert [unit[1] for unit in self.return_drills(units)] == ["f"]
-
-    @pytest.mark.parametrize(("days_away", "drilled"), [(3, []), (200, ["f", "j"])])
-    def test_an_anchor_not_practised_for_months_is_slipping(
-        self, days_away: int, drilled: list[str]
-    ) -> None:
-        # The case decay was added for. Every press was right, so the raw
-        # share never moves; what goes is how much the old presses still say.
+    def test_a_bump_letter_left_for_months_gets_no_return_drill(self) -> None:
+        # Decay gives every key need again, the bump letters no more than the rest.
         stamps = ["2026-01-01T10:00:00+00:00", "2026-01-02T10:00:00+00:00"]
-        now = (datetime.fromisoformat(stamps[1]) + timedelta(days=days_away)).isoformat()
-        fixture = Fixture(source=doubles(ANCHOR_SIX + "dk"), seed=5, now=now)
-        for name in ANCHOR_SIX + "dk":
+        now = (datetime.fromisoformat(stamps[1]) + timedelta(days=200)).isoformat()
+        letters = ANCHOR_SIX + "dk"
+        fixture = Fixture(source=doubles(letters), seed=5, now=now)
+        for name in letters:
             for index in range(config.KNOWN_MIN_ATTEMPTS):
                 stamp = stamps[index % 2]
                 fixture.store.upsert_key_stat(fixture.profile, name, True, stamp)
                 fixture.store.append_attempt(fixture.profile, name, True, stamp)
         units = fixture.generator.next_block().units
-        assert sorted(unit[1] for unit in self.return_drills(units)) == drilled
-
-    def test_the_sample_floor_is_enough_to_be_slipping(self) -> None:
-        fixture = Fixture(source=doubles(ANCHOR_SIX), seed=5)
-        for name in ANCHOR_SIX:
-            fixture.activate(name)
-        press(fixture, "f", config.ANCHOR_MIN_ATTEMPTS - 1, correct=False)
-        attempts = fixture.store.window_stats(fixture.profile, "f").attempt_count
-        assert attempts == config.ANCHOR_MIN_ATTEMPTS
-        units = fixture.generator.next_block().units
-        assert [unit[1] for unit in self.return_drills(units)] == ["f"]
-
-    def test_too_few_attempts_is_not_a_slipping_anchor(self) -> None:
-        fixture = Fixture(source=doubles(ANCHOR_SIX), seed=5)
-        for name in ANCHOR_SIX:
-            fixture.activate(name)
-        press(fixture, "f", config.ANCHOR_MIN_ATTEMPTS - 2, correct=False)
-        attempts = fixture.store.window_stats(fixture.profile, "f").attempt_count
-        assert attempts == config.ANCHOR_MIN_ATTEMPTS - 1
-        assert self.return_drills(fixture.generator.next_block().units) == []
+        assert len(units) == FIRST_SLOTS
+        assert all(len(set(unit)) == 1 for unit in units)
+        counts = Counter(unit[0] for unit in units)
+        assert max(counts.values()) - min(counts[name] for name in letters) <= 1
 
 
 class TestLanguageWeights:
@@ -1315,7 +1254,7 @@ class TestStepShape:
     def test_an_empty_step_is_refused(self) -> None:
         fixture = Fixture(active=ANCHOR_SIX)
         with pytest.raises(ValueError, match="one or two graphemes"):
-            fixture.generator.begin_step(IntroductionStep(CURRICULUM, ()))
+            fixture.generator.begin_step(IntroductionStep(()))
 
 
 class TestSessionFloor:

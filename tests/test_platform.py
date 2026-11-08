@@ -292,7 +292,8 @@ class TestScanCodeGrid:
     """
 
     def test_the_six_anchor_scan_codes(self) -> None:
-        # ADR-027 § The Anchor Gate, by position: the two index home columns.
+        # The two index home columns by position: the bumps and the keys above
+        # and below them (ADR-033).
         assert SCAN_CODE_GRID[0x13] == (2, 4)
         assert SCAN_CODE_GRID[0x21] == (3, 4)
         assert SCAN_CODE_GRID[0x2F] == (4, 4)

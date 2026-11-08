@@ -6,6 +6,7 @@
 > Part of the [Takki architecture](../architecture.md).
 > **Partly superseded by [ADR-032](0032-grapheme-led-introduction-and-selectable-ordering.md) (2026-08-23):** the *ordering* below Stage 0 and the placement of modifier keys are no longer decided here. §§ Phase 1 and Phase 2 are one candidate ordering among three, restated in ADR-032; modifiers are no longer ordered at all, because introduction is grapheme-led. Everything else in this ADR stands and remains authoritative — Stage 0, the introduction script, the step semantics, the finger map, the composite data model, the Latvian resolution and the milestone denominators.
 > **§ Stage 0 superseded by [ADR-033](0033-rest-keys-and-keyboard-alignment.md) (2026-10-10):** Stage 0 is removed and the keyboard alignment takes its place; open question 7 is answered there. This ADR is not yet amended and the code still runs Stage 0.
+> **Amended 2026-11-08 ([alpha-plan](../alpha-plan.md) #12m session 4), § Stage 0 only:** Stage 0 is removed from the code; [§ Stage 0 — Anchor establishment](#stage-0--anchor-establishment) says what replaced it. The rest of ADR-033's amendment to this ADR is split by the session that builds each part, as the developer agreed: the location rule from the rest key and the rest letter's shorter script with session (5), which also closes open question 7; the rest-cue lines and what the introduction's guided presses are with session (6), the ladder.
 
 ---
 
@@ -34,6 +35,14 @@ This ADR fills those gaps. The drill content played *after* a key has been intro
 *(Added 2026-08-23. Precedes both phases below and is common to every introduction strategy.)*
 
 > **Superseded by [ADR-033](0033-rest-keys-and-keyboard-alignment.md) (2026-10-10).** Kept as the record of what was decided in August, and as what the code does until ADR-033 is implemented.
+>
+> **Removed from the code 2026-11-08** (alpha-plan #12m session 4). What stands in its place:
+> - **No stage runs ahead of the ordering.** The sequence is the strategy's own order, from the first step. `IntroductionStep` and `IntroductionSlot` have no `stage` field, `anchor_keys` and its six positions are gone, and so is Stage 0's own Phase A content in the drill generator.
+> - **The first step is the two bump letters**, row 3, columns 4 and 7 (`f j` on QWERTY), under every ordering ([ADR-032 § No Stage 0 above the orderings](0032-grapheme-led-introduction-and-selectable-ordering.md#no-stage-0-above-the-orderings)). Ordering A, the default until session (5) builds ADR-033's order, opens there itself: its first symmetric pair is columns 4 and 7. The bump letters are `home_anchor_keys`, by position, and a layout with no letter on a bump fails loudly.
+> - **`r u v m` are ordinary letters**, introduced at their rank by the ordering. Under Ordering A in English that puts them in Phase 2 (`r` 14th, `u` 17th, `m` 21st, `v` 24th on the fixture corpus).
+> - **The first step takes the ordinary ramp-up**, as every step does: each new letter alone in Phase A, then Phase B with no anchor behind it, until session (6) replaces the phases with the ladder, where the bump letters start at Choose ([ADR-024](0024-drill-content-and-lesson-granularity.md#the-ramp-up-restated-four-objectives-and-a-ladder-of-three-levels)).
+> - **Finding home by touch** is the keyboard alignment's job (ADR-033), which session (7) builds. Until then nothing in a session teaches the rest position.
+> - **The ladder's first rung** is `rest`, not the anchor gate ([ADR-027 § The `rest` rung](0027-key-and-accuracy-state-model.md#the-rest-rung)).
 
 Before any curriculum runs, the child learns to **find home by touch**. Stage 0 introduces exactly six keys — the two index home columns, positions (2,4) (3,4) (4,4) and (2,7) (3,7) (4,7), which are `r f v` / `u j m` on every QWERTY-derived layout in the v1 target set (German differs only at column 6, which Stage 0 does not use).
 

@@ -356,6 +356,9 @@ class FakeStore:
     def landings(self, profile_id: int) -> list[Landing]:
         return list(self._landings.get(profile_id, []))
 
+    def first_round_landings(self, profile_id: int) -> list[Landing]:
+        return [landing for landing in self._landings.get(profile_id, []) if landing.round == 1]
+
     def choose_rest_key(
         self,
         profile_id: int,

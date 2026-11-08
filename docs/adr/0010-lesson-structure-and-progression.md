@@ -4,6 +4,7 @@
 **Date:** 2026-05-17
 
 > Part of the [Takki architecture](../architecture.md).
+> **Amended 2026-11-08 ([alpha-plan](../alpha-plan.md) #12m session 4)** for [ADR-033](0033-rest-keys-and-keyboard-alignment.md) and [ADR-027 § Rest keys, the ladder's presses and the `rest` rung](0027-key-and-accuracy-state-model.md#rest-keys-the-ladders-presses-and-the-rest-rung): "Why 6" has a new reason, the first rung of § Milestone Levels is `rest`, and its story note says the rung comes late. The same session corrected two sentences that gave Known as a raw 90% (review finding E7). Each change is a dated note where it applies. Built in the same session: Stage 0 and the anchor rung are gone from the code.
 
 ---
 
@@ -23,7 +24,7 @@ Words from the filtered word list constrained to keys the child has already mast
 
 Progression is adaptive and continuous, not fixed-step:
 - A new key is introduced in Layer 1 when the current step's ramp-up has ended and there is a free slot: at most 6 keys may be introduced but not yet known, and each key that becomes known frees a slot. *(Since 2026-10-01, alpha-plan #12g; see § The introduction gate is slots, below. The original rule was "when first-attempt accuracy on current keys exceeds 90% over a minimum of 50 presses".)*
-- A key is considered "known" when first-attempt accuracy ≥ 90% over ≥ 90 attempts and ≥ 2 distinct practice days, evaluated over a rolling window of 200 attempts (see ADR-027)
+- A key is considered "known" when first-attempt accuracy ≥ 90% over ≥ 90 attempts and ≥ 2 distinct practice days, evaluated over a rolling window of 200 attempts (see ADR-027) *(2026-11-08, review finding E7: since alpha-plan #12f the 90% is a lower confidence bound over evidence that ages, not the raw share, and Known also has a speed term; since #12m session 2 the practice days are counted outside the window. [ADR-027](0027-key-and-accuracy-state-model.md) is authoritative.)*
 - Layer 2 unlocks when ≥ 8 keys are known
 - Word length in Layer 2 advances when clean word rate exceeds 85% over 20 words
 - Clean word rate (no auto-rejections, no restarts — see ADR-012) is the sole progression gate until the child reaches sustained real-word fluency (see milestones below)
@@ -55,7 +56,7 @@ Three readings this section did not pin, taken here rather than left for the ses
 **The rule.** Two gates stand between a block boundary and a new step:
 
 1. The current step's ramp-up has ended ([ADR-024](0024-drill-content-and-lesson-granularity.md), unchanged).
-2. **There is a free slot.** The step is introduced only if, once it is, at most `MAX_KEYS_IN_PROGRESS` keys are Active but not yet Known ([ADR-027](0027-key-and-accuracy-state-model.md)'s Known, unchanged: 90 presses, 90%, 2 distinct days). A pair needs two free slots and a single key one. Every key that becomes Known frees a slot.
+2. **There is a free slot.** The step is introduced only if, once it is, at most `MAX_KEYS_IN_PROGRESS` keys are Active but not yet Known ([ADR-027](0027-key-and-accuracy-state-model.md)'s Known, unchanged: 90 presses, 90%, 2 distinct days). *(2026-11-08, E7: "90%" is the lower confidence bound over decayed evidence since #12f, and Known has a speed term. The gate reads Known as ADR-027 defines it, whatever that is.)* A pair needs two free slots and a single key one. Every key that becomes Known frees a slot.
 
 Three readings, pinned here:
 
@@ -63,11 +64,15 @@ Three readings, pinned here:
 - **With nothing in progress there is always room**, whatever the cap. A cap below the first step's size would otherwise never let it in.
 - **It is a rolling query.** Known is read off the window, so a key whose accuracy slips below the bar is in progress again and takes its slot back. Nothing is recorded.
 
-**Why 6.** *(Stage 0 is superseded by [ADR-033](0033-rest-keys-and-keyboard-alignment.md), 2026-10-10, which keeps six on a new reason; not yet amended here.)* It is Stage 0's six keys. A child can still meet all of Stage 0 on the first day, which the developer wants to stay possible, and from then on new letters come as old ones are learned. It is a starting point to be tuned by ear in alpha-plan #12h.
+**Why 6.** *(Amended 2026-11-08, #12m session 4. The reason below was Stage 0's, which [ADR-033](0033-rest-keys-and-keyboard-alignment.md) removed. Kept as the record.)* It is Stage 0's six keys. A child can still meet all of Stage 0 on the first day, which the developer wants to stay possible, and from then on new letters come as old ones are learned. It is a starting point to be tuned by ear in alpha-plan #12h.
+
+**Why 6, since Stage 0 went** ([ADR-033 § Introduction order and slots](0033-rest-keys-and-keyboard-alignment.md#introduction-order-and-slots), "Six slots, with a new reason", marked [S] there). Six is three steps of one letter per hand on a first day, which is what ADR-033's spike ran. It has no derivation beyond that, and is tuned by ear in #12h. Under Ordering A, which the code runs until #12m session (5) builds ADR-033's order, the first day's three steps are `f j`, `d k`, `s l`, six letters.
+
+**Open, for #12m session (5), which builds the slots:** ADR-033 says "`f` and `j` are the first step and take no introduction slots" **[D]**. The code counts them like any key: while they are not Known they are two of the six keys in progress. Read the other way, they hold no slot, and a first day reaches eight letters before the gate closes, not six, which does not match "three steps of one letter per hand on a first day". Session (4) changed nothing here, and puts the reading to the developer in session (5).
 
 **Configurable per child.** `MAX_KEYS_IN_PROGRESS` is a compiled default that `SessionLoop` takes by construction ([ADR-025](0025-configuration-system.md)). The yaml and per-profile tiers do not exist yet; when they do, they raise it for a child who can carry more keys at once, such as a keen child or one who already knows the keyboard.
 
-**The curriculum waits for Known, not for the anchor rung.** This answers [roadmap § D](../roadmap.md#d-smaller-gaps-worth-a-line-in-the-relevant-adr) *Does the curriculum wait for the anchor gate?* After Stage 0 the next pair waits until two of the six keys are Known. The rung itself is still not a gate: a hard wait on it was never what the developer wanted, and it can still fire late.
+**The curriculum waits for Known, not for the anchor rung.** This answers [roadmap § D](../roadmap.md#d-smaller-gaps-worth-a-line-in-the-relevant-adr) *Does the curriculum wait for the anchor gate?* After Stage 0 the next pair waits until two of the six keys are Known. The rung itself is still not a gate: a hard wait on it was never what the developer wanted, and it can still fire late. *(2026-11-08: the anchor rung is retired, and its place is taken by `rest`, which is not a gate either ([ADR-027 § The `rest` rung](0027-key-and-accuracy-state-model.md#the-rest-rung), "Never revoked, and not a gate"). The step after the first day's six letters waits for as many Known letters as it has members.)*
 
 **Why this is not the per-key floor ADR-023 rejects.** [ADR-023](0023-key-introduction-protocol.md) § Where the phase boundary is rejects a per-key gate because one key stuck at 89% would lock the curriculum. Under slots one stuck key never blocks anything; only a full set of them does, and the gate reopens as soon as practice lifts one to Known. A child with that many keys below the bar should not be getting new letters.
 
@@ -102,9 +107,11 @@ Named milestones wrap the adaptive engine to give parents, teachers, and childre
 
 *(Rewritten 2026-08-23 — six evenly spaced key-count rungs replacing the previous four. Criteria and rationale live in [ADR-027 § Milestone Ladder](0027-key-and-accuracy-state-model.md#milestone-ladder), which is authoritative; this table mirrors it.)*
 
+*(Amended 2026-11-08, #12m session 4: row 1 is `rest`, for ADR-027's amendment of the same day. It replaces `anchor`, whose criterion was "the six index home-column keys (`r f v` / `u j m`) Known at the anchor bar — 25 attempts, ≥ 95%, ≥ 2 days". The other rows are unchanged.)*
+
 | # | Slug | Criterion |
 |---|---|---|
-| 1 | `anchor` | The six index home-column keys (`r f v` / `u j m`) Known at the anchor bar — 25 attempts, ≥ 95%, ≥ 2 days |
+| 1 | `rest` | All eight fingers land on their rest keys at the first round of each of the last five days, one session start a day, or every rest key has passed its own test ([ADR-033](0033-rest-keys-and-keyboard-alignment.md)) |
 | 2 | `third` | ≥ 1/3 of the language's grapheme set Known — Layer 2 has unlocked, so real words are typeable |
 | 3 | `half` | ≥ 1/2 of the grapheme set Known |
 | 4 | `two_thirds` | ≥ 2/3 of the grapheme set Known |
@@ -118,6 +125,12 @@ Rungs 2, 4 and 6 are the former Silver, Gold and Platinum gates at unchanged thr
 **Slugs, not names.** The table lists the stored identifier. Spoken names come from the per-language YAML tier ([ADR-022](0022-localisation-strategy.md)) and are deliberately not fixed here — see the narrative note below.
 
 **Narrative framing — for the Beta voiceover pass.** *(Recorded 2026-08-23 so it reaches the session that writes the spoken introduction.)* The ladder tells a story the child should be told once, at setup: **first you learn to find the anchors — the two bumps your index fingers rest on, which is the base everything else is measured from — and once you have that, you learn to navigate the rest of the keyboard**, with a milestone every time you have learned another sixth of your alphabet. A maritime framing fits and is already half-adopted in the design's own vocabulary (*anchor*, *anchoring*), and navigation is the rare domain where finding your position without seeing it is the normal case rather than a workaround — but the metaphor belongs to the language pack, not to the engine, so another language may choose its own rather than translate this one. Naming and narrative are a Beta task, to be tuned with real children; the slugs above are what Alpha ships.
+
+*(2026-11-08, #12m session 4, for [ADR-027 § The `rest` rung](0027-key-and-accuracy-state-model.md#the-rest-rung).)* The story above tells the anchors first, and the first rung is now `rest`: where all eight fingers rest, found from the two bumps. The order the story tells is no longer the order the rungs fire in, and the voiceover pass has to allow for it.
+- **`rest` fires on the fifth day at the earliest**, because it reads one session start a day over five days. `third` (8 Known letters in English) can come before it, and often will.
+- **Rungs have no order between them.** Several on one check are spoken in ladder order, `rest` first; on different checks they are spoken as they come.
+- **So the setup story cannot promise "first the rest position, then the rest of the keyboard"** as a sequence of celebrations. It can still tell it as the order of *skills*: the hands are placed at the start of every session from the first day, long before the rung certifies it.
+- **What would change this:** ADR-027 considered a `sixth` rung for an earlier first celebration and did not take it. #12h listens for when the first celebration comes.
 
 **Milestone gates are key-count based, not coverage based.** Rung 2 triggers when the child has mastered ≥ 1/3 of the language's full key set; rung 4 at ≥ 2/3. "Full key set" is the count of distinct alphabetic characters on the language's physical keyboard layout, enumerated via the platform scan code interface. This is the authoritative source — it includes diacritics and native special characters (e.g. Icelandic has 34 keys including ð, þ, á, é, í; Czech 40 keys) and excludes loanword-only characters that happen to appear in wordfreq data. Using the language's own alphabet size as the denominator means Silver and Gold are always "a third of your alphabet" and "two thirds of your alphabet" regardless of language complexity.
 

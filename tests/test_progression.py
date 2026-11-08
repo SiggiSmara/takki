@@ -79,7 +79,7 @@ class TestLayerTwoUnlock:
 
     def test_the_adr_028_walk_of_the_english_count(self) -> None:
         # ADR-028 § Layer-2 unlock walks 2, 4, 6, 7, 9 for a home-row-fill
-        # curriculum with no Stage 0 in front of it: F+J, D+K, S+L, A solo
+        # curriculum: F+J, D+K, S+L, A solo
         # (the right pinky's home position is `;`, not a letter), G+H.
         layout = build_en()
         store = FakeStore()
@@ -93,17 +93,15 @@ class TestLayerTwoUnlock:
         assert locked_at == [2, 4, 6, 7]
         assert len(active_graphemes(layout, states(store))) == 9
 
-    def test_the_shipped_english_walk_unlocks_one_step_earlier_at_exactly_8(self) -> None:
-        # Stage 0 (ADR-023, alpha session 8b) sits in front of the strategy and
-        # its three steps are all pairs, so the shipped count goes 2, 4, 6, 8 --
-        # never 7, and the unlock lands on the threshold exactly. ADR-028's
-        # arithmetic predates the stage; its conclusion ("layouts whose home
-        # rows yield exactly 8 trigger the unlock at the same count, no change
-        # to the threshold is needed") is what survives.
+    def test_the_shipped_english_walk_is_adr_028s_walk_again(self) -> None:
+        # With Stage 0 gone (ADR-033) nothing sits in front of home-row fill, so
+        # the shipped count is ADR-028's own: 2, 4, 6, 7, and the unlock comes
+        # at 9, one past the threshold, because `a` is a solo step. From alpha
+        # session 8b until #12m session 4, Stage 0's three pairs made it 8.
         layout, store = build_en(), FakeStore()
         keys = introducer(layout, store)
         walk: list[tuple[int, bool]] = []
-        for _ in range(4):
+        for _ in range(5):
             step = keys.introduce_next()
             assert step is not None
             for member in step.keys:
@@ -114,7 +112,7 @@ class TestLayerTwoUnlock:
                     layer_two_unlocked(layout, states(store)),
                 )
             )
-        assert walk == [(2, False), (4, False), (6, False), (8, True)]
+        assert walk == [(2, False), (4, False), (6, False), (7, False), (9, True)]
 
     def test_a_grapheme_the_current_layout_cannot_produce_does_not_count(self) -> None:
         # key_stats survives a profile's language change.

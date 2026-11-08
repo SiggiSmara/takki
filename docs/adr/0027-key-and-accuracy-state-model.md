@@ -1,6 +1,6 @@
 # ADR-027: Key & Accuracy State Model
 
-**Status:** Accepted. Amended 2026-11-08 for ADR-033 and ADR-024; the amendment is not yet implemented (alpha-plan #12m sessions (4) and (6)).  
+**Status:** Accepted. Amended 2026-11-08 for ADR-033 and ADR-024. Session (4) of alpha-plan #12m built its part on 2026-11-08 (the Anchor Gate retired, the `rest` rung, the bump keys' speed term); session (6) builds the presses that are not attempts.  
 **Date:** 2026-06-14  
 **Noted:** 2026-11-01 — § First-Attempt Counting: the held-key rule's two Windows assumptions, restated for key events taken from Takki's window (alpha #13). The rule itself is unchanged.  
 **Amended:** 2026-11-08 — alpha-plan #12m, for [ADR-033](0033-rest-keys-and-keyboard-alignment.md) and [ADR-024](0024-drill-content-and-lesson-granularity.md): [§ Rest keys, the ladder's presses and the `rest` rung](#rest-keys-the-ladders-presses-and-the-rest-rung). § The Anchor Gate is retired.
@@ -302,7 +302,7 @@ Diamond and Speed remain accuracy/fluency gates, not key-count gates, and are un
 
 ### The Anchor Gate
 
-> **Retired 2026-11-08**, for [ADR-033](0033-rest-keys-and-keyboard-alignment.md) (2026-10-10), by [§ Rest keys, the ladder's presses and the `rest` rung](#rest-keys-the-ladders-presses-and-the-rest-rung): the `anchor` rung, the anchor bar (`ANCHOR_MIN_ATTEMPTS`, `ANCHOR_MIN_ACCURACY`) and the lifelong hold of `f` and `j` to it all go. The section is kept as the record of what was decided. It is still what the code does until alpha-plan #12m session (4) builds the amendment.
+> **Retired 2026-11-08**, for [ADR-033](0033-rest-keys-and-keyboard-alignment.md) (2026-10-10), by [§ Rest keys, the ladder's presses and the `rest` rung](#rest-keys-the-ladders-presses-and-the-rest-rung): the `anchor` rung, the anchor bar (`ANCHOR_MIN_ATTEMPTS`, `ANCHOR_MIN_ACCURACY`) and the lifelong hold of `f` and `j` to it all go. The section is kept as the record of what was decided. It is still what the code does until alpha-plan #12m session (4) builds the amendment. *(Removed from the code 2026-11-08 in session (4). A profile that earned `anchor` keeps its `milestones` row; nothing reads it, and the ladder no longer names it, so it is not re-earned and not counted.)*
 
 The first rung certifies that the child can **find home by touch** — the F and J tactile bumps, the one orientation landmark present on essentially every physical keyboard, and the foundation every later key position is described against ([ADR-023](0023-key-introduction-protocol.md) § Location).
 
@@ -338,6 +338,8 @@ Closing the evaluation window when Stage 0 ends would remove both, and would als
 *(Amended 2026-11-08, alpha-plan #12m, the ADR-027 session. This is the amendment that [ADR-033 § Amendments this ADR requires](0033-rest-keys-and-keyboard-alignment.md#amendments-this-adr-requires) and [ADR-024 § The ramp-up restated](0024-drill-content-and-lesson-granularity.md#the-ramp-up-restated-four-objectives-and-a-ladder-of-three-levels) ("What this amendment requires elsewhere") ask of this ADR. It supersedes § The Anchor Gate as a whole, the `anchor` row of § Milestone Ladder with its "Why no rung at 1/6", and the root paragraph of § Known has a speed term. Each keeps its text, with a dated note pointing here, as the record of what was decided before.)*
 
 **Not yet implemented.** The code still runs Stage 0, the anchor rung and the anchor bar, and `f` and `j` still have no speed term. Session (4) builds the retirement, the `rest` rung and the speed term. Session (6) builds the ladder, and with it the presses that are not attempts. Nothing writes landings or rest keys before session (7), so the `rest` rung cannot fire in a real session until then. This amendment changes no code.
+
+*(**Built 2026-11-08, #12m session 4**, except the presses that are not attempts, which are session (6)'s. Stage 0, the `anchor` rung, the anchor bar and the maintenance path are gone from the code. `rest` is first in `LADDER`, its criterion is `milestones.rest_reached`, and its read is `Store.first_round_landings`, on both stores, with an index on `landings (profile_id, round)`. `KeyStates` gives `f` and `j` a speed term and keeps them in the pool from their first timed presses; the drill generator withholds Phase C's speed term from them in their own step, as the bar does. The rung's default tests are in `tests/test_milestones.py` (`TestRestRung`, `TestRestRungDayIsLocal`), on seeded stores: nothing writes landings or rest keys before session (7). Two readings were settled while building it; see "Built: how a day is read" below.)*
 
 How to read the marks:
 
@@ -430,6 +432,13 @@ What § The Anchor Gate worked out about when a rung is evaluated carries over t
 - **When it is evaluated** **[A]**, as § The Anchor Gate worked out for `anchor`: on every check until it fires, and never again after, the `milestones` row being the one-time half. Its inputs change only when a first round is written or a rest key changes or passes, so a check at every block boundary costs one narrow read.
 - **It fires late and out of ladder order, routinely** **[A]**. It cannot fire before the fifth day, and `third` (8 Known letters in English) can come earlier. The rungs are one-time events with no order between them, and several on one check are returned in ladder order, `rest` first. Nothing in the engine breaks. The cost falls on the spoken story ([ADR-010 § Milestone Levels](0010-lesson-structure-and-progression.md#milestone-levels), "Narrative framing"), which tells the anchors first. ADR-010's amendment carries it.
 - **Never revoked, and not a gate.** A child who later lands elsewhere keeps the rung; a changed rest key is handled by ADR-033, not by withdrawing a milestone. Nothing waits for the rung, as nothing waited for the anchor rung (ADR-010).
+
+**Built: how a day is read** *(2026-11-08, #12m session 4)*.
+
+- **A round's day is computed from its UTC stamp when the rung is checked**, in the machine's zone at that moment (`milestones.local_day`). It is not stored. *Decided by the developer in session (4), who put it as a rule: the database holds UTC only, because mixing UTC and local time has led to trouble before.* A machine moved to another zone moves the days already lived; a permanent move is the only case, and it is accepted. This differs from "the same local day `practice_days` uses" above, which fixes its day when written. **Until the next #12m session**: the developer decided both are replaced by a practice-day number on each session, set when the session starts, so that nothing local is stored and a sitting past midnight is one day ([alpha-plan](../alpha-plan.md), "From #12m session (4)"). The rung's rules do not change with it, only where the day comes from.
+- **A session's day is the day of its round 1's first landing**, so a round 1 that crosses midnight belongs to the day it began **[A]**.
+- **The days are taken in calendar order**, the last `REST_SETTLED_SESSION_STARTS` of them, and must all pass. A day earlier than another by the calendar but written later (a clock set back) is placed by its date **[A]**.
+- **A finger with two landings in one round 1** has both judged; every landing must pass **[A]**. The alignment writes one per finger, so this is a guard, not a case.
 
 #### The ladder's first slot
 

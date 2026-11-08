@@ -110,7 +110,7 @@ class TestBars:
 
 class TestLatency:
     def test_no_baseline_skips_the_term(self) -> None:
-        # Every profile's first days, Stage 0 included: a term that failed closed
+        # Every profile's first days, the bump letters' own step included: a term that failed closed
         # would hold the curriculum behind a measurement that cannot be made.
         assert rampup.bar_met(RampUpPhase.C, rows(THROUGH_C, 9999), None)
 
@@ -297,9 +297,9 @@ def assert_returns_home(layout: Layout, prompts: tuple[str, ...]) -> None:
 
     Checked per hand, and only for a hand these prompts contain a home key for.
     That is the guarantee: a hand the inventory cannot bring home is one the
-    invariant says nothing about -- a non-Stage-0 Phase A for a solo reach key is
-    `w` and the other hand's anchor, and ADR-024 specifies repetition there.
-    Every anchored phase, and all of Stage 0, carries the home key and is bound.
+    invariant says nothing about -- Phase A for a solo reach key is `w` and the
+    other hand's anchor, and ADR-024 specifies repetition there. Every anchored
+    phase carries the home key and is bound.
     """
     guarded = {
         base_key(layout, prompt).side
@@ -355,8 +355,8 @@ class TestBlockInvariants:
     @pytest.mark.parametrize("solo", [False, True])
     @pytest.mark.parametrize("seed", range(8))
     def test_a_hand_returns_home_between_two_reaches(self, seed: int, solo: bool) -> None:
-        # ADR-027 § The Anchor Gate depends on this: with it, first-press accuracy
-        # on `f` is return-to-anchor accuracy whatever order the units come in.
+        # ADR-024 property 2, which the ladder retires in #12m session (6). The
+        # Anchor Gate that depended on it is retired already (ADR-027, 2026-11-08).
         # Solo steps are parametrised in because the borrowed other-hand unit was
         # introduced here, and a property test blind to solo steps could not see
         # that pairing it with the member broke exactly this.

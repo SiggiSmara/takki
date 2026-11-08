@@ -165,7 +165,7 @@ class Harness:
     def opened(self) -> str:
         """The prompt now open, whichever member of the step it is.
 
-        Stage 0's home pair is emitted in a shuffled order (ADR-024 § Ramp-up
+        The first step's pair is emitted in a shuffled order (ADR-024 § Ramp-up
         variability property 1), so a test about pairing, timeouts or focus asks
         which letter came up instead of assuming `f`.
         """
@@ -175,7 +175,7 @@ class Harness:
         return target
 
     def partner(self, target: str) -> str:
-        """The other member of Stage 0's home pair — a press that is always wrong for `target`."""
+        """The other bump letter — a press that is always wrong for `target`."""
         return "j" if target == "f" else "f"
 
     def answer(self, count: int = 1) -> list[str]:
@@ -306,16 +306,16 @@ class _AnyTs:
 ANY_TS = _AnyTs()
 
 
-class TestStageZeroEndToEnd:
-    """The headline: a cold profile through Stage 0's first step and out again."""
+class TestFirstStepEndToEnd:
+    """The headline: a cold profile through the first step, the bump letters, and out again."""
 
-    def test_a_cold_profile_runs_stage_0_step_one_to_completion(self) -> None:
+    def test_a_cold_profile_runs_the_first_step_to_completion(self) -> None:
         harness = Harness()
         harness.loop.start()
 
-        # Phase A of Stage 0 is the L-R interleave of f and j -- ADR-024 § Stage
-        # 0's blocks are not ordinary ramp-up. Ten cycles, capped by the phase's
-        # own remaining requirement (PHASE_A_STREAK). The *order* within a block
+        # Phase A of the first step is the L-R interleave of f and j: each
+        # member alone, as for any pair. Ten cycles, capped by the phase's own
+        # remaining requirement (PHASE_A_STREAK). The *order* within a block
         # is shuffled (ADR-024 property 1), so each phase is checked by what it
         # asked for and how often, and by the one thing the shuffle must never
         # do: ask for the same letter twice running.
@@ -335,10 +335,12 @@ class TestStageZeroEndToEnd:
         assert Counter(phase_c) == {"f": config.PHASE_C_ATTEMPTS, "j": config.PHASE_C_ATTEMPTS}
 
         # Out the other side: the ramp-up has ended and there are free slots,
-        # so the boundary asks the introducer for Stage 0's second step.
+        # so the boundary asks the introducer for the second step. With no
+        # Stage 0 (ADR-033) that is home-row fill's next pair, `d k`, whose
+        # Phase A asks for each new letter alone.
         harness.settle()
-        assert harness.engine.spoken == intro_lines(("f", "j")) + intro_lines(("r", "u"))
-        assert harness.loop.prompt in {"f", "r"}
+        assert harness.engine.spoken == intro_lines(("f", "j")) + intro_lines(("d", "k"))
+        assert harness.loop.prompt in {"d", "k"}
 
         counted = config.PHASE_A_STREAK + config.PHASE_B_ATTEMPTS + config.PHASE_C_ATTEMPTS
         for name in ("f", "j"):
@@ -346,7 +348,8 @@ class TestStageZeroEndToEnd:
             assert (window.attempt_count, window.correct_count) == (counted, counted)
         # Every prompt chimed once, none errored.
         assert harness.cues.played == ["correct"] * (2 * counted)
-        # The anchor rung needs all six Stage 0 keys over two calendar days.
+        # No rung: `rest` reads landings, which nothing writes before the
+        # alignment (#12m session 7), and `third` needs eight Known letters.
         assert harness.store.achieved_milestones(harness.profile.id) == []
 
 
@@ -1415,7 +1418,7 @@ class TestCelebration:
                 if TwoRungs.fired:
                     return ()
                 TwoRungs.fired = True
-                return ("anchor", "third")
+                return ("rest", "third")
 
         monkeypatch.setattr("takki.session.MilestoneDetector", TwoRungs)
         spoken: list[str] = []
@@ -1429,8 +1432,8 @@ class TestCelebration:
         harness.pump()
         # Ladder order, in the boundary that earned them, and ahead of the
         # introduction script that follows.
-        assert spoken == ["anchor", "third"]
-        assert harness.engine.spoken == ["rung anchor"]
+        assert spoken == ["rest", "third"]
+        assert harness.engine.spoken == ["rung rest"]
 
     def test_a_celebration_is_not_interrupted_by_a_keypress(
         self, monkeypatch: pytest.MonkeyPatch
@@ -1444,7 +1447,7 @@ class TestCelebration:
                 if OneRung.fired:
                     return ()
                 OneRung.fired = True
-                return ("anchor",)
+                return ("rest",)
 
         monkeypatch.setattr("takki.session.MilestoneDetector", OneRung)
         harness = Harness(celebrant=_rung_line)
@@ -1457,7 +1460,7 @@ class TestCelebration:
         assert harness.engine.stopped == 0
         assert harness.cues.played == []
         harness.pump()
-        assert harness.engine.spoken == ["rung anchor"]
+        assert harness.engine.spoken == ["rung rest"]
 
     def test_no_celebrant_speaks_nothing(self) -> None:
         harness = Harness()
@@ -1719,9 +1722,9 @@ class TestIntroductionPacingAcrossSessions:
     """alpha-plan #12d — every restart used to introduce the next step at once.
 
     The run of 2026-09-26 found four sessions against one store introducing all
-    of Stage 0: the ramp-up lived only in the session that started it, so a new
-    session's first block boundary found no ramp-up in progress and ADR-010's
-    aggregate gate had nothing to say about a set this new.
+    of what was then Stage 0: the ramp-up lived only in the session that
+    started it, so a new session's first block boundary found no ramp-up in
+    progress and ADR-010's aggregate gate had nothing to say about a set this new.
     """
 
     def run_sessions(self, count: int, answers: int) -> tuple[FakeStore, list[list[str]]]:
@@ -1757,14 +1760,14 @@ class TestIntroductionPacingAcrossSessions:
         second = Harness(store=store, profile=profile)
         second.loop.start()
         asked = second.answer(8)
-        # Still Stage 0's home pair, not a new letter and not the steady-state
-        # mix over everything Active.
+        # Still the first step's pair, not a new letter and not the
+        # steady-state mix over everything Active.
         assert set(asked) == {"f", "j"}
 
     def test_a_finished_ramp_up_lets_the_next_session_introduce(self) -> None:
         # The gate must not become a lock. A profile whose newest step has met
         # every bar -- Phase A + B + C worth of clean attempts on both members --
-        # resumes nothing and moves on to Stage 0's second step.
+        # resumes nothing and moves on to the second step.
         store = FakeStore()
         profile = store.create_profile("kid")
         store.mark_introduced(profile.id, ["f", "j"])
@@ -1785,8 +1788,8 @@ class TestIntroductionPacingAcrossSessions:
         harness.loop.start()
         harness.settle()
         assert sorted({i.key_char for i in store.introductions(profile.id)} - {"f", "j"}) == [
-            "r",
-            "u",
+            "d",
+            "k",
         ]
 
     def test_the_phase_the_child_reached_is_recorded_and_survives_the_restart(self) -> None:
@@ -1844,7 +1847,7 @@ class TestIntroductionPacingAcrossSessions:
         assert [describe(intro) for intro in remembered.keys] == intro_texts(("f", "j"))
 
     def test_a_resumed_later_step_keeps_its_location_clauses(self) -> None:
-        # Stage 0's second step is located against the first, so its rebuild
+        # The second step is located against the first, so its rebuild
         # depends on what the child had before it.
         store = FakeStore()
         profile = store.create_profile("kid")
@@ -1853,7 +1856,7 @@ class TestIntroductionPacingAcrossSessions:
         first.loop.start()
         first.answer(6)
         first.loop.stop()
-        assert steps_of(store, profile.id) == [("f", "j"), ("r", "u")]
+        assert steps_of(store, profile.id) == [("f", "j"), ("d", "k")]
 
         second = Harness(store=store, profile=profile)
         second.loop.start()
@@ -1862,8 +1865,8 @@ class TestIntroductionPacingAcrossSessions:
         assert introducer is not None
         remembered = introducer.last_step
         assert remembered is not None
-        assert [describe(intro) for intro in remembered.keys] == intro_texts(("r", "u"))
-        assert all("Reach" in rest for _, rest in intro_texts(("r", "u")))
+        assert [describe(intro) for intro in remembered.keys] == intro_texts(("d", "k"))
+        assert all("Reach" in rest for _, rest in intro_texts(("d", "k")))
         # Both members were answered, so nothing is spoken again.
         assert second.engine.spoken == []
 
@@ -1941,13 +1944,13 @@ class TestIntroductionPacingAcrossSessions:
                 if OneRung.fired:
                     return ()
                 OneRung.fired = True
-                return ("anchor",)
+                return ("rest",)
 
         monkeypatch.setattr("takki.session.MilestoneDetector", OneRung)
         second = Harness(store=store, profile=profile, celebrant=_rung_line)
         second.loop.start()
         second.settle()
-        assert second.engine.spoken == ["rung anchor", *owed]
+        assert second.engine.spoken == ["rung rest", *owed]
 
     def test_a_step_introduced_and_never_answered_is_introduced_again(self) -> None:
         # ADR-023 § What the introducer remembers: the script is that letter's
@@ -2023,44 +2026,45 @@ class TestSlots:
         harness.settle()
         return harness
 
-    def test_a_cold_profile_meets_all_of_stage_0_and_then_waits(self) -> None:
+    def test_a_cold_profile_meets_the_first_days_steps_and_then_waits(self) -> None:
         # The steps that fit are read from the cap, not from the output: change
         # the cap and this asks for a different prefix. At the shipped cap it is
-        # Stage 0's three pairs.
-        stage_0: list[tuple[str, ...]] = []
+        # three pairs, `f j`, `d k`, `s l` under home-row fill (ADR-033's "three
+        # steps of one letter per hand on a first day").
+        first_day: list[tuple[str, ...]] = []
         for step in STEPS:
-            if sum(len(s) for s in stage_0) + len(step) > config.MAX_KEYS_IN_PROGRESS:
+            if sum(len(s) for s in first_day) + len(step) > config.MAX_KEYS_IN_PROGRESS:
                 break
-            stage_0.append(step)
+            first_day.append(step)
         harness = Harness(now=lambda: DAY_ONE)
         harness.loop.start()
         drills = harness.loop._drills  # pyright: ignore[reportPrivateUsage]
         assert drills is not None
         for _ in range(2000):
-            if steps_of(harness.store, harness.profile.id) == stage_0 and drills.ramp_up is None:
+            if steps_of(harness.store, harness.profile.id) == first_day and drills.ramp_up is None:
                 break
             harness.answer()
         else:
-            raise AssertionError("Stage 0 was never fully introduced and ramped up")
+            raise AssertionError("the first day's steps were never introduced and ramped up")
 
         # Slots full, nothing Known on a first day: steady-state blocks over
         # those six, however long the child goes on, and no fourth script. Not
         # necessarily all six -- f and j were every later ramp-up's partners and
         # are past SESSION_KEY_CEILING by now.
         asked = harness.answer(4 * config.FIRST_BLOCK_PROMPTS)
-        assert set(asked) <= {name for step in stage_0 for name in step}
+        assert set(asked) <= {name for step in first_day for name in step}
         assert drills.ramp_up is None
-        assert steps_of(harness.store, harness.profile.id) == stage_0
-        assert harness.engine.spoken == [line for step in stage_0 for line in intro_lines(step)]
+        assert steps_of(harness.store, harness.profile.id) == first_day
+        assert harness.engine.spoken == [line for step in first_day for line in intro_lines(step)]
 
-    @pytest.mark.parametrize(("known", "introduced"), [("", 0), ("f", 0), ("fj", 1), ("fjruvm", 1)])
-    def test_the_step_after_stage_0_waits_for_two_known_keys(
-        self, known: str, introduced: int
-    ) -> None:
-        # The fourth step is a pair, so one free slot is not enough -- and six
-        # free slots still introduce one step, because its ramp-up then holds
-        # the next one back.
-        assert len(STEPS[3]) == 2
+    @pytest.mark.parametrize("known", ["", "f", "fj", "fjdksl"])
+    def test_the_step_after_the_first_days_steps_waits_for_known_keys(self, known: str) -> None:
+        # The first three steps fill the cap. The fourth needs as many free
+        # slots as it has members (`a` alone under home-row fill, as column 10
+        # holds no letter), and six free slots still introduce one step,
+        # because its ramp-up then holds the next one back.
+        assert sum(len(step) for step in STEPS[:3]) == config.MAX_KEYS_IN_PROGRESS
+        introduced = 1 if len(known) >= len(STEPS[3]) else 0
         harness = self.started(3, known)
         assert steps_of(harness.store, harness.profile.id) == STEPS[: 3 + introduced]
         assert harness.engine.spoken == [
@@ -2103,7 +2107,7 @@ class TestEndOfTheCurriculum:
     def test_a_layout_with_nothing_left_to_introduce_keeps_drilling(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        def stage_0_only() -> Layout:
+        def six_index_column_letters() -> Layout:
             positions = {
                 "r": (2, 4),
                 "f": (3, 4),
@@ -2116,7 +2120,7 @@ class TestEndOfTheCurriculum:
             graphemes = {char: Grapheme(char, "direct", (char,), 1) for char in keys}
             return Layout(lang="en", keys=keys, graphemes=graphemes)
 
-        monkeypatch.setattr("tests.test_session.build_en", stage_0_only)
+        monkeypatch.setattr("tests.test_session.build_en", six_index_column_letters)
         harness = Harness()
         harness.loop.start()
         profile = harness.profile.id

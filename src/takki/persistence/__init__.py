@@ -322,6 +322,10 @@ class Store(Protocol):
         """Every landing, in the order pressed."""
         ...
 
+    def first_round_landings(self, profile_id: int) -> list[Landing]:
+        """Every landing in any session's round 1, in the order pressed (the `rest` rung's read)."""
+        ...
+
     def choose_rest_key(
         self,
         profile_id: int,

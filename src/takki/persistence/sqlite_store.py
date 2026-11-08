@@ -89,6 +89,10 @@ CREATE TABLE IF NOT EXISTS landings (
 
 CREATE INDEX IF NOT EXISTS idx_landings_profile ON landings (profile_id);
 
+-- The `rest` rung reads round 1 of every session (ADR-027). Equal keys sit in
+-- rowid order, so `ORDER BY id` needs no sort.
+CREATE INDEX IF NOT EXISTS idx_landings_round ON landings (profile_id, round);
+
 CREATE TABLE IF NOT EXISTS rest_keys (
     id          INTEGER PRIMARY KEY,
     profile_id  INTEGER NOT NULL REFERENCES profiles(id),
@@ -778,14 +782,20 @@ class SqliteStore:
             )
 
     def landings(self, profile_id: int) -> list[Landing]:
+        return self._landings("WHERE profile_id = ?", (profile_id,))
+
+    def first_round_landings(self, profile_id: int) -> list[Landing]:
+        return self._landings("WHERE profile_id = ? AND round = 1", (profile_id,))
+
+    def _landings(self, where: str, params: tuple[int, ...]) -> list[Landing]:
         rows = self.conn.execute(
-            """
+            f"""
             SELECT session_id, round, finger, key_row, key_col, validated, landed_at
             FROM landings
-            WHERE profile_id = ?
+            {where}
             ORDER BY id
             """,
-            (profile_id,),
+            params,
         ).fetchall()
         return [
             Landing(

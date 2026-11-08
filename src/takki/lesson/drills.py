@@ -1,8 +1,8 @@
 """ADR-024 — Layer 1 drill content and lesson granularity.
 
 Four phases of ramp-up after an introduction step, steady-state blocks planned
-by each key's need, anchor return-drills, and blocks sized by the child's own
-pace. Pure logic: no store writes, no audio, no timers.
+by each key's need, and blocks sized by the child's own pace. Pure logic: no
+store writes, no audio, no timers.
 """
 
 import math
@@ -19,10 +19,8 @@ from takki.lesson import rampup
 from takki.lesson.introducer import (
     DIRECT,
     HOME_ROW,
-    STAGE_0,
     IntroductionStep,
     KeyIntroduction,
-    anchor_keys,
     base_key,
     home_anchor_keys,
     key_distance,
@@ -174,7 +172,10 @@ class DrillGenerator:
     ) -> None:
         self._layout = layout
         self._source = source
-        self._anchor_six = frozenset(anchor_keys(layout))
+        # ADR-024's bar (Phase C's, until the ladder) skips the speed term for
+        # the two bump letters: in their own step the only comparison it could
+        # make is one index finger against the other. Known still applies it.
+        self._bumps = frozenset(home_anchor_keys(layout))
         self._states = key_states
         self._progress = progress
         self._clock = clock
@@ -269,9 +270,7 @@ class DrillGenerator:
         # and the windows are being read anyway. Left to the first judged
         # keystroke it is a pass over every Active key on the keypress path.
         self._baseline_cache = (
-            {}
-            if ramp is None
-            else {name: self._states.speed_baseline(name) for name in ramp.graphemes}
+            {} if ramp is None else {name: self._read_baseline(name) for name in ramp.graphemes}
         )
         if ramp is None:
             units = self._steady_units(target)
@@ -364,8 +363,11 @@ class DrillGenerator:
         Active key.
         """
         if grapheme not in self._baseline_cache:
-            self._baseline_cache[grapheme] = self._states.speed_baseline(grapheme)
+            self._baseline_cache[grapheme] = self._read_baseline(grapheme)
         return self._baseline_cache[grapheme]
+
+    def _read_baseline(self, grapheme: str) -> float | None:
+        return None if grapheme in self._bumps else self._states.speed_baseline(grapheme)
 
     def _remaining(self, member: _Member, ramp: RampUp) -> int:
         progress = ramp.progress.get(member.grapheme)
@@ -398,7 +400,7 @@ class DrillGenerator:
         same_hand = [other for other in candidates if other.side == key.side]
         reachable = same_finger or same_hand
         if not reachable:
-            # Only Stage 0's first step gets here: f and j are the anchors, so
+            # Only the first step gets here: f and j are the bump letters, so
             # there is nothing behind them to alternate with. Phase A and B
             # fall back to the bare member, which for that step is the L-R
             # interleave the pair branch would have produced anyway.
@@ -416,7 +418,7 @@ class DrillGenerator:
         it adds a key the child already has rather than a new one.
         """
         other = self._other_hand_anchor(ramp) if len(ramp.members) == 1 else None
-        if ramp.phase is RampUpPhase.A and ramp.step.stage != STAGE_0:
+        if ramp.phase is RampUpPhase.A:
             # Phase A keeps its isolation for the keys being learned: the member
             # alone, and for a pair the L-R interleave (ADR-028 § Pair ramp-up),
             # which engages both hands already. Only a *solo* step leaves a hand
@@ -427,12 +429,7 @@ class DrillGenerator:
             if other is not None:
                 units.append((other,))
             return tuple(units)
-        # Phase B's alternation, and Stage 0's Phase A as well: the stage
-        # alternates each anchor with its own column reaches (f <-> r, f <-> v)
-        # rather than repeating the reach, which is the whole reason plain
-        # first-press accuracy is a valid anchor measure (ADR-027 § The Anchor
-        # Gate). Ordinary Phase A repetition here would silently invalidate the
-        # ladder's first rung.
+        # Phase B's alternation: each member with the key its finger returns to.
         units = [
             (member.anchor, member.grapheme) if member.anchor else (member.grapheme,)
             for member in ramp.members
@@ -489,14 +486,13 @@ class DrillGenerator:
 
         What must survive the shuffle, in the order they are preferred:
 
-        1. **No hand reaches twice without returning home** (property 2), which
-           is what keeps first-press accuracy on an anchor a return-to-anchor
-           measure for [ADR-027 § The Anchor Gate](../../../docs/adr/0027-key-and-accuracy-state-model.md).
+        1. **No hand reaches twice without returning home** (property 2), so
+           every reach is practised as a reach from home.
         2. **No prompt follows itself** (property 5): a doubled prompt is a
            finger told to stay where it is.
 
         The invariant is enforced **only for a hand the inventory can bring
-        home**. A non-Stage-0 Phase A for a solo reach key is `w` plus the other
+        home**. Phase A for a solo reach key is `w` plus the other
         hand's anchor: there is no left-hand home key in it, so nothing can
         return the left hand, and ADR-024 specifies pure repetition there anyway.
         Trying regardless is worse than not trying -- the assembler then picks the
@@ -664,7 +660,6 @@ class DrillGenerator:
             # state is what `session_complete` guards against.
             return []
         slots = max(1, -(-target // 2))
-        drills = self._anchor_drills()[:slots]
         # ADR-010's soft ceiling: a key drilled SESSION_KEY_CEILING times this
         # sitting is no longer planned as a target. It still turns up inside
         # other keys' bigrams. If every key is there, nobody is excluded -- the
@@ -676,10 +671,9 @@ class DrillGenerator:
         } or active
         slow = self._states.slow_keys()
         needs = {name: self._need(name, name in slow) for name in targetable}
-        counts = plan_targets(needs, slots - len(drills), self._rng)
+        counts = plan_targets(needs, slots, self._rng)
         pool = self._pool(active)
-        groups = [[drill] for drill in drills]
-        groups += [
+        groups = [
             [self._carrier(name, pool, active) for _ in range(counts[name])]
             for name in sorted(counts)
         ]
@@ -687,7 +681,7 @@ class DrillGenerator:
 
     def _need(self, grapheme: str, slow: bool) -> int:
         evidence = self._states.evidence(grapheme)
-        need = presses_needed(evidence, self._bar(grapheme))
+        need = presses_needed(evidence, config.KNOWN_MIN_ACCURACY)
         if slow:
             # Only speed keeps it from Known, and speed comes from practice.
             # Without this it would be planned for nothing and hold its slot.
@@ -701,17 +695,6 @@ class DrillGenerator:
             and grapheme not in self._session_attempts
         )
         return max(need, 1) if waiting else need
-
-    def _bar(self, grapheme: str) -> float:
-        # The bar the key is working toward. All six Stage 0 keys are held to
-        # the anchor bar, not only the two ADR-027 maintains for life: the rung
-        # needs all six at it, and after the rung the cost is r u v m practised
-        # to 95% rather than 90%, which is a handful of presses.
-        return (
-            config.ANCHOR_MIN_ACCURACY
-            if grapheme in self._anchor_six
-            else config.KNOWN_MIN_ACCURACY
-        )
 
     def _carrier(self, grapheme: str, pool: dict[str, float], active: AbstractSet[str]) -> Unit:
         carriers = {bigram: weight for bigram, weight in pool.items() if grapheme in bigram}
@@ -738,48 +721,6 @@ class DrillGenerator:
             placed += [((i + phase) / len(group), index, i, unit) for i, unit in enumerate(group)]
         return [unit for *_, unit in sorted(placed)]
 
-    # ---- anchor maintenance --------------------------------------------
-
-    def _anchor_drills(self) -> list[Unit]:
-        """ADR-027 § The Anchor Gate's maintenance path: return-drills for a slipping anchor."""
-        # Kept beside the need-based plan rather than folded into it: the plan
-        # decides which key is practised, not in what form. A slipping `f` would
-        # be planned by need anyway, but carried by `ff` or `fu`, and only a
-        # reach followed by the anchor measures the return. Each drill takes one
-        # of the block's slots, so block length is unchanged.
-        drills: list[Unit] = []
-        for anchor in home_anchor_keys(self._layout):
-            if not self._anchor_slipping(anchor):
-                continue
-            reach = self._reach(anchor)
-            if reach is None:
-                continue
-            drills.append((reach, anchor))
-        return drills
-
-    def _anchor_slipping(self, anchor: str) -> bool:
-        evidence = self._states.evidence(anchor)
-        # The same sample size the gate was measured over: below it a single
-        # early slip would read as a lost anchor, and below it the child is
-        # still inside Stage 0, where every block is anchor drill anyway.
-        if evidence.attempts < config.ANCHOR_MIN_ATTEMPTS:
-            return False
-        # The measure the rung and the block plan read (ADR-027): the bound
-        # over decayed evidence. On the raw share, an anchor the rung had just
-        # failed, or one not practised for months, was never slipping.
-        return accuracy_bound(evidence.correct, evidence.weight) < config.ANCHOR_MIN_ACCURACY
-
-    def _reach(self, anchor: str) -> str | None:
-        key = self._layout.keys[anchor]
-        reaches = sorted(
-            name
-            for name in self._active()
-            if self._layout.graphemes[name].mechanism == DIRECT
-            and (other := self._layout.keys[name]).col == key.col
-            and other.row != key.row
-        )
-        return self._rng.choice(reaches) if reaches else None
-
     # ---- pace ----------------------------------------------------------
 
     def _target_prompts(self) -> int:
@@ -798,7 +739,7 @@ class DrillGenerator:
         # ADR-027 § Key States aligns the terminology: ADR-024's
         # "previously-known keys" are keys the child has been *introduced* to,
         # which is Active. Reading it as Known (90 attempts over 2 days) would
-        # leave every early key without an anchor and never fire re-exposure.
+        # leave every early key without an anchor.
         return self._states.active_keys() & set(self._layout.graphemes)
 
     def _weight(self, grapheme: str) -> float:

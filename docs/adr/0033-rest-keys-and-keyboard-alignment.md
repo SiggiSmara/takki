@@ -1,6 +1,6 @@
 # ADR-033: Rest Keys and the Keyboard Alignment
 
-**Status:** Accepted. Not yet implemented. Of the amendments it requires, ADR-024's is made (2026-10-10), ADR-026's and ADR-011's (both 2026-11-01), and ADR-032's and ADR-027's (both 2026-11-08); the others are not.
+**Status:** Accepted. Partly implemented: Stage 0 and the anchor bar are removed and the `rest` rung is built (alpha-plan #12m session 4, 2026-11-08); the alignment, the rest tier's states and the new order are not. Of the amendments it requires, ADR-024's is made (2026-10-10), ADR-026's and ADR-011's (both 2026-11-01), ADR-032's and ADR-027's (both 2026-11-08), and ADR-010's, ADR-025's in part and ADR-023's in part (all 2026-11-08, session 4); the others are not.
 **Date:** 2026-10-10
 **Noted:** 2026-11-01 — alpha #13 answered § Work this ADR requires: the three Windows checks and the dead-key worry, from measurement. The answers are dated notes in that section, and none of them changes a decision here.
 
@@ -136,7 +136,7 @@ An index finger is ready when it has found its bump on three rounds in a row. Th
 
 ### Stage 0 is removed, and the first milestone changes
 
-**Stage 0 is removed for every ordering.** **[S]** Placing the hands does its work, and does it better: it starts from the landmark, it covers eight fingers where Stage 0 covered two, and it costs eight presses a round where Stage 0 cost several hundred prompts on letters that spell nothing. `r u v m` (the keys above and below the bumps) become ordinary letters.
+**Stage 0 is removed for every ordering.** **[S]** *(Removed from the code 2026-11-08, #12m session 4. Ordering A, still the default until session (5), opens at its own first pair, `f j`.)* Placing the hands does its work, and does it better: it starts from the landmark, it covers eight fingers where Stage 0 covered two, and it costs eight presses a round where Stage 0 cost several hundred prompts on letters that spell nothing. `r u v m` (the keys above and below the bumps) become ordinary letters.
 
 Three things go with it and are named so that their amendments do not miss them:
 
@@ -145,6 +145,13 @@ Three things go with it and are named so that their amendments do not miss them:
 - **Reach-and-return is no longer a stage.** It is still practised: every key's ramp-up alternates it with a key the finger returns to ([ADR-024](0024-drill-content-and-lesson-granularity.md#new-key-ramp-up--four-phases)), and the alignment returns the hands to the bumps every round. *(Note 2026-10-10: under [ADR-024](0024-drill-content-and-lesson-granularity.md#the-ramp-up-restated-four-objectives-and-a-ladder-of-three-levels)'s ladder it is practised at the Reach level only, by a press of the finger's rest key after each reach. A rest letter and the bump letters have no reach and so no Reach level.)*
 
 **The rest position is the ladder's first rung.** **[S]** It replaces the `anchor` rung with a new slug, `rest`. Criterion: all eight fingers land on their rest keys at the first round of each of the last five sessions. It reads session starts and not rounds within a session because of the Simon et al. result above and the developer's own statement that ingrained takes longer than two days.
+
+*(Noted 2026-11-08, #12m session 4, which built the rung. [ADR-027 § The `rest` rung](0027-key-and-accuracy-state-model.md#the-rest-rung) reads this criterion differently in three places, each settled with the developer in the ADR-027 session:*
+- *It counts **one session start a day**: the last five local days with a complete first round, and on each only the first such session. Five restarts in one sitting would pass "the last five sessions", and a restart minutes later is not cold.*
+- *A landing is judged against the finger's **current** rest key, not the key current when it landed. A changed key restarts the count by itself, and the first day can count.*
+- *It **also fires when the full round retires**, which otherwise could leave it unreachable for good.*
+
+*Session 4 added how the day is read: from the round's UTC stamp, in the machine's zone, when the rung is checked; nothing local is stored (the developer's rule). A practice-day number per session replaces that in the next #12m session. Nothing writes landings or rest keys before session (7), so the rung cannot fire in a real session until then.)*
 
 ### What must be recorded
 
@@ -225,14 +232,14 @@ Each is a later session, one ADR per session.
 | [ADR-023](0023-key-introduction-protocol.md) | § Stage 0 removed; the location rule reads from the rest key; the shortened script; open question 7 closed |
 | [ADR-032](0032-grapheme-led-introduction-and-selectable-ordering.md) | Decision 2: no Stage 0 above the orderings; Ordering C restated as this order; the strategy takes the child's rest state; the key-share measure. **Done 2026-11-08** (alpha-plan #12m, the ADR-032 session): [ADR-032 § Decision 2 restated](0032-grapheme-led-introduction-and-selectable-ordering.md#decision-2-restated-rest-keys-and-ordering-c-as-the-default). It also retires Ordering B. It defines the key share asked for in § Work this ADR requires ("A key's share of key presses"). It differs from this ADR in five places, all recorded there: the bump letters, and so every letter, come once *both* index fingers are ready, which overrides § The alignment's "fingers that are ready get keys" when only one index finger is ready, and its table's "Chosen" row until the bump letters are had; with the engine's ranking, English's first steps after `f j` are `e n`, `a l`, `t o`, not § Consequences' `e o`, `a l`, `t i`, which was the spike's ranking; each hand's turn is decided by a count, which is the alternation of § Introduction order and slots except where one kind could not be taken for a while; and a rest letter needs its finger only chosen, as § The alignment's table says, so neither § Introduction order and slots' "a letter on a finger that is not ready is passed over" nor § The alignment's "fingers that are ready get keys" covers it |
 | [ADR-027](0027-key-and-accuracy-state-model.md) | First rung is the rest position; § The Anchor Gate retired, with the anchor bar and the lifelong hold on `f` and `j`. **Done 2026-11-08** (alpha-plan #12m, the ADR-027 session): [ADR-027 § Rest keys, the ladder's presses and the `rest` rung](0027-key-and-accuracy-state-model.md#rest-keys-the-ladders-presses-and-the-rest-rung). It differs from this ADR's text in three places, all recorded there: the rung counts one session start a day, so "the last five sessions" in § Stage 0 is removed reads as the last five days; a landing is judged against the finger's current rest key; and the rung also fires when the full round retires, which otherwise could leave it unreachable. It also gives `f` and `j` a speed term of their own in Known. Dated notes in "The rest position is the ladder's first rung" are owed; #12m session (4) makes them. Whether a weak rest key's own test in § The alignment also reads days is put to the developer in session (7) |
-| [ADR-010](0010-lesson-structure-and-progression.md) | "Why 6"; the first-rung row of the milestone table and its narrative note |
+| [ADR-010](0010-lesson-structure-and-progression.md) | "Why 6"; the first-rung row of the milestone table and its narrative note. **Done 2026-11-08** (alpha-plan #12m session 4). It leaves one reading open for session (5): § Introduction order and slots says `f` and `j` "take no introduction slots", and the code counts them in the slot gate like any key while they are not Known |
 | [ADR-024](0024-drill-content-and-lesson-granularity.md) | Phase B's same-finger anchor is the rest key, and what stands in when that key has no Active letter; the ramp-up of a rest letter; Stage 0's own content removed; the alignment's time is outside pace and block length; the block plan holds no key to the anchor bar. **Done 2026-10-10** (alpha-plan #12m): [ADR-024 § The ramp-up restated](0024-drill-content-and-lesson-granularity.md#the-ramp-up-restated-four-objectives-and-a-ladder-of-three-levels). This mark was added on 2026-11-08 |
 | [ADR-011](0011-persistence-and-state.md) | The records in § What must be recorded; a landing has no latency. **Done 2026-11-01** (alpha-plan #12m session 2): [§ Records for the alignment, the rest keys and the ladder](0011-persistence-and-state.md#records-for-the-alignment-the-rest-keys-and-the-ladder). The records are in the store; nothing writes them until sessions (4), (6) and (7) |
 | [ADR-028](0028-composite-input-and-keyboard-ownership.md), [ADR-005](0005-keyboard-handling.md) | A press in the alignment on a key that produces no character; a dead key as a rest key, with the key-capture decision |
 | [ADR-026](0026-platform-interface-abstraction.md) | `get_layout_positions()` returns non-letter cells. **Done 2026-11-01** (alpha-plan #12m session 1): [§ Every cell of the grid](0026-platform-interface-abstraction.md#every-cell-of-the-grid) |
 | [ADR-022](0022-localisation-strategy.md) | The alignment's strings: "press and let go", the "let go" instruction, finger guidance and non-letter key names |
 | [ADR-012](0012-audio-feedback-design.md) | Feedback for a press that has no wrong answer |
-| [ADR-025](0025-configuration-system.md) | The numbers above; `ANCHOR_MIN_ATTEMPTS` and `ANCHOR_MIN_ACCURACY` removed; rest keys as per-profile state |
+| [ADR-025](0025-configuration-system.md) | The numbers above; `ANCHOR_MIN_ATTEMPTS` and `ANCHOR_MIN_ACCURACY` removed; rest keys as per-profile state. **Done in part 2026-11-08** (#12m session 4): the anchor numbers removed, `REST_SETTLED_SESSION_STARTS` added, rest keys recorded as state and not configuration. The other numbers are added by sessions (5) and (7), which read them |
 
 [roadmap.md](../roadmap.md) (§ What is deliberately never taught, and the two § D items on the bump and on rest positions) and [architecture.md § Out of Scope](../architecture.md#out-of-scope) carry dated notes on the four tiers, added with this ADR.
 
@@ -243,7 +250,7 @@ Each is a later session, one ADR per session.
 - **A session costs at least one round before any typing** while the full round runs, and the first session up to the cap. How long that takes is not measured. The cost falls to two presses when the full round retires, and to nothing if the child retires the bumps.
 - **The introduction order becomes per child**, through rest letters and readiness. A strategy can no longer be computed from the layout and the language alone.
 - **Phase B's fallback anchor becomes common.** A finger whose rest key has no letter, or a weak letter not yet introduced, has no same-finger letter to return to. ADR-032 open question 4 foresaw this for Orderings B and C. *(Note 2026-10-10: no longer a consequence. [ADR-024](0024-drill-content-and-lesson-granularity.md#the-ramp-up-restated-four-objectives-and-a-ladder-of-three-levels) has no Phase B, and the return is asked for by finger, so nothing has to stand in for a rest key without a letter.)*
-- **The current code keeps Stage 0** until this is implemented. This document changes no code.
+- **The current code keeps Stage 0** until this is implemented. This document changes no code. *(Stage 0 removed from the code 2026-11-08, #12m session 4.)*
 
 ### Alpha, and the Windows re-validation run (#12h)
 

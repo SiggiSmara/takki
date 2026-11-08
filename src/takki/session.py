@@ -204,8 +204,8 @@ class SessionLoop:
             self.running = False
             return
         # The first spoken line of the session comes out of here: a cold
-        # profile's first block boundary introduces Stage 0's first step, and
-        # its script is what the child hears. Nothing before this point speaks.
+        # profile's first block boundary introduces the first step, the bump
+        # letters, and its script is what the child hears. Nothing before this point speaks.
         self._begin_block()
 
     def stop(self) -> None:
@@ -533,20 +533,19 @@ class SessionLoop:
            have ended (`ramp_up is None`, the drill generator's call, not this
            module's) *and* ADR-010's `room_for_step` must hold: the step must
            leave no more than the cap of keys short of Known. Nothing gates it
-           on the anchor rung -- see the note below.
+           on a milestone -- see the note below.
         3. **Layer-2 unlock.** After the introduction, because the introduction
            is what changes the Active set it counts; reading it first would
            report a set one step stale.
         4. **The block.** Last, because its content depends on the ramp-up
            step 2 may just have started.
 
-        **The curriculum does not wait for the anchor rung, but it does wait
-        for Known** (ADR-010 § Progression Rules, alpha-plan #12g). Stage 0 is
-        a strong opening, not a barrier: its six keys fill the default cap, so
-        all of it can be met on the first day, and the step after it needs two
-        of the six Known. The rung is still not a gate, and the price is the
-        one session 10 already priced -- a rung that can fire late and after
-        `third`.
+        **The curriculum does not wait for the `rest` rung, but it does wait
+        for Known** (ADR-010 § Progression Rules, alpha-plan #12g). Six slots
+        let three steps of one letter per hand come on the first day, and a
+        later step waits for a slot. The rung is not a gate, and the price is
+        a rung that fires late and often after `third` (ADR-027 § The `rest`
+        rung).
         """
         assert self._drills is not None
         self._lengths.flush()
@@ -580,8 +579,8 @@ class SessionLoop:
     def _celebrate(self, rungs: tuple[str, ...]) -> None:
         """Every rung earned since the last check, in ladder order, in one boundary.
 
-        `check()` can hand back more than one at once, and a late anchor rung
-        can arrive after `third` (ADR-027 § The Anchor Gate). They are spoken
+        `check()` can hand back more than one at once, and the `rest` rung
+        routinely arrives after `third` (ADR-027 § The `rest` rung). They are spoken
         as consecutive non-interruptible utterances in a single sequence, so
         the speaker spaces them by each other's duration and none overlaps.
         None is held over to a later boundary: a deferred rung is one the child
@@ -599,7 +598,7 @@ class SessionLoop:
         The cross-session half of alpha-plan #12d. Until this existed, a session
         started with no ramp-up in progress, so its first block boundary
         introduced another key however far the last session had got -- four
-        starts introduced all of Stage 0. The phase is not restored from a saved
+        starts introduced four steps. The phase is not restored from a saved
         field: ADR-024 § Ramp-up variability derives it from the child's own
         rows, so what this does is name the step and let the generator read it.
         """

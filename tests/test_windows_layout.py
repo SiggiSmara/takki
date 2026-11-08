@@ -6,7 +6,7 @@ from contextlib import contextmanager
 
 import pytest
 
-from takki.lesson.introducer import anchor_keys
+from takki.lesson.introducer import home_anchor_keys
 from takki.platform.layout import (
     SCAN_CODE_GRID,
     PhysicalKey,
@@ -159,19 +159,18 @@ class TestReadsTheTargetLayouts:
         assert (de.keys["y"].row, de.keys["y"].col) == (4, 1)
         assert (de.keys["z"].row, de.keys["z"].col) == (2, 6)
 
-    def test_every_target_layout_carries_letters_at_the_six_anchors(self) -> None:
-        # ADR-027 § The Anchor Gate names these by position. anchor_keys indexes
-        # them unguarded, so a layout without them raises rather than degrading
-        # to a five-key Stage 0. Unreachable in Alpha behind verify_layout, but
+    def test_every_target_layout_carries_f_and_j_on_the_bumps(self) -> None:
+        # ADR-033 names the bump letters by position, and every ordering opens
+        # with them. home_anchor_keys indexes them unguarded, so a layout
+        # without them raises. Unreachable in Alpha behind verify_layout, but
         # the measurement belongs in the suite rather than in a plan row.
+        # (Stage 0's six keys were checked here until #12m session 4.)
         from takki.platform.windows import read_layout
 
         for klid in (US_QWERTY, GERMAN_QWERTZ, ICELANDIC):
             with loaded(klid) as hkl:
                 layout = read_layout(hkl)
-            anchors = anchor_keys(layout)
-            assert len(anchors) == 6
-            assert all(name in layout.graphemes for name in anchors), (klid, anchors)
+            assert home_anchor_keys(layout) == ("f", "j"), klid
 
 
 class TestEveryCell:

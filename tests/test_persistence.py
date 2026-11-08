@@ -1,7 +1,5 @@
-import os
 import sqlite3
-import time
-from collections.abc import Callable, Generator, Iterator
+from collections.abc import Callable, Generator
 from contextlib import closing, contextmanager
 from pathlib import Path
 from typing import Any, cast
@@ -26,6 +24,7 @@ from takki.persistence import (
     utc_stamp,
 )
 from takki.persistence.sqlite_store import SqliteStore
+from tests.conftest import needs_tzset
 from tests.fakes.fake_store import FakeStore
 
 
@@ -278,29 +277,7 @@ class TestOnlyUtcIsReadBack:
                 read()
 
 
-# POSIX only: Windows has no way to change a running process's timezone.
-_tzset: Callable[[], None] | None = getattr(time, "tzset", None)
-
-
-@pytest.fixture()
-def timezone() -> Iterator[Callable[[str], None]]:
-    assert _tzset is not None
-    apply = _tzset
-    before = os.environ.get("TZ")
-
-    def use(name: str) -> None:
-        os.environ["TZ"] = name
-        apply()
-
-    yield use
-    if before is None:
-        del os.environ["TZ"]
-    else:
-        os.environ["TZ"] = before
-    apply()
-
-
-@pytest.mark.skipif(_tzset is None, reason="the process timezone cannot be set here")
+@needs_tzset
 class TestPracticeDayIsLocal:
     """ADR-011: stored in UTC, but a practice day is the child's local day."""
 
@@ -1181,6 +1158,40 @@ class TestLandings:
             (second, 1, 3, 10),
         ]
 
+    def test_first_round_landings_are_round_1_of_every_session_in_order(
+        self, any_store: Store
+    ) -> None:
+        # ADR-027 § The `rest` rung reads only round 1, of this profile.
+        alice = any_store.create_profile("Alice").id
+        bob = any_store.create_profile("Bob").id
+        first = any_store.start_session(alice)
+        second = any_store.start_session(alice)
+        theirs = any_store.start_session(bob)
+        any_store.record_landing(alice, first, 1, "L-idx", 3, 4, True, T1)
+        any_store.record_landing(alice, first, 2, "L-idx", 3, 4, True, T1)
+        any_store.record_landing(bob, theirs, 1, "L-idx", 3, 4, True, T1)
+        any_store.record_landing(alice, second, 1, "R-idx", 3, 7, False, T3)
+        any_store.record_landing(alice, first, 1, "R-idx", 3, 7, True, T2)
+        any_store.record_landing(alice, second, 3, "R-idx", 3, 7, True, T3)
+        assert any_store.first_round_landings(alice) == [
+            Landing(first, 1, "L-idx", 3, 4, True, T1),
+            Landing(second, 1, "R-idx", 3, 7, False, T3),
+            Landing(first, 1, "R-idx", 3, 7, True, T2),
+        ]
+        assert any_store.first_round_landings(bob) == [Landing(theirs, 1, "L-idx", 3, 4, True, T1)]
+
+    def test_the_first_round_read_uses_its_index(self) -> None:
+        # One narrow read at every block boundary until the rung fires, over a
+        # table that is never trimmed (ADR-011 § `landings`).
+        store = SqliteStore(":memory:")
+        plan = store.conn.execute(
+            "EXPLAIN QUERY PLAN SELECT * FROM landings WHERE profile_id = 1 AND round = 1 "
+            "ORDER BY id"
+        ).fetchall()
+        details = " ".join(str(row[-1]) for row in plan)
+        assert "idx_landings_round" in details
+        assert "TEMP B-TREE" not in details
+
 
 class TestRestKeys:
     """ADR-011 `rest_keys`: each finger's rest key and its events, replaced keys kept."""
@@ -1416,6 +1427,25 @@ class TestMigration:
         p = store.create_profile("Alice", "en")
         store.append_letter_lengths(p.id, "voice", 1.0, [("f", 450)])
         assert store.letter_lengths(p.id, "f", "voice", 1.0) == [450]
+
+    def test_a_current_database_gains_the_first_round_index_and_is_not_refused(
+        self, tmp_path: Path
+    ) -> None:
+        # #12m session 4 added an index and no column, so the version stays 1
+        # and a database from session 2 or 3 opens and gains it.
+        path = str(tmp_path / "takki.sqlite")
+        SqliteStore(path).conn.close()
+        old = sqlite3.connect(path)
+        old.executescript("DROP INDEX idx_landings_round;")
+        old.commit()
+        old.close()
+        store = SqliteStore(path)
+        names = {
+            row[0]
+            for row in store.conn.execute("SELECT name FROM sqlite_master WHERE type = 'index'")
+        }
+        assert "idx_landings_round" in names
+        assert store.conn.execute("PRAGMA user_version").fetchone()[0] == 1
 
     def test_a_database_with_the_old_phase_table_is_refused_at_open(self, tmp_path: Path) -> None:
         # ADR-011, 2026-10-04: `ramp_up_phases` changed shape with no migration.

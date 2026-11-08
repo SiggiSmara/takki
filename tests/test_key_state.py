@@ -513,11 +513,37 @@ class TestSpeedTerm:
         assert states.slow_keys() == {"v"}
         assert states.known_keys() == set(medians) - {"v"}
 
-    def test_the_bump_keys_have_no_speed_term(self) -> None:
-        # Something has to be the root of the comparison.
+    def test_a_bump_key_has_a_speed_term_of_its_own(self) -> None:
+        # ADR-027, 2026-11-08: `f` and `j` stay the root of the pool but are
+        # judged like any key, against the baseline without themselves.
         states = speeds({"f": 9000, "j": 1000, "d": 1000, "k": 1000, "s": 1000})
+        assert states.speed_baseline("f") == 1000
+        assert states.slow_keys() == {"f"}
+        assert states.known_keys() == set("jdks")
+
+    @pytest.mark.parametrize(
+        ("f_ms", "slow"), [(RATIO * 1000, set[str]()), (RATIO * 1000 + 1, {"f"})]
+    )
+    def test_in_the_first_steps_one_bump_key_is_judged_against_the_other(
+        self, f_ms: float, slow: set[str]
+    ) -> None:
+        # Both meet the floors and nothing else does: `f`'s pool is `j` alone,
+        # and `j`'s is `f`, which a slow `f` does not make slow.
+        states = speeds({"f": f_ms, "j": 1000})
+        assert (states.speed_baseline("f"), states.speed_baseline("j")) == (1000, f_ms)
+        assert states.slow_keys() == slow
+        assert states.known_keys() == {"f", "j"} - slow
+
+    def test_a_bump_key_below_the_floors_has_a_baseline_from_its_partner(self) -> None:
+        # The pool takes the bump keys from their tenth timed press, before the
+        # floors, so `f` is compared with `j` as soon as `j` has a speed.
+        store = FakeStore()
+        profile = store.create_profile("Alice")
+        practised(store, profile.id, "j", 1000, presses=config.SPEED_MIN_SAMPLE)
+        practised(store, profile.id, "f", 3000, presses=config.SPEED_MIN_SAMPLE)
+        states = KeyStates(store, profile.id, now=lambda: DAY2, bump_keys=BUMP)
+        assert (states.speed_baseline("f"), states.speed_baseline("j")) == (1000, 3000)
         assert states.slow_keys() == set()
-        assert states.speed_baseline("f") is None
 
     def test_the_bump_keys_are_in_the_pool_before_they_meet_the_floors(self) -> None:
         store = FakeStore()
@@ -621,20 +647,25 @@ class TestSpeedTerm:
     def test_known_agrees_with_the_rule_written_out_again(self) -> None:
         # The rule as the spike had it, over profiles that include what it is
         # for: keys past the ratio, and slower groups on both sides of half.
+        # Since 2026-11-08 a bump key has a term of its own too, so some
+        # profiles have a slow bump key (ADR-027 § Known's speed term after
+        # the ladder).
         def by_the_rule(medians: dict[str, float]) -> set[str]:
-            slow = set()
+            slow: set[str] = set()
             for name, ms in medians.items():
                 pool = [other_ms for other, other_ms in medians.items() if other != name]
-                if name not in BUMP and ms > RATIO * median(pool):
+                if ms > RATIO * median(pool):
                     slow.add(name)
             return slow
 
         rng = random.Random(12)
-        some_slow = all_pass_despite_slow_keys = 0
+        some_slow = all_pass_despite_slow_keys = slow_bump = 0
         for _ in range(40):
             others = rng.sample("ruvmdkslagh", rng.randint(1, 9))
             slow_share = rng.choice((0.0, 0.2, 0.5, 0.8))
             medians = {name: float(rng.randint(600, 1300)) for name in BUMP}
+            if rng.random() < 0.3:
+                medians[rng.choice(BUMP)] *= 4
             for name in others:
                 base = rng.randint(900, 1300)
                 medians[name] = float(
@@ -645,6 +676,7 @@ class TestSpeedTerm:
             assert states.slow_keys() == expected
             assert states.known_keys() == set(medians) - expected
             some_slow += bool(expected)
+            slow_bump += bool(expected & set(BUMP))
             beyond_the_bump_keys = [
                 name
                 for name in others
@@ -654,3 +686,4 @@ class TestSpeedTerm:
         # Both sides of the rule were actually generated.
         assert some_slow >= 5
         assert all_pass_despite_slow_keys >= 5
+        assert slow_bump >= 5
