@@ -9,6 +9,7 @@ from typing import Any
 
 import pytest
 
+import takki.main
 from takki.audio.cues import CueOutputError
 from takki.audio.tts import SpeechOutputError
 from takki.audio.tts_worker import TTSWorker
@@ -20,6 +21,7 @@ from takki.main import (
     resolve_language,
     verify_layout,
 )
+from takki.persistence import Profile, Store
 from takki.persistence.sqlite_store import SqliteStore
 from takki.platform.layout import build_de, build_en, build_is, describe_mismatch
 from takki.session import InboundEvent
@@ -27,6 +29,7 @@ from tests.fakes.fake_focus_source import FakeFocusSource
 from tests.fakes.fake_platform import FakePlatformInterface
 from tests.fakes.fake_sound_cues import FakeSoundCues
 from tests.fakes.scripted_key_stream import ScriptedKeyStream
+from tests.rest import seed_rest
 
 
 class TestResolveLanguage:
@@ -254,6 +257,16 @@ class TestStartup:
             close(store)
 
         monkeypatch.setattr(SqliteStore, "close", recording_close)
+
+        # Nothing writes rest keys before the alignment (#12m session (7)), and
+        # without them nothing is introduced (ADR-032 rest rule 1).
+        def profile_at_rest(store: Store, language: str) -> Profile:
+            profile = make_profile(store, language)
+            seed_rest(store, profile.id)
+            return profile
+
+        make_profile = takki.main._profile  # pyright: ignore[reportPrivateUsage]
+        monkeypatch.setattr("takki.main._profile", profile_at_rest)
 
         assert main() == 0
         assert engine.spoken[:6] == [

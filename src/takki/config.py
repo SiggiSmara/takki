@@ -133,12 +133,18 @@ REST_SETTLED_SESSION_STARTS = 5
 
 # ADR-010 § Progression Rules. The gate on *when* a new key is introduced, as
 # opposed to which one: the most keys a child may have Active but not yet
-# Known. Every key that becomes Known frees a slot. Six is three steps of one
-# letter per hand on a first day, which is what ADR-033's spike ran; it has no
-# derivation beyond that and is tuned by ear. Meant to be raised per child
-# -- a keen one, or one who already knows the keyboard -- once ADR-025's
-# per-profile tier exists.
+# Known. Every key that becomes Known frees a slot. The bump letters hold none
+# (ADR-033), so six is three steps of one letter per hand after `f j` on a
+# first day, which is what ADR-033's spike ran; it has no derivation beyond
+# that and is tuned by ear. Meant to be raised per child -- a keen one, or one
+# who already knows the keyboard -- once ADR-025's per-profile tier exists.
 MAX_KEYS_IN_PROGRESS = 6
+
+# ADR-033 § Introduction order and slots: a rest letter takes an early turn in
+# Ordering C only if its key carries at least this share of the language's key
+# presses (ADR-032 § A key's share of key presses). Below it the letter is
+# weak and waits for its ordinary rank.
+REST_LETTER_MIN_SHARE = 0.02
 
 # ADR-010 § The Two Practice Layers. Counted over *Active* graphemes, not Known
 # -- ADR-027 § Milestone Ladder and ADR-028 § Layer-2 unlock both read it that

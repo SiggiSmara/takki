@@ -22,6 +22,7 @@ from takki.lesson.introducer import (
     KeyIntroduction,
     base_key,
     home_anchor_keys,
+    home_row_fill,
     introduction_sequence,
 )
 from takki.lesson.key_state import CONFIDENCE_Z, Evidence, KeyStates, accuracy_bound
@@ -31,6 +32,7 @@ from takki.platform.layout import Layout, build_en, build_is
 from tests.fakes.fake_clock import FakeClock
 from tests.fakes.fake_store import FakeStore
 from tests.fakes.fixed_list_source import FixedListSource
+from tests.rest import READY
 from tests.sessions import session_for
 
 # Real English words so the bigram pool is a real one, weighted so the drill
@@ -544,7 +546,11 @@ class TestFirstSteps:
     def steps(self) -> tuple[Layout, WordSource, list[IntroductionStep]]:
         layout = build_en()
         source = FixedListSource(EN_WORDS)
-        return layout, source, introduction_sequence(layout, source)[:3]
+        return (
+            layout,
+            source,
+            introduction_sequence(layout, source, set(), READY, home_row_fill)[:3],
+        )
 
     def test_the_first_step_is_the_bump_letters(self) -> None:
         _, _, steps = self.steps()

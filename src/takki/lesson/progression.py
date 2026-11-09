@@ -19,6 +19,7 @@ do: Known needs 90 attempts across two calendar days.
 from collections.abc import Iterable
 
 from takki import config
+from takki.lesson.introducer import home_anchor_keys
 from takki.lesson.key_state import KeyStates
 from takki.platform.layout import Layout
 
@@ -43,8 +44,12 @@ def layer_two_unlocked(
 
 
 def keys_in_progress(layout: Layout, states: KeyStates) -> set[str]:
-    """The keys holding a slot: introduced and practised, not yet Known."""
-    return active_graphemes(layout, states) - states.known_keys()
+    """The keys holding a slot: introduced and practised, not yet Known.
+
+    The bump letters hold none (ADR-033 § Introduction order and slots).
+    """
+    held = active_graphemes(layout, states) - states.known_keys()
+    return held - set(home_anchor_keys(layout))
 
 
 def room_for_step(
@@ -60,4 +65,5 @@ def room_for_step(
         # otherwise never let it through.
         return True
     # A union, so a member that is already Active is not counted twice.
-    return len(in_progress | set(graphemes)) <= cap
+    taking = set(graphemes) - set(home_anchor_keys(layout))
+    return len(in_progress | taking) <= cap

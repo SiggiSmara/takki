@@ -7,12 +7,13 @@ import pytest
 
 from takki import config
 from takki.lesson import rampup
-from takki.lesson.introducer import HOME_ROW, base_key, introduction_sequence
+from takki.lesson.introducer import HOME_ROW, base_key, home_row_fill, introduction_sequence
 from takki.lesson.rampup import RampUpPhase, RampUpProgress
 from takki.persistence import Attempt, PhaseRecord
 from takki.platform.layout import Layout, build_en
 from tests.fakes.fake_store import FakeStore
 from tests.fakes.fixed_list_source import FixedListSource
+from tests.rest import READY
 from tests.sessions import session_for
 from tests.test_drills import EN_WORDS, Fixture, make_step
 
@@ -330,7 +331,8 @@ class TestBlockInvariants:
         """
         layout = build_en()
         source = FixedListSource(EN_WORDS)
-        steps = introduction_sequence(layout, source)
+        # Ordering A: a fixture of pairs and solo steps, not a test of the order.
+        steps = introduction_sequence(layout, source, set(), READY, home_row_fill)
         chosen = [s for s in steps if (len(s.keys) == 1) == solo][:4]
         assert chosen, "no steps of the requested shape"
         produced: list[tuple[Layout, tuple[str, ...]]] = []

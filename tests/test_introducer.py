@@ -10,14 +10,20 @@ from takki.lesson.introducer import (
     DEFAULT_STRATEGY,
     IntroductionSlot,
     IntroductionStep,
+    IntroductionStrategy,
     KeyIntroducer,
     KeyIntroduction,
     Location,
+    Rest,
+    RestCell,
+    current_rest,
     describe,
     describe_location,
     home_anchor_keys,
     home_row_fill,
     introduction_sequence,
+    may_introduce,
+    per_hand_alternation,
     phase1_slots,
     phase2_slots,
     resume_step,
@@ -28,6 +34,7 @@ from takki.platform.layout import Grapheme, Layout, PhysicalKey, build_de, build
 from tests.fakes.fake_platform import FakePlatformInterface
 from tests.fakes.fake_store import FakeStore
 from tests.fakes.fixed_list_source import FixedListSource
+from tests.rest import READY
 
 # One word per letter of interest, weighted so the Phase 2 order is fully
 # determined by this table rather than by any corpus. Words are >= 3 chars
@@ -50,6 +57,21 @@ def source(words: dict[str, float]) -> WordSource:
     return FixedListSource(words)
 
 
+def ordered(
+    layout: Layout,
+    words: WordSource,
+    had: AbstractSet[str] = frozenset(),
+    strategy: IntroductionStrategy = home_row_fill,
+    rest: Rest = READY,
+) -> list[IntroductionStep]:
+    """The order, on Ordering A with every finger ready unless told otherwise.
+
+    Most tests here are about Ordering A's own structure -- its phases and the
+    locations its order produces -- so it is named, not taken from the default.
+    """
+    return introduction_sequence(layout, words, had, rest, strategy)
+
+
 def names(steps: list[IntroductionStep]) -> list[list[str]]:
     return [[k.grapheme for k in step.keys] for step in steps]
 
@@ -59,7 +81,7 @@ def flat(steps: list[IntroductionStep]) -> list[KeyIntroduction]:
 
 
 def sequence(layout: Layout, words: dict[str, float] = EN_WORDS) -> list[IntroductionStep]:
-    return introduction_sequence(layout, source(words))
+    return ordered(layout, source(words))
 
 
 def phase1(layout: Layout) -> list[list[str]]:
@@ -69,12 +91,12 @@ def phase1(layout: Layout) -> list[list[str]]:
     appear on `IntroductionStep` (ADR-032 § What this changes item 3), so a test
     about the phases asks the strategy directly.
     """
-    return [list(slot.keys) for slot in phase1_slots(layout, set())]
+    return [list(slot.keys) for slot in phase1_slots(layout, set(), READY)]
 
 
 def phase2(layout: Layout, words: dict[str, float] = EN_WORDS) -> list[list[str]]:
     had = {name for row in phase1(layout) for name in row}
-    return [list(slot.keys) for slot in phase2_slots(layout, source(words), had)]
+    return [list(slot.keys) for slot in phase2_slots(layout, source(words), had, READY)]
 
 
 def phase2_steps(layout: Layout, words: dict[str, float] = EN_WORDS) -> list[IntroductionStep]:
@@ -90,7 +112,9 @@ def stocked(store: Store, profile_id: int, *chars: str) -> None:
 def introducer(
     layout: Layout, store: Store, profile_id: int, words: dict[str, float] = EN_WORDS
 ) -> KeyIntroducer:
-    return KeyIntroducer(layout, source(words), KeyStates(store, profile_id))
+    return KeyIntroducer(
+        layout, source(words), KeyStates(store, profile_id), lambda: READY, home_row_fill
+    )
 
 
 class TestPhase1Order:
@@ -260,9 +284,7 @@ class TestCompositeIntroduction:
     def test_a_composite_is_pooled_by_the_hand_of_its_base_stroke(self) -> None:
         # ADR-032 § Decision 1 rule 2 -- not by the modifier, which is R-pink
         # for all six and balances nothing.
-        sides = {
-            k.grapheme: k.side for k in flat(introduction_sequence(build_is(), WordfreqSource()))
-        }
+        sides = {k.grapheme: k.side for k in flat(ordered(build_is(), WordfreqSource()))}
         assert [sides[c] for c in "áéíóúý"] == ["L", "L", "R", "R", "R", "R"]
 
     def test_a_step_may_carry_two_graphemes_and_three_physical_keys(self) -> None:
@@ -270,7 +292,7 @@ class TestCompositeIntroduction:
         # 2026-08-23: a composite paired with an ordinary letter.
         step = next(
             s
-            for s in introduction_sequence(build_is(), WordfreqSource())
+            for s in ordered(build_is(), WordfreqSource())
             if any(k.is_composite for k in s.keys) and len(s.keys) == 2
         )
         assert [k.grapheme for k in step.keys] == ["á", "ð"]
@@ -401,9 +423,7 @@ class TestLocation:
         store = FakeStore()
         profile = store.create_profile("Ana")
         stocked(store, profile.id, *"asdfghjkl", "r")
-        steps = introduction_sequence(
-            build_en(), source(EN_WORDS), KeyStates(store, profile.id).active_keys()
-        )
+        steps = ordered(build_en(), source(EN_WORDS), KeyStates(store, profile.id).active_keys())
         e = next(k for k in flat(steps) if k.grapheme == "e")
         assert e.location == Location(reference="d", row_delta=-1, col_delta=0)
 
@@ -624,7 +644,7 @@ class TestPurity:
         # introduced and has no position of its own, while 'dead-acute' belongs
         # to what the child can strike and must never be introduced again.
         layout = build_is()
-        steps = introduction_sequence(layout, source(EN_WORDS), {"á", "a", "æ"})
+        steps = ordered(layout, source(EN_WORDS), {"á", "a", "æ"})
         assert "á" not in [k.grapheme for k in flat(steps)]
         assert all(k.modifier is None for k in flat(steps))
 
@@ -634,7 +654,7 @@ class TestPurity:
         # base's own step anchors it to itself at distance zero and the script
         # says "reach nowhere from A".
         layout = build_is()
-        steps = introduction_sequence(layout, source(EN_WORDS), {"á"})
+        steps = ordered(layout, source(EN_WORDS), {"á"})
         for k in flat(steps):
             assert k.location is None or k.location.reference != k.base
 
@@ -645,17 +665,15 @@ class TestPurity:
         layout = build_is()
         del layout.graphemes["a"]
         with pytest.raises(ValueError, match="not a grapheme of this layout"):
-            introduction_sequence(layout, source(EN_WORDS))
+            ordered(layout, source(EN_WORDS))
 
     def test_a_name_the_layout_does_not_produce_is_ignored(self) -> None:
         layout = build_en()
-        assert names(introduction_sequence(layout, source(EN_WORDS), {"ß"})) == names(
-            sequence(layout)
-        )
+        assert names(ordered(layout, source(EN_WORDS), {"ß"})) == names(sequence(layout))
 
     def test_the_default_layout_from_the_fake_platform_sequences(self) -> None:
         platform = FakePlatformInterface()
-        steps = introduction_sequence(platform.get_layout_positions(), source(EN_WORDS))
+        steps = ordered(platform.get_layout_positions(), source(EN_WORDS))
         assert names(steps)[0] == ["f", "j"]
 
 
@@ -669,16 +687,20 @@ def scrambled_index_columns() -> Layout:
 
 
 def alphabetical(
-    layout: Layout, source: WordSource, had: AbstractSet[str]
+    layout: Layout, source: WordSource, had: AbstractSet[str], rest: Rest
 ) -> list[IntroductionSlot]:
-    """A trivial second ordering: every remaining grapheme solo, alphabetically.
+    """A trivial ordering: every remaining grapheme solo, alphabetically.
 
-    Not a curriculum — it exists to show the order is selectable, and lives in
-    the test file for exactly that reason (ADR-032 § Decision 2 ships one
-    strategy). It does not open at the bump letters, which the seam allows
-    until #12m session (5) builds the rules that bind every strategy.
+    Not a curriculum -- it exists to show the order is selectable, and lives in
+    the test file for that reason. It obeys the rest rules like every strategy
+    (decided 2026-11-09): the bump letters come first from above it, and it
+    applies rules 2 and 3 itself, which for one-letter steps is a filter.
     """
-    return [IntroductionSlot((name,)) for name in sorted(set(layout.graphemes) - set(had))]
+    return [
+        IntroductionSlot((name,))
+        for name in sorted(set(layout.graphemes) - set(had))
+        if may_introduce(layout, name, had, rest)
+    ]
 
 
 class TestBumpLetters:
@@ -725,7 +747,7 @@ class TestBumpLetters:
 
     def test_the_bump_pair_leaves_no_degenerate_step_once_had(self) -> None:
         # Fully had, the pair must vanish rather than emit an empty step.
-        steps = introduction_sequence(build_en(), source(EN_WORDS), {"f", "j"})
+        steps = ordered(build_en(), source(EN_WORDS), {"f", "j"})
         assert all(step.keys for step in steps)
         assert names(steps)[0] == ["d", "k"]
 
@@ -829,7 +851,7 @@ class TestRealIcelandic:
         assert 0.013 < share["á"] < 0.014
 
     def test_the_accent_key_arrives_with_a_acute_and_not_twenty_keys_earlier(self) -> None:
-        steps = introduction_sequence(build_is(), WordfreqSource())
+        steps = ordered(build_is(), WordfreqSource())
         announced = [k for k in flat(steps) if k.modifier is not None]
         assert [k.grapheme for k in announced] == ["á"]
         order = [k.grapheme for k in flat(steps)]
@@ -839,7 +861,7 @@ class TestRealIcelandic:
         assert "dead-acute" not in order
 
     def test_the_full_real_icelandic_order(self) -> None:
-        steps = introduction_sequence(build_is(), WordfreqSource())
+        steps = ordered(build_is(), WordfreqSource())
         assert names(steps) == [
             ["f", "j"],
             ["d", "k"],
@@ -866,40 +888,49 @@ class TestRealIcelandic:
 class TestStrategySeam:
     """ADR-032 § Decision 2 — the ordering is selectable."""
 
-    def test_the_default_is_the_two_phase_home_row_fill_order(self) -> None:
-        assert DEFAULT_STRATEGY is home_row_fill
-        explicit = introduction_sequence(build_en(), source(EN_WORDS), strategy=home_row_fill)
-        assert names(explicit) == names(sequence(build_en()))
+    def test_the_default_is_ordering_c(self) -> None:
+        # ADR-032 § What Alpha ships, restated: C is the compiled default and A
+        # stays selectable. Ordering B is retired, so nothing builds it.
+        assert DEFAULT_STRATEGY is per_hand_alternation
+        default = introduction_sequence(build_en(), source(EN_WORDS), set(), READY)
+        assert names(default) == names(
+            ordered(build_en(), source(EN_WORDS), strategy=per_hand_alternation)
+        )
+        assert names(default) != names(sequence(build_en()))
 
-    def test_swapping_the_strategy_changes_the_whole_order(self) -> None:
-        # Nothing runs ahead of the strategy any more: with Stage 0 gone, the
-        # first step is the strategy's own.
-        swapped = introduction_sequence(build_en(), source(EN_WORDS), strategy=alphabetical)
-        assert names(swapped) == [[c] for c in sorted(build_en().graphemes)]
+    def test_swapping_the_strategy_changes_the_order_after_the_bump_letters(self) -> None:
+        # Rest rule 1 sits above every strategy, this one included.
+        swapped = ordered(build_en(), source(EN_WORDS), strategy=alphabetical)
+        rest = [[c] for c in sorted(build_en().graphemes) if c not in "fj"]
+        assert names(swapped) == [["f", "j"], *rest]
         assert names(swapped) != names(sequence(build_en()))
 
-    def test_the_strategy_is_handed_exactly_what_was_had(self) -> None:
-        seen: list[set[str]] = []
+    def test_the_strategy_is_handed_what_was_had_and_the_bump_letters(self) -> None:
+        seen: list[tuple[set[str], Rest]] = []
 
         def recording(
-            layout: Layout, source: WordSource, had: AbstractSet[str]
+            layout: Layout, source: WordSource, had: AbstractSet[str], rest: Rest
         ) -> list[IntroductionSlot]:
-            seen.append(set(had))
+            seen.append((set(had), rest))
             return []
 
-        introduction_sequence(build_en(), source(EN_WORDS), {"e"}, recording)
-        assert seen == [{"e"}]
+        steps = ordered(build_en(), source(EN_WORDS), {"e"}, recording)
+        assert seen == [({"e", "f", "j"}, READY)]
+        assert names(steps) == [["f", "j"]]
 
     def test_the_introducer_uses_the_strategy_it_was_given(self) -> None:
         store = FakeStore()
         profile = store.create_profile("Ana")
         intro = KeyIntroducer(
-            build_en(), source(EN_WORDS), KeyStates(store, profile.id), alphabetical
+            build_en(), source(EN_WORDS), KeyStates(store, profile.id), lambda: READY, alphabetical
         )
         emitted: list[list[str]] = []
         while (step := intro.introduce_next()) is not None:
             emitted.append([k.grapheme for k in step.keys])
-        assert emitted == [[c] for c in sorted(build_en().graphemes)]
+        assert emitted == [
+            ["f", "j"],
+            *([c] for c in sorted(build_en().graphemes) if c not in "fj"),
+        ]
 
 
 class TestRemember:
@@ -911,9 +942,11 @@ class TestRemember:
         source = FixedListSource(EN_WORDS)
         store = FakeStore()
         profile = store.create_profile("kid").id
-        introducer = KeyIntroducer(layout, source, KeyStates(store, profile))
+        introducer = KeyIntroducer(
+            layout, source, KeyStates(store, profile), lambda: READY, home_row_fill
+        )
         assert introducer.last_step is None
-        step = introduction_sequence(layout, source)[0]
+        step = ordered(layout, source)[0]
         introducer.remember(step)
         assert introducer.last_step is step
 
@@ -922,8 +955,10 @@ class TestRemember:
         source = FixedListSource(EN_WORDS)
         store = FakeStore()
         profile = store.create_profile("kid").id
-        introducer = KeyIntroducer(layout, source, KeyStates(store, profile))
-        first, second = introduction_sequence(layout, source)[:2]
+        introducer = KeyIntroducer(
+            layout, source, KeyStates(store, profile), lambda: READY, home_row_fill
+        )
+        first, second = ordered(layout, source)[:2]
         introducer.remember(first)
         emitted = introducer.introduce_next()
         assert emitted is not None
@@ -942,7 +977,7 @@ class TestResumeStep:
         layout = build()
         words = WordfreqSource()
         had: set[str] = set()
-        steps = introduction_sequence(layout, words)
+        steps = ordered(layout, words)
         assert any(intro.modifier for intro in flat(steps)) == (build is build_is)
         for step in steps:
             members = [intro.grapheme for intro in step.keys]
@@ -955,3 +990,333 @@ class TestResumeStep:
         layout = build_en()
         first = sequence(layout)[0]
         assert resume_step(layout, ["f", "j"], {"f", "j"}) == first
+
+
+# Ordering C's fixture (#12m session (5)): `s`, `l` and `a` are rest letters
+# well above REST_LETTER_MIN_SHARE, `k` is one far below it, and `d` and `;`
+# carry nothing. Every other letter weighs zero and ranks alphabetically.
+C_WORDS: dict[str, float] = {
+    "sss": 100.0,
+    "eee": 90.0,
+    "nnn": 80.0,
+    "lll": 70.0,
+    "ttt": 60.0,
+    "ooo": 50.0,
+    "aaa": 40.0,
+    "iii": 30.0,
+    "kkk": 1.0,
+}
+
+
+def members(steps: list[list[str]]) -> list[str]:
+    return [name for step in steps for name in step]
+
+
+def c_order(rest: Rest, had: AbstractSet[str] = frozenset()) -> list[list[str]]:
+    return names(ordered(build_en(), source(C_WORDS), had, per_hand_alternation, rest))
+
+
+def with_rest(**cells: RestCell | None) -> dict[str, RestCell]:
+    """READY with some fingers moved (a cell), or removed (None). Keyword `L_mid` is `L-mid`."""
+    rest = dict(READY)
+    for name, cell in cells.items():
+        finger = name.replace("_", "-")
+        if cell is None:
+            del rest[finger]
+        else:
+            rest[finger] = cell
+    return rest
+
+
+STRATEGIES = [per_hand_alternation, home_row_fill, alphabetical]
+
+
+class TestRestRuleOne:
+    """ADR-032 rest rule 1: the bump letters first, together, once both index fingers are ready."""
+
+    @pytest.mark.parametrize("strategy", STRATEGIES)
+    @pytest.mark.parametrize(
+        "rest",
+        [
+            {},
+            with_rest(L_idx=RestCell(3, 4, False)),
+            with_rest(R_idx=RestCell(3, 7, False)),
+            with_rest(L_idx=None),
+            with_rest(L_idx=RestCell(3, 4, False), R_idx=RestCell(3, 7, False)),
+        ],
+    )
+    def test_nothing_until_both_index_fingers_are_ready(
+        self, strategy: IntroductionStrategy, rest: Rest
+    ) -> None:
+        assert ordered(build_en(), source(C_WORDS), set(), strategy, rest) == []
+
+    @pytest.mark.parametrize("strategy", STRATEGIES)
+    def test_the_bump_letters_open_every_strategy(self, strategy: IntroductionStrategy) -> None:
+        steps = names(ordered(build_en(), source(C_WORDS), set(), strategy, READY))
+        assert steps[0] == ["f", "j"]
+        assert "f" not in members(steps[1:]) and "j" not in members(steps[1:])
+
+    @pytest.mark.parametrize("strategy", STRATEGIES)
+    def test_with_only_the_index_fingers_the_bump_letters_still_come(
+        self, strategy: IntroductionStrategy
+    ) -> None:
+        rest = {finger: READY[finger] for finger in ("L-idx", "R-idx")}
+        steps = names(ordered(build_en(), source(C_WORDS), set(), strategy, rest))
+        assert steps[0] == ["f", "j"]
+
+
+class TestRestRulesTwoAndThree:
+    """ADR-032 rest rules 2 and 3, on Ordering C with exact sequences."""
+
+    def test_every_finger_ready(self) -> None:
+        assert c_order(READY) == [
+            ["f", "j"],
+            ["e", "n"],
+            ["s", "l"],
+            ["t", "o"],
+            ["a", "i"],
+            ["b", "k"],
+            ["c", "h"],
+            ["d", "m"],
+            ["g", "p"],
+            ["q", "u"],
+            ["r", "y"],
+            ["v"],
+            ["w"],
+            ["x"],
+            ["z"],
+        ]
+
+    def test_a_finger_with_no_rest_key_is_passed_over(self) -> None:
+        # Rule 2: only the index fingers are chosen, so only their columns
+        # (4-5 and 6-7) give letters, and no rest letter takes a turn.
+        rest = {finger: READY[finger] for finger in ("L-idx", "R-idx")}
+        assert c_order(rest) == [
+            ["f", "j"],
+            ["t", "n"],
+            ["b", "h"],
+            ["g", "m"],
+            ["r", "u"],
+            ["v", "y"],
+        ]
+
+    def test_a_chosen_finger_not_ready_gives_its_rest_letter_and_nothing_else(self) -> None:
+        # Rule 3: the left ring finger is chosen on `s`, not ready. `s` comes
+        # at its turn; `w` and `x`, reached from it, are left out.
+        rest = with_rest(L_ring=RestCell(3, 2, False))
+        assert c_order(rest) == [
+            ["f", "j"],
+            ["e", "n"],
+            ["s", "l"],
+            ["t", "o"],
+            ["a", "i"],
+            ["b", "k"],
+            ["c", "h"],
+            ["d", "m"],
+            ["g", "p"],
+            ["q", "u"],
+            ["r", "y"],
+            ["v"],
+            ["z"],
+        ]
+
+    def test_a_weak_rest_letter_on_a_chosen_finger_comes_at_its_rank(self) -> None:
+        # `k` is under the floor, so it waits in the useful queue at its rank,
+        # and needs its finger only chosen. `i`, reached from it, is passed
+        # over, so the right hand takes `k`, its next letter that may come.
+        rest = with_rest(R_mid=RestCell(3, 8, False))
+        assert c_order(rest) == [
+            ["f", "j"],
+            ["e", "n"],
+            ["s", "l"],
+            ["t", "o"],
+            ["a", "k"],
+            ["b", "h"],
+            ["c", "m"],
+            ["d", "p"],
+            ["g", "u"],
+            ["q", "y"],
+            ["r"],
+            ["v"],
+            ["w"],
+            ["x"],
+            ["z"],
+        ]
+
+    def test_a_rest_letter_on_an_unconventional_key_is_a_rest_letter(self) -> None:
+        # ADR-033: a child whose left middle finger rests on `e` has `e` as a
+        # rest letter, strong here, and `d` as an ordinary one.
+        rest = with_rest(L_mid=RestCell(2, 3, True))
+        assert c_order(rest) == [
+            ["f", "j"],
+            ["t", "n"],
+            ["s", "l"],
+            ["b", "o"],
+            ["e", "i"],
+            ["c", "k"],
+            ["a", "h"],
+            ["d", "m"],
+            ["g", "p"],
+            ["q", "u"],
+            ["r", "y"],
+            ["v"],
+            ["w"],
+            ["x"],
+            ["z"],
+        ]
+
+    def test_a_finger_that_becomes_ready_brings_its_letters_from_then_on(self) -> None:
+        not_ready = with_rest(L_ring=RestCell(3, 2, False))
+        had = {name for step in c_order(not_ready) for name in step}
+        assert c_order(READY, had) == [["w"], ["x"]]
+
+
+class TestOrderingC:
+    """ADR-032 § Ordering C, restated: whose turn it is, decided by a count."""
+
+    def test_each_hands_first_turn_is_useful_and_the_bump_letters_count_as_neither(
+        self,
+    ) -> None:
+        assert c_order(READY)[1] == ["e", "n"]
+        assert c_order(READY, {"f", "j", "e", "n"})[0] == ["s", "l"]
+
+    def test_a_hand_with_no_strong_rest_letter_left_takes_a_useful_one(self) -> None:
+        # The right hand's only strong rest letter is `l`; after it, every
+        # turn that would be strong falls to the useful queue.
+        right = [step[-1] for step in c_order(READY)[1:11]]
+        assert right == ["n", "l", "o", "i", "k", "h", "m", "p", "u", "y"]
+
+    def test_the_count_reads_the_letters_already_had(self) -> None:
+        # Had `e` and `t` (two useful) and no rest letter: the left hand's next
+        # turns are strong until the count evens out -- `s`, then `a`.
+        assert c_order(READY, {"f", "j", "e", "t"})[:3] == [["s", "n"], ["a", "l"], ["b", "o"]]
+
+    def test_equal_shares_are_taken_in_ranking_order(self) -> None:
+        # `a` and `s` carry the same share of key presses (two `a` in "aab",
+        # one `s` in a word twice as frequent), and `s` ranks first, because a
+        # letter counts once per word. Alphabetical order would put `a` first.
+        words = {"aab": 10.0, "sbc": 20.0}
+        shares = source(words).key_shares(build_en())
+        assert shares["a"] == shares["s"]
+        steps = names(ordered(build_en(), source(words), set(), per_hand_alternation))
+        left = [step[0] for step in steps[1:5]]
+        assert left == ["b", "s", "c", "a"]
+
+
+class TestCompositeReadiness:
+    """Decided 2026-11-09 (ADR-032 "What a composite would need"): reading B."""
+
+    def test_the_modifier_s_finger_must_be_ready_when_the_composite_brings_it_in(self) -> None:
+        layout = build_is()
+        had = {"f", "j", "a"}
+        assert may_introduce(layout, "á", had, READY)
+        rest = with_rest(R_pink=RestCell(3, 10, False))
+        assert not may_introduce(layout, "á", had, rest)
+
+    def test_a_modifier_that_is_its_finger_s_rest_key_needs_it_only_chosen(self) -> None:
+        rest = with_rest(R_pink=RestCell(3, 11, False))
+        assert may_introduce(build_is(), "á", {"f", "j", "a"}, rest)
+
+    def test_once_the_modifier_is_had_its_finger_is_not_read(self) -> None:
+        rest = with_rest(R_pink=None)
+        assert may_introduce(build_is(), "é", {"f", "j", "a", "á", "e"}, rest)
+
+    def test_a_base_on_its_finger_s_rest_key_needs_it_only_chosen(self) -> None:
+        # `á` is struck on `a`, the left little finger's rest key: no reach.
+        rest = with_rest(L_pink=RestCell(3, 1, False))
+        assert may_introduce(build_is(), "á", {"f", "j", "a"}, rest)
+
+    def test_any_other_base_needs_its_finger_ready(self) -> None:
+        rest = with_rest(L_mid=RestCell(3, 3, False))
+        assert not may_introduce(build_is(), "é", {"f", "j", "a", "á", "e"}, rest)
+
+
+class TestOrderingAUnderTheRules:
+    """ADR-032 § Ordering A under the rules: pairs by column, a member passed over."""
+
+    def test_a_member_passed_over_leaves_its_partner_alone_and_stays_out_of_phase_2(
+        self,
+    ) -> None:
+        rest = with_rest(L_mid=None)
+        steps = names(ordered(build_en(), source(C_WORDS), set(), home_row_fill, rest))
+        assert steps[:5] == [["f", "j"], ["k"], ["s", "l"], ["a"], ["g", "h"]]
+        assert not {"d", "e", "c"} & set(members(steps))
+
+    @pytest.mark.parametrize("cell", [None, RestCell(2, 1, False)])
+    def test_a_composite_never_comes_before_a_base_passed_over_in_phase_1(
+        self, cell: RestCell | None
+    ) -> None:
+        # Phase 2 is handed every home-row letter as had, so `eligible` opens
+        # for `á` while `a` is still waiting. `may_introduce` holds it back,
+        # because `á` is struck on the same key (found by session (5)'s review).
+        rest = with_rest(L_pink=cell)
+        order = members(names(ordered(build_is(), WordfreqSource(), set(), home_row_fill, rest)))
+        assert "a" not in order
+        assert "á" not in order
+
+    def test_it_comes_back_alone_at_the_head_of_phase_1(self) -> None:
+        had = {"f", "j", "k", "s", "l", "a", "g", "h", "t", "n"}
+        steps = names(ordered(build_en(), source(C_WORDS), had, home_row_fill, READY))
+        assert steps[0] == ["d"]
+
+
+class TestTheOrderIsAForecast:
+    """ADR-032: an empty order means nothing may come now, not that the curriculum is done."""
+
+    def test_the_introducer_reads_the_rest_state_each_time(self) -> None:
+        store = FakeStore()
+        profile = store.create_profile("Ana")
+        rest: dict[str, RestCell] = {}
+        intro = KeyIntroducer(
+            build_en(), source(C_WORDS), KeyStates(store, profile.id), lambda: rest
+        )
+        assert intro.upcoming() is None
+        assert intro.introduce_next() is None
+        rest.update(READY)
+        step = intro.introduce_next()
+        assert step is not None
+        assert [k.grapheme for k in step.keys] == ["f", "j"]
+
+    def test_letters_waiting_on_a_finger_do_not_raise(self) -> None:
+        # Phase 2 runs dry with letters left in its pools; only a composite
+        # with no base letter is an error (the test in TestPurity).
+        rest = with_rest(L_mid=None)
+        slots = phase2_slots(build_is(), source(C_WORDS), {"f", "j"}, rest)
+        assert "e" not in {name for slot in slots for name in slot.keys}
+
+    def test_current_rest_reads_current_keys_and_whether_they_are_ready(self) -> None:
+        store = FakeStore()
+        pid = store.create_profile("Ana").id
+        store.choose_rest_key(pid, "L-mid", 3, 3, "landings")
+        store.mark_rest_key_ready(pid, "L-mid")
+        store.choose_rest_key(pid, "L-mid", 2, 3, "landings")
+        store.choose_rest_key(pid, "R-mid", 3, 8, "answer")
+        store.mark_rest_key_passed(pid, "R-mid")
+        assert current_rest(store.rest_keys(pid)) == {
+            "L-mid": RestCell(2, 3, False),
+            "R-mid": RestCell(3, 8, False),
+        }
+
+
+@pytest.mark.slow
+class TestRealOrderingC:
+    """ADR-032 § Ordering C, restated: its table of orders, on the real word data.
+
+    Every finger ready only; the spike that made the table implements the
+    count rule itself, so this pins the engine against it in that one state.
+    """
+
+    @pytest.mark.parametrize(
+        ("build", "rest", "expected"),
+        [
+            (build_en, READY, "fj en al to si rh du cm"),
+            (build_de, READY, "fj en sl ri ah tu dm co"),
+            (build_is, READY, "fj ri al en sk tu gm vð"),
+            (build_en, with_rest(L_mid=RestCell(2, 3, True)), "fj tn el ro ai dh su cm"),
+        ],
+    )
+    def test_the_amendments_table(
+        self, build: Callable[[], Layout], rest: Rest, expected: str
+    ) -> None:
+        steps = ordered(build(), WordfreqSource(), set(), per_hand_alternation, rest)
+        assert ["".join(step) for step in names(steps)[:8]] == expected.split()

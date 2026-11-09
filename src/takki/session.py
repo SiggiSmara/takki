@@ -45,6 +45,8 @@ from takki.lesson.introducer import (
     IntroductionStrategy,
     KeyIntroducer,
     KeyIntroduction,
+    Rest,
+    current_rest,
     describe,
     home_anchor_keys,
     resume_step,
@@ -192,7 +194,9 @@ class SessionLoop:
             self._clock,
             lengths=self._lengths,
         )
-        self._introducer = KeyIntroducer(self._layout, self._source, self._states, self._strategy)
+        self._introducer = KeyIntroducer(
+            self._layout, self._source, self._states, self._rest, self._strategy
+        )
         self._drills = DrillGenerator(
             self._layout,
             self._source,
@@ -550,9 +554,10 @@ class SessionLoop:
            step 2 may just have started.
 
         **The curriculum does not wait for the `rest` rung, but it does wait
-        for Known** (ADR-010 § Progression Rules, alpha-plan #12g). Six slots
-        let three steps of one letter per hand come on the first day, and a
-        later step waits for a slot. The rung is not a gate, and the price is
+        for Known** (ADR-010 § Progression Rules, alpha-plan #12g). The bump
+        letters hold no slot, so six slots let `f j` and three steps of one
+        letter per hand come on the first day, and a later step waits for a
+        slot. The rung is not a gate, and the price is
         a rung that fires late and often after `third` (ADR-027 § The `rest`
         rung).
         """
@@ -573,10 +578,16 @@ class SessionLoop:
         self._prompt_deadline = None
         self._prompt_due = bool(self._block.prompts)
         if not self._block.prompts:
-            # Nothing left to introduce and nothing Active to drill. Reachable
-            # only from an empty curriculum; without it the loop would spin
+            # Nothing that may be introduced now and nothing Active to drill:
+            # an empty curriculum, or a profile whose index fingers are not
+            # both ready (ADR-032 rest rule 1), which is every profile until
+            # the alignment writes `rest_keys` (#12m session (7)). What the
+            # session says then is (7)'s. Without this the loop would spin
             # forever issuing no prompts.
             self.running = False
+
+    def _rest(self) -> Rest:
+        return current_rest(self._store.rest_keys(self._profile_id))
 
     def _milestones(self) -> MilestoneDetector:
         # Fresh per check: it holds no state, and the persisted rows are the
@@ -647,6 +658,8 @@ class SessionLoop:
             return
         upcoming = self._introducer.upcoming()
         if upcoming is None:
+            # Nothing may be introduced now; a finger that becomes ready
+            # brings letters back at a later boundary.
             return
         if not room_for_step(
             self._layout,

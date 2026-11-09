@@ -33,6 +33,7 @@ from tests.fakes.fake_tts import FakeTTSEngine
 from tests.fakes.fixed_list_source import FixedListSource
 from tests.fakes.scripted_key_stream import ScriptedKeyStream
 from tests.fakes.waiting_queue import install
+from tests.rest import READY, seed_rest
 from tests.sessions import session_for
 
 EN_WORDS: dict[str, float] = {
@@ -48,9 +49,10 @@ EN_WORDS: dict[str, float] = {
     "just": 10.0,
 }
 
-# Every slot taken (ADR-010): six keys Active and none Known, so a session
-# seeded with this introduces nothing and goes straight to steady state.
-FULL_SLOTS = dict.fromkeys("fjruvm", 10)
+# Every slot taken (ADR-010): the bump letters, which hold none (ADR-033), and
+# six keys Active and none Known, so a session seeded with this introduces
+# nothing and goes straight to steady state.
+FULL_SLOTS = dict.fromkeys("fjruvmdk", 10)
 DAY_ONE = "2026-01-01T10:00:00+00:00"
 DAY_TWO = "2026-01-02T10:00:00+00:00"
 
@@ -89,6 +91,8 @@ class Harness:
         max_keys_in_progress: int = config.MAX_KEYS_IN_PROGRESS,
         voice: str = SEED_VOICE,
         rate: float = config.TTS_RATE,
+        not_ready: tuple[str, ...] = (),
+        rest_keys: bool = True,
     ) -> None:
         self.layout = build_en()
         self.source = source or FixedListSource(words if words is not None else EN_WORDS)
@@ -105,6 +109,11 @@ class Harness:
         # the way a child restarting Takki does (alpha-plan #12d).
         self.store = store if store is not None else FakeStore()
         self.profile = profile if profile is not None else self.store.create_profile("kid")
+        # Nothing writes rest keys before the alignment (#12m session (7)), and
+        # with none the order is empty (ADR-032 rest rule 1). A profile passed
+        # back in for a second session keeps the keys it has.
+        if rest_keys and not self.store.rest_keys(self.profile.id):
+            seed_rest(self.store, self.profile.id, not_ready=not_ready)
         for name, count in (seed or {}).items():
             for _ in range(count):
                 self.store.upsert_key_stat(self.profile.id, name, True)
@@ -235,7 +244,7 @@ def intro_script(names: tuple[str, ...]) -> list[tuple[str, str, str]]:
     """A step's script as it is spoken: per member, the lead, the letter, the rest."""
     layout = build_en()
     source = FixedListSource(EN_WORDS)
-    for step in introduction_sequence(layout, source):
+    for step in introduction_sequence(layout, source, set(), READY):
         if tuple(k.grapheme for k in step.keys) == names:
             return [
                 (lead, intro.grapheme, rest)
@@ -354,12 +363,11 @@ class TestFirstStepEndToEnd:
         assert Counter(phase_c) == {"f": config.PHASE_C_ATTEMPTS, "j": config.PHASE_C_ATTEMPTS}
 
         # Out the other side: the ramp-up has ended and there are free slots,
-        # so the boundary asks the introducer for the second step. With no
-        # Stage 0 (ADR-033) that is home-row fill's next pair, `d k`, whose
-        # Phase A asks for each new letter alone.
+        # so the boundary asks the introducer for the second step, the default
+        # order's next pair, whose Phase A asks for each new letter alone.
         harness.settle()
-        assert harness.engine.spoken == intro_lines(("f", "j")) + intro_lines(("d", "k"))
-        assert harness.loop.prompt in {"d", "k"}
+        assert harness.engine.spoken == intro_lines(("f", "j")) + intro_lines(STEPS[1])
+        assert harness.loop.prompt in set(STEPS[1])
 
         counted = config.PHASE_A_STREAK + config.PHASE_B_ATTEMPTS + config.PHASE_C_ATTEMPTS
         for name in ("f", "j"):
@@ -1806,10 +1814,8 @@ class TestIntroductionPacingAcrossSessions:
         harness = Harness(store=store, profile=profile)
         harness.loop.start()
         harness.settle()
-        assert sorted({i.key_char for i in store.introductions(profile.id)} - {"f", "j"}) == [
-            "d",
-            "k",
-        ]
+        introduced = {i.key_char for i in store.introductions(profile.id)}
+        assert sorted(introduced - {"f", "j"}) == sorted(STEPS[1])
 
     def test_the_phase_the_child_reached_is_recorded_and_survives_the_restart(self) -> None:
         # The durable half of the fix. Session 1 gets past Phase A's bar; the
@@ -1875,7 +1881,7 @@ class TestIntroductionPacingAcrossSessions:
         first.loop.start()
         first.answer(6)
         first.loop.stop()
-        assert steps_of(store, profile.id) == [("f", "j"), ("d", "k")]
+        assert steps_of(store, profile.id) == STEPS[:2]
 
         second = Harness(store=store, profile=profile)
         second.loop.start()
@@ -1884,8 +1890,8 @@ class TestIntroductionPacingAcrossSessions:
         assert introducer is not None
         remembered = introducer.last_step
         assert remembered is not None
-        assert [describe(intro) for intro in remembered.keys] == intro_texts(("d", "k"))
-        assert all("Reach" in rest for _, rest in intro_texts(("d", "k")))
+        assert [describe(intro) for intro in remembered.keys] == intro_texts(STEPS[1])
+        assert all("Reach" in rest for _, rest in intro_texts(STEPS[1]))
         # Both members were answered, so nothing is spoken again.
         assert second.engine.spoken == []
 
@@ -1989,9 +1995,11 @@ class TestIntroductionPacingAcrossSessions:
         assert second.engine.spoken == intro_lines(("f", "j"))
 
 
+BUMPS = frozenset({"f", "j"})
+
 STEPS: list[tuple[str, ...]] = [
     tuple(intro.grapheme for intro in step.keys)
-    for step in introduction_sequence(build_en(), FixedListSource(EN_WORDS))
+    for step in introduction_sequence(build_en(), FixedListSource(EN_WORDS), set(), READY)
 ]
 
 
@@ -2037,6 +2045,21 @@ def finish(
                 )
 
 
+def slots_taken(step: tuple[str, ...]) -> int:
+    """The slots a step holds: the bump letters hold none (ADR-033)."""
+    return len(set(step) - BUMPS)
+
+
+def first_day(cap: int = config.MAX_KEYS_IN_PROGRESS) -> int:
+    """How many of `STEPS` a cold profile meets before the slots are full, read from the cap."""
+    taken = 0
+    for count, step in enumerate(STEPS):
+        taken += slots_taken(step)
+        if taken > cap:
+            return count
+    return len(STEPS)
+
+
 class TestSlots:
     """alpha-plan #12g — a new step needs a free slot, and Known is what frees one."""
 
@@ -2049,81 +2072,128 @@ class TestSlots:
         harness.settle()
         return harness
 
+    def test_the_first_day_is_the_bump_letters_and_three_steps_after_them(self) -> None:
+        # ADR-033's "three steps of one letter per hand on a first day", with
+        # `f j` holding no slot (decided 2026-11-09): eight letters, not six.
+        assert first_day() == 4
+        assert STEPS[0] == ("f", "j")
+        assert [len(step) for step in STEPS[:4]] == [2, 2, 2, 2]
+
     def test_a_cold_profile_meets_the_first_days_steps_and_then_waits(self) -> None:
-        # The steps that fit are read from the cap, not from the output: change
-        # the cap and this asks for a different prefix. At the shipped cap it is
-        # three pairs, `f j`, `d k`, `s l` under home-row fill (ADR-033's "three
-        # steps of one letter per hand on a first day").
-        first_day: list[tuple[str, ...]] = []
-        for step in STEPS:
-            if sum(len(s) for s in first_day) + len(step) > config.MAX_KEYS_IN_PROGRESS:
-                break
-            first_day.append(step)
+        steps = STEPS[: first_day()]
         harness = Harness(now=lambda: DAY_ONE)
         harness.loop.start()
         drills = harness.loop._drills  # pyright: ignore[reportPrivateUsage]
         assert drills is not None
-        for _ in range(2000):
-            if steps_of(harness.store, harness.profile.id) == first_day and drills.ramp_up is None:
+        for _ in range(3000):
+            if steps_of(harness.store, harness.profile.id) == steps and drills.ramp_up is None:
                 break
             harness.answer()
         else:
             raise AssertionError("the first day's steps were never introduced and ramped up")
 
         # Slots full, nothing Known on a first day: steady-state blocks over
-        # those six, however long the child goes on, and no fourth script. Not
-        # necessarily all six -- f and j were every later ramp-up's partners and
-        # are past SESSION_KEY_CEILING by now.
+        # those letters, however long the child goes on, and no further script.
+        # Not necessarily all of them -- some are past SESSION_KEY_CEILING by now.
         asked = harness.answer(4 * config.FIRST_BLOCK_PROMPTS)
-        assert set(asked) <= {name for step in first_day for name in step}
+        assert set(asked) <= {name for step in steps for name in step}
         assert drills.ramp_up is None
-        assert steps_of(harness.store, harness.profile.id) == first_day
-        assert harness.engine.spoken == [line for step in first_day for line in intro_lines(step)]
+        assert steps_of(harness.store, harness.profile.id) == steps
+        assert harness.engine.spoken == [line for step in steps for line in intro_lines(step)]
 
-    @pytest.mark.parametrize("known", ["", "f", "fj", "fjdksl"])
+    @pytest.mark.parametrize("known", ["", "f", "fj", "r", "ru", "fjr", "ruaneh"])
     def test_the_step_after_the_first_days_steps_waits_for_known_keys(self, known: str) -> None:
-        # The first three steps fill the cap. The fourth needs as many free
-        # slots as it has members (`a` alone under home-row fill, as column 10
-        # holds no letter), and six free slots still introduce one step,
-        # because its ramp-up then holds the next one back.
-        assert sum(len(step) for step in STEPS[:3]) == config.MAX_KEYS_IN_PROGRESS
-        introduced = 1 if len(known) >= len(STEPS[3]) else 0
-        harness = self.started(3, known)
-        assert steps_of(harness.store, harness.profile.id) == STEPS[: 3 + introduced]
+        # The first day's steps fill the cap. The next needs as many free slots
+        # as it has members, and a Known bump letter frees none, because it
+        # never held one. Six free slots still introduce one step, because its
+        # ramp-up then holds the next one back.
+        day = first_day()
+        assert sum(slots_taken(step) for step in STEPS[:day]) == config.MAX_KEYS_IN_PROGRESS
+        introduced = 1 if len(set(known) - BUMPS) >= slots_taken(STEPS[day]) else 0
+        harness = self.started(day, known)
+        assert steps_of(harness.store, harness.profile.id) == STEPS[: day + introduced]
         assert harness.engine.spoken == [
-            line for step in STEPS[3 : 3 + introduced] for line in intro_lines(step)
+            line for step in STEPS[day : day + introduced] for line in intro_lines(step)
         ]
 
     @pytest.mark.parametrize(("in_progress", "introduced"), [(6, 0), (5, 1)])
     def test_a_single_key_step_needs_one_slot(self, in_progress: int, introduced: int) -> None:
         index = next(i for i, step in enumerate(STEPS) if len(step) == 1)
         earlier = [name for step in STEPS[:index] for name in step]
-        harness = self.started(index, "".join(earlier[: len(earlier) - in_progress]))
+        known = earlier[: len(earlier) - in_progress]
+        assert not BUMPS & set(earlier[len(known) :])
+        harness = self.started(index, "".join(known))
         assert steps_of(harness.store, harness.profile.id) == STEPS[: index + introduced]
 
     def test_a_larger_cap_passed_by_construction_lets_the_next_step_in(self) -> None:
         # ADR-025: the per-profile tier will raise this for a child who can
         # carry more keys at once. Eight is room for exactly one more pair.
-        harness = self.started(3, max_keys_in_progress=8)
-        assert steps_of(harness.store, harness.profile.id) == STEPS[:4]
+        day = first_day()
+        harness = self.started(day, max_keys_in_progress=8)
+        assert steps_of(harness.store, harness.profile.id) == STEPS[: day + 1]
 
-    def test_a_smaller_cap_holds_a_cold_profile_at_its_first_step(self) -> None:
+    def test_a_smaller_cap_holds_a_cold_profile_after_its_first_two_steps(self) -> None:
+        # The bump letters take no slot, so the step after them always fits.
+        assert first_day(2) == 2
         harness = Harness(now=lambda: DAY_ONE, max_keys_in_progress=2)
         harness.loop.start()
         ramp_up = config.PHASE_A_STREAK + config.PHASE_B_ATTEMPTS + config.PHASE_C_ATTEMPTS
-        harness.answer(2 * ramp_up + 2 * config.FIRST_BLOCK_PROMPTS)
-        assert steps_of(harness.store, harness.profile.id) == STEPS[:1]
+        harness.answer(4 * ramp_up + 2 * config.FIRST_BLOCK_PROMPTS)
+        assert steps_of(harness.store, harness.profile.id) == STEPS[:2]
 
     def test_a_key_becoming_known_mid_session_opens_the_gate_at_the_next_boundary(self) -> None:
-        # Day two, all six one press short of Known. The first block's presses
-        # are those presses, so the boundary after it finds free slots.
-        harness = self.started(3)
-        assert steps_of(harness.store, harness.profile.id) == STEPS[:3]
+        # Day two, every letter one press short of Known. The first block's
+        # presses are those presses, so the boundary after it finds free slots.
+        day = first_day()
+        harness = self.started(day)
+        assert steps_of(harness.store, harness.profile.id) == STEPS[:day]
         for _ in range(4 * config.FIRST_BLOCK_PROMPTS):
-            if len(steps_of(harness.store, harness.profile.id)) > 3:
+            if len(steps_of(harness.store, harness.profile.id)) > day:
                 break
             harness.answer()
-        assert steps_of(harness.store, harness.profile.id) == STEPS[:4]
+        assert steps_of(harness.store, harness.profile.id) == STEPS[: day + 1]
+
+
+class TestRestState:
+    """ADR-032 rest rules, as the loop reads them: `rest_keys` at every block boundary."""
+
+    @pytest.mark.parametrize(
+        "kwargs", [{"rest_keys": False}, {"not_ready": ("L-idx",)}, {"not_ready": ("R-idx",)}]
+    )
+    def test_a_cold_profile_without_both_index_fingers_ready_hears_nothing(
+        self, kwargs: dict[str, Any]
+    ) -> None:
+        # Rest rule 1, and the state of every profile until the alignment
+        # writes rest keys (#12m session (7)): no letter and nothing Active,
+        # so the first boundary ends the session. What it says then is (7)'s.
+        harness = Harness(**kwargs)
+        harness.loop.start()
+        harness.settle()
+        assert harness.loop.running is False
+        assert harness.engine.spoken == []
+        assert harness.store.introductions(harness.profile.id) == []
+
+    def test_a_finger_that_becomes_ready_is_read_at_the_next_boundary(self) -> None:
+        # The bump letters are had and drilled; the left index finger is not
+        # ready, so nothing more comes (rest rule 1) and the session drills
+        # `f j`. Once the store says it is ready, the next boundary introduces.
+        store = FakeStore()
+        profile = store.create_profile("kid")
+        finish(store, profile.id, [("f", "j")])
+        harness = Harness(store=store, profile=profile, not_ready=("L-idx",))
+        harness.loop.start()
+        harness.settle()
+        assert harness.loop.running
+        assert harness.engine.spoken == []
+        block = harness.loop._block  # pyright: ignore[reportPrivateUsage]
+        assert set(harness.answer(len(block.prompts))) == {"f", "j"}
+        assert steps_of(store, profile.id) == STEPS[:1]
+        store.mark_rest_key_ready(profile.id, "L-idx")
+        block = harness.loop._block  # pyright: ignore[reportPrivateUsage]
+        harness.answer(len(block.prompts))
+        assert steps_of(store, profile.id) == STEPS[:2]
+        harness.settle()
+        assert harness.engine.spoken == intro_lines(STEPS[1])
 
 
 class TestEndOfTheCurriculum:

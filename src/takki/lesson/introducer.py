@@ -1,10 +1,12 @@
-from collections.abc import Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from collections.abc import Set as AbstractSet
 from dataclasses import dataclass
 from typing import Protocol
 
+from takki import config
 from takki.language import WordSource
 from takki.lesson.key_state import KeyStates
+from takki.persistence import RestKey
 from takki.platform.layout import (
     L_IDX,
     L_MID,
@@ -43,6 +45,31 @@ def home_anchor_keys(layout: Layout) -> tuple[str, ...]:
     """
     by_pos = letters_by_position(layout)
     return tuple(by_pos[(HOME_ROW, col)] for col in ANCHOR_COLUMNS)
+
+
+@dataclass(frozen=True)
+class RestCell:
+    """A finger's current rest key (ADR-032 § The strategy takes the child's rest state).
+
+    A finger present in `Rest` is chosen; absent, it has no current rest key.
+    """
+
+    row: int
+    col: int
+    ready: bool
+
+
+# Finger id (`COL_TO_FINGER`'s) → that finger's current rest key.
+Rest = Mapping[str, RestCell]
+
+
+def current_rest(keys: Iterable[RestKey]) -> dict[str, RestCell]:
+    """`rest_keys` rows as the order reads them: current keys only, `passed_at` ignored."""
+    return {
+        key.finger: RestCell(key.row, key.col, key.ready_at is not None)
+        for key in keys
+        if key.replaced_at is None
+    }
 
 
 @dataclass(frozen=True)
@@ -126,20 +153,23 @@ class IntroductionSlot:
 
 
 class IntroductionStrategy(Protocol):
-    """The introduction order (ADR-032 § Decision 2).
+    """The introduction order (ADR-032 § Decision 2 restated).
 
-    Returns every remaining slot in order as grapheme names, left-hand member
-    first, and returns nothing that is already in `had`. Filtering is the
-    strategy's job because pairing happens after it: a strategy that ignored
-    `had` would mispair the survivors, not merely repeat itself.
+    Returns the slots it can see now, in order, as grapheme names, left-hand
+    member first, and nothing already in `had`. `had` always holds the bump
+    letters: `introduction_sequence` puts them first, above every strategy
+    (rest rule 1). Filtering is the strategy's job because pairing happens
+    inside it: a step thinned afterwards would be mispaired.
 
-    Two rules bind every ordering, not just the one that ships. A composite is
-    ineligible until its base letter is in `had` (`eligible` below), and a
-    composite pools by the hand of its base stroke -- both ADR-032 § Decision 1.
+    Rules that bind every ordering. A composite is ineligible until its base
+    letter is in `had` (`eligible`), and pools by the hand of its base stroke
+    (ADR-032 § Decision 1). A letter is passed over unless `may_introduce`
+    holds (rest rules 2 and 3). Letters passed over are left out, so a short
+    or empty result does not mean the curriculum is finished.
     """
 
     def __call__(
-        self, layout: Layout, source: WordSource, had: AbstractSet[str]
+        self, layout: Layout, source: WordSource, had: AbstractSet[str], rest: Rest
     ) -> list[IntroductionSlot]: ...
 
 
@@ -161,24 +191,117 @@ def base_key(layout: Layout, name: str) -> PhysicalKey:
     return layout.keys[grapheme.base or grapheme.char]
 
 
+def may_introduce(layout: Layout, name: str, had: AbstractSet[str], rest: Rest) -> bool:
+    """Rest rules 2 and 3 (ADR-032 § The strategy takes the child's rest state).
+
+    A key on its finger's rest key needs the finger chosen; any other key needs
+    it ready, because it is described and reached from the rest key. A
+    composite is checked on its base stroke and, when it brings in its
+    modifier, on the modifier too: the step locates the modifier from that
+    finger's rest key ("What a composite would need", decided 2026-11-09).
+    """
+    grapheme = layout.graphemes[name]
+    if not _finger_takes(base_key(layout, name), rest):
+        return False
+    if grapheme.mechanism == DIRECT:
+        return True
+    modifier = next(key for key in grapheme.prereq_keys if key != grapheme.base)
+    return modifier in _keys_behind(layout, had) or _finger_takes(layout.keys[modifier], rest)
+
+
+def _finger_takes(key: PhysicalKey, rest: Rest) -> bool:
+    cell = rest.get(key.finger)
+    if cell is None:
+        return False
+    return cell.ready or (cell.row, cell.col) == (key.row, key.col)
+
+
+def bumps_ready(rest: Rest) -> bool:
+    """Rest rule 1's gate: nothing is introduced until both index fingers are ready."""
+    return all((cell := rest.get(finger)) is not None and cell.ready for finger in (L_IDX, R_IDX))
+
+
 def home_row_fill(
-    layout: Layout, source: WordSource, had: AbstractSet[str]
+    layout: Layout, source: WordSource, had: AbstractSet[str], rest: Rest
 ) -> list[IntroductionSlot]:
     """Ordering A (ADR-032 § Ordering A, formerly ADR-023 §§ Phase 1-2): the
     home row by symmetric pairs, then frequency leader per hand.
 
-    The default, and the only ordering Alpha ships. The choice between it, an
-    F/J-seeded order and a per-child calibrated one belongs to the Beta pilot
-    (ADR-032 open questions 1 and 4, roadmap B9) -- this seam exists so that
-    choice costs a constructor argument rather than an engine rewrite.
+    Selectable, and the control arm if the pilot compares orders (ADR-032 §
+    What Alpha ships, restated). Its steps are pairs by column, so a member
+    passed over leaves its partner alone in the step, and comes back as a step
+    of its own once its finger can take it.
     """
-    slots = phase1_slots(layout, had)
-    running = set(had) | {name for slot in slots for name in slot.keys}
-    slots.extend(phase2_slots(layout, source, running))
+    slots = phase1_slots(layout, had, rest)
+    # Every home-row letter, not only the slots: one passed over in Phase 1
+    # waits for Phase 1 and must not turn up in Phase 2's pools as well.
+    home = {name for (row, _), name in letters_by_position(layout).items() if row == HOME_ROW}
+    slots.extend(phase2_slots(layout, source, set(had) | home, rest))
     return slots
 
 
-DEFAULT_STRATEGY: IntroductionStrategy = home_row_fill
+def per_hand_alternation(
+    layout: Layout, source: WordSource, had: AbstractSet[str], rest: Rest
+) -> list[IntroductionSlot]:
+    """Ordering C (ADR-032 § Ordering C, restated; ADR-033's order). The default.
+
+    Each hand takes a strong rest letter when it has had more useful letters
+    than strong rest letters, and otherwise its most useful letter, so its
+    first turn is useful. The bump letters are in neither queue and neither
+    count. A count needs only `had` and the current rest keys, so nothing is
+    stored; where one kind could not be taken for a while, the other gets
+    several turns in a row until it evens out, which was accepted with the rule.
+    """
+    bumps = set(home_anchor_keys(layout))
+    by_pos = letters_by_position(layout)
+    shares = source.key_shares(layout)
+    ranking = source.letter_ranking(layout)
+    rank = {name: index for index, name in enumerate(ranking)}
+    rest_letters = {by_pos[cell] for c in rest.values() if (cell := (c.row, c.col)) in by_pos}
+    strong = {
+        name
+        for name in rest_letters - bumps
+        if shares.get(name, 0.0) >= config.REST_LETTER_MIN_SHARE
+    }
+    running = {name for name in had if name in layout.graphemes} | bumps
+    queues: dict[bool, dict[str, list[str]]] = {
+        True: {"L": [], "R": []},
+        False: {"L": [], "R": []},
+    }
+    counts: dict[bool, dict[str, int]] = {True: {"L": 0, "R": 0}, False: {"L": 0, "R": 0}}
+    for name in ranking:
+        side = base_key(layout, name).side
+        if name in bumps:
+            continue
+        if name in running:
+            counts[name in strong][side] += 1
+        else:
+            queues[name in strong][side].append(name)
+    for pool in queues[True].values():
+        # Strongest first; equal shares in ranking order, never set order.
+        pool.sort(key=lambda name: (-shares.get(name, 0.0), rank[name]))
+    slots: list[IntroductionSlot] = []
+    while True:
+        step: list[str] = []
+        for side in ("L", "R"):
+            turn = counts[False][side] > counts[True][side]
+            for kind in (turn, not turn):
+                name = _take_eligible(layout, queues[kind][side], running, rest)
+                if name is not None:
+                    counts[kind][side] += 1
+                    step.append(name)
+                    break
+        if not step:
+            break
+        running.update(step)
+        slots.append(IntroductionSlot(tuple(step)))
+    _refuse_baseless_composites(
+        layout, [name for kind in queues.values() for pool in kind.values() for name in pool]
+    )
+    return slots
+
+
+DEFAULT_STRATEGY: IntroductionStrategy = per_hand_alternation
 
 
 class KeyIntroducer:
@@ -189,11 +312,17 @@ class KeyIntroducer:
         layout: Layout,
         source: WordSource,
         key_states: KeyStates,
+        rest: Callable[[], Rest],
         strategy: IntroductionStrategy = DEFAULT_STRATEGY,
     ) -> None:
         self._layout = layout
         self._source = source
         self._states = key_states
+        # Read each time the order is worked out, as `had` is, not once here:
+        # the alignment opens the session and marks fingers ready, and an
+        # order read before it would be yesterday's (ADR-032 § The strategy
+        # takes the child's rest state).
+        self._rest = rest
         # A constructor argument rather than a config key or a profiles column:
         # the pilot A/Bs orderings per child, which is ADR-025's per-profile
         # tier, and that tier does not exist yet. A global config key would be
@@ -211,7 +340,11 @@ class KeyIntroducer:
 
     def upcoming(self) -> IntroductionStep | None:
         """The step `introduce_next` would emit, without emitting it."""
-        remaining = introduction_sequence(self._layout, self._source, self._had(), self._strategy)
+        remaining = introduction_sequence(
+            self._layout, self._source, self._had(), self._rest(), self._strategy
+        )
+        # The order is a forecast: None means nothing may be introduced now,
+        # not that the curriculum is finished.
         return remaining[0] if remaining else None
 
     def introduce_next(self) -> IntroductionStep | None:
@@ -244,14 +377,28 @@ class KeyIntroducer:
 def introduction_sequence(
     layout: Layout,
     source: WordSource,
-    had: AbstractSet[str] = frozenset(),
+    had: AbstractSet[str],
+    rest: Rest,
     strategy: IntroductionStrategy = DEFAULT_STRATEGY,
 ) -> list[IntroductionStep]:
-    """The remaining curriculum from `had`, in order. Pure: no store writes, no audio."""
+    """The steps that may come from `had` and `rest`, in order. Pure: no store writes, no audio.
+
+    Rest rule 1 is applied here, once, above every strategy: nothing until both
+    index fingers are ready, then the bump letters first, together.
+    """
     # `had` is grapheme names throughout -- key_stats is keyed by grapheme
     # (ADR-011) and so is the introducer's own record. Anything the layout does
     # not produce is dropped rather than resolved.
     introduced = {name for name in had if name in layout.graphemes}
+    if not bumps_ready(rest):
+        return []
+    bumps = home_anchor_keys(layout)
+    slots = (
+        [IntroductionSlot(pending)]
+        if (pending := tuple(b for b in bumps if b not in introduced))
+        else []
+    )
+    slots.extend(strategy(layout, source, introduced | set(bumps), rest))
     # The second, separate running set: the physical keys the child can strike.
     # It is not the first one with the composites removed -- a composite adds
     # its modifier here without ever being a key itself, and that modifier is
@@ -259,17 +406,14 @@ def introduction_sequence(
     # different questions (what has been taught, what can be pointed at) and
     # come apart the moment a language has a composite in it.
     struck = _keys_behind(layout, introduced)
-    return [
-        _build_step(layout, slot, introduced, struck)
-        for slot in strategy(layout, source, introduced)
-    ]
+    return [_build_step(layout, slot, introduced, struck) for slot in slots]
 
 
 def _keys_behind(layout: Layout, graphemes: AbstractSet[str]) -> set[str]:
     return {key for name in graphemes for key in layout.graphemes[name].prereq_keys}
 
 
-def phase1_slots(layout: Layout, had: AbstractSet[str]) -> list[IntroductionSlot]:
+def phase1_slots(layout: Layout, had: AbstractSet[str], rest: Rest) -> list[IntroductionSlot]:
     """Ordering A's Phase 1. Public because it is this ordering's own structure
     and is asserted as such; nothing outside `home_row_fill` composes it."""
     # Letters only, and by position, so this phase never sees a composite: a
@@ -285,18 +429,24 @@ def phase1_slots(layout: Layout, had: AbstractSet[str]) -> list[IntroductionSlot
     for left, right in _PHASE1_COLUMN_PAIRS:
         members = tuple(by_col[col] for col in (left, right) if col in by_col)
         paired.update(members)
-        pending = tuple(name for name in members if name not in had)
+        pending = tuple(
+            name for name in members if name not in had and may_introduce(layout, name, had, rest)
+        )
         if pending:
             slots.append(IntroductionSlot(pending))
     # ADR-023's "remaining row-3 letters solo" tail, outward by column so each
     # one anchors to the key introduced immediately before it.
     tail = (by_col[col] for col in sorted(by_col) if by_col[col] not in paired)
-    slots.extend(IntroductionSlot((name,)) for name in tail if name not in had)
+    slots.extend(
+        IntroductionSlot((name,))
+        for name in tail
+        if name not in had and may_introduce(layout, name, had, rest)
+    )
     return slots
 
 
 def phase2_slots(
-    layout: Layout, source: WordSource, had: AbstractSet[str]
+    layout: Layout, source: WordSource, had: AbstractSet[str], rest: Rest
 ) -> list[IntroductionSlot]:
     # Graphemes, not keys (ADR-032 § Decision 1). A composite is ranked as the
     # letter it is, and the modifier it needs has no entry here at all.
@@ -308,32 +458,44 @@ def phase2_slots(
     slots: list[IntroductionSlot] = []
     while pools["L"] or pools["R"]:
         leaders = tuple(
-            name for side in ("L", "R") if (name := _take_eligible(layout, pools[side], running))
+            name
+            for side in ("L", "R")
+            if (name := _take_eligible(layout, pools[side], running, rest))
         )
         if not leaders:
-            # Every survivor is a composite whose base letter is not itself a
-            # grapheme of this layout, so the curriculum can never introduce it
-            # and the eligibility gate can never open. ADR-032 § Decision 1
-            # rule 1 assumes a composite's base *is* a letter the child is
-            # taught; a layout that breaks the assumption is a broken premise,
-            # and fails loudly: silently dropping letters from a curriculum is
-            # the failure nobody notices.
-            # Reachable only from session 12's real layout data.
-            stuck = sorted(pools["L"] + pools["R"])
-            raise ValueError(
-                f"composites whose base letter is not a grapheme of this layout: {stuck}"
-            )
+            # The rest wait on fingers not ready, on a base not yet had, or
+            # can never come: only the last is an error.
+            _refuse_baseless_composites(layout, pools["L"] + pools["R"])
+            break
         running.update(leaders)
         slots.append(IntroductionSlot(leaders))
     return slots
 
 
-def _take_eligible(layout: Layout, pool: list[str], had: AbstractSet[str]) -> str | None:
-    # Skip past an ineligible leader rather than stall the pool on it: a
-    # composite that outranks its own base waits for the base and keeps its
-    # place in the ranking, and everything behind it still advances.
+def _refuse_baseless_composites(layout: Layout, waiting: Iterable[str]) -> None:
+    # A composite whose base letter is not itself a grapheme of this layout can
+    # never be introduced: the eligibility gate can never open. ADR-032 §
+    # Decision 1 rule 1 assumes a composite's base *is* a letter the child is
+    # taught; a layout that breaks the assumption is a broken premise, and
+    # fails loudly: silently dropping letters from a curriculum is the failure
+    # nobody notices. Everything else left waiting waits on a finger.
+    stuck = sorted(
+        name
+        for name in waiting
+        if (base := layout.graphemes[name].base) is not None and base not in layout.graphemes
+    )
+    if stuck:
+        raise ValueError(f"composites whose base letter is not a grapheme of this layout: {stuck}")
+
+
+def _take_eligible(
+    layout: Layout, pool: list[str], had: AbstractSet[str], rest: Rest
+) -> str | None:
+    # Skip past a leader that may not come yet rather than stall the pool on
+    # it: a composite that outranks its own base, or a letter on a finger not
+    # ready, keeps its place in the ranking, and everything behind it advances.
     for index, name in enumerate(pool):
-        if eligible(layout, name, had):
+        if eligible(layout, name, had) and may_introduce(layout, name, had, rest):
             return pool.pop(index)
     return None
 

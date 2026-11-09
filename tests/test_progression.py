@@ -1,7 +1,7 @@
 import pytest
 
 from takki import config
-from takki.lesson.introducer import KeyIntroducer, introduction_sequence
+from takki.lesson.introducer import KeyIntroducer, RestCell, introduction_sequence
 from takki.lesson.key_state import KeyStates
 from takki.lesson.progression import (
     active_graphemes,
@@ -13,6 +13,7 @@ from takki.persistence import Store
 from takki.platform.layout import Layout, build_de, build_en, build_is
 from tests.fakes.fake_store import FakeStore
 from tests.fakes.fixed_list_source import FixedListSource
+from tests.rest import READY
 from tests.sessions import session_for
 
 DAY1 = "2026-01-01T10:00:00+00:00"
@@ -54,7 +55,7 @@ def states(store: Store) -> KeyStates:
 
 
 def introducer(layout: Layout, store: Store) -> KeyIntroducer:
-    return KeyIntroducer(layout, FixedListSource(EN_WORDS), states(store))
+    return KeyIntroducer(layout, FixedListSource(EN_WORDS), states(store), lambda: READY)
 
 
 class TestLayerTwoUnlock:
@@ -94,11 +95,11 @@ class TestLayerTwoUnlock:
         assert locked_at == [2, 4, 6, 7]
         assert len(active_graphemes(layout, states(store))) == 9
 
-    def test_the_shipped_english_walk_is_adr_028s_walk_again(self) -> None:
-        # With Stage 0 gone (ADR-033) nothing sits in front of home-row fill, so
-        # the shipped count is ADR-028's own: 2, 4, 6, 7, and the unlock comes
-        # at 9, one past the threshold, because `a` is a solo step. From alpha
-        # session 8b until #12m session 4, Stage 0's three pairs made it 8.
+    def test_the_shipped_english_walk_unlocks_at_the_threshold(self) -> None:
+        # Ordering C, the default since #12m session (5), takes one letter per
+        # hand in every step here (`f j`, `t h`, `a o`, `e n`, `d i` on this
+        # corpus), so the count moves by two and the unlock comes at 8 itself.
+        # Under home-row fill it was ADR-028's 2, 4, 6, 7, 9 (the walk above).
         layout, store = build_en(), FakeStore()
         keys = introducer(layout, store)
         walk: list[tuple[int, bool]] = []
@@ -113,7 +114,7 @@ class TestLayerTwoUnlock:
                     layer_two_unlocked(layout, states(store)),
                 )
             )
-        assert walk == [(2, False), (4, False), (6, False), (7, False), (9, True)]
+        assert walk == [(2, False), (4, False), (6, False), (8, True), (10, True)]
 
     def test_a_grapheme_the_current_layout_cannot_produce_does_not_count(self) -> None:
         # key_stats survives a profile's language change.
@@ -151,17 +152,38 @@ class TestRoomForStep:
 
     def test_a_key_in_progress_is_active_and_not_known(self) -> None:
         store = FakeStore()
-        answer(store, "f", correct=config.KNOWN_MIN_ATTEMPTS)
-        answer(store, "j", correct=1)
-        assert keys_in_progress(build_en(), states(store)) == {"f", "j"}
-        answer(store, "f", correct=1, day=DAY2)
-        assert states(store).known_keys() == {"f"}
-        assert keys_in_progress(build_en(), states(store)) == {"j"}
+        answer(store, "e", correct=config.KNOWN_MIN_ATTEMPTS)
+        answer(store, "r", correct=1)
+        assert keys_in_progress(build_en(), states(store)) == {"e", "r"}
+        answer(store, "e", correct=1, day=DAY2)
+        assert states(store).known_keys() == {"e"}
+        assert keys_in_progress(build_en(), states(store)) == {"r"}
+
+    def test_the_bump_letters_hold_no_slot(self) -> None:
+        # ADR-033 § Introduction order and slots, read as written (decided
+        # 2026-11-09): `f j` are the first step and take no introduction slots,
+        # so six other letters fill the cap and `f j` never close it.
+        store = FakeStore()
+        for char in "fjruvme":
+            answer(store, char, correct=1)
+        assert states(store).known_keys() == set()
+        assert keys_in_progress(build_en(), states(store)) == set("ruvme")
+        assert room_for_step(build_en(), states(store), ["d"])
+        assert not room_for_step(build_en(), states(store), ["d", "k"])
+
+    def test_a_bump_letter_in_a_step_takes_no_slot(self) -> None:
+        # A half-answered bump pair resumes as the one letter left (ADR-023).
+        store = FakeStore()
+        for char in "fruvmei":
+            answer(store, char, correct=1)
+        assert len(keys_in_progress(build_en(), states(store))) == config.MAX_KEYS_IN_PROGRESS
+        assert room_for_step(build_en(), states(store), ["j"])
+        assert not room_for_step(build_en(), states(store), ["j", "k"])
 
     @pytest.mark.parametrize("in_progress", range(1, config.MAX_KEYS_IN_PROGRESS + 1))
     def test_a_step_fits_only_if_the_total_stays_within_the_cap(self, in_progress: int) -> None:
         store = FakeStore()
-        for char in "fjruvm"[:in_progress]:
+        for char in "ruvmei"[:in_progress]:
             answer(store, char, correct=1)
         free = config.MAX_KEYS_IN_PROGRESS - in_progress
         assert room_for_step(build_en(), states(store), ["d"]) is (free >= 1)
@@ -169,24 +191,24 @@ class TestRoomForStep:
 
     def test_each_known_key_frees_exactly_one_slot(self) -> None:
         store = FakeStore()
-        for char in "fjruvm":
+        for char in "ruvmei":
             answer(store, char, correct=config.KNOWN_MIN_ATTEMPTS)
         assert not room_for_step(build_en(), states(store), ["d"])
-        answer(store, "f", correct=1, day=DAY2)
+        answer(store, "r", correct=1, day=DAY2)
         assert room_for_step(build_en(), states(store), ["d"])
         assert not room_for_step(build_en(), states(store), ["d", "k"])
-        answer(store, "j", correct=1, day=DAY2)
+        answer(store, "u", correct=1, day=DAY2)
         assert room_for_step(build_en(), states(store), ["d", "k"])
 
     def test_a_key_that_stops_being_known_takes_its_slot_back(self) -> None:
         # A rolling query, unlike a milestone: Known is read off the window, so
         # a key whose accuracy slips under the bar is in progress again.
         store = FakeStore()
-        for char in "fjruvm":
+        for char in "ruvmei":
             answer(store, char, correct=config.KNOWN_MIN_ATTEMPTS)
-        answer(store, "f", correct=1, day=DAY2)
+        answer(store, "r", correct=1, day=DAY2)
         assert room_for_step(build_en(), states(store), ["d"])
-        answer(store, "f", wrong=20, day=DAY2)
+        answer(store, "r", wrong=20, day=DAY2)
         assert states(store).known_keys() == set()
         assert not room_for_step(build_en(), states(store), ["d"])
 
@@ -209,14 +231,14 @@ class TestRoomForStep:
     def test_a_member_that_is_already_active_is_not_counted_twice(self) -> None:
         # A pair one member of which was answered and the other never was.
         store = FakeStore()
-        for char in "fjruv":
+        for char in "ruvei":
             answer(store, char, correct=1)
         assert room_for_step(build_en(), states(store), ["v", "m"])
         assert not room_for_step(build_en(), states(store), ["d", "k"])
 
     def test_a_cap_passed_in_is_honoured(self) -> None:
         store = FakeStore()
-        for char in "fjruvm":
+        for char in "ruvmei":
             answer(store, char, correct=1)
         assert not room_for_step(build_en(), states(store), ["d", "k"])
         assert room_for_step(build_en(), states(store), ["d", "k"], cap=8)
@@ -224,7 +246,7 @@ class TestRoomForStep:
 
     def test_a_grapheme_the_current_layout_cannot_produce_holds_no_slot(self) -> None:
         store = FakeStore()
-        for char in "fjruv":
+        for char in "ruvei":
             answer(store, char, correct=1)
         answer(store, "ä", correct=1)
         assert room_for_step(build_en(), states(store), ["m"])
@@ -245,6 +267,18 @@ class TestProgressionIsNotAMilestone:
         # Guards the walk above: if the strategy ever stopped emitting every
         # grapheme, the counts it asserts would quietly stop meaning anything.
         layout = build_en()
-        steps = introduction_sequence(layout, FixedListSource(EN_WORDS))
+        steps = introduction_sequence(layout, FixedListSource(EN_WORDS), set(), READY)
         emitted = [member.grapheme for step in steps for member in step.keys]
         assert sorted(emitted) == sorted(layout.graphemes)
+
+    def test_a_finger_not_ready_leaves_exactly_its_other_letters_out(self) -> None:
+        # ADR-032 rest rule 3: the order is a forecast, so the whole layout is
+        # read from the layout and not from the order. The left middle finger
+        # is chosen on `d`, not ready: `d` comes, `e` and `c` wait.
+        layout = build_en()
+        rest = dict(READY)
+        rest["L-mid"] = RestCell(3, 3, False)
+        steps = introduction_sequence(layout, FixedListSource(EN_WORDS), set(), rest)
+        emitted = [member.grapheme for step in steps for member in step.keys]
+        assert sorted(set(layout.graphemes) - set(emitted)) == ["c", "e"]
+        assert len(emitted) == len(set(emitted))

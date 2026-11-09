@@ -147,10 +147,12 @@ class TestSatisfiedRungs:
 DAY1 = "2026-01-01T10:00:00+00:00"
 DAY2 = "2026-01-02T10:00:00+00:00"
 KNOWN = WindowStats(attempt_count=90, correct_count=90, distinct_days=2)
-# The order `introduction_sequence` emits for English under home-row fill, with
-# no Stage 0 (ADR-033). Spelled out rather than derived, so a change to the
+# The order `introduction_sequence` emits for English on the real word data
+# under Ordering C, the default since #12m session (5), with every finger ready
+# at the conventional rest position (ADR-032 § Ordering C, restated, whose
+# table it extends). Spelled out rather than derived, so a change to the
 # ordering shows up here as a diff rather than silently redefining the walk.
-EN_INTRODUCTION_ORDER = "fjdkslaghentoriwubpcmqyvxz"
+EN_INTRODUCTION_ORDER = "fjenaltosirhducmgywpbkvxqz"
 
 
 class RecordingStore(FakeStore):
