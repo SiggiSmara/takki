@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Literal
 
+from takki import config
+
 L_PINK, L_RING, L_MID, L_IDX = "L-pink", "L-ring", "L-mid", "L-idx"
 R_IDX, R_MID, R_RING, R_PINK = "R-idx", "R-mid", "R-ring", "R-pink"
 
@@ -31,16 +33,33 @@ COL_TO_FINGER: dict[int, str] = {
 # Two keys, and every key that produces no character, are deliberately left
 # out (ADR-026 § Every cell of the grid): 0x56, the extra key ISO keyboards
 # carry left of Z, which an ANSI keyboard does not have and Windows cannot tell
-# is missing; and 0x29, left of `1` (roadmap § C17). 0x2B is placed where ISO
-# keyboards have it; on an ANSI keyboard it sits one row up, above Enter.
-SCAN_CODE_GRID: dict[int, tuple[int, int]] = {
+# is missing; and 0x29, left of `1` (roadmap § C17).
+_SHARED_GRID: dict[int, tuple[int, int]] = {
     **{sc: (1, col) for col, sc in enumerate(range(0x02, 0x0E), start=1)},
     **{sc: (2, col) for col, sc in enumerate(range(0x10, 0x1C), start=1)},
     **{sc: (3, col) for col, sc in enumerate(range(0x1E, 0x29), start=1)},
-    0x2B: (3, 12),
     **{sc: (4, col) for col, sc in enumerate(range(0x2C, 0x36), start=1)},
 }
-_SCAN_CODES: dict[tuple[int, int], int] = {cell: sc for sc, cell in SCAN_CODE_GRID.items()}
+
+# The one cell the keyboard's shape moves: 0x2B is left of Enter on ISO and
+# above it on ANSI. Windows sends the same code for both and cannot tell the
+# two keyboards apart, so the shape is a setting (config.KEYBOARD_SHAPE).
+_CELL_0X2B: dict[str, tuple[int, int]] = {"iso": (3, 12), "ansi": (2, 13)}
+
+KeyboardShape = Literal["iso", "ansi"]
+
+
+def scan_code_grid(shape: KeyboardShape | None = None) -> dict[int, tuple[int, int]]:
+    """Set-1 scan code → (row, col) on a keyboard of `shape`; the setting when None."""
+    return {**_SHARED_GRID, 0x2B: _CELL_0X2B[shape or config.KEYBOARD_SHAPE]}
+
+
+# Every position on either shape names one scan code, so a key's scan code
+# needs no shape: (3, 12) and (2, 13) both name 0x2B.
+_SCAN_CODES: dict[tuple[int, int], int] = {
+    **{cell: sc for sc, cell in _SHARED_GRID.items()},
+    **{cell: 0x2B for cell in _CELL_0X2B.values()},
+}
 
 
 @dataclass(frozen=True)
@@ -202,7 +221,7 @@ _SHARED_CELLS: dict[str, tuple[int, int]] = {
 }
 
 
-def build_en() -> Layout:
+def build_en(shape: KeyboardShape | None = None) -> Layout:
     """US QWERTY layout — 26 direct lowercase letters, and the other 20 cells."""
     direct: dict[str, tuple[int, int]] = {**_QWERTY_COMMON, "y": (2, 6), "z": (4, 1)}
     cells: dict[str, tuple[int, int]] = {
@@ -213,14 +232,13 @@ def build_en() -> Layout:
         "]": (2, 12),
         ";": (3, 10),
         "'": (3, 11),
-        # 0x2B: row 3 on ISO keyboards, row 2 above Enter on ANSI (ADR-026).
-        "\\": (3, 12),
+        "\\": scan_code_grid(shape)[0x2B],
         "/": (4, 10),
     }
     return _direct_layout("en", direct, cells)
 
 
-def build_de() -> Layout:
+def build_de(shape: KeyboardShape | None = None) -> Layout:
     """German QWERTZ layout — 26 letters plus ä, ö, ü, ß, and every other cell but one."""
     # The one left out is the dead acute at (1, 12): declaring it is roadmap
     # § C17's fix, and since describe_mismatch compares dead keys it would make
@@ -237,7 +255,7 @@ def build_de() -> Layout:
     cells: dict[str, tuple[int, int]] = {
         **_SHARED_CELLS,
         "+": (2, 12),
-        "#": (3, 12),
+        "#": scan_code_grid(shape)[0x2B],
         "-": (4, 10),
     }
     return _direct_layout("de", direct, cells)
@@ -255,7 +273,7 @@ _ICELANDIC_ACUTES: dict[str, str] = {
 }
 
 
-def build_is() -> Layout:
+def build_is(shape: KeyboardShape | None = None) -> Layout:
     """Icelandic layout — direct letters, the six dead-acute composites, and every other cell."""
     direct: dict[str, tuple[int, int]] = {
         **_QWERTY_COMMON,
@@ -270,7 +288,7 @@ def build_is() -> Layout:
         **_SHARED_CELLS,
         "-": (1, 12),
         "'": (2, 12),
-        "+": (3, 12),
+        "+": scan_code_grid(shape)[0x2B],
     }
     layout = _direct_layout("is", direct, cells)
     layout.keys["dead-acute"] = PhysicalKey("dead-acute", 3, 11)

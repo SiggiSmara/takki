@@ -2,6 +2,8 @@
 and per-profile SQLite settings once those tiers land -- Alpha reads these
 values directly."""
 
+from typing import Literal
+
 # Lesson language (ADR-025 tier 1, ADR-009). None means "ask the platform" --
 # ADR-013's locale detection, and the right default on a machine with one
 # language. Set it to a primary subtag ("en", "de", "is") to pin the
@@ -11,6 +13,13 @@ values directly."""
 # start if it is not (main.verify_layout). ADR-006 keeps Windows authoritative
 # for the layout itself -- this names the curriculum, never the keyboard.
 LANGUAGE: str | None = None
+
+# The physical keyboard's shape (ADR-026 § Every cell of the grid). It moves
+# one key: scan code 0x2B is left of Enter on "iso" and above it on "ansi".
+# Windows reports the layout, never the shape, so a parent sets it (roadmap
+# § D, the setup instructions). It matters only to a child whose right little
+# finger rests on that key, whose reaches are described from it (ADR-023).
+KEYBOARD_SHAPE: Literal["iso", "ansi"] = "iso"
 
 # Key bindings (ADR-025). Values are pynput key *name* strings -- what
 # Key.<member>.name returns, which is what session 5's translate() puts in

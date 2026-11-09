@@ -638,9 +638,12 @@ class SessionLoop:
         members = [entry.key_char for entry in introduced if entry.step == newest]
         active = self._states.active_keys()
         # What the introducer's own `had` was when it emitted the step: the
-        # rebuilt script is derived from it (alpha-plan #12j).
+        # rebuilt script is derived from it (alpha-plan #12j). Its locations are
+        # from today's rest keys, not the ones it was first described from
+        # (decided 2026-11-09, #12m session (5b)). Until the alignment runs
+        # ahead of this (#12m session (7)), today's are the last ones stored.
         had = active | {entry.key_char for entry in introduced}
-        step = resume_step(self._layout, members, had)
+        step = resume_step(self._layout, members, had, self._rest())
         if not self._drills.resume_step(step):
             return
         # The introducer did not emit this step, so it has to be told: the

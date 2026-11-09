@@ -1,20 +1,22 @@
 import sys
+from collections.abc import Callable
 from unittest.mock import patch
 
 import pytest
 
+from takki import config
 from takki.audio.fallback_tts import FallbackTTS
 from takki.platform import select_platform_interface
 from takki.platform.dev_stub import DevStubInterface
 from takki.platform.layout import (
     COL_TO_FINGER,
-    SCAN_CODE_GRID,
     Layout,
     PhysicalKey,
     build_de,
     build_en,
     build_is,
     describe_mismatch,
+    scan_code_grid,
 )
 from takki.platform.windows import (
     dead_key_name,
@@ -23,6 +25,8 @@ from takki.platform.windows import (
 )
 from tests.fakes.fake_platform import FakePlatformInterface
 from tests.fakes.fake_tts import FakeTTSEngine
+
+ISO = scan_code_grid("iso")
 
 
 class TestCOLToFinger:
@@ -294,38 +298,81 @@ class TestScanCodeGrid:
     def test_the_six_anchor_scan_codes(self) -> None:
         # The two index home columns by position: the bumps and the keys above
         # and below them (ADR-033).
-        assert SCAN_CODE_GRID[0x13] == (2, 4)
-        assert SCAN_CODE_GRID[0x21] == (3, 4)
-        assert SCAN_CODE_GRID[0x2F] == (4, 4)
-        assert SCAN_CODE_GRID[0x16] == (2, 7)
-        assert SCAN_CODE_GRID[0x24] == (3, 7)
-        assert SCAN_CODE_GRID[0x32] == (4, 7)
+        assert ISO[0x13] == (2, 4)
+        assert ISO[0x21] == (3, 4)
+        assert ISO[0x2F] == (4, 4)
+        assert ISO[0x16] == (2, 7)
+        assert ISO[0x24] == (3, 7)
+        assert ISO[0x32] == (4, 7)
 
     def test_row_extents(self) -> None:
-        assert SCAN_CODE_GRID[0x02] == (1, 1) and SCAN_CODE_GRID[0x0D] == (1, 12)
-        assert SCAN_CODE_GRID[0x10] == (2, 1) and SCAN_CODE_GRID[0x1B] == (2, 12)
-        assert SCAN_CODE_GRID[0x1E] == (3, 1) and SCAN_CODE_GRID[0x28] == (3, 11)
-        assert SCAN_CODE_GRID[0x2B] == (3, 12)
-        assert SCAN_CODE_GRID[0x2C] == (4, 1) and SCAN_CODE_GRID[0x35] == (4, 10)
+        assert ISO[0x02] == (1, 1) and ISO[0x0D] == (1, 12)
+        assert ISO[0x10] == (2, 1) and ISO[0x1B] == (2, 12)
+        assert ISO[0x1E] == (3, 1) and ISO[0x28] == (3, 11)
+        assert ISO[0x2B] == (3, 12)
+        assert ISO[0x2C] == (4, 1) and ISO[0x35] == (4, 10)
 
     def test_every_column_has_a_finger(self) -> None:
-        assert all(col in COL_TO_FINGER for _, col in SCAN_CODE_GRID.values())
+        assert all(col in COL_TO_FINGER for _, col in ISO.values())
 
     def test_the_iso_extra_key_has_no_position(self) -> None:
         # 0x56 is the key left of Z on ISO boards. No target layout puts a
         # letter there, and giving it a column would collide with row 4 col 1.
-        assert 0x56 not in SCAN_CODE_GRID
+        assert 0x56 not in ISO
 
     def test_positions_are_unique(self) -> None:
-        assert len(set(SCAN_CODE_GRID.values())) == len(SCAN_CODE_GRID)
+        assert len(set(ISO.values())) == len(ISO)
 
     def test_a_keys_scan_code_is_its_position_in_the_grid(self) -> None:
         # Also every table key is a grid cell: scan_code raises for one that is not.
-        for build in (build_en, build_de, build_is):
-            for key in build().keys.values():
-                assert SCAN_CODE_GRID[key.scan_code] == (key.row, key.col)
+        for shape in ("iso", "ansi"):
+            grid = scan_code_grid(shape)
+            for build in (build_en, build_de, build_is):
+                for key in build(shape).keys.values():
+                    assert grid[key.scan_code] == (key.row, key.col)
         assert build_en().keys[";"].scan_code == 0x27
         assert build_is().keys["dead-acute"].scan_code == 0x28
+
+
+class TestKeyboardShape:
+    """config.KEYBOARD_SHAPE moves one cell, 0x2B, and nothing else (ADR-026, 2026-11-09)."""
+
+    def test_ansi_puts_0x2b_above_enter_and_moves_nothing_else(self) -> None:
+        ansi = scan_code_grid("ansi")
+        assert ISO[0x2B] == (3, 12)
+        assert ansi[0x2B] == (2, 13)
+        assert {sc: cell for sc, cell in ansi.items() if cell != ISO[sc]} == {0x2B: (2, 13)}
+        assert len(ansi) == len(ISO) == 46
+
+    def test_both_cells_are_the_right_little_fingers(self) -> None:
+        assert COL_TO_FINGER[12] == COL_TO_FINGER[13] == "R-pink"
+
+    def test_the_setting_is_iso_by_default_and_read_when_called(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        assert config.KEYBOARD_SHAPE == "iso"
+        assert scan_code_grid() == ISO
+        assert build_en().keys["\\"] == PhysicalKey("\\", 3, 12)
+        monkeypatch.setattr(config, "KEYBOARD_SHAPE", "ansi")
+        assert scan_code_grid()[0x2B] == (2, 13)
+        assert build_en().keys["\\"] == PhysicalKey("\\", 2, 13)
+
+    @pytest.mark.parametrize(
+        ("build", "name"), [(build_en, "\\"), (build_de, "#"), (build_is, "+")]
+    )
+    def test_every_builder_follows_the_shape_and_nothing_else_moves(
+        self, build: Callable[..., Layout], name: str
+    ) -> None:
+        iso, ansi = build("iso"), build("ansi")
+        assert iso.keys[name] == PhysicalKey(name, 3, 12)
+        assert ansi.keys[name] == PhysicalKey(name, 2, 13)
+        assert {n: k for n, k in ansi.keys.items() if iso.keys[n] != k} == {name: ansi.keys[name]}
+        assert ansi.graphemes == iso.graphemes
+
+    def test_the_startup_check_gives_the_same_verdict_on_both_shapes(self) -> None:
+        # 0x2B carries no letter and no dead key on any table, so it is not compared.
+        for build in (build_en, build_de, build_is):
+            assert describe_mismatch(build("iso"), build("ansi")) is None
 
 
 class TestSelectPlatformInterface:
@@ -370,13 +417,13 @@ class TestNonLetterCells:
     def test_english_and_icelandic_fill_every_grid_cell(self) -> None:
         for build in (build_en, build_is):
             layout = build()
-            assert len(layout.keys) == len(SCAN_CODE_GRID) == 46
-            assert {(k.row, k.col) for k in layout.keys.values()} == set(SCAN_CODE_GRID.values())
+            assert len(layout.keys) == len(ISO) == 46
+            assert {(k.row, k.col) for k in layout.keys.values()} == set(ISO.values())
 
     def test_german_fills_every_cell_but_its_undeclared_dead_acute(self) -> None:
         # roadmap § C17: declaring the dead key is C17's fix, not this table's.
         layout = build_de()
-        missing = set(SCAN_CODE_GRID.values()) - {(k.row, k.col) for k in layout.keys.values()}
+        missing = set(ISO.values()) - {(k.row, k.col) for k in layout.keys.values()}
         assert missing == {(1, 12)}
 
     def test_a_cell_is_never_a_grapheme(self) -> None:

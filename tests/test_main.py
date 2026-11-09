@@ -272,10 +272,10 @@ class TestStartup:
         assert engine.spoken[:6] == [
             "New letter:",
             "f",
-            "Use your left index finger.",
+            "Use your left index finger. It is the key with the bump, where that finger rests.",
             "New letter:",
             "j",
-            "Use your right index finger. Reach three positions to the right from F.",
+            "Use your right index finger. It is the key with the bump, where that finger rests.",
         ]
         assert platform.fallback_voice_ids == ["fake-en"]
         assert Keys.joined

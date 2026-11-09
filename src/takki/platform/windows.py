@@ -7,7 +7,7 @@ import unicodedata
 from collections.abc import Callable
 
 from takki.audio.tts import TTSEngine
-from takki.platform.layout import SCAN_CODE_GRID, Grapheme, Layout, PhysicalKey
+from takki.platform.layout import Grapheme, Layout, PhysicalKey, scan_code_grid
 
 logger = logging.getLogger(__name__)
 
@@ -278,8 +278,11 @@ def read_layout(hkl: int) -> Layout:
     graphemes: dict[str, Grapheme] = {}
     letter_scan_codes: dict[str, int] = {}
     dead_scan_codes: list[int] = []
+    # The keyboard's shape is a setting: Windows reports the layout, not the
+    # shape, and 0x2B's cell depends on it (ADR-026 § Every cell of the grid).
+    grid = scan_code_grid()
 
-    for scan_code, (row, col) in SCAN_CODE_GRID.items():
+    for scan_code, (row, col) in grid.items():
         count, chars = to_unicode(hkl, scan_code, NO_KERNEL_STATE_CHANGE)
         if count < 0:
             dead_scan_codes.append(scan_code)
@@ -301,7 +304,7 @@ def read_layout(hkl: int) -> Layout:
             keys[chars] = PhysicalKey(chars, row, col)
 
     for scan_code in dead_scan_codes:
-        row, col = SCAN_CODE_GRID[scan_code]
+        row, col = grid[scan_code]
         _flush(hkl)
         to_unicode(hkl, scan_code)  # arm it -- unflagged, because this must set state
         _, standalone = to_unicode(hkl, _SPACE_SCAN_CODE)

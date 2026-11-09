@@ -21,7 +21,7 @@ from takki.lesson.introducer import KeyIntroducer, describe, introduction_sequen
 from takki.lesson.key_state import KeyStates
 from takki.lesson.rampup import RampUpProgress
 from takki.persistence import Attempt, PhaseRecord, Profile, WindowStats
-from takki.platform.layout import Grapheme, Layout, PhysicalKey, build_en
+from takki.platform.layout import L_PINK, Grapheme, Layout, PhysicalKey, build_en
 from takki.session import Celebrant, InboundEvent, SessionLoop
 from tests.fakes.fake_clock import FakeClock
 from tests.fakes.fake_focus_source import FakeFocusSource
@@ -1894,6 +1894,49 @@ class TestIntroductionPacingAcrossSessions:
         assert all("Reach" in rest for _, rest in intro_texts(STEPS[1]))
         # Both members were answered, so nothing is spoken again.
         assert second.engine.spoken == []
+
+    def test_a_resumed_step_is_described_from_todays_rest_keys(self) -> None:
+        # Decided 2026-11-09 (#12m session (5b)): a rest key changed between the
+        # sessions moves the description, because the finger now starts there.
+        store = FakeStore()
+        profile = store.create_profile("kid")
+        finish(store, profile.id, STEPS[:2])
+        first = Harness(store=store, profile=profile)
+        first.loop.start()
+        assert first.answer(1) == ["n"]
+        first.loop.stop()
+        assert first.engine.spoken[:2] == [
+            "New letter:",
+            "Use your left little finger. It is the key where that finger rests.",
+        ]
+        assert steps_of(store, profile.id) == STEPS[:3] and STEPS[2] == ("a", "n")
+        # The left little finger now rests one row up, on `q`.
+        store.choose_rest_key(profile.id, L_PINK, 2, 1, "landings")
+        store.mark_rest_key_ready(profile.id, L_PINK)
+
+        second = Harness(store=store, profile=profile)
+        second.loop.start()
+        second.settle()
+        introducer = second.loop._introducer  # pyright: ignore[reportPrivateUsage]
+        assert introducer is not None and introducer.last_step is not None
+        assert [describe(i) for i in introducer.last_step.keys] == [
+            (
+                "New letter:",
+                "Use your left little finger. Reach one row down from where that finger rests.",
+            ),
+            (
+                "New letter:",
+                "Use your right index finger. "
+                "Reach one row down and one position to the left from where that finger rests.",
+            ),
+        ]
+        # The member never answered is spoken again, from where its finger
+        # rests today: it was introduced as the key that finger rested on.
+        assert second.engine.spoken == [
+            "New letter:",
+            "Use your left little finger. Reach one row down from where that finger rests.",
+        ]
+        assert second.letters.played[0] == "a"
 
     def test_a_half_answered_pair_is_resumed_as_a_pair(self) -> None:
         # alpha-plan #12j, O3. The session used to refuse the resume, and the

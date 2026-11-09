@@ -74,11 +74,15 @@ def current_rest(keys: Iterable[RestKey]) -> dict[str, RestCell]:
 
 @dataclass(frozen=True)
 class Location:
-    """Where a new key sits relative to one the child already has."""
+    """Where a key sits relative to its finger's rest key (ADR-023, amended 2026-11-09)."""
 
-    reference: str
     row_delta: int  # negative = towards the number row
     col_delta: int  # negative = towards the left edge
+
+    @property
+    def at_rest(self) -> bool:
+        # The key is the finger's rest key: there is no reach to describe.
+        return self.row_delta == 0 and self.col_delta == 0
 
 
 @dataclass(frozen=True)
@@ -93,6 +97,7 @@ class ModifierIntroduction:
 
     key: str  # "dead-acute", "altgr"
     finger: str
+    # From the modifier's own finger's rest key; None when that finger has none.
     location: Location | None
     # The mechanism class to explain in words, or None when a composite of
     # this class has already been introduced. Two dead keys in one layout are
@@ -119,10 +124,9 @@ class KeyIntroduction:
     # nothing, so the base stroke is what pools a composite by hand.
     finger: str
     side: str
-    # None for the very first grapheme introduced -- nothing anchors it yet --
+    # From the finger's rest key. None when the finger has no current rest key,
     # and for every composite, whose script names its base letter outright and
-    # spends its location clause on the modifier instead. Locating a composite
-    # against the base it already requires would be a self-reference.
+    # spends its location clause on the modifier instead.
     location: Location | None
     modifier: ModifierIntroduction | None
 
@@ -404,9 +408,11 @@ def introduction_sequence(
     # its modifier here without ever being a key itself, and that modifier is
     # exactly what must not be re-announced later. The two sets answer
     # different questions (what has been taught, what can be pointed at) and
-    # come apart the moment a language has a composite in it.
+    # come apart the moment a language has a composite in it. Since the
+    # location rule moved to the rest key (2026-11-09), `struck` answers only
+    # whether a modifier is new; the location reads `rest`.
     struck = _keys_behind(layout, introduced)
-    return [_build_step(layout, slot, introduced, struck) for slot in slots]
+    return [_build_step(layout, slot, introduced, struck, rest) for slot in slots]
 
 
 def _keys_behind(layout: Layout, graphemes: AbstractSet[str]) -> set[str]:
@@ -501,34 +507,37 @@ def _take_eligible(
 
 
 def _build_step(
-    layout: Layout, slot: IntroductionSlot, introduced: set[str], struck: set[str]
+    layout: Layout, slot: IntroductionSlot, introduced: set[str], struck: set[str], rest: Rest
 ) -> IntroductionStep:
     introductions: list[KeyIntroduction] = []
     for name in slot.keys:
-        introductions.append(_introduce(layout, name, introduced, struck))
-        # Added as we go, so the right-hand member of a pair may anchor to the
-        # left-hand one the child has just been told about.
+        introductions.append(_introduce(layout, name, introduced, struck, rest))
+        # Added as we go: a pair's second member is a composite whose modifier
+        # the first one brought in, and must not announce it again.
         introduced.add(name)
         struck.update(layout.graphemes[name].prereq_keys)
     return IntroductionStep(tuple(introductions))
 
 
 def resume_step(
-    layout: Layout, graphemes: Sequence[str], had: AbstractSet[str]
+    layout: Layout, graphemes: Sequence[str], had: AbstractSet[str], rest: Rest
 ) -> IntroductionStep:
-    """Rebuild a step already introduced, as it was first emitted (ADR-024's cross-session resume)."""
-    # `had` is what the child had before the step: the location and modifier
-    # clauses are derived from it. The step's own members are taken out, so a
-    # caller handing over everything introduced gets no member located against
-    # its own pair.
+    """Rebuild a step already introduced (ADR-024's cross-session resume).
+
+    The modifier clauses are as first emitted; the locations are from today's
+    rest keys, so a finger that moved is not sent from where it no longer rests.
+    """
+    # `had` is what the child had before the step: the modifier clauses are
+    # derived from it. The step's own members are taken out, so a caller
+    # handing over everything introduced still hears the modifier announced.
     members = tuple(name for name in graphemes if name in layout.graphemes)
     introduced = {name for name in had if name in layout.graphemes} - set(members)
     struck = _keys_behind(layout, introduced)
-    return _build_step(layout, IntroductionSlot(members), introduced, struck)
+    return _build_step(layout, IntroductionSlot(members), introduced, struck, rest)
 
 
 def _introduce(
-    layout: Layout, name: str, introduced: AbstractSet[str], struck: AbstractSet[str]
+    layout: Layout, name: str, introduced: AbstractSet[str], struck: AbstractSet[str], rest: Rest
 ) -> KeyIntroduction:
     grapheme = layout.graphemes[name]
     key = base_key(layout, name)
@@ -540,13 +549,19 @@ def _introduce(
         base=key.name,
         finger=key.finger,
         side=key.side,
-        location=None if composite else _locate(layout, key, struck),
-        modifier=_introduce_modifier(layout, grapheme, introduced, struck) if composite else None,
+        location=None if composite else _locate(key, rest),
+        modifier=_introduce_modifier(layout, grapheme, introduced, struck, rest)
+        if composite
+        else None,
     )
 
 
 def _introduce_modifier(
-    layout: Layout, grapheme: Grapheme, introduced: AbstractSet[str], struck: AbstractSet[str]
+    layout: Layout,
+    grapheme: Grapheme,
+    introduced: AbstractSet[str],
+    struck: AbstractSet[str],
+    rest: Rest,
 ) -> ModifierIntroduction | None:
     modifier = next(key for key in grapheme.prereq_keys if key != grapheme.base)
     if modifier in struck:
@@ -564,7 +579,7 @@ def _introduce_modifier(
     return ModifierIntroduction(
         key=modifier,
         finger=key.finger,
-        location=_locate(layout, key, struck),
+        location=_locate(key, rest),
         # The mechanism is explained once per class, not once per key: a layout
         # with two dead keys teaches two keys but one idea.
         mechanism=None
@@ -577,25 +592,18 @@ def _mechanism_taught(layout: Layout, mechanism: str, introduced: AbstractSet[st
     return any(layout.graphemes[name].mechanism == mechanism for name in introduced)
 
 
-def _locate(layout: Layout, key: PhysicalKey, struck: AbstractSet[str]) -> Location | None:
-    # A modifier produces no character and makes no sound of its own, so it is
-    # never the anchor another key is described against -- it only receives one.
-    # The key being located is excluded as well: `struck` can already hold it
-    # when a composite pulled it in as a base stroke, and `min` would then
-    # return a zero-distance self-reference ("reach nowhere from A").
-    candidates = [
-        layout.keys[name] for name in struck if name in layout.graphemes and name != key.name
-    ]
-    if not candidates:
+def _locate(key: PhysicalKey, rest: Rest) -> Location | None:
+    # From the finger's rest key, whether or not it carries a letter (ADR-033),
+    # never from a letter the child has: the finger moves from where it rests.
+    cell = rest.get(key.finger)
+    if cell is None:
         return None
-    same_finger = [other for other in candidates if other.finger == key.finger]
-    reference = min(same_finger or candidates, key=lambda other: key_distance(key, other))
-    return Location(reference.name, key.row - reference.row, key.col - reference.col)
+    return Location(key.row - cell.row, key.col - cell.col)
 
 
 def key_distance(key: PhysicalKey, other: PhysicalKey) -> tuple[int, int, str]:
-    """Sort key for "closest key to `key`". Public because ADR-024's Phase B
-    anchor is the same reach measured the same way (alpha session 9)."""
+    """Sort key for "closest key to `key`": the drill generator's Phase B anchor
+    (alpha session 9), until ADR-024's ladder replaces Phase B (#12m session (6))."""
     row_gap, col_gap = abs(key.row - other.row), abs(key.col - other.col)
     # Manhattan, then prefer the straight vertical reach: it is the motion the
     # finger already makes from its home position and the one that describes
@@ -636,6 +644,11 @@ _COMPOSITE_SCRIPTS: dict[str, str] = {
 
 _NUMBER_WORDS: tuple[str, ...] = ("zero", "one", "two", "three", "four")
 
+# A rest letter's script ends here, where another letter's gives its reach
+# (ADR-033 § Introduction order and slots; wording decided 2026-11-09).
+_BUMP_LINE = "It is the key with the bump, where that finger rests."
+_REST_LINE = "It is the key where that finger rests."
+
 
 def describe(introduction: KeyIntroduction) -> tuple[str, str]:
     """The script on either side of the letter, which the caller speaks as itself (ADR-023)."""
@@ -643,8 +656,13 @@ def describe(introduction: KeyIntroduction) -> tuple[str, str]:
         rest = _composite_clauses(introduction)
     else:
         rest = [f"Use your {FINGER_NAMES[introduction.finger]}."]
-        if introduction.location is not None:
-            rest.append(f"Reach {describe_location(introduction.location)}.")
+        location = introduction.location
+        if location is not None and location.at_rest:
+            # The index fingers rest on the bumps and on nothing else (ADR-033).
+            bump = introduction.finger in (L_IDX, R_IDX)
+            rest.append(_BUMP_LINE if bump else _REST_LINE)
+        elif location is not None:
+            rest.append(f"Reach {describe_location(location)} from where that finger rests.")
     return "New letter:", " ".join(rest)
 
 
@@ -659,7 +677,14 @@ def _composite_clauses(introduction: KeyIntroduction) -> list[str]:
     # ADR-032 § What a modifier still gets: name, location relative to a key
     # the child has, and mechanism -- all inside the composite's own step.
     if modifier.location is not None:
-        clauses.append(f"{name[0].upper()}{name[1:]} is {describe_location(modifier.location)}.")
+        # Its own sentence, so the finger is named rather than "that finger".
+        rests = f"where your {FINGER_NAMES[modifier.finger]} rests"
+        place = (
+            rests
+            if modifier.location.at_rest
+            else f"{describe_location(modifier.location)} from {rests}"
+        )
+        clauses.append(f"{name[0].upper()}{name[1:]} is {place}.")
     if modifier.mechanism is not None:
         clauses.append(MECHANISM_NOTES[modifier.mechanism])
     return clauses
@@ -674,7 +699,7 @@ def describe_location(location: Location) -> str:
     if location.col_delta:
         direction = "left" if location.col_delta < 0 else "right"
         moves.append(f"{_count(location.col_delta, 'position')} to the {direction}")
-    return f"{' and '.join(moves)} from {_spoken(location.reference)}"
+    return " and ".join(moves)
 
 
 def _spoken(char: str) -> str:

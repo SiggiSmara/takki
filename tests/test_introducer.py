@@ -30,7 +30,15 @@ from takki.lesson.introducer import (
 )
 from takki.lesson.key_state import KeyStates
 from takki.persistence import Store
-from takki.platform.layout import Grapheme, Layout, PhysicalKey, build_de, build_en, build_is
+from takki.platform.layout import (
+    Grapheme,
+    KeyboardShape,
+    Layout,
+    PhysicalKey,
+    build_de,
+    build_en,
+    build_is,
+)
 from tests.fakes.fake_platform import FakePlatformInterface
 from tests.fakes.fake_store import FakeStore
 from tests.fakes.fixed_list_source import FixedListSource
@@ -312,20 +320,13 @@ class TestCompositeIntroduction:
         assert not any(k.is_composite for k in flat(sequence(build_de())))
         assert all(k.modifier is None for k in flat(sequence(build_de())))
 
-    def test_a_modifier_is_never_the_reference_for_another_key(self) -> None:
-        for k in flat(sequence(build_is(), self.IS_WORDS)):
-            references = [k.location] + ([k.modifier.location] if k.modifier else [])
-            for location in references:
-                if location is not None:
-                    assert location.reference != "dead-acute"
-
     def test_the_modifier_gets_a_finger_and_a_location_of_its_own(self) -> None:
         first = next(k for k in flat(sequence(build_is(), self.IS_WORDS)) if k.modifier)
         assert first.grapheme == "á"
         assert first.modifier is not None
         assert first.modifier.key == "dead-acute"
         assert first.modifier.finger == "R-pink"
-        assert first.modifier.location == Location(reference="æ", row_delta=0, col_delta=1)
+        assert first.modifier.location == Location(0, 1)
         assert first.modifier.mechanism == "dead-key"
 
     def test_only_the_first_composite_of_a_class_carries_the_modifier(self) -> None:
@@ -408,91 +409,168 @@ class TestModifierAnnouncementMemory:
         assert all(k.modifier is None for k in step.keys)
 
 
+def intro(
+    layout: Layout, name: str, rest: Rest = READY, had: AbstractSet[str] = frozenset()
+) -> KeyIntroduction:
+    """One letter's introduction, built as the step builder builds it."""
+    (only,) = resume_step(layout, [name], had, rest).keys
+    return only
+
+
+def script(
+    layout: Layout, name: str, rest: Rest = READY, had: AbstractSet[str] = frozenset()
+) -> str:
+    return describe(intro(layout, name, rest, had))[1]
+
+
 class TestLocation:
-    """ADR-023 § Location — closest same-finger key, else closest known key."""
+    """ADR-023 § Location, amended 2026-11-09: every key from its finger's rest key."""
 
-    def test_the_very_first_key_has_no_reference(self) -> None:
-        first = flat(sequence(build_en()))[0]
-        assert first.grapheme == "f"
-        assert first.location is None
+    def test_the_bump_letters_are_at_their_rest_keys(self) -> None:
+        first = sequence(build_en())[0]
+        assert [(k.grapheme, k.location) for k in first.keys] == [
+            ("f", Location(0, 0)),
+            ("j", Location(0, 0)),
+        ]
 
-    def test_same_finger_reference_wins_over_a_physically_closer_key(self) -> None:
-        # E is at (2,3): D (3,3) is the same finger at distance 1, and so is
-        # nothing else -- but R (2,4) would tie on distance if the finger
-        # filter did not apply first.
-        store = FakeStore()
-        profile = store.create_profile("Ana")
-        stocked(store, profile.id, *"asdfghjkl", "r")
-        steps = ordered(build_en(), source(EN_WORDS), KeyStates(store, profile.id).active_keys())
-        e = next(k for k in flat(steps) if k.grapheme == "e")
-        assert e.location == Location(reference="d", row_delta=-1, col_delta=0)
+    def test_a_reach_on_each_axis_is_measured_from_the_rest_key(self) -> None:
+        layout = build_en()
+        assert intro(layout, "e").location == Location(-1, 0)
+        assert intro(layout, "c").location == Location(1, 0)
+        assert intro(layout, "g").location == Location(0, 1)
+        assert intro(layout, "h").location == Location(0, -1)
+        assert intro(layout, "t").location == Location(-1, 1)
+        assert intro(build_de(), "ß").location == Location(-2, 1)
 
-    def test_different_finger_fallback_when_the_finger_has_nothing_yet(self) -> None:
-        # K is the second key of step 2, so the right middle finger owns
-        # nothing; the closest key the child has is J, one column left.
-        k = next(k for k in flat(sequence(build_en())) if k.grapheme == "k")
-        assert k.location == Location(reference="j", row_delta=0, col_delta=1)
+    def test_a_letter_the_child_has_is_not_the_reference(self) -> None:
+        # Under the old rule `t` was located from `g` once the child had it.
+        layout = build_en()
+        assert intro(layout, "t", had={"f", "j", "g", "r"}).location == Location(-1, 1)
 
-    def test_the_right_hand_member_may_anchor_to_its_own_step_partner(self) -> None:
-        j = next(k for k in flat(sequence(build_en())) if k.grapheme == "j")
-        assert j.location == Location(reference="f", row_delta=0, col_delta=3)
+    def test_a_rest_key_with_no_letter_still_locates(self) -> None:
+        # The right little finger rests on `;` in English, which is no letter.
+        assert intro(build_en(), "p").location == Location(-1, 0)
 
-    def test_vertical_reach_beats_a_horizontal_one_at_equal_distance(self) -> None:
-        # T is at (2,5), left index. Same-finger candidates by then include
-        # G (3,5) and R (2,4), both Manhattan distance 1 away; G is the
-        # straight vertical reach and wins on the |dcol| tie-break.
-        t = next(k for k in flat(sequence(build_en())) if k.grapheme == "t")
-        assert t.location == Location(reference="g", row_delta=-1, col_delta=0)
+    def test_a_middle_finger_resting_on_e_locates_d_from_e(self) -> None:
+        rest = with_rest(L_mid=RestCell(2, 3, True))
+        assert intro(build_en(), "e", rest).location == Location(0, 0)
+        assert intro(build_en(), "d", rest).location == Location(1, 0)
+        assert intro(build_en(), "c", rest).location == Location(2, 0)
 
-    def test_a_number_row_letter_measures_two_rows_up(self) -> None:
-        sharp_s = next(k for k in flat(sequence(build_de())) if k.grapheme == "ß")
-        assert sharp_s.location is not None
-        assert sharp_s.location.row_delta == -2
+    def test_a_finger_with_no_rest_key_gives_no_location(self) -> None:
+        assert intro(build_en(), "e", with_rest(L_mid=None)).location is None
+
+    def test_a_composite_spends_its_location_on_its_modifier(self) -> None:
+        a_acute = intro(build_is(), "á", had={"a"})
+        assert a_acute.location is None
+        assert a_acute.modifier is not None
+        assert a_acute.modifier.location == Location(0, 1)
+
+    def test_a_modifier_is_located_from_its_own_fingers_rest_key(self) -> None:
+        # The accent key's finger is the right little finger, not `a`'s.
+        moved = with_rest(R_pink=RestCell(2, 11, True))
+        a_acute = intro(build_is(), "á", moved, had={"a"})
+        assert a_acute.modifier is not None
+        assert a_acute.modifier.location == Location(1, 0)
+
+    def test_a_modifier_that_is_its_fingers_rest_key_is_at_rest(self) -> None:
+        on_it = with_rest(R_pink=RestCell(3, 11, False))
+        a_acute = intro(build_is(), "á", on_it, had={"a"})
+        assert a_acute.modifier is not None
+        assert a_acute.modifier.location == Location(0, 0)
+
+    @pytest.mark.parametrize(
+        ("shape", "cell", "location"),
+        [("iso", (3, 12), Location(-1, -2)), ("ansi", (2, 13), Location(0, -3))],
+    )
+    def test_a_little_finger_resting_on_0x2b_follows_the_keyboard_shape(
+        self, shape: KeyboardShape, cell: tuple[int, int], location: Location
+    ) -> None:
+        layout = build_en(shape)
+        assert (layout.keys["\\"].row, layout.keys["\\"].col) == cell
+        rest = with_rest(R_pink=RestCell(*cell, True))
+        assert intro(layout, "p", rest).location == location
 
 
 class TestScript:
     """Placeholder English, in focus_model's style — ADR-022's YAML tier is unwritten."""
 
-    def test_adr_023s_worked_example_verbatim(self) -> None:
-        e = next(k for k in flat(sequence(build_en())) if k.grapheme == "e")
-        assert describe(e) == (
+    def test_a_bump_letter_is_where_its_finger_rests_on_the_bump(self) -> None:
+        f, j = sequence(build_en())[0].keys
+        assert describe(f) == (
             "New letter:",
-            "Use your left middle finger. Reach one row up from D.",
+            "Use your left index finger. It is the key with the bump, where that finger rests.",
+        )
+        assert describe(j) == (
+            "New letter:",
+            "Use your right index finger. It is the key with the bump, where that finger rests.",
         )
 
-    def test_a_bottom_row_key_is_reached_down(self) -> None:
-        v = next(k for k in flat(sequence(build_en())) if k.grapheme == "v")
-        assert describe(v)[1] == "Use your left index finger. Reach one row down from F."
-
-    def test_a_key_nearer_the_little_finger_is_reached_to_the_left(self) -> None:
-        d = next(k for k in flat(sequence(build_en())) if k.grapheme == "d")
-        assert (
-            describe(d)[1] == "Use your left middle finger. Reach one position to the left from F."
+    def test_another_rest_letter_is_where_its_finger_rests(self) -> None:
+        assert script(build_en(), "s") == (
+            "Use your left ring finger. It is the key where that finger rests."
+        )
+        e_rest = with_rest(L_mid=RestCell(2, 3, True))
+        assert script(build_en(), "e", e_rest) == (
+            "Use your left middle finger. It is the key where that finger rests."
         )
 
-    def test_a_reach_on_both_axes_names_both_moves(self) -> None:
-        assert (
-            describe_location(Location(reference="j", row_delta=1, col_delta=-2))
-            == "one row down and two positions to the left from J"
+    def test_adr_023s_worked_example_from_the_rest_key(self) -> None:
+        assert script(build_en(), "e") == (
+            "Use your left middle finger. Reach one row up from where that finger rests."
         )
+
+    def test_a_reach_on_each_axis(self) -> None:
+        layout = build_en()
+        assert script(layout, "v") == (
+            "Use your left index finger. Reach one row down from where that finger rests."
+        )
+        assert script(layout, "g") == (
+            "Use your left index finger. "
+            "Reach one position to the right from where that finger rests."
+        )
+        assert script(layout, "h") == (
+            "Use your right index finger. "
+            "Reach one position to the left from where that finger rests."
+        )
+        assert script(layout, "t") == (
+            "Use your left index finger. "
+            "Reach one row up and one position to the right from where that finger rests."
+        )
+
+    def test_a_reach_from_a_rest_key_with_no_letter(self) -> None:
+        assert script(build_en(), "p") == (
+            "Use your right little finger. Reach one row up from where that finger rests."
+        )
+
+    def test_d_from_a_middle_finger_resting_on_e(self) -> None:
+        e_rest = with_rest(L_mid=RestCell(2, 3, True))
+        assert script(build_en(), "d", e_rest) == (
+            "Use your left middle finger. Reach one row down from where that finger rests."
+        )
+
+    @pytest.mark.parametrize(
+        ("shape", "cell", "reach"),
+        [
+            ("iso", (3, 12), "one row up and two positions to the left"),
+            ("ansi", (2, 13), "three positions to the left"),
+        ],
+    )
+    def test_a_reach_from_0x2b_on_both_keyboard_shapes(
+        self, shape: KeyboardShape, cell: tuple[int, int], reach: str
+    ) -> None:
+        rest = with_rest(R_pink=RestCell(*cell, True))
+        assert script(build_en(shape), "p", rest) == (
+            f"Use your right little finger. Reach {reach} from where that finger rests."
+        )
+
+    def test_a_finger_with_no_rest_key_drops_the_location_clause(self) -> None:
+        assert script(build_en(), "e", with_rest(L_mid=None)) == "Use your left middle finger."
 
     def test_a_reach_past_the_number_words_is_spoken_in_digits(self) -> None:
-        assert (
-            describe_location(Location(reference="f", row_delta=0, col_delta=4))
-            == "four positions to the right from F"
-        )
-        assert (
-            describe_location(Location(reference="f", row_delta=0, col_delta=5))
-            == "5 positions to the right from F"
-        )
-
-    def test_a_reference_with_no_single_capital_is_spoken_as_it_is(self) -> None:
-        location = Location(reference="ß", row_delta=1, col_delta=0)
-        assert describe_location(location) == "one row down from ß"
-
-    def test_the_first_key_drops_the_location_clause(self) -> None:
-        f = flat(sequence(build_en()))[0]
-        assert describe(f) == ("New letter:", "Use your left index finger.")
+        assert describe_location(Location(0, 4)) == "four positions to the right"
+        assert describe_location(Location(0, 5)) == "5 positions to the right"
+        assert describe_location(Location(-2, 0)) == "two rows up"
 
     def test_the_first_composite_of_a_class_explains_the_mechanism(self) -> None:
         first = next(
@@ -503,8 +581,16 @@ class TestScript:
         assert describe(first) == (
             "New letter:",
             "Press the accent key first, then A. "
-            "The accent key is one position to the right from Æ. "
+            "The accent key is one position to the right from where your right little finger rests. "
             "It will not make a sound on its own — it changes the next letter you press.",
+        )
+
+    def test_a_modifier_on_its_fingers_rest_key_is_where_that_finger_rests(self) -> None:
+        on_it = with_rest(R_pink=RestCell(3, 11, False))
+        assert script(build_is(), "á", on_it, had={"a"}) == (
+            "Press the accent key first, then A. "
+            "The accent key is where your right little finger rests. "
+            "It will not make a sound on its own — it changes the next letter you press."
         )
 
     def test_a_later_composite_of_the_same_class_names_only_its_keys(self) -> None:
@@ -514,13 +600,6 @@ class TestScript:
             if k.is_composite
         ][1]
         assert describe(later) == ("New letter:", "Press the accent key first, then E.")
-
-    def test_plural_and_diagonal_reaches_read_correctly(self) -> None:
-        j = next(k for k in flat(sequence(build_en())) if k.grapheme == "j")
-        assert describe(j) == (
-            "New letter:",
-            "Use your right index finger. Reach three positions to the right from F.",
-        )
 
     def test_the_letter_itself_is_not_in_the_script(self) -> None:
         # alpha-plan #12l: the caller speaks it between the two parts, through
@@ -648,15 +727,17 @@ class TestPurity:
         assert "á" not in [k.grapheme for k in flat(steps)]
         assert all(k.modifier is None for k in flat(steps))
 
-    def test_a_key_is_never_the_reference_for_itself(self) -> None:
-        # `struck` can hold a key before the curriculum introduces it, because
-        # a composite pulls its base stroke in. Without the self-exclusion the
-        # base's own step anchors it to itself at distance zero and the script
-        # says "reach nowhere from A".
+    def test_only_a_rest_letter_is_at_rest(self) -> None:
+        # A zero reach is spoken as "where that finger rests", so it must mean
+        # exactly that. Under the old rule a composite's base, struck before it
+        # was introduced, could be located against itself ("reach nowhere").
         layout = build_is()
         steps = ordered(layout, source(EN_WORDS), {"á"})
-        for k in flat(steps):
-            assert k.location is None or k.location.reference != k.base
+        at_rest = [k.grapheme for k in flat(steps) if k.location and k.location.at_rest]
+        rest_cells = {(cell.row, cell.col) for cell in READY.values()}
+        assert sorted(at_rest) == sorted(
+            name for name, key in layout.keys.items() if (key.row, key.col) in rest_cells
+        )
 
     def test_a_composite_whose_base_is_not_a_grapheme_fails_loudly(self) -> None:
         # ADR-032 § Decision 1 rule 1 assumes a composite's base is a letter
@@ -731,13 +812,6 @@ class TestBumpLetters:
     def test_the_first_step_is_the_bump_letters_for_every_layout(self) -> None:
         for build in (build_en, build_de, build_is):
             assert names(sequence(build()))[0] == ["f", "j"]
-
-    def test_the_first_step_locates_j_from_f_and_f_from_nothing(self) -> None:
-        first = sequence(build_en())[0]
-        assert [(k.grapheme, k.location) for k in first.keys] == [
-            ("f", None),
-            ("j", Location(reference="f", row_delta=0, col_delta=3)),
-        ]
 
     def test_r_u_v_m_are_ordinary_letters_introduced_once_at_their_rank(self) -> None:
         # Stage 0's other four keys are no longer a stage: the strategy ranks them.
@@ -981,15 +1055,30 @@ class TestResumeStep:
         assert any(intro.modifier for intro in flat(steps)) == (build is build_is)
         for step in steps:
             members = [intro.grapheme for intro in step.keys]
-            assert resume_step(layout, members, had) == step
+            assert resume_step(layout, members, had, READY) == step
             had.update(members)
 
     def test_the_step_itself_is_not_among_what_the_child_had(self) -> None:
         # A caller that hands over everything introduced, the step included,
-        # must not get a member located against its own pair.
+        # must still hear the modifier its step brought in.
+        layout = build_is()
+        words = TestCompositeIntroduction.IS_WORDS
+        step = next(s for s in ordered(layout, source(words)) if any(k.modifier for k in s.keys))
+        members = [k.grapheme for k in step.keys]
+        had = {name for name in layout.graphemes if layout.graphemes[name].mechanism == "direct"}
+        assert resume_step(layout, members, had | set(members), READY) == step
+
+    def test_a_rest_key_changed_since_is_described_from_todays(self) -> None:
+        # Decided 2026-11-09 (#12m session (5b)): the finger starts from where
+        # it rests now, and the record of where it rested then is not read.
         layout = build_en()
-        first = sequence(layout)[0]
-        assert resume_step(layout, ["f", "j"], {"f", "j"}) == first
+        then = resume_step(layout, ["c", "m"], {"f", "j"}, READY)
+        today = resume_step(layout, ["c", "m"], {"f", "j"}, with_rest(L_mid=RestCell(2, 3, True)))
+        assert [k.location for k in then.keys] == [Location(1, 0), Location(1, 0)]
+        assert [k.location for k in today.keys] == [Location(2, 0), Location(1, 0)]
+        assert describe(today.keys[0])[1] == (
+            "Use your left middle finger. Reach two rows down from where that finger rests."
+        )
 
 
 # Ordering C's fixture (#12m session (5)): `s`, `l` and `a` are rest letters

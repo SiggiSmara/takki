@@ -8,13 +8,13 @@ import pytest
 
 from takki.lesson.introducer import home_anchor_keys
 from takki.platform.layout import (
-    SCAN_CODE_GRID,
     PhysicalKey,
     build_de,
     build_en,
     build_is,
     describe_mismatch,
     key_positions,
+    scan_code_grid,
 )
 
 pytestmark = pytest.mark.windows_only
@@ -185,7 +185,7 @@ class TestEveryCell:
             with loaded(klid) as hkl:
                 layout = read_layout(hkl)
             cells = {(key.row, key.col) for key in layout.keys.values()}
-            assert cells == set(SCAN_CODE_GRID.values()), klid
+            assert cells == set(scan_code_grid().values()), klid
 
     def test_a_cells_scan_code_gives_back_its_character(self) -> None:
         # The scan code is derived from the position, not stored, so this is the
@@ -208,7 +208,7 @@ class TestEveryCell:
         with loaded(UK_QWERTY) as hkl:
             layout = read_layout(hkl)
         expected = build_en().keys
-        expected["#"] = PhysicalKey("#", 3, 12)
+        expected["#"] = PhysicalKey("#", *scan_code_grid()[0x2B])
         del expected["\\"]
         assert layout.keys == expected
         assert describe_mismatch(build_en(), layout) is None
