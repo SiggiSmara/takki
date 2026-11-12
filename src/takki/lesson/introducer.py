@@ -639,6 +639,52 @@ _NUMBER_WORDS: tuple[str, ...] = ("zero", "one", "two", "three", "four")
 _BUMP_LINE = "It is the key with the bump, where that finger rests."
 _REST_LINE = "It is the key where that finger rests."
 
+# The rest cue (ADR-024 § Reach: one short word, "rest", never "home"), the
+# script's line about it and its guidance; words decided 2026-11-12, #12m
+# sessions (6) and (6b).
+REST_CUE = "Rest."
+_CUE_LINE = "When you hear rest, put your fingers back where they rest, and press with the {} you just used."
+
+
+def rest_cue_line(composite: bool) -> str:
+    """The script's line about the cue, said once after a Reach step's last member (ADR-023)."""
+    return _CUE_LINE.format("fingers" if composite else "finger")
+
+
+def rest_guidance(fingers: Sequence[str]) -> str:
+    """What the rest cue says after wrong presses: the fingers still owed, through the bump.
+
+    One finger or a composite's two, in keystroke order. An index finger is
+    sent back to its bump; any other finger finds its hand's bump first.
+    """
+    index = [finger for finger in fingers if finger in (L_IDX, R_IDX)]
+    others = [finger for finger in fingers if finger not in index]
+    sentences = [
+        f"Put your {FINGER_NAMES[finger]} back on the key with the bump." for finger in index
+    ]
+    if not others:
+        return " ".join(sentences)
+    hands = list(
+        dict.fromkeys(_hand(finger) for finger in others if _index_of(finger) not in index)
+    )
+    if len(hands) == 2:
+        sentences.append("Find the bumps with both index fingers.")
+    elif hands:
+        sentences.append(f"Find the bump with your {hands[0]} index finger.")
+    names = " and your ".join(FINGER_NAMES[finger] for finger in others)
+    rest = "they rest" if len(others) > 1 else "it rests"
+    press = "press both keys" if len(fingers) > 1 else "press"
+    sentences.append(f"Then put your {names} back where {rest}, and {press}.")
+    return " ".join(sentences)
+
+
+def _hand(finger: str) -> str:
+    return "left" if finger.startswith("L-") else "right"
+
+
+def _index_of(finger: str) -> str:
+    return L_IDX if finger.startswith("L-") else R_IDX
+
 
 def describe(introduction: KeyIntroduction) -> tuple[str, str]:
     """The script on either side of the letter, which the caller speaks as itself (ADR-023)."""

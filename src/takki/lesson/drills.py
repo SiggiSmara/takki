@@ -277,6 +277,8 @@ class DrillGenerator:
         self._block_seconds = 0.0
         # None until the block's first answer: see `record_answer`.
         self._answered_at: float | None = None
+        # The gap now running held spoken guidance: see `leave_out_gap`.
+        self._gap_left_out = False
 
     @property
     def ramp_up(self) -> StepLadder | None:
@@ -344,6 +346,7 @@ class DrillGenerator:
         self._paced_attempts = 0
         self._block_seconds = 0.0
         self._answered_at = None
+        self._gap_left_out = False
         target = self._target_prompts()
         ladder = self._ladder
         # Read here, at the boundary, where the session holds the key states
@@ -374,7 +377,8 @@ class DrillGenerator:
         # built and that answer is whatever the session says first, an
         # introduction script or a celebration, and none of it is typing.
         previous, self._answered_at = self._answered_at, now
-        if previous is not None and now - previous <= config.PACE_IDLE_GAP_SECONDS:
+        left_out, self._gap_left_out = self._gap_left_out, False
+        if previous is not None and not left_out and now - previous <= config.PACE_IDLE_GAP_SECONDS:
             self._block_seconds += now - previous
             self._paced_attempts += 1
         grapheme = prompt.grapheme
@@ -398,6 +402,24 @@ class DrillGenerator:
             return
         if prompt.kind in (PromptKind.COUNTED, PromptKind.REACH):
             self._refresh()
+
+    def leave_out_gap(self) -> None:
+        """The gap ending at the next answer is left out of pace, as an idle gap is.
+
+        Called when Takki speaks a rest cue's guidance: the time it takes is
+        Takki's, not the child's (ADR-024 § Lesson granularity, restated).
+        """
+        self._gap_left_out = True
+
+    def takes_reach_now(self, grapheme: str) -> bool:
+        """Whether `grapheme` is a member of the step that is at Reach and reaches."""
+        ladder = self._ladder
+        return (
+            ladder is not None
+            and ladder.level == "reach"
+            and grapheme in ladder.graphemes
+            and ladder.takes_reach(grapheme)
+        )
 
     # ---- the ladder ----------------------------------------------------
 

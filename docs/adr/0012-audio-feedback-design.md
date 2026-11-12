@@ -151,6 +151,14 @@ When the child types an incorrect character, the keypress is auto-rejected: it i
 
 Auto-reject applies in both layers. In Layer 1 the drill repeats the same character prompt. In Layer 2 the same character position in the word is re-prompted.
 
+**The rest cue** *(dated note, 2026-11-12, alpha-plan #12m sessions (6) and (6b); [ADR-024 § Reach](0024-drill-content-and-lesson-granularity.md#reach) owns the cue.)* After each Reach letter Takki speaks *"Rest."*, one interruptible utterance through the same path as a prompt's re-speak, and the cue is answered by a press on the rest key of every finger the letter was typed with. The feedback for a press after it:
+
+- **An owed rest key**: the correct-key sound, and it cuts what is speaking, as any answer does. A rest key already pressed for this cue: nothing, no sound.
+- **Any other key**: the error sound, and the cue stays open. The re-prompt is the word again, except at every `REST_CUE_GUIDE_AFTER`-th (2nd) wrong press, where it is the guidance: the fingers still owed, sent back through the bump.
+- **A wrong press while the guidance is speaking does not cut it** (decided by the developer in session (6b)). It gets the error sound and nothing else: it is not counted and queues nothing. The guidance is for the child who keeps missing, who is the child most likely to go on pressing through it, and "TTS interrupt on keypress" above is for a child ahead of the prompt. An owed rest key still cuts it.
+
+What a pause, the re-read key, the restart key and a timeout do while a cue is open is [concurrency-model.md § While a rest cue is open](../concurrency-model.md#while-a-rest-cue-is-open). Tests: `tests/test_session.py::TestRestCue`.
+
 **Backspace — considered and rejected:**
 
 With auto-reject in place, backspace has no meaningful use case. The only situations where backspace seems useful — "I typed the wrong character," "I want to rethink from an earlier position" — are either already handled (wrong characters are discarded automatically) or better served by other controls. Going back one character does not help a child who is disoriented; re-reading the full prompt does. Backspace is therefore disabled entirely. Pressing it plays the boundary tone so the child knows the key registered but had no effect.

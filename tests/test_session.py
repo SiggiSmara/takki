@@ -17,11 +17,30 @@ from takki.focus_model import PAUSED_ANNOUNCEMENT, RESUMED_ANNOUNCEMENT
 from takki.input import KeyEvent
 from takki.language import WordSource
 from takki.lesson.drills import DrillBlock, DrillGenerator, Prompt
-from takki.lesson.introducer import KeyIntroducer, describe, introduction_sequence
+from takki.lesson.introducer import (
+    REST_CUE,
+    KeyIntroducer,
+    describe,
+    introduction_sequence,
+    rest_cue_line,
+    rest_guidance,
+)
 from takki.lesson.key_state import KeyStates
 from takki.persistence import Attempt, Profile, WindowStats
-from takki.platform.layout import L_PINK, Grapheme, Layout, PhysicalKey, build_en
-from takki.session import REST_CUE, Celebrant, InboundEvent, SessionLoop
+from takki.platform.layout import (
+    L_IDX,
+    L_MID,
+    L_PINK,
+    R_IDX,
+    R_MID,
+    R_PINK,
+    Grapheme,
+    Layout,
+    PhysicalKey,
+    build_en,
+    build_is,
+)
+from takki.session import Celebrant, InboundEvent, SessionLoop
 from tests.fakes.fake_clock import FakeClock
 from tests.fakes.fake_focus_source import FakeFocusSource
 from tests.fakes.fake_frames import FakeFrameLimiter
@@ -94,8 +113,9 @@ class Harness:
         not_ready: tuple[str, ...] = (),
         rest_keys: bool = True,
         rng: random.Random | None = None,
+        layout: Layout | None = None,
     ) -> None:
-        self.layout = build_en()
+        self.layout = layout or build_en()
         self.source = source or FixedListSource(words if words is not None else EN_WORDS)
         self.inbound: queue.Queue[InboundEvent] = queue.Queue()
         self.clock = FakeClock()
@@ -294,8 +314,23 @@ def member_lines(names: tuple[str, ...]) -> dict[str, list[str]]:
 
 
 def intro_lines(names: tuple[str, ...]) -> list[str]:
-    """What the TTS engine speaks of a step's script while the letters go to the fake source."""
-    return [text for lead, _, rest in intro_script(names) for text in (lead, rest)]
+    """What the TTS engine speaks of a step's script while the letters go to the fake source.
+
+    A step with a member that reaches, introduced at Reach, ends with the line
+    about the rest cue (ADR-023, #12m session (6b)).
+    """
+    lines = [text for lead, _, rest in intro_script(names) for text in (lead, rest)]
+    return [*lines, rest_cue_line(False)] if reaches(names) else lines
+
+
+def reaches(names: tuple[str, ...]) -> bool:
+    """Whether any member of an English step is off its finger's rest key under READY."""
+    layout = build_en()
+    return any(
+        (key.row, key.col) != (READY[key.finger].row, READY[key.finger].col)
+        for name in names
+        for key in [layout.keys[name]]
+    )
 
 
 class TestStartup:
@@ -408,10 +443,187 @@ class TestFirstStepEndToEnd:
 class TestRestCue:
     """ADR-024 § Reach in the loop: the cue after each Reach letter, answered by the rest key.
 
-    #12m session (6) builds the cue's basic handling. The guidance after wrong
-    presses, the script's line about the cue, and what a pause, the re-read key
-    and the restart key say while one is open are session (6b)'s.
+    #12m session (6) built the cue; session (6b) its guidance after wrong
+    presses and what a pause, the re-read key, the restart key and a timeout
+    do while one is open (decided 2026-11-12).
     """
+
+    # `r`'s cue asks the left index finger back.
+    GUIDE_F = "Put your left index finger back on the key with the bump."
+
+    def miss(self, harness: Harness, key: str = "g") -> None:
+        """A wrong press on the open cue, and whatever it queues spoken to its end."""
+        harness.press(key)
+        for _ in range(3):
+            harness.loop.tick()
+            harness.pump()
+        harness.loop.tick()
+
+    def test_the_rhythm_is_the_word_and_the_guidance_at_every_nth_miss(self) -> None:
+        harness = self.at_reach()
+        spoken = len(harness.engine.spoken)
+        misses = 3 * config.REST_CUE_GUIDE_AFTER
+        for _ in range(misses):
+            self.miss(harness)
+        assert harness.engine.spoken[spoken:] == [
+            self.GUIDE_F if n % config.REST_CUE_GUIDE_AFTER == 0 else REST_CUE
+            for n in range(1, misses + 1)
+        ]
+        assert harness.cues.played == ["correct"] + ["error"] * misses
+        assert harness.loop.cue == ("f",)
+
+    def test_a_miss_while_the_guidance_is_spoken_does_not_cut_it_and_is_not_counted(
+        self,
+    ) -> None:
+        # Decided 2026-11-12 (#12m session (6b)): the guidance is for the child
+        # who keeps missing, so a miss does not cut it off.
+        harness = self.at_reach()
+        for _ in range(config.REST_CUE_GUIDE_AFTER - 1):
+            self.miss(harness)
+        harness.press("g")
+        harness.loop.tick()
+        # The guidance is in flight and not yet heard.
+        spoken, stopped = len(harness.engine.spoken), harness.engine.stopped
+        harness.press("h")
+        harness.loop.tick()
+        harness.pump()
+        harness.loop.tick()
+        harness.pump()
+        harness.loop.tick()
+        assert harness.engine.stopped == stopped
+        assert harness.engine.spoken[spoken:] == [self.GUIDE_F]
+        assert harness.cues.played == ["correct"] + ["error"] * (config.REST_CUE_GUIDE_AFTER + 1)
+        # Not counted: the next miss is the word, the one after it the guidance.
+        spoken = len(harness.engine.spoken)
+        for _ in range(config.REST_CUE_GUIDE_AFTER):
+            self.miss(harness)
+        assert harness.engine.spoken[spoken:] == [REST_CUE] * (config.REST_CUE_GUIDE_AFTER - 1) + [
+            self.GUIDE_F
+        ]
+
+    def test_the_rest_key_cuts_the_guidance_and_closes_the_cue(self) -> None:
+        harness = self.at_reach()
+        for _ in range(config.REST_CUE_GUIDE_AFTER - 1):
+            self.miss(harness)
+        harness.press("g")
+        harness.loop.tick()
+        harness.press("f")
+        harness.loop.tick()
+        harness.pump()
+        assert self.GUIDE_F not in harness.engine.spoken
+        assert harness.cues.played[-1] == "correct"
+        assert harness.opened() == "u"
+
+    def test_a_pause_keeps_the_cue_open_and_the_resume_speaks_the_guidance(self) -> None:
+        harness = self.at_reach()
+        # One miss short of the guidance; the resume resets the count, so the
+        # next miss is the word again.
+        for _ in range(config.REST_CUE_GUIDE_AFTER - 1):
+            self.miss(harness)
+        spoken = len(harness.engine.spoken)
+        harness.focus.lose_focus()
+        harness.loop.tick()
+        harness.pump()
+        harness.focus.gain_focus()
+        harness.loop.tick()
+        harness.pump()
+        harness.loop.tick()
+        harness.pump()
+        harness.loop.tick()
+        assert harness.loop.cue == ("f",)
+        self.miss(harness)
+        assert harness.engine.spoken[spoken:] == [
+            PAUSED_ANNOUNCEMENT,
+            RESUMED_ANNOUNCEMENT,
+            self.GUIDE_F,
+            REST_CUE,
+        ]
+
+    def test_a_miss_before_the_resumes_guidance_is_heard_leaves_it_owed(self) -> None:
+        # The child has not heard the guidance yet, so a miss over the resume
+        # announcement does not turn it back into the word.
+        harness = self.at_reach()
+        spoken = len(harness.engine.spoken)
+        harness.focus.lose_focus()
+        harness.loop.tick()
+        harness.pump()
+        harness.focus.gain_focus()
+        harness.loop.tick()
+        harness.press("g")
+        for _ in range(3):
+            harness.loop.tick()
+            harness.pump()
+        assert harness.engine.spoken[spoken:] == [PAUSED_ANNOUNCEMENT, self.GUIDE_F]
+        assert harness.cues.played == ["correct", "error"]
+
+    def test_the_re_read_key_speaks_the_guidance_and_is_not_a_miss(self) -> None:
+        harness = self.at_reach()
+        spoken = len(harness.engine.spoken)
+        harness.key(config.REREAD_KEY)
+        harness.loop.tick()
+        harness.key(config.REREAD_KEY, pressed=False)
+        for _ in range(3):
+            harness.loop.tick()
+            harness.pump()
+        assert harness.engine.spoken[spoken:] == [self.GUIDE_F]
+        assert harness.cues.played == ["correct"]
+        # The count is where it was: the misses still run word, then guidance.
+        for _ in range(config.REST_CUE_GUIDE_AFTER):
+            self.miss(harness)
+        assert harness.engine.spoken[spoken:] == [self.GUIDE_F] + [REST_CUE] * (
+            config.REST_CUE_GUIDE_AFTER - 1
+        ) + [self.GUIDE_F]
+
+    def test_the_restart_key_resets_the_count(self) -> None:
+        harness = self.at_reach()
+        for _ in range(config.REST_CUE_GUIDE_AFTER - 1):
+            self.miss(harness)
+        spoken = len(harness.engine.spoken)
+        harness.key(config.RESTART_KEY)
+        harness.loop.tick()
+        harness.clock.advance(config.RESTART_HOLD_MS / 1000)
+        harness.loop.tick()
+        harness.key(config.RESTART_KEY, pressed=False)
+        harness.pump()
+        harness.loop.tick()
+        self.miss(harness)
+        assert harness.engine.spoken[spoken:] == [REST_CUE, REST_CUE]
+        assert harness.loop.cue == ("f",)
+
+    def test_a_timeout_after_the_guidance_speaks_the_word(self) -> None:
+        harness = self.at_reach()
+        for _ in range(config.REST_CUE_GUIDE_AFTER):
+            self.miss(harness)
+        spoken = len(harness.engine.spoken)
+        harness.clock.advance(config.PROMPT_TIMEOUT_SECONDS)
+        harness.loop.tick()
+        harness.pump()
+        assert harness.engine.spoken[spoken:] == [REST_CUE]
+
+    def test_a_gap_that_held_the_guidance_is_left_out_of_the_pace_measure(self) -> None:
+        def paced(misses: int) -> tuple[int, float]:
+            harness = self.at_reach()
+            for _ in range(misses):
+                self.miss(harness)
+            harness.press("f")
+            harness.loop.tick()
+            harness.opened()
+            harness.press("u")
+            harness.loop.tick()
+            drills = harness.loop._drills  # pyright: ignore[reportPrivateUsage]
+            assert drills is not None
+            return (
+                drills._paced_attempts,  # pyright: ignore[reportPrivateUsage]
+                drills._block_seconds,  # pyright: ignore[reportPrivateUsage]
+            )
+
+        # The cue's answer is its first press, the first miss. Two gaps: `r` to
+        # that miss, and the miss to `u` over the other misses and `f`.
+        misses = config.REST_CUE_GUIDE_AFTER - 1
+        assert paced(misses) == (2, (misses + 2) * KEYSTROKE_SECONDS)
+        # With the guidance spoken after the cue's answer, the gap from that
+        # answer to `u` is left out; the gap from `r` to it is kept.
+        assert paced(config.REST_CUE_GUIDE_AFTER) == (1, KEYSTROKE_SECONDS)
 
     def at_reach(self) -> Harness:
         """A profile past the first step, at the second's Reach: `r`, then its cue, then `u`."""
@@ -503,6 +715,137 @@ class TestRestCue:
         first = harness.walk(1)[0]
         (row,) = harness.store.window_attempts(harness.profile.id, first)[-1:]
         assert row.prev_char == "R-idx"
+
+
+class TestRestCueLine:
+    """ADR-023, decided 2026-11-12: a step at Reach is told what the cue asks, once, after its last member."""
+
+    def started(self, steps: list[tuple[str, ...]], **kwargs: Any) -> Harness:
+        store = FakeStore()
+        profile = store.create_profile("kid")
+        finish(store, profile.id, steps, "".join(name for step in steps for name in step))
+        harness = Harness(store=store, profile=profile, now=lambda: DAY_TWO, **kwargs)
+        harness.loop.start()
+        harness.settle()
+        return harness
+
+    def test_a_reach_step_ends_its_script_with_the_line(self) -> None:
+        harness = self.started(STEPS[:1])
+        assert steps_of(harness.store, harness.profile.id)[-1] == ("r", "u")
+        assert harness.engine.spoken == [
+            *(text for pair in intro_texts(("r", "u")) for text in pair),
+            "When you hear rest, put your fingers back where they rest, "
+            "and press with the finger you just used.",
+        ]
+
+    def test_the_bump_letters_have_no_line(self) -> None:
+        harness = Harness()
+        harness.loop.start()
+        harness.settle()
+        assert harness.engine.spoken == [text for pair in intro_texts(("f", "j")) for text in pair]
+
+    def test_a_step_of_rest_letters_has_no_line(self) -> None:
+        index = STEPS.index(("s", "k"))
+        harness = self.started(STEPS[:index])
+        assert steps_of(harness.store, harness.profile.id)[-1] == ("s", "k")
+        assert harness.engine.spoken == [text for pair in intro_texts(("s", "k")) for text in pair]
+
+    def test_the_re_read_key_speaks_the_line_again_with_the_script(self) -> None:
+        store = FakeStore()
+        profile = store.create_profile("kid")
+        finish(store, profile.id, STEPS[:1], "fj")
+        harness = Harness(store=store, profile=profile, now=lambda: DAY_TWO)
+        harness.loop.start()
+        harness.key(config.REREAD_KEY)
+        harness.loop.tick()
+        harness.key(config.REREAD_KEY, pressed=False)
+        harness.settle()
+        line = rest_cue_line(False)
+        assert harness.engine.spoken.count(line) == 2
+        assert harness.engine.spoken[-1] == line
+
+    def test_a_composite_step_says_fingers_and_its_cue_guides_only_the_finger_still_owed(
+        self,
+    ) -> None:
+        # Icelandic `á`: the accent key under the right little finger, then `a`
+        # under the left little. Its cue waits for both rest keys.
+        phase1 = [("f", "j"), ("d", "k"), ("s", "l"), ("a", "æ"), ("g", "h")]
+        harness = self.started(
+            phase1,
+            layout=build_is(),
+            words={"ááá": 100.0, "ééé": 90.0, "rrr": 80.0, "nnn": 70.0, "sss": 60.0},
+        )
+        assert steps_of(harness.store, harness.profile.id)[-1] == ("á", "n")
+        assert harness.engine.spoken[-1] == (
+            "When you hear rest, put your fingers back where they rest, "
+            "and press with the fingers you just used."
+        )
+        assert harness.loop.prompt == "á"
+        harness.press("á")
+        harness.loop.tick()
+        harness.pump()
+        harness.loop.tick()
+        assert harness.loop.cue == ("æ", "a")
+        both = (
+            "Find the bumps with both index fingers. Then put your right little finger "
+            "and your left little finger back where they rest, and press both keys."
+        )
+        one = (
+            "Find the bump with your left index finger. "
+            "Then put your left little finger back where it rests, and press."
+        )
+        spoken = len(harness.engine.spoken)
+        for _ in range(config.REST_CUE_GUIDE_AFTER):
+            TestRestCue().miss(harness)
+        harness.press("æ")
+        harness.loop.tick()
+        assert harness.loop.cue == ("a",)
+        for _ in range(config.REST_CUE_GUIDE_AFTER):
+            TestRestCue().miss(harness)
+        assert harness.engine.spoken[spoken:] == (
+            [REST_CUE] * (config.REST_CUE_GUIDE_AFTER - 1)
+            + [both]
+            + [REST_CUE] * (config.REST_CUE_GUIDE_AFTER - 1)
+            + [one]
+        )
+
+
+class TestRestGuidance:
+    """The guidance's words, decided 2026-11-12 (#12m sessions (6) and (6b)): by the bump."""
+
+    def test_an_index_finger_goes_back_to_its_bump(self) -> None:
+        assert rest_guidance([L_IDX]) == "Put your left index finger back on the key with the bump."
+        assert (
+            rest_guidance([R_IDX]) == "Put your right index finger back on the key with the bump."
+        )
+
+    def test_any_other_finger_finds_its_hands_bump_first(self) -> None:
+        # Whichever key the finger rests on: the guidance names fingers, never keys.
+        assert rest_guidance([L_MID]) == (
+            "Find the bump with your left index finger. "
+            "Then put your left middle finger back where it rests, and press."
+        )
+
+    def test_two_fingers_on_two_hands(self) -> None:
+        # Icelandic `é`: the right little finger and the left middle.
+        assert rest_guidance([R_PINK, L_MID]) == (
+            "Find the bumps with both index fingers. Then put your right little finger "
+            "and your left middle finger back where they rest, and press both keys."
+        )
+
+    def test_two_fingers_on_one_hand(self) -> None:
+        # Icelandic `í`: the right little finger and the right middle.
+        assert rest_guidance([R_PINK, R_MID]) == (
+            "Find the bump with your right index finger. Then put your right little finger "
+            "and your right middle finger back where they rest, and press both keys."
+        )
+
+    def test_two_fingers_one_an_index_finger(self) -> None:
+        # Icelandic `ú`: the right little finger and the right index.
+        assert rest_guidance([R_PINK, R_IDX]) == (
+            "Put your right index finger back on the key with the bump. "
+            "Then put your right little finger back where it rests, and press both keys."
+        )
 
 
 class TestLifetimes:
@@ -2046,12 +2389,14 @@ class TestIntroductionPacingAcrossSessions:
         # The step had not reached Choose, so the whole script is spoken again
         # (ADR-024), each member from where its finger rests today: `a` was
         # introduced as the key its finger rested on, and now takes a reach.
+        # The step is still at Reach, so the script ends with the cue's line.
         assert second.engine.spoken == [
             "New letter:",
             "Use your left little finger. Reach one row down from where that finger rests.",
             "New letter:",
             "Use your right index finger. "
             "Reach one row down and one position to the left from where that finger rests.",
+            rest_cue_line(False),
         ]
         assert second.letters.played[:2] == ["a", "n"]
 

@@ -41,6 +41,7 @@ from takki.lesson.attempts import AttemptCounter, PressOutcome
 from takki.lesson.drills import Block, DrillGenerator, Prompt, PromptKind
 from takki.lesson.introducer import (
     DEFAULT_STRATEGY,
+    REST_CUE,
     IntroductionStrategy,
     KeyIntroducer,
     KeyIntroduction,
@@ -48,6 +49,8 @@ from takki.lesson.introducer import (
     current_rest,
     describe,
     home_anchor_keys,
+    rest_cue_line,
+    rest_guidance,
     resume_step,
 )
 from takki.lesson.key_state import KeyStates
@@ -67,11 +70,6 @@ InboundEvent = KeyEvent | FocusEvent | SpeechFinished | Quit
 # half of the problem -- when a celebration happens and in what order -- so
 # that the tier, when it lands, has nothing left to decide about sequencing.
 Celebrant = Callable[[str], str | None]
-
-
-# Placeholder English until ADR-022's YAML tier (ADR-024 § Reach: one short
-# word, "rest", never "home").
-REST_CUE = "Rest."
 
 
 class SessionLoop:
@@ -139,6 +137,13 @@ class SessionLoop:
         self._open: Prompt | None = None
         # The rest keys an open rest cue still waits for.
         self._cue_left: list[str] = []
+        # Wrong presses on the open cue since it opened or the child came back;
+        # every REST_CUE_GUIDE_AFTER-th is answered with the guidance.
+        self._cue_wrong = 0
+        # The re-issue owed is the cue's guidance, not its word.
+        self._guidance_due = False
+        # The cue's guidance was the last thing the loop spoke for it.
+        self._guiding = False
         self._first_press = False
         self._prompt_due = False
         self._reprompt_due = False
@@ -328,10 +333,21 @@ class SessionLoop:
         if self._prompt_due:
             self._prompt_due = False
             self._reprompt_due = False
+            self._guidance_due = False
             self._start_prompt()
         elif self._reprompt_due:
             self._reprompt_due = False
-            self._speak_prompt()
+            guide, self._guidance_due = self._guidance_due, False
+            self._speak_prompt(guide=guide)
+
+    def _reissue(self, *, guide: bool = False) -> None:
+        """Owe a re-speak of the open prompt; for a rest cue, `guide` asks for the guidance.
+
+        A guidance already owed is never turned back into the word: the child
+        who was owed it has not heard it yet.
+        """
+        self._guidance_due = guide or (self._reprompt_due and self._guidance_due)
+        self._reprompt_due = True
 
     # ---- prompts -------------------------------------------------------
 
@@ -348,6 +364,7 @@ class SessionLoop:
         self._reprompts = 0
         if prompt.kind is PromptKind.REST:
             self._cue_left = list(prompt.owed)
+            self._cue_wrong = 0
             self._attempts.rest_cue(prompt.fingers or "")
         else:
             assert prompt.grapheme is not None
@@ -365,9 +382,15 @@ class SessionLoop:
             # (ADR-023 § The key introduction script).
             lead, rest = describe(intro)
             parts += [lead, Letter(intro.grapheme), rest]
+        # ADR-023: a step at Reach is told what the cue asks, once, after its
+        # last member. A resumed step past Reach will hear no cue.
+        assert self._drills is not None
+        reaching = [intro for intro in keys if self._drills.takes_reach_now(intro.grapheme)]
+        if reaching:
+            parts.append(rest_cue_line(any(intro.is_composite for intro in reaching)))
         self._speaker.say(*parts)
 
-    def _speak_prompt(self) -> None:
+    def _speak_prompt(self, *, guide: bool = False) -> None:
         """Re-speak the open prompt, without touching its identity.
 
         Deliberately not `start_prompt`: re-latching would let the child's next
@@ -380,8 +403,21 @@ class SessionLoop:
         self._prompt_deadline = self._clock.monotonic() + config.PROMPT_TIMEOUT_SECONDS
         if self._open.kind is PromptKind.REST:
             # ADR-024 § Reach: the cue is spoken, one word, and a press cuts it
-            # as a press cuts a letter.
-            self._speaker.say(REST_CUE)
+            # as a press cuts a letter. Its guidance names the fingers still
+            # owed, and the gap it is spoken in is Takki's time, not the child's.
+            self._guiding = guide
+            if not guide:
+                self._speaker.say(REST_CUE)
+                return
+            assert self._drills is not None
+            fingers = (self._open.fingers or "").split("+")
+            owed = [
+                finger
+                for char, finger in zip(self._open.owed, fingers, strict=True)
+                if char in self._cue_left
+            ]
+            self._speaker.say(rest_guidance(owed))
+            self._drills.leave_out_gap()
             return
         letter = self._open.grapheme
         assert letter is not None
@@ -414,7 +450,8 @@ class SessionLoop:
         if self._reprompts >= config.PROMPT_MAX_REPROMPTS:
             return
         self._reprompts += 1
-        self._reprompt_due = True
+        # A rest cue's timeout speaks the word again, not the guidance.
+        self._reissue()
 
     def _on_pause(self) -> None:
         # The deadline is disarmed rather than merely skipped: monotonic time
@@ -425,6 +462,8 @@ class SessionLoop:
         # The same reasoning for the answer's latency: a press over the resume
         # announcement would otherwise be timed across the whole time away.
         self._attempts.mark_inaudible()
+        # The pause announcement cut whatever the cue was saying.
+        self._guiding = False
 
     def _on_resume(self) -> None:
         """Carry-forward "D resume re-read": returning from PAUSED re-issues the prompt.
@@ -438,7 +477,11 @@ class SessionLoop:
             # A child who has come back is engaging again, so the budget they
             # spent before leaving is not held against them.
             self._reprompts = 0
-            self._reprompt_due = True
+            # An open rest cue gets its guidance: the hands left the keys for
+            # whatever took the focus. Its wrong presses start again from none.
+            rest = self._open.kind is PromptKind.REST
+            self._cue_wrong = 0
+            self._reissue(guide=rest)
         elif self._script_in_flight:
             # An introduction script was cut by the focus loss. Re-speak it
             # **whole**, not from where it stopped: the child task-switched
@@ -519,6 +562,12 @@ class SessionLoop:
         owed = typed.char in self._cue_left
         if not owed and typed.char in prompt.owed:
             return
+        if not owed and self._guiding and self._speaker.busy:
+            # Decided 2026-11-12 (#12m session (6b)): the guidance is for the
+            # child who keeps missing, so a miss does not cut it. The error
+            # sound only: it is not counted and nothing is queued after it.
+            self._cues.play("error")
+            return
         self._speaker.interrupt()
         self._reprompts = 0
         self._cues.play("correct" if owed else "error")
@@ -527,7 +576,10 @@ class SessionLoop:
             self._first_press = False
             self._drills.record_answer(prompt, owed)
         if not owed:
-            self._reprompt_due = True
+            # ADR-024 § Reach, decided 2026-11-12: the word again, and the
+            # guidance in its place at every REST_CUE_GUIDE_AFTER-th miss.
+            self._cue_wrong += 1
+            self._reissue(guide=self._cue_wrong % config.REST_CUE_GUIDE_AFTER == 0)
             return
         self._cue_left.remove(typed.char)
         if not self._cue_left:
@@ -545,7 +597,9 @@ class SessionLoop:
 
     def _on_reread(self) -> None:
         if self._open is not None:
-            self._reprompt_due = True
+            # On a rest cue the key asks for help, so it gets the guidance; it
+            # is not a wrong press and leaves the count where it is.
+            self._reissue(guide=self._open.kind is PromptKind.REST)
             return
         if not self._script_in_flight:
             # Nothing open and no script speaking: a celebration, or the next

@@ -179,6 +179,21 @@ The bump line is chosen by the finger, an index finger at its rest key, not by r
 
 Objective 1's "differs by kind of letter" therefore shows only in whether a letter has Reach, which is where the key is, and in the script's own words.
 
+#### The script's line about the rest cue
+
+*(Amended 2026-11-12, alpha-plan #12m session (6b); the words decided by the developer in session (6). Marks: **[S]** put to the developer and answered; **[T]** pinned by a default test; **[A]** argued.)*
+
+A step that starts at Reach is told what the rest cue ([ADR-024 § Reach](0024-drill-content-and-lesson-granularity.md#reach)) will ask, before the first one is spoken:
+
+> *"When you hear rest, put your fingers back where they rest, and press with the finger you just used."*
+
+- **Once per step, after the last member's script** **[S, T]**, as its own utterance. In a pair it follows the second member, not each member.
+- **"Fingers you just used"** when a member that reaches is a composite **[S, T]**: its cue waits for the rest key of every finger the letter was typed with, so for Icelandic `á` it is two presses.
+- **Only for a step at Reach with a member that reaches** **[S, T]**. Not for the bump letters, a step of rest letters, or a step resumed past Reach, which will hear no cue **[A]**. A pair of a rest letter and a reaching letter gets it, because one of them is cued.
+- **It is part of the script** **[T]**: it goes through the same path, so the re-read key and the resume after a pause re-speak it with the script, and it is spoken again when a resumed step's script is owed at Reach.
+
+**Code:** `rest_cue_line` in `takki.lesson.introducer`, appended by `SessionLoop._speak_introduction`, which asks `DrillGenerator.takes_reach_now`. **Tests:** `tests/test_session.py` (`TestRestCueLine`, `test_a_resumed_step_is_described_from_todays_rest_keys`).
+
 **The script is spoken as three utterances, and the letter is the middle one** *(amended 2026-10-06, alpha-plan #12l; the developer's idea, out of #12f.)* *"New letter:"*, then the letter, then *"Use your left middle finger. Reach one row up from D."* The letter does not go to the voice as part of a sentence. It goes through the same `LetterAudioSource` a prompt uses, as the same lower-case grapheme, so what the child hears in the introduction is exactly the sound they are then asked for; in Beta that includes a personal recording ([ADR-030](0030-personal-letter-recordings.md)). Two reasons:
 
 - **It is the one place a letter is always heard to its end.** No prompt is open during an introduction, so no press cuts it. Timed there, every letter has a length before its first prompt, which `after_letter_ms` needs ([ADR-011](0011-persistence-and-state.md), "A letter's length is a stored measurement").

@@ -338,6 +338,8 @@ class TestReach:
         assert [shown(p) for p in prompts] == [("reach", "d"), ("rest", "e")] * (
             config.LEVEL_UP_CORRECT
         )
+        # The finger it asks back, which the guidance names (#12m session (6b)).
+        assert {p.fingers for p in prompts if p.kind is PromptKind.REST} == {L_MID}
 
     def test_a_pair_takes_turns_left_hand_first(self) -> None:
         fixture = Fixture(active="fj")
