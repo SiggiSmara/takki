@@ -155,7 +155,7 @@ def _print_accuracy_by_timing(conn: sqlite3.Connection, profile_id: int) -> None
 
 
 def _print_ramp_up(conn: sqlite3.Connection, profile_id: int) -> None:
-    """Introduction steps and the phases each member has passed (ADR-024).
+    """Introduction steps, the ladder's level runs and the bar (ADR-024, ADR-011).
 
     The only place a resumed ramp-up is observable. Without it, a session that
     paces wrongly after a restart cannot be told apart from one that paces
@@ -164,34 +164,39 @@ def _print_ramp_up(conn: sqlite3.Connection, profile_id: int) -> None:
     """
     steps = conn.execute(
         """
-        SELECT step, key_char, position, introduced_at FROM introductions
+        SELECT step, key_char, position, introduced_at, stable_attempts FROM introductions
         WHERE profile_id = ?
         ORDER BY step, position
         """,
         (profile_id,),
     ).fetchall()
-    print("\nintroductions and ramp-up phases")
+    print("\nintroductions and ramp-up levels")
     if not steps:
         print("  (none)")
         return
-    phases: dict[str, str] = {}
-    for key_char, phase, started, completed in conn.execute(
+    levels: dict[str, str] = {}
+    for key_char, level, session_id, started, completed in conn.execute(
         """
-        SELECT key_char, phase, started_attempts, completed_attempts FROM ramp_up_phases
-        WHERE profile_id = ?
-        ORDER BY key_char, phase
+        SELECT key_char, level, session_id, started_presses, completed_presses
+        FROM ramp_up_levels WHERE profile_id = ?
+        ORDER BY id
         """,
         (profile_id,),
     ).fetchall():
-        # The key's lifetime attempt count where the phase began and where it
-        # was passed; an open end is the phase the key is in.
-        span = f"{phase}@{started}-{'' if completed is None else completed}"
-        phases[key_char] = f"{phases.get(key_char, '')}{span} "
-    print(f"  {'step':>4} {'key':<4} {'pos':>3}  {'phases (began-passed)':<30} introduced_at")
-    for step, key_char, position, introduced_at in steps:
+        # The letter's lifetime press count where the level began and where its
+        # rule was met, and the session the run was in: Reach starts again in
+        # a new session. An open end is a level the letter has not met.
+        span = f"{level}#{session_id}@{started}-{'' if completed is None else completed}"
+        levels[key_char] = f"{levels.get(key_char, '')}{span} "
+    print(
+        f"  {'step':>4} {'key':<4} {'pos':>3}  {'levels (session@began-met)':<44} "
+        f"{'bar':>4} introduced_at"
+    )
+    for step, key_char, position, introduced_at, stable in steps:
+        bar = "-" if stable is None else str(stable)
         print(
             f"  {step:>4} {key_char:<4} {position:>3}  "
-            f"{phases.get(key_char, '(none)'):<30} {introduced_at}"
+            f"{levels.get(key_char, '(none)'):<44} {bar:>4} {introduced_at}"
         )
 
 

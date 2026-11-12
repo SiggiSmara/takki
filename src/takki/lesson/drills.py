@@ -1,33 +1,27 @@
 """ADR-024 — Layer 1 drill content and lesson granularity.
 
-Four phases of ramp-up after an introduction step, steady-state blocks planned
-by each key's need, and blocks sized by the child's own pace. Pure logic: no
-store writes, no audio, no timers.
+The ramp-up's ladder after an introduction step (Reach, Choose, Travel),
+general-practice blocks planned by each key's need, and blocks sized by the
+child's own pace. No audio and no timers; the ladder's records are written by
+`StepLadder`.
 """
 
 import math
 import random
-from collections import Counter, deque
+from collections import deque
+from collections.abc import Callable
 from collections.abc import Set as AbstractSet
-from dataclasses import dataclass
 from fractions import Fraction
 
 from takki import config
 from takki.clock import Clock
 from takki.language import WordSource
-from takki.lesson import rampup
-from takki.lesson.introducer import (
-    DIRECT,
-    HOME_ROW,
-    IntroductionStep,
-    KeyIntroduction,
-    base_key,
-    home_anchor_keys,
-    key_distance,
-)
+from takki.lesson.introducer import IntroductionStep, Rest, home_anchor_keys
 from takki.lesson.key_state import Evidence, KeyStates, accuracy_bound
-from takki.lesson.rampup import PHASE_ORDER, MemberProgress, RampUpPhase, RampUpProgress
-from takki.platform.layout import Layout
+from takki.lesson.prompts import Prompt, PromptKind
+from takki.lesson.rampup import StepLadder
+from takki.persistence import Level, Store
+from takki.platform.layout import Layout, PhysicalKey
 
 # A unit is one bigram or short sequence, and each of its members is one prompt
 # (ADR-027 § First-Attempt Counting: one attempt per prompt). A composite is a
@@ -106,59 +100,134 @@ def plan_targets(needs: dict[str, int], slots: int, rng: random.Random) -> dict[
     return counts
 
 
-@dataclass(frozen=True)
-class DrillBlock:
-    units: tuple[Unit, ...]
+class Block:
+    """What the session loop works through between two block boundaries."""
+
+    def current(self) -> Prompt | None:
+        """The prompt to open, or None once the block is done."""
+        raise NotImplementedError
+
+    def close(self) -> None:
+        """The open prompt has been answered; the next `current` moves on."""
+        raise NotImplementedError
+
+    def restart(self, heard: bool) -> None:
+        """The restart key: the current unit is presented again (ADR-012 § Recovery).
+
+        `heard` is whether a prompt is open, that is, has been spoken to the
+        child; a prompt drawn and still held behind speech has not been.
+        """
+        raise NotImplementedError
+
+
+class DrillBlock(Block):
+    """A block planned whole: general practice, a sequence of counted units."""
+
+    def __init__(self, units: tuple[Unit, ...]) -> None:
+        self.units = units
+        self._index = 0
+        # For each prompt, the index of the first prompt of its unit: Layer 1's
+        # answer to the restart key, which abandons "the current word".
+        self._unit_start = tuple(start for start, unit in _starts(units) for _ in unit)
 
     @property
     def prompts(self) -> tuple[str, ...]:
         return tuple(prompt for unit in self.units for prompt in unit)
 
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, DrillBlock) and other.units == self.units
 
-@dataclass(frozen=True)
-class _Member:
-    """One step member and the key it alternates with.
+    __hash__ = None  # type: ignore[assignment]
 
-    No counters. Thresholds are per-member and never shared (ADR-028 § Pair
-    ramp-up: "a slow right hand cannot mask a poor left hand"), but since
-    2026-09-29 every one of them is read off the member's own stored window --
-    see `takki.lesson.rampup` and ADR-024 § Ramp-up variability.
+    def current(self) -> Prompt | None:
+        prompts = self.prompts
+        if self._index >= len(prompts):
+            return None
+        return Prompt(PromptKind.COUNTED, prompts[self._index])
+
+    def close(self) -> None:
+        self._index += 1
+
+    def restart(self, heard: bool) -> None:
+        if self._index < len(self._unit_start):
+            self._index = self._unit_start[self._index]
+
+
+def _starts(units: tuple[Unit, ...]) -> list[tuple[int, Unit]]:
+    starts: list[tuple[int, Unit]] = []
+    index = 0
+    for unit in units:
+        starts.append((index, unit))
+        index += len(unit)
+    return starts
+
+
+class _LadderBlock(Block):
+    """A ladder block, drawn prompt by prompt (ADR-024 § Lesson granularity, restated).
+
+    A re-ask depends on the child's answer, so nothing past the open prompt is
+    decided in advance. At Reach the block is whole cycles, each member's
+    letter and then the rest cue, so it ends with the hand at rest. At Choose
+    and Travel it may end after any prompt, but not with a re-ask still owed.
     """
 
-    grapheme: str
-    anchor: str | None
+    def __init__(self, generator: "DrillGenerator", level: Level, target: int) -> None:
+        self._generator = generator
+        self._level = level
+        self._target = target
+        self._issued = 0
+        self._open: Prompt | None = None
+        self._cycle: list[Prompt] = []
+        self._cycles = generator.reach_cycles(target) if level == "reach" else 0
+        self._done = False
 
+    def current(self) -> Prompt | None:
+        if self._open is None and not self._done:
+            self._open = self._next()
+            self._done = self._open is None
+        return self._open
 
-@dataclass
-class RampUp:
-    """The current step, and the phase last derived for it.
+    def close(self) -> None:
+        self._open = None
+        self._issued += 1
 
-    `phase` is a cache, not the authority: `key_attempts` is. The generator
-    re-derives it after every attempt, so a session that resumes mid-ramp-up
-    re-enters the phase the child's own rows support (alpha-plan #12d).
-    """
+    def restart(self, heard: bool) -> None:
+        # Only the open prompt is re-presented: at the ladder's levels every
+        # prompt is a unit of its own. A drawn letter the child has heard comes
+        # back as a re-ask, because they now know what is coming (decided
+        # 2026-11-12, #12m session (6)). One drawn and held behind speech has
+        # not been heard, and stays a draw: otherwise a restart in that gap
+        # would make a listened press uncounted.
+        if heard and self._open is not None and self._open.kind is PromptKind.COUNTED:
+            self._open = Prompt(PromptKind.REASK, self._open.grapheme)
 
-    step: IntroductionStep
-    phase: RampUpPhase
-    members: tuple[_Member, ...]
-    # Each member's place in the ramp-up, read once per refresh rather than per
-    # question asked of it: `_cycles_owed` and the phase both want it.
-    progress: dict[str, MemberProgress]
-
-    @property
-    def graphemes(self) -> tuple[str, ...]:
-        return tuple(member.grapheme for member in self.members)
+    def _next(self) -> Prompt | None:
+        generator = self._generator
+        if self._level == "reach":
+            if not self._cycle:
+                # The step's level is read live, at a cycle's end: a step that
+                # has climbed starts its next level at the next block.
+                if self._cycles <= 0 or generator.level != "reach":
+                    return None
+                self._cycles -= 1
+                self._cycle = generator.reach_cycle()
+            return self._cycle.pop(0)
+        reask = generator.pending_reask()
+        if reask is not None:
+            return reask
+        if self._issued >= self._target or generator.level != self._level:
+            return None
+        return generator.draw()
 
 
 class DrillGenerator:
     """Drill blocks for one session (ADR-024).
 
-    The ramp-up's phase is **not** held here: it is recorded by
-    `RampUpProgress` and read back, so a child halfway through Phase B is still
-    halfway through Phase B next session (ADR-024 § Ramp-up variability, and
-    alpha-plan #12d for what the old session-local lifetime cost). What is held
-    here is a cache of that reading, plus the session-local things that really
-    are session-local -- the pace measure and the per-key session counts.
+    The step's place on the ladder is **not** held here: it is recorded by
+    `StepLadder` and read back, so a child at Travel is still at Travel next
+    session (ADR-024 § What survives a restart). What is held here is the
+    session-local things that really are session-local: the draw's last
+    letters and owed re-asks, the pace measure and the per-key session counts.
     """
 
     def __init__(
@@ -168,41 +237,54 @@ class DrillGenerator:
         key_states: KeyStates,
         clock: Clock,
         rng: random.Random,
-        progress: RampUpProgress,
+        store: Store,
+        profile_id: int,
+        session_id: int,
+        rest: Callable[[], Rest],
     ) -> None:
         self._layout = layout
         self._source = source
-        # ADR-024's bar (Phase C's, until the ladder) skips the speed term for
-        # the two bump letters: in their own step the only comparison it could
-        # make is one index finger against the other. Known still applies it.
+        # ADR-024's bar skips the speed term for the two bump letters: in their
+        # own step the only comparison it could make is one index finger
+        # against the other. Known still applies it.
         self._bumps = frozenset(home_anchor_keys(layout))
         self._states = key_states
-        self._progress = progress
+        self._store = store
+        self._profile_id = profile_id
+        self._session_id = session_id
+        self._rest = rest
         self._clock = clock
         self._rng = rng
-        self._ramp_up: RampUp | None = None
+        self._ladder: StepLadder | None = None
         self._session_attempts: dict[str, int] = {}
         # Both derived tables are a full pass over the corpus, and the block
         # generator reads them several times per block.
         self._weights: dict[str, float] = source.grapheme_weights(layout)
         self._bigrams: dict[str, float] = dict(sorted(source.bigram_weights(layout).items()))
+        self._cells = {(key.row, key.col): name for name, key in layout.keys.items()}
         self._pace: deque[tuple[int, float]] = deque(maxlen=config.PACE_BLOCKS)
         self._block_open = False
         self._baseline_cache: dict[str, float | None] = {}
-        # Which hands are off home, carried *across* blocks: a block boundary is
-        # not a reason for a finger to be somewhere else, and resetting here is
-        # how the first prompt of a block used to be able to reach twice running
-        # (ADR-024 property 2).
-        self._off_home: set[str] = set()
-        self._last_prompt: str | None = None
+        # The draw (ADR-024 § The draw: repeats and misses). Held across
+        # blocks: a block boundary is not a reason to forget what was just asked.
+        self._last_drawn: str | None = None
+        self._run = 0
+        self._reask: str | None = None
+        self._reasks_left = 0
+        # The letter whose re-asks have just ended: the draw moves away from it.
+        self._avoid: str | None = None
         self._paced_attempts = 0
         self._block_seconds = 0.0
-        # None until the block's first answer: see `record_attempt`.
+        # None until the block's first answer: see `record_answer`.
         self._answered_at: float | None = None
 
     @property
-    def ramp_up(self) -> RampUp | None:
-        return self._ramp_up
+    def ramp_up(self) -> StepLadder | None:
+        return self._ladder
+
+    @property
+    def level(self) -> Level | None:
+        return None if self._ladder is None else self._ladder.level
 
     @property
     def session_complete(self) -> bool:
@@ -213,51 +295,49 @@ class DrillGenerator:
         )
 
     def begin_step(self, step: IntroductionStep) -> bool:
-        """Start ADR-024's ramp-up for a step the introducer has just emitted.
+        """Start ADR-024's ladder for a step the introducer has just emitted.
 
         False when the step needs no ramp-up because every member has already
-        passed every phase -- only reachable for a strategy that hands over a key
-        the child has already drilled. The caller must not speak an introduction
+        met the bar -- only reachable for a strategy that hands over a key the
+        child has already drilled. The caller must not speak an introduction
         for a step that starts nothing.
         """
         if not 1 <= len(step.keys) <= 2:
-            # ADR-028 § Pair ramp-up's branch table covers a solo member and a
-            # pair, and is keyed off the step's contents. A step of another
-            # shape is an amendment to that table, not something to guess at
-            # here (ADR-032 raised the member-count/key-count split; the count
-            # that matters to the table is the member count).
+            # ADR-028 § Pair ramp-up covers a solo member and a pair. A step of
+            # another shape is an amendment there, not something to guess at.
             raise ValueError(f"a step carries one or two graphemes, not {len(step.keys)}")
-        members = tuple(_Member(intro.grapheme, self._anchor(intro, step)) for intro in step.keys)
-        self._ramp_up = RampUp(step, RampUpPhase.A, members, {})
-        self._off_home = set()
-        self._last_prompt = None
-        # A brand-new step has no recorded completions, so this reads Phase A.
-        # Reading it rather than asserting it is what makes `resume_step` below
+        # Whether a member takes Reach is read from today's rest keys, when
+        # the step begins or resumes.
+        members = [(intro.grapheme, self._takes_reach(intro.grapheme)) for intro in step.keys]
+        self._ladder = StepLadder(self._store, self._profile_id, self._session_id, members)
+        self._reask = None
+        self._avoid = None
+        # A brand-new step has no records, so this begins its first level.
+        # Reading rather than asserting it is what makes `resume_step` below
         # the same code path as a fresh introduction.
-        # `_refresh_ramp` clears the ramp-up when every phase is already passed,
-        # which is the False this returns.
-        self._refresh_ramp()
+        self._refresh()
         return self.ramp_up is not None
 
     def resume_step(self, step: IntroductionStep) -> bool:
-        """Re-enter a step's ramp-up at the phase the child's stored rows support.
+        """Re-enter a step's ladder where the child's records put it.
 
-        The cross-session half of ADR-024 § Ramp-up variability, called once at
-        session start (alpha-plan #12d: before this, every restart introduced
-        another key however little the last one had been practised).
-
-        Returns False and starts nothing when the step has no attempts at all.
-        That is not a resumable ramp-up but an introduction the child never
-        answered, and ADR-023 § What the introducer remembers owes them the
-        whole script again, which the introducer's own path gives.
+        Called once at session start (alpha-plan #12d). Returns False and
+        starts nothing when no member has a single press, Reach or counted:
+        that is an introduction the child never answered, and ADR-023 § What
+        the introducer remembers owes them the whole script again, which the
+        introducer's own path gives. A step still at Reach is begun again from
+        nothing (ADR-024), which `StepLadder` does by reading only this
+        session's Reach run.
         """
-        if not any(self._progress.member(intro.grapheme).attempts for intro in step.keys):
+        if not any(
+            self._store.reach_presses(self._profile_id, intro.grapheme)
+            or self._lifetime_attempts(intro.grapheme)
+            for intro in step.keys
+        ):
             return False
-        # `any`, not `all`: a pair with one member answered stays a pair, and
-        # the caller speaks the script again for the other.
         return self.begin_step(step)
 
-    def next_block(self) -> DrillBlock:
+    def next_block(self) -> Block:
         if self._block_open:
             self._pace.append((self._paced_attempts, self._block_seconds))
         self._block_open = True
@@ -265,94 +345,75 @@ class DrillGenerator:
         self._block_seconds = 0.0
         self._answered_at = None
         target = self._target_prompts()
-        ramp = self._ramp_up
+        ladder = self._ladder
         # Read here, at the boundary, where the session holds the key states
         # and the windows are being read anyway. Left to the first judged
         # keystroke it is a pass over every Active key on the keypress path.
         self._baseline_cache = (
-            {} if ramp is None else {name: self._read_baseline(name) for name in ramp.graphemes}
+            {} if ladder is None else {name: self._read_baseline(name) for name in ladder.graphemes}
         )
-        if ramp is None:
-            units = self._steady_units(target)
-        elif ramp.phase is RampUpPhase.C:
-            units = self._phase_c_units(ramp, target)
-        else:
-            units = self._cycle_units(ramp, target)
-        return DrillBlock(tuple(units))
+        if ladder is None or ladder.level is None:
+            return DrillBlock(tuple(self._steady_units(target)))
+        return _LadderBlock(self, ladder.level, target)
 
-    def record_attempt(self, grapheme: str, correct: bool) -> None:
-        """One counted attempt, paired one-for-one with `AttemptCounter`'s.
+    def record_answer(self, prompt: Prompt, correct: bool) -> None:
+        """A prompt's first press, once per prompt, after `AttemptCounter` has written it.
 
-        Called once per prompt the child answered, with the first press's
-        outcome (ADR-027 § First-Attempt Counting). Retry presses are not
-        attempts and must not reach here, or Phase C's accuracy would be
-        measured over something that is not first-attempt accuracy.
+        Every kind of prompt is an answer for pace: answering it took the
+        child's time (ADR-024 § Lesson granularity, restated). Only a counted
+        prompt is an attempt, for the session floor and the ladder's Choose,
+        Travel and the bar; only a Reach prompt moves Reach.
         """
         now = self._clock.monotonic()
         # Pace is measured over the gaps between one answer and the next, and a
         # gap longer than the cap is not one of them -- the child had stopped
         # typing (a PAUSED interval, a walk-away, a conversation), and monotonic
         # time runs through all of those. Such an answer contributes neither
-        # time nor count, so an interruption leaves the measured pace exactly
-        # where it was instead of collapsing it. A block nobody answered
-        # therefore contributes no sample at all rather than dead air.
-        # A block's first answer has no answer before it, so it opens the
-        # measure and is not a gap. What lies between the block being built
-        # and that answer is whatever the session says first, an introduction
-        # script or a celebration, and none of it is the child's typing.
+        # time nor count. A block's first answer has no answer before it, so it
+        # opens the measure and is not a gap: what lies between the block being
+        # built and that answer is whatever the session says first, an
+        # introduction script or a celebration, and none of it is typing.
         previous, self._answered_at = self._answered_at, now
         if previous is not None and now - previous <= config.PACE_IDLE_GAP_SECONDS:
             self._block_seconds += now - previous
             self._paced_attempts += 1
-        self._session_attempts[grapheme] = self._session_attempts.get(grapheme, 0) + 1
-        ramp = self._ramp_up
-        if ramp is None:
+        grapheme = prompt.grapheme
+        if prompt.kind is PromptKind.REST or grapheme is None:
             return
-        if grapheme not in ramp.graphemes:
-            # An anchor or a Phase C partner. It is practice, and it counts for
-            # the session floor and ceiling, but the phase bar is the *new*
-            # letter's (ADR-024 § New-key ramp-up).
+        if prompt.kind is PromptKind.COUNTED:
+            self._session_attempts[grapheme] = self._session_attempts.get(grapheme, 0) + 1
+            if not correct and self.level in ("choose", "travel"):
+                # A missed letter is asked again (ADR-024 § The draw).
+                self._reask = grapheme
+                self._reasks_left = config.MISS_REPEATS
+        elif prompt.kind is PromptKind.REASK and grapheme == self._reask:
+            self._reasks_left -= 1
+            if correct or self._reasks_left <= 0:
+                self._reask = None
+                self._avoid = grapheme
+        ladder = self._ladder
+        if ladder is None or grapheme not in ladder.graphemes:
+            # A bump letter or a partner. It is practice, and it counts for the
+            # session floor and ceiling, but the ladder is the new letter's.
             return
-        self._refresh_ramp()
+        if prompt.kind in (PromptKind.COUNTED, PromptKind.REACH):
+            self._refresh()
 
-    # ---- ramp-up state -------------------------------------------------
+    # ---- the ladder ----------------------------------------------------
 
-    def _refresh_ramp(self) -> None:
-        """Record any bar the latest attempt just met, then read the step's phase.
+    def _refresh(self) -> None:
+        """Record any event the latest press met, then read the step's level.
 
-        Called after the attempt has been written, so the row the child just
-        produced is included -- the session loop writes through `AttemptCounter`
-        before it tells this generator (ADR-027 § First-Attempt Counting pairs
-        the two calls). The *recording* is what makes a phase survive both a
-        restart and the rolling window's own forgetting; see
-        `takki.lesson.rampup` for why re-deriving it was not enough.
+        Called after the press has been written, so the row the child just
+        produced is included: the session loop writes through `AttemptCounter`
+        before it tells this generator.
         """
-        ramp = self._ramp_up
-        if ramp is None:
+        ladder = self._ladder
+        if ladder is None:
             return
-        for member in ramp.members:
-            progress = self._progress.member(member.grapheme)
-            # The baseline reads every Active key's window (ADR-027 § Known has
-            # a speed term): only Phase C's bar consults it, so only Phase C
-            # asks, and `next_block` has usually read it already.
-            # A member waiting for its partner is not judged at all.
-            judged = progress.begun and progress.phase is RampUpPhase.C
-            baseline = self._baseline(member.grapheme) if judged else None
-            if self._progress.advance(progress, baseline):
-                progress = self._progress.member(member.grapheme)
-            ramp.progress[member.grapheme] = progress
-        if all(progress.phase is None for progress in ramp.progress.values()):
-            self._ramp_up = None  # Phase D: the members join the steady-state pool.
-            return
-        phases = [p.phase for p in ramp.progress.values() if p.phase is not None]
-        ramp.phase = min(phases, key=PHASE_ORDER.index)
-        # Every member in the step's phase starts it here. One that got there
-        # first waited un-begun, which keeps its waiting presses out of this
-        # phase's evidence. Begun when found missing, so a session killed
-        # between a completion and this write loses nothing.
-        for grapheme, progress in ramp.progress.items():
-            if progress.phase is ramp.phase and not progress.begun:
-                ramp.progress[grapheme] = self._progress.begin(progress)
+        ladder.refresh(self._baseline)
+        if ladder.level is None:
+            self._ladder = None  # General practice: the members join its pool.
 
     def _baseline(self, grapheme: str) -> float | None:
         """ADR-027: what this member's speed is judged against, the baseline Known reads.
@@ -369,282 +430,116 @@ class DrillGenerator:
     def _read_baseline(self, grapheme: str) -> float | None:
         return None if grapheme in self._bumps else self._states.speed_baseline(grapheme)
 
-    def _remaining(self, member: _Member, ramp: RampUp) -> int:
-        progress = ramp.progress.get(member.grapheme)
-        if progress is None or progress.phase is not ramp.phase:
-            # Finished, or ahead of its partner: it owes the step's phase
-            # nothing more, and the block is sized by the member still in it.
-            return 0
-        return rampup.remaining(ramp.phase, progress.evidence)
+    def _lifetime_attempts(self, grapheme: str) -> int:
+        stat = self._store.key_stats(self._profile_id).get(grapheme)
+        return stat.attempt_count if stat is not None else 0
 
-    def _anchor(self, intro: KeyIntroduction, step: IntroductionStep) -> str | None:
-        if intro.is_composite:
-            # ADR-028 § Phase B: a composite's same-finger anchor is its own
-            # base letter -- the same physical key with and without the
-            # modifier gesture. Not a special case of the neighbour rule below,
-            # a different rule.
-            return intro.base
-        key = base_key(self._layout, intro.grapheme)
-        pool = self._active() - {member.grapheme for member in step.keys}
-        # Direct graphemes only: an anchor is prompted like any other letter,
-        # and a composite anchor would drag a second mechanism into the drill
-        # the new key is supposed to have to itself.
-        candidates = [
-            self._layout.keys[name]
-            for name in sorted(pool)
-            if self._layout.graphemes[name].mechanism == DIRECT
-        ]
-        same_finger = [
-            other for other in candidates if other.finger == key.finger and other.row == HOME_ROW
-        ]
-        same_hand = [other for other in candidates if other.side == key.side]
-        reachable = same_finger or same_hand
-        if not reachable:
-            # Only the first step gets here: f and j are the bump letters, so
-            # there is nothing behind them to alternate with. Phase A and B
-            # fall back to the bare member, which for that step is the L-R
-            # interleave the pair branch would have produced anyway.
-            return None
-        return min(reachable, key=lambda other: key_distance(key, other)).name
+    def _fingers(self, grapheme: str) -> list[PhysicalKey]:
+        """The keys a letter is typed with, in keystroke order: a composite's modifier first."""
+        return [self._layout.keys[name] for name in self._layout.graphemes[grapheme].prereq_keys]
+
+    def _takes_reach(self, grapheme: str) -> bool:
+        """ADR-024: a letter with no reach has no Reach level.
+
+        A letter has one when any key it is typed with is off its finger's rest
+        key. So a rest letter and the bump letters have none, and a composite
+        has one unless its modifier and its base are both rest keys, which
+        needs a dead key as a rest key: ADR-033 allows it, and nothing can land
+        on one yet. A finger with no current rest key has nowhere to come back
+        to, so a letter on it gets no Reach (argued; nothing removes a rest key
+        today).
+        """
+        rest = self._rest()
+        keys = self._fingers(grapheme)
+        cells = [rest.get(key.finger) for key in keys]
+        if any(cell is None for cell in cells):
+            return False
+        return any(
+            (key.row, key.col) != (cell.row, cell.col)
+            for key, cell in zip(keys, cells, strict=True)
+            if cell is not None
+        )
+
+    def _cue(self, grapheme: str) -> Prompt:
+        """The rest cue after `grapheme`: every finger the letter was typed with, back where it rests.
+
+        Decided 2026-11-12 (#12m session (6)): "rest" means all the fingers
+        back, and it is confirmed by a press with each finger the letter used.
+        """
+        rest = self._rest()
+        owed: list[str] = []
+        fingers: list[str] = []
+        for key in self._fingers(grapheme):
+            cell = rest[key.finger]
+            if key.finger in fingers:
+                continue
+            fingers.append(key.finger)
+            owed.append(self._cells[(cell.row, cell.col)])
+        return Prompt(PromptKind.REST, owed=tuple(owed), fingers="+".join(fingers))
+
+    def reach_cycles(self, target: int) -> int:
+        """Whole Reach cycles for a block: the pace target, capped by what the level still needs."""
+        ladder = self._ladder
+        assert ladder is not None
+        reaching = [g for g in ladder.graphemes if ladder.takes_reach(g)]
+        # Each cycle is a letter and its cue for every member that reaches.
+        per_cycle = 2 * len(reaching)
+        owed = max(ladder.owed(g) for g in reaching)
+        return max(1, min(max(1, owed), -(-target // per_cycle)))
+
+    def reach_cycle(self) -> list[Prompt]:
+        """One Reach cycle: each reaching member's letter, then the rest cue, left hand first.
+
+        A member that has met Reach's rule keeps being prompted while its
+        partner catches up; its presses feed its own reach reading and nothing
+        else (ADR-024, "Pairs").
+        """
+        ladder = self._ladder
+        assert ladder is not None
+        cycle: list[Prompt] = []
+        for grapheme in ladder.graphemes:
+            if ladder.takes_reach(grapheme):
+                cycle += [Prompt(PromptKind.REACH, grapheme), self._cue(grapheme)]
+        return cycle
+
+    def pending_reask(self) -> Prompt | None:
+        return None if self._reask is None else Prompt(PromptKind.REASK, self._reask)
+
+    def draw(self) -> Prompt:
+        """One prompt of Choose or Travel, each letter of the set equally likely (ADR-024).
+
+        Within two rules: a prompt follows itself at most MAX_SAME_IN_A_ROW
+        times, and after a letter's re-asks the draw moves to another letter.
+        A re-ask is not a draw, so it is outside the cap.
+        """
+        letters = sorted(self._draw_set())
+        allowed = [name for name in letters if name != self._avoid] or letters
+        if self._run >= config.MAX_SAME_IN_A_ROW:
+            allowed = [name for name in allowed if name != self._last_drawn] or allowed
+        choice = self._rng.choice(allowed)
+        self._run = self._run + 1 if choice == self._last_drawn else 1
+        self._last_drawn = choice
+        self._avoid = None
+        return Prompt(PromptKind.COUNTED, choice)
+
+    def _draw_set(self) -> set[str]:
+        """Choose: the step's letters and the two bump letters. Travel: its letters and partners."""
+        ladder = self._ladder
+        assert ladder is not None
+        step = set(ladder.graphemes)
+        if ladder.level == "choose":
+            return step | self._bumps
+        return step | self._partners(step)
+
+    def _partners(self, step: AbstractSet[str]) -> set[str]:
+        # ADR-024 § Travel: TRAVEL_PARTNERS other Active letters, the ones the
+        # language uses most, ranked by each letter's own frequency. While the
+        # bump letters are the only other Active ones, this is Choose's set.
+        pool = self._active() - set(step)
+        ranked = sorted(pool, key=lambda name: (-self._weight(name), name))
+        return set(ranked[: config.TRAVEL_PARTNERS])
 
     # ---- content -------------------------------------------------------
-
-    def _cycle(self, ramp: RampUp) -> tuple[Unit, ...]:
-        """The step's unit inventory — its closed content (ADR-024 property 4).
-
-        `_cycle_units` varies order and direction; the inventory itself never
-        grows, which is the commitment to moderate rather than high contextual
-        interference. What a solo step adds is the other hand (property 3), and
-        it adds a key the child already has rather than a new one.
-        """
-        other = self._other_hand_anchor(ramp) if len(ramp.members) == 1 else None
-        if ramp.phase is RampUpPhase.A:
-            # Phase A keeps its isolation for the keys being learned: the member
-            # alone, and for a pair the L-R interleave (ADR-028 § Pair ramp-up),
-            # which engages both hands already. Only a *solo* step leaves a hand
-            # idle, and only there does the other hand's home key join in -- `a`
-            # on English being the audible case, where column 10's home cell
-            # holds no letter for `a` to pair with.
-            units = [(member.grapheme,) for member in ramp.members]
-            if other is not None:
-                units.append((other,))
-            return tuple(units)
-        # Phase B's alternation: each member with the key its finger returns to.
-        units = [
-            (member.anchor, member.grapheme) if member.anchor else (member.grapheme,)
-            for member in ramp.members
-        ]
-        if other is not None:
-            # On its own, *not* paired with the member. A cross-hand unit like
-            # `j e` carries the member's hand off home with no home key of that
-            # hand to return to, so pairing it that way broke property 2 on every
-            # solo reach step -- `d e j e j e ...` never returns the left hand.
-            # Alone, it sits between the member's own anchored units, and the
-            # sequence reads `d e j d e j ...`: both hands busy, every reach
-            # still followed by its own anchor.
-            units.append((other,))
-        return tuple(units)
-
-    def _other_hand_anchor(self, ramp: RampUp) -> str | None:
-        """The tactile home key on the hand this step does not use, if it has one."""
-        member = ramp.members[0].grapheme
-        side = base_key(self._layout, member).side
-        anchors = [
-            name
-            for name in home_anchor_keys(self._layout)
-            if self._layout.keys[name].side != side and name in self._active() and name != member
-        ]
-        return anchors[0] if anchors else None
-
-    def _cycle_units(self, ramp: RampUp, target: int) -> list[Unit]:
-        cycle = self._cycle(ramp)
-        per_cycle = sum(len(unit) for unit in cycle)
-        cycles = max(1, max(self._cycles_owed(member, ramp, cycle) for member in ramp.members))
-        # Whole cycles only, so a pair's two members always get the same number
-        # of prompts out of a block, and the block still ends on a unit
-        # boundary (ADR-024 § Block boundaries).
-        cycles = max(1, min(cycles, -(-target // per_cycle)))
-        units = [unit for _ in range(cycles) for unit in cycle]
-        return self._vary(units)
-
-    def _cycles_owed(self, member: _Member, ramp: RampUp, cycle: tuple[Unit, ...]) -> int:
-        # Cycles, not prompts: a member can appear more than once per cycle, and
-        # counting prompts instead would make a block as many times too long as
-        # the inventory mentions it. That is what inflated a solo step's blocks
-        # when the other hand joined the inventory.
-        per_cycle = sum(unit.count(member.grapheme) for unit in cycle)
-        owed = self._remaining(member, ramp)
-        return -(-owed // per_cycle) if per_cycle else owed
-
-    def _vary(self, units: list[Unit]) -> list[Unit]:
-        """Shuffle order and vary direction, keeping the block's two invariants.
-
-        ADR-024 properties 1, 2 and 5. A fixed cycle makes the next prompt
-        predictable from the last, and a learner then answers from a plan instead
-        of from the letter they heard -- which is the skill being taught, and
-        which the counted rows would otherwise measure.
-
-        What must survive the shuffle, in the order they are preferred:
-
-        1. **No hand reaches twice without returning home** (property 2), so
-           every reach is practised as a reach from home.
-        2. **No prompt follows itself** (property 5): a doubled prompt is a
-           finger told to stay where it is.
-
-        The invariant is enforced **only for a hand the inventory can bring
-        home**. Phase A for a solo reach key is `w` plus the other
-        hand's anchor: there is no left-hand home key in it, so nothing can
-        return the left hand, and ADR-024 specifies pure repetition there anyway.
-        Trying regardless is worse than not trying -- the assembler then picks the
-        only unit that does not make things worse, over and over, and a block
-        comes out as `w j j j j j j j j j w w w w w w w w w`: clumped, which is
-        the opposite of what the shuffle is for.
-        """
-        remaining = list(units)
-        self._rng.shuffle(remaining)
-        guarded = self._guarded_hands(units)
-        varied: list[Unit] = []
-        while remaining:
-            index, form = self._next_form(remaining, guarded)
-            remaining.pop(index)
-            varied.append(form)
-            self._track(form)
-        return varied
-
-    def _track(self, form: Unit) -> None:
-        """Follow each prompt's effect on where the hands are."""
-        for prompt in form:
-            key = base_key(self._layout, prompt)
-            if key.row == HOME_ROW:
-                self._off_home.discard(key.side)
-            else:
-                self._off_home.add(key.side)
-        self._last_prompt = form[-1]
-
-    def _guarded_hands(self, units: list[Unit]) -> set[str]:
-        """Hands this inventory can return home, and therefore must."""
-        home = {
-            base_key(self._layout, prompt).side
-            for unit in units
-            for prompt in unit
-            if base_key(self._layout, prompt).row == HOME_ROW
-        }
-        return home
-
-    def _next_form(self, remaining: list[Unit], guarded: set[str]) -> tuple[int, Unit]:
-        # Whichever kind of unit has most left to place goes first. Taking the
-        # first acceptable candidate out of a shuffled list instead lets the
-        # kinds drift out of step, and a block then *ends* with the leftovers of
-        # one kind -- two `j`s in a row, where nothing is left that could avoid
-        # the repeat. `sorted` is stable, so the shuffle still decides ties.
-        counts = Counter(remaining)
-        order = sorted(range(len(remaining)), key=lambda index: -counts[remaining[index]])
-        candidates = [(index, form) for index in order for form in self._forms(remaining[index])]
-        for index, form in candidates:
-            if self._returns_home(form, guarded) and form[0] != self._last_prompt:
-                return index, form
-        for index, form in candidates:
-            if self._returns_home(form, guarded):
-                return index, form
-        for index, form in candidates:
-            if form[0] != self._last_prompt:
-                return index, form
-        return candidates[0]
-
-    def _returns_home(self, form: Unit, guarded: set[str]) -> bool:
-        """Would this form leave a guarded hand reaching twice without going home?"""
-        off_home = set(self._off_home)
-        for prompt in form:
-            key = base_key(self._layout, prompt)
-            if key.row == HOME_ROW:
-                off_home.discard(key.side)
-                continue
-            if key.side in off_home and key.side in guarded:
-                return False
-            off_home.add(key.side)
-        return True
-
-    def _forms(self, unit: Unit) -> list[Unit]:
-        """A unit's orders: one for a single prompt, both ways round for a pair.
-
-        Direction is where half of property 1 comes from. `r f` is the return
-        that `f r` leaves owed, so both belong in the inventory -- and which one
-        is emitted is decided by `_next_form` against where the hands are, not
-        by a coin toss that can then break property 2.
-        """
-        if len(unit) != 2 or unit[0] == unit[1]:
-            return [unit]
-        forms = [unit, (unit[1], unit[0])]
-        self._rng.shuffle(forms)
-        return forms
-
-    def _partners(self, ramp: RampUp) -> set[str]:
-        # ADR-024 Phase C: "2-3 of the most-frequent previously-known keys".
-        pool = self._active() - set(ramp.graphemes)
-        ranked = sorted(pool, key=lambda name: (-self._weight(name), name))
-        return set(ranked[: config.PHASE_C_PARTNERS])
-
-    def _phase_c_units(self, ramp: RampUp, target: int) -> list[Unit]:
-        # ADR-024 Phase C: the new letter mixed with 2-3 of the most frequent
-        # letters the child already has, in 2- and 3-letter sequences chosen
-        # for actual bigram frequency.
-        partners = self._partners(ramp)
-        # One alphabet per member -- {this letter} + partners, never the other
-        # new letter. A pair step's two members are both brand new, and pairing
-        # them with each other is the several-new-keys-at-once mix the ramp-up
-        # exists to prevent (ADR-024 § New-key ramp-up).
-        alphabets = {grapheme: self._pool({grapheme} | partners) for grapheme in ramp.graphemes}
-        pools = {
-            grapheme: {bigram: w for bigram, w in alphabet.items() if grapheme in bigram}
-            for grapheme, alphabet in alphabets.items()
-        }
-        ranked = sorted(partners, key=lambda name: (-self._weight(name), name))
-        fallback = ranked[0] if ranked else None
-        rounds = max(1, max(self._remaining(m, ramp) for m in ramp.members))
-        units: list[Unit] = []
-        count = 0
-        for _ in range(rounds):
-            if count >= target:
-                break
-            for member in ramp.members:
-                unit = self._phase_c_unit(
-                    member.grapheme, pools[member.grapheme], alphabets[member.grapheme], fallback
-                )
-                units.append(unit)
-                count += len(unit)
-        return units
-
-    def _phase_c_unit(
-        self,
-        grapheme: str,
-        pool: dict[str, float],
-        alphabet: dict[str, float],
-        fallback: str | None,
-    ) -> Unit:
-        if not pool:
-            # The corpus has no bigram pairing this letter with any of its
-            # partners -- a rare letter early in the curriculum. Alternate it
-            # with the most frequent partner instead of dropping the phase.
-            return (fallback, grapheme) if fallback else (grapheme,)
-        bigram = self._choose(pool)
-        unit: Unit = (bigram[0], bigram[1])
-        if self._rng.random() < config.PHASE_C_TRIGRAM_CHANCE:
-            unit = self._extend(unit, alphabet)
-        return unit
-
-    def _extend(self, unit: Unit, alphabet: dict[str, float]) -> Unit:
-        # Grown in either direction, so a real trigram like "the" can come out
-        # of "he" -- appending alone would only ever reach "het".
-        options: dict[Unit, float] = {}
-        for bigram, weight in alphabet.items():
-            if bigram[1] == unit[0]:
-                options[(bigram[0], *unit)] = weight
-            if bigram[0] == unit[-1]:
-                options[(*unit, bigram[1])] = weight
-        if not options:
-            return unit
-        keys = sorted(options)
-        return self._rng.choices(keys, weights=[options[key] for key in keys])[0]
 
     def _steady_units(self, target: int) -> list[Unit]:
         # ADR-024 § Steady-state drill generation (alpha-plan #12e): each block

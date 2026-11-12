@@ -12,7 +12,6 @@ from takki.persistence import (
     Landing,
     Level,
     LevelRecord,
-    PhaseRecord,
     Profile,
     ReachPress,
     RestKey,
@@ -118,17 +117,6 @@ CREATE TABLE IF NOT EXISTS practice_days (
     PRIMARY KEY (profile_id, key_char, practice_day)
 );
 
-CREATE TABLE IF NOT EXISTS ramp_up_phases (
-    profile_id         INTEGER NOT NULL REFERENCES profiles(id),
-    key_char           TEXT    NOT NULL,
-    phase              TEXT    NOT NULL,
-    started_attempts   INTEGER NOT NULL,
-    started_at         TEXT    NOT NULL,
-    completed_attempts INTEGER,
-    completed_at       TEXT,
-    PRIMARY KEY (profile_id, key_char, phase)
-);
-
 CREATE TABLE IF NOT EXISTS key_stats (
     profile_id        INTEGER NOT NULL REFERENCES profiles(id),
     key_char          TEXT    NOT NULL,
@@ -176,7 +164,10 @@ CREATE INDEX IF NOT EXISTS idx_ll_profile_key
 # Raised by a schema change that an older database cannot be opened under.
 # 1: alpha-plan #12m session 2. Every database before it reads 0.
 # 2: #12m session 4b, the practice-day number in place of a stored local date.
-_SCHEMA_VERSION = 2
+# 3: #12m session (6), `ramp_up_phases` dropped with the phases. Nothing would
+#    read the old table, but a database holds exactly the schema the code
+#    creates, so an older one is refused (decided by the developer).
+_SCHEMA_VERSION = 3
 
 
 # A record of a letter's ramp-up needs the letter's introduction.
@@ -439,66 +430,6 @@ class SqliteStore:
             )
         self.conn.commit()
         return step
-
-    def begin_phase(
-        self,
-        profile_id: int,
-        key_char: str,
-        phase: str,
-        attempts_at: int,
-        started_at: str | None = None,
-    ) -> None:
-        # Write-once: the phase's evidence is the key's attempts after this
-        # count, and moving it would move the evidence under the child.
-        ts = _stamp(started_at)
-        self.conn.execute(
-            """
-            INSERT OR IGNORE INTO ramp_up_phases
-                (profile_id, key_char, phase, started_attempts, started_at)
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            (profile_id, key_char, phase, attempts_at, ts),
-        )
-        self.conn.commit()
-
-    def record_phase(
-        self,
-        profile_id: int,
-        key_char: str,
-        phase: str,
-        attempts_at: int,
-        completed_at: str | None = None,
-    ) -> None:
-        # Write-once: a phase a child has passed stays passed (ADR-024 § A phase
-        # completion is an event). `attempts_at` is the key's lifetime attempt
-        # count at that moment, which no rolling window can evict.
-        # A completion with no start has no evidence it could have been read
-        # from, so it is a caller's mistake and not a row to invent.
-        key = (profile_id, key_char, phase)
-        self._write_once(
-            """
-            UPDATE ramp_up_phases SET completed_attempts = ?, completed_at = ?
-            WHERE profile_id = ? AND key_char = ? AND phase = ?
-              AND completed_attempts IS NULL
-            """,
-            (attempts_at, _stamp(completed_at), *key),
-            "SELECT 1 FROM ramp_up_phases WHERE profile_id = ? AND key_char = ? AND phase = ?",
-            key,
-            f"phase {phase!r} of {key_char!r} was never begun",
-        )
-
-    def phase_records(self, profile_id: int, key_char: str) -> dict[str, PhaseRecord]:
-        rows = self.conn.execute(
-            """
-            SELECT phase, started_attempts, completed_attempts FROM ramp_up_phases
-            WHERE profile_id = ? AND key_char = ?
-            ORDER BY phase
-            """,
-            (profile_id, key_char),
-        ).fetchall()
-        return {
-            cast(str, r[0]): PhaseRecord(cast(int, r[1]), cast("int | None", r[2])) for r in rows
-        }
 
     def append_attempt(
         self,

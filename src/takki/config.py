@@ -161,26 +161,33 @@ REST_LETTER_MIN_SHARE = 0.02
 # introduction, which Known cannot do (it needs 90 attempts over two days).
 LAYER_2_MIN_KEYS = 8
 
-# ADR-024 § New-key ramp-up. Starting points, not measured optima -- Alpha and
-# Beta are expected to tune them. The four-phase *structure* is not
-# configurable; only the bars between the phases are.
-# Phase A counts a streak (any wrong first press resets it) while Phase B
-# counts a run with an error budget. The two counting models differ on
-# purpose, per roadmap D "Phase A vs Phase B counting".
-PHASE_A_STREAK = 10
-PHASE_B_ATTEMPTS = 20
-PHASE_B_MAX_REJECTIONS = 1
-PHASE_C_ATTEMPTS = 30
-PHASE_C_MIN_ACCURACY = 0.85
-# ADR-024 § Ramp-up variability: Phase C's speed term, against the same
-# baseline Known's speed term reads and at the same ratio (ADR-027). With no
-# baseline the term is skipped.
-PHASE_C_MAX_LATENCY_RATIO = 2.0
-
-# How many previously-active graphemes Phase C mixes the new one with, and how
-# often a sampled bigram is grown into ADR-024's "3-letter sequence".
-PHASE_C_PARTNERS = 3
-PHASE_C_TRIGRAM_CHANCE = 0.5
+# ADR-024 § The ramp-up restated: the ladder's numbers. Starting points, not
+# measured optima. The objectives and the order of the levels are the design
+# and are not configurable; these numbers are (ADR-025).
+#
+# A letter leaves Reach, and the step leaves Choose, when LEVEL_UP_CORRECT of
+# the letter's latest LEVEL_UP_WINDOW presses at that level were right at the
+# first press. Read back from the latest press, so the answer depends only on
+# recent presses (#12j, finding O5).
+LEVEL_UP_CORRECT = 8
+LEVEL_UP_WINDOW = 10
+# The one bar: over the latest STABLE_ATTEMPTS listened presses, at least
+# STABLE_MIN_ACCURACY right at the first press, and no slower than
+# STABLE_MAX_LATENCY_RATIO times the baseline Known reads (ADR-027). With no
+# baseline the speed term is skipped.
+STABLE_ATTEMPTS = 30
+STABLE_MIN_ACCURACY = 0.85
+STABLE_MAX_LATENCY_RATIO = 2.0
+# Travel draws the step's letters with this many other Active letters, the
+# ones the language uses most.
+TRAVEL_PARTNERS = 2
+# The draw at Choose and Travel: a prompt may follow itself at most this many
+# times in a row, and a missed letter is asked again until one right first
+# press or this many re-asks.
+MAX_SAME_IN_A_ROW = 2
+MISS_REPEATS = 2
+# Wrong presses on an open rest cue before Takki speaks guidance (#12m (6b)).
+REST_CUE_GUIDE_AFTER = 2
 
 # ADR-024 § Lesson granularity. The block's wall-clock duration stays roughly
 # constant and the volume of practice scales with the child's pace, so a slow

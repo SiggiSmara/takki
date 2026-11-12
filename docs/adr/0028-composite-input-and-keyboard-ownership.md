@@ -119,6 +119,8 @@ The lesson engine therefore has no concept of "modifier key" or "compose state."
 
 ### Composite ramp-up (B5)
 
+*(2026-11-12, alpha-plan #12m session (6): written in phases, which [ADR-024](0024-drill-content-and-lesson-granularity.md#the-ramp-up-restated-four-objectives-and-a-ladder-of-three-levels) replaced with a ladder of Reach, Choose and Travel; see "Built, #12m session (6)" there. Read for the ladder, decided by the developer: **a composite takes Reach** like any letter typed with a key off its finger's rest key. A Reach prompt asks for the whole grapheme, as Phase A did, and the rest cue after it waits for a press on the rest key of **both** fingers it was typed with, the modifier's and the base letter's, in either order: for Icelandic `é`, `æ` and `d`; for `á`, `æ` and `a`, although the left little finger never left `a`. "Rest" means every finger back. Phase B's alternation with the base letter goes with Phase B; Choose and Travel draw a composite like any letter. A composite has no Reach only when its modifier and its base are both rest keys, which needs a dead key as a rest key: [ADR-033](0033-rest-keys-and-keyboard-alignment.md) allows one and nothing can land on one yet, and a rest cue waiting for a dead key cannot be answered today, since its press reaches the engine with no character. Both go with the first dead-key language's alignment work (§ Event model, "Decided").)*
+
 ADR-024's Phase A through D is amended for composite graphemes.
 
 **Phase A — whole grapheme repeated.** "Type the new key alone, repeatedly" becomes "type the whole grapheme repeatedly." The engine prompts `á`; the child presses dead-acute then `a`; pynput fires `KeyCode(char='á')`; the engine records a correct attempt. Ten consecutive correct attempts advance to Phase B. The two-keystroke mechanism is entirely invisible to the engine.
@@ -144,6 +146,8 @@ A modifier key (AltGr, dead-acute, dead-macron, etc.) has **no step of its own a
 The modifier's introduction is therefore one clause inside a letter's introduction, immediately followed by that letter's own four-phase ramp-up (see below).
 
 ### Pair ramp-up (B7)
+
+*(2026-11-12, alpha-plan #12m session (6): the per-phase rules below are replaced by [ADR-024](0024-drill-content-and-lesson-granularity.md#pairs)'s "Pairs" for the ladder. At Reach a pair's cycles take turns, left-hand member first, each letter followed by its rest cue, and a member with no Reach is not prompted until the step reaches Choose; at Choose and Travel the members are drawn with the others of the set, not interleaved. The step climbs together, and each member's rule is its own, so "a slow right hand cannot mask a poor left hand" still holds. What the step selects is unchanged: the member count, never the key count.)*
 
 An introduction step carries one or two **graphemes**, left-hand member first (ADR-023 § What an introduction step is; [ADR-032](0032-grapheme-led-introduction-and-selectable-ordering.md) § Decision 1 for why the member is a grapheme and not a key). The adaptation to ADR-024's single-key phases depends on the step's contents, **not on which stage or ordering produced it** *(generalised 2026-08-23 by [ADR-032](0032-grapheme-led-introduction-and-selectable-ordering.md): this section previously keyed off "Phase 2", which is now one candidate ordering's internal structure — the rules below apply equally to Stage 0's three pairs and to any future ordering's steps)*.
 

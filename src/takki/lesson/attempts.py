@@ -4,6 +4,7 @@ from enum import Enum, auto
 from takki import config
 from takki.clock import Clock
 from takki.lesson.letter_lengths import LetterLengths
+from takki.lesson.prompts import PromptKind
 from takki.persistence import Store
 
 
@@ -16,7 +17,12 @@ class PressOutcome(Enum):
 
 
 class AttemptCounter:
-    """ADR-027 § First-Attempt Counting Semantics: one attempt per prompt, decided by the first press."""
+    """ADR-027 § First-Attempt Counting Semantics: one attempt per prompt, decided by the first press.
+
+    And where a press that is not an attempt goes (§ Presses that are not
+    attempts): a Reach press to `reach_presses`, a re-ask nowhere. A rest cue
+    is not opened here at all; `rest_cue` only moves `prev_char`.
+    """
 
     def __init__(
         self,
@@ -59,19 +65,22 @@ class AttemptCounter:
         # leaves the timestamp to the store.
         self._now = now
         self._target: str | None = None
+        self._kind = PromptKind.COUNTED
         self._counted = False
 
     @property
     def counted(self) -> bool:
-        """Whether the prompt last opened has had its one attempt written."""
+        """Whether the prompt last opened has had its first press decided, and written where it goes."""
         return self._counted
 
-    def start_prompt(self, target: str) -> None:
+    def start_prompt(self, target: str, kind: PromptKind = PromptKind.COUNTED) -> None:
         # Once per prompt, and only for a new one. A timeout re-issue re-speaks
         # the same prompt and must not call this: it counts nothing, and
         # re-latching would let the child's second keystroke be counted as
         # another first attempt (ADR-027 § Timeouts).
+        assert kind is not PromptKind.REST
         self._target = target
+        self._kind = kind
         self._counted = False
         self._sent_at = None
         self._timed = False
@@ -82,6 +91,15 @@ class AttemptCounter:
             # and not only in `press`: the caller plays the cue right after a
             # press, and a store read ahead of it is audible delay.
             self._lengths.usual(target)
+
+    def rest_cue(self, fingers: str) -> None:
+        """A rest cue opens: nothing is counted, and the next row's predecessor is the fingers.
+
+        ADR-011: `prev_char` after a rest cue holds the id of the finger it
+        asked for, and for a composite's two fingers both ids joined by `+`.
+        """
+        self._target = None
+        self._previous = fingers
 
     def letter_sent(self, *, cuttable: bool = True) -> None:
         """The open prompt's letter has been sent to be spoken, for the first time or again."""
@@ -139,7 +157,17 @@ class AttemptCounter:
                 self._sent_at = None
             return PressOutcome.CORRECT if correct else PressOutcome.WRONG
         ts = self._now() if self._now is not None else None
-        if self._counted:
+        if self._kind is not PromptKind.COUNTED:
+            # Predictable, so not an attempt (ADR-027 § Presses that are not
+            # attempts): no `key_stats`, no `key_attempts`, no practice day.
+            # A Reach press is kept apart for whether the child reaches the
+            # key; a re-ask is kept nowhere. Neither is timed.
+            if not self._counted and self._kind is PromptKind.REACH:
+                self._store.append_reach_press(self._profile_id, target, correct, ts)
+            if not self._counted:
+                self._counted = True
+                self._previous = target
+        elif self._counted:
             # The prompt's outcome is already decided; every keystroke until
             # the correct character arrives is engagement and nothing more.
             self._store.bump_key_recency(self._profile_id, target, ts)

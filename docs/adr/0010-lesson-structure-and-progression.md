@@ -55,7 +55,7 @@ Three readings this section did not pin, taken here rather than left for the ses
 
 **The rule.** Two gates stand between a block boundary and a new step:
 
-1. The current step's ramp-up has ended ([ADR-024](0024-drill-content-and-lesson-granularity.md), unchanged).
+1. The current step's ramp-up has ended ([ADR-024](0024-drill-content-and-lesson-granularity.md), unchanged). *(2026-11-12, alpha-plan #12m session (6): the ramp-up ends when every member of the step has met [ADR-024's one bar](0024-drill-content-and-lesson-granularity.md#the-one-bar), recorded as `introductions.stable_at`. While a step is at Reach its new letter is not Active, so it holds no slot until its first Choose press ([ADR-027](0027-key-and-accuracy-state-model.md#a-rest-key-has-no-key-state)).)*
 2. **There is a free slot.** The step is introduced only if, once it is, at most `MAX_KEYS_IN_PROGRESS` keys are Active but not yet Known ([ADR-027](0027-key-and-accuracy-state-model.md)'s Known, unchanged: 90 presses, 90%, 2 distinct days). *(2026-11-08, E7: "90%" is the lower confidence bound over decayed evidence since #12f, and Known has a speed term. The gate reads Known as ADR-027 defines it, whatever that is.)* A pair needs two free slots and a single key one. Every key that becomes Known frees a slot.
 
 Three readings, pinned here:

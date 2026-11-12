@@ -12,13 +12,12 @@ things are called in, and the three lifetimes those calls have:
   per Active grapheme, so it is called at a block boundary and never in the
   prompt loop (ADR-027 § Milestone Ladder);
 * `AttemptCounter.start_prompt` / `press` **per prompt**, paired one-for-one
-  with `DrillGenerator.record_attempt` (ADR-027 § First-Attempt Counting).
+  with `DrillGenerator.record_answer` (ADR-027 § First-Attempt Counting).
 """
 
 import queue
 import random
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
 
 from takki import config
 from takki.audio.cues import SoundCuePlayer
@@ -39,7 +38,7 @@ from takki.input import KeyEvent, KeyEventStream
 from takki.input.taxonomy import KeyBindings
 from takki.language import WordSource, warm
 from takki.lesson.attempts import AttemptCounter, PressOutcome
-from takki.lesson.drills import DrillBlock, DrillGenerator
+from takki.lesson.drills import Block, DrillGenerator, Prompt, PromptKind
 from takki.lesson.introducer import (
     DEFAULT_STRATEGY,
     IntroductionStrategy,
@@ -55,7 +54,6 @@ from takki.lesson.key_state import KeyStates
 from takki.lesson.letter_lengths import LetterLengths
 from takki.lesson.milestones import MilestoneDetector
 from takki.lesson.progression import layer_two_unlocked, room_for_step
-from takki.lesson.rampup import RampUpProgress
 from takki.persistence import Store
 from takki.platform.layout import Layout
 from takki.speech import Letter, Speaker
@@ -71,23 +69,9 @@ InboundEvent = KeyEvent | FocusEvent | SpeechFinished | Quit
 Celebrant = Callable[[str], str | None]
 
 
-@dataclass(frozen=True)
-class _Block:
-    prompts: tuple[str, ...]
-    # For each prompt, the index of the first prompt of the unit it belongs to.
-    # Layer 1's answer to ADR-012's restart key, which abandons "the current
-    # word": the nearest thing to a word here is ADR-024's unit, and a block
-    # always ends on one (§ Block boundaries).
-    unit_start: tuple[int, ...]
-
-
-def _to_block(block: DrillBlock) -> _Block:
-    starts: list[int] = []
-    index = 0
-    for unit in block.units:
-        starts.extend([index] * len(unit))
-        index += len(unit)
-    return _Block(block.prompts, tuple(starts))
+# Placeholder English until ADR-022's YAML tier (ADR-024 § Reach: one short
+# word, "rest", never "home").
+REST_CUE = "Rest."
 
 
 class SessionLoop:
@@ -151,9 +135,10 @@ class SessionLoop:
         self._session_id: int | None = None
         self._introducer: KeyIntroducer | None = None
         self._drills: DrillGenerator | None = None
-        self._block = _Block((), ())
-        self._index = 0
-        self._prompt: str | None = None
+        self._block: Block | None = None
+        self._open: Prompt | None = None
+        # The rest keys an open rest cue still waits for.
+        self._cue_left: list[str] = []
         self._first_press = False
         self._prompt_due = False
         self._reprompt_due = False
@@ -170,8 +155,21 @@ class SessionLoop:
 
     @property
     def prompt(self) -> str | None:
-        """The grapheme the child is being asked for, or None when none is open."""
-        return self._prompt
+        """The letter the child is being asked for, or None when no letter is open."""
+        if self._open is None or self._open.kind is PromptKind.REST:
+            return None
+        return self._open.grapheme
+
+    @property
+    def cue(self) -> tuple[str, ...] | None:
+        """The rest keys an open rest cue still waits for, or None when no cue is open."""
+        if self._open is None or self._open.kind is not PromptKind.REST:
+            return None
+        return tuple(self._cue_left)
+
+    @property
+    def open_prompt(self) -> Prompt | None:
+        return self._open
 
     # ---- startup and shutdown -----------------------------------------
 
@@ -203,7 +201,10 @@ class SessionLoop:
             self._states,
             self._clock,
             self._rng,
-            RampUpProgress(self._store, self._profile_id),
+            self._store,
+            self._profile_id,
+            self._session_id,
+            self._rest,
         )
         self._resume_ramp_up()
         self._keys.start()
@@ -339,11 +340,18 @@ class SessionLoop:
         # `_advance` holds the prompt until the speaker is idle, so this clears
         # exactly when the script finished rather than when it was queued.
         self._script_in_flight = ()
-        target = self._block.prompts[self._index]
-        self._prompt = target
+        assert self._block is not None
+        prompt = self._block.current()
+        assert prompt is not None
+        self._open = prompt
         self._first_press = True
         self._reprompts = 0
-        self._attempts.start_prompt(target)
+        if prompt.kind is PromptKind.REST:
+            self._cue_left = list(prompt.owed)
+            self._attempts.rest_cue(prompt.fingers or "")
+        else:
+            assert prompt.grapheme is not None
+            self._attempts.start_prompt(prompt.grapheme, prompt.kind)
         self._speak_prompt()
 
     def _speak_introduction(self, keys: Sequence[KeyIntroduction]) -> None:
@@ -368,19 +376,26 @@ class SessionLoop:
         auto-rejected keypress, and the return from PAUSED -- comes through
         here, so there is exactly one place for that to be got wrong.
         """
-        assert self._prompt is not None
-        cuttable = self._lengths.usual(self._prompt) is not None
+        assert self._open is not None
+        self._prompt_deadline = self._clock.monotonic() + config.PROMPT_TIMEOUT_SECONDS
+        if self._open.kind is PromptKind.REST:
+            # ADR-024 § Reach: the cue is spoken, one word, and a press cuts it
+            # as a press cuts a letter.
+            self._speaker.say(REST_CUE)
+            return
+        letter = self._open.grapheme
+        assert letter is not None
+        cuttable = self._lengths.usual(letter) is not None
         if cuttable:
-            self._speaker.letter(self._prompt)
+            self._speaker.letter(letter)
         else:
             # No length under this voice and rate: the introduction's letter
             # was cut, or the voice has changed since. Played so that a press
             # cannot cut it, once, which measures it. The press still counts
             # and gets its cue; `_advance` holds the next prompt until the
             # letter ends (ADR-012 § A letter with no measured length).
-            self._speaker.say(Letter(self._prompt), interruptible=False)
+            self._speaker.say(Letter(letter), interruptible=False)
         self._attempts.letter_sent(cuttable=cuttable)
-        self._prompt_deadline = self._clock.monotonic() + config.PROMPT_TIMEOUT_SECONDS
 
     def _on_timeout(self) -> None:
         """Carry-forward "D auto-advance": a Layer-1 timeout re-prompts.
@@ -419,7 +434,7 @@ class SessionLoop:
         disoriented state the re-read key exists to serve. Queued rather than
         spoken now -- `_advance` holds it until the announcement finishes.
         """
-        if self._prompt is not None:
+        if self._open is not None:
             # A child who has come back is engaging again, so the budget they
             # spent before leaving is not held against them.
             self._reprompts = 0
@@ -446,14 +461,17 @@ class SessionLoop:
 
     def _on_character(self, typed: TypedCharacter) -> None:
         assert self._drills is not None
-        target = self._prompt
-        if target is None:
+        prompt = self._open
+        if prompt is None:
             # Nothing open to answer: a restart or a block boundary abandoned
             # the prompt and its replacement is held behind speech. The counter
             # is deliberately not asked -- it still holds the abandoned target
             # until `_start_prompt` re-latches, and this loop is the one place
             # that knows the prompt is gone. Type-ahead here writes nothing and
             # gets no feedback (roadmap § D).
+            return
+        if prompt.kind is PromptKind.REST:
+            self._on_cue_press(prompt, typed)
             return
         outcome = self._attempts.press(typed.char, repeat=typed.repeat)
         if outcome is PressOutcome.IGNORED:
@@ -467,34 +485,66 @@ class SessionLoop:
         self._speaker.interrupt()
         self._reprompts = 0
         # The cue first: it is the child's feedback and it is immediate, while
-        # `record_attempt` below reads this key's window back out of SQLite to
-        # see whether a bar was met. On the slowest hardware the project
+        # `record_answer` below reads this key's window back out of SQLite to
+        # see whether a level's rule or the bar was met. On the slowest hardware the project
         # supports, doing that first is audible delay on every keypress.
         self._cues.play("correct" if outcome is PressOutcome.CORRECT else "error")
         if self._first_press and self._attempts.counted:
             # Once per prompt, with the first press's outcome, paired
             # one-for-one with the counter's own write. A retry press must not
-            # reach here or Phase C stops measuring first-attempt accuracy, and
+            # reach here or the ladder stops measuring first-press accuracy, and
             # neither must a press too early to count (ADR-027): the counter
             # wrote nothing for it, and the prompt's next press is the first.
             self._first_press = False
-            self._drills.record_attempt(target, outcome is PressOutcome.CORRECT)
+            self._drills.record_answer(prompt, outcome is PressOutcome.CORRECT)
         if outcome is PressOutcome.WRONG:
             # ADR-012 § Wrong character handling: auto-rejected, and the same
             # character is re-prompted. The prompt stays open and stays the
             # same prompt.
             self._reprompt_due = True
             return
-        self._prompt = None
+        self._close_prompt()
+
+    def _on_cue_press(self, prompt: Prompt, typed: TypedCharacter) -> None:
+        """A press while a rest cue is open (ADR-024 § Reach, as decided 2026-11-12).
+
+        The cue waits for a press on the rest key of every finger the letter
+        was typed with, in any order. A rest key already pressed for it is
+        ignored, the finger is only resting; any other key is wrong, and the
+        cue stays open. Nothing is counted, whatever the key carries.
+        """
+        assert self._drills is not None
+        if typed.repeat:
+            return
+        owed = typed.char in self._cue_left
+        if not owed and typed.char in prompt.owed:
+            return
+        self._speaker.interrupt()
+        self._reprompts = 0
+        self._cues.play("correct" if owed else "error")
+        if self._first_press:
+            # Pace only: answering the cue took the child's time.
+            self._first_press = False
+            self._drills.record_answer(prompt, owed)
+        if not owed:
+            self._reprompt_due = True
+            return
+        self._cue_left.remove(typed.char)
+        if not self._cue_left:
+            self._close_prompt()
+
+    def _close_prompt(self) -> None:
+        assert self._block is not None
+        self._open = None
         self._prompt_deadline = None
-        self._index += 1
-        if self._index < len(self._block.prompts):
+        self._block.close()
+        if self._block.current() is not None:
             self._prompt_due = True
         else:
             self._begin_block()
 
     def _on_reread(self) -> None:
-        if self._prompt is not None:
+        if self._open is not None:
             self._reprompt_due = True
             return
         if not self._script_in_flight:
@@ -514,14 +564,16 @@ class SessionLoop:
         """ADR-012 § Recovery, in Layer 1: re-present the current unit.
 
         There is no word here to abandon; ADR-024's unit is the nearest thing,
-        and a block always ends on one. The re-typed prompts are counted again,
-        because each is a fresh prompt and ADR-027 counts prompts -- ADR-012's
-        "the word is not counted toward session totals" has no Layer-1
-        mechanism behind it and no schema to hold one.
+        and a block always ends on one. In general practice the re-typed
+        prompts are counted again, because each is a fresh prompt and ADR-027
+        counts prompts -- ADR-012's "the word is not counted toward session
+        totals" has no Layer-1 mechanism behind it and no schema to hold one.
+        On the ladder every prompt is a unit, and a drawn letter the child has
+        heard comes back as a re-ask (the block decides; #12m session (6)).
         """
-        if self._index >= len(self._block.prompts):
+        if self._block is None:
             return
-        if self._prompt is not None:
+        if self._open is not None:
             # The abandoned prompt's letter may still be sounding, and the
             # letter the unit starts on is sent at once. If that one has no
             # length it does not replace the first but queues behind it, and
@@ -529,10 +581,10 @@ class SessionLoop:
             # open: with none, what is speaking is an introduction script,
             # and the key abandons nothing.
             self._speaker.interrupt()
-        self._index = self._block.unit_start[self._index]
-        self._prompt = None
+        self._block.restart(heard=self._open is not None)
+        self._open = None
         self._prompt_deadline = None
-        self._prompt_due = True
+        self._prompt_due = self._block.current() is not None
 
     # ---- the block boundary --------------------------------------------
 
@@ -572,12 +624,11 @@ class SessionLoop:
                 self._script_owed = ()
             self._introduce()
             self.layer_two_unlocked = layer_two_unlocked(self._layout, self._states)
-            self._block = _to_block(self._drills.next_block())
-        self._index = 0
-        self._prompt = None
+            self._block = self._drills.next_block()
+        self._open = None
         self._prompt_deadline = None
-        self._prompt_due = bool(self._block.prompts)
-        if not self._block.prompts:
+        self._prompt_due = self._block.current() is not None
+        if not self._prompt_due:
             # Nothing that may be introduced now and nothing Active to drill:
             # an empty curriculum, or a profile whose index fingers are not
             # both ready (ADR-032 rest rule 1), which is every profile until

@@ -8,6 +8,7 @@
 > **Noted 2026-11-08 ([alpha-plan](../alpha-plan.md) #12m, the ADR-027 session):** [ADR-027 § The `rest` rung](0027-key-and-accuracy-state-model.md#the-rest-rung) reads the first round of the last five *days*, one session a day, and judges each landing against the finger's *current* rest key. So § `landings`' "the last five sessions" and § `rest_keys`' "the `rest` rung will need [replaced keys]" no longer describe the rung. Dated notes in both are owed by #12m session (4), which adds the narrower read.  
 > **Amended 2026-11-08 ([alpha-plan](../alpha-plan.md) #12m session 4):** the `rest` rung's read, `first_round_landings`, and its index, with the dated notes owed above. No schema version change: an index is all that was added. The developer stated the rule that **the database holds UTC only**; `practice_days.day` is the one stored local value, and the next #12m session replaces it with a practice-day number on each session. See § Practice days outside the window.  
 > **Amended 2026-11-08 ([alpha-plan](../alpha-plan.md) #12m session 4b):** the practice-day number. Each session carries one, set when it starts; `practice_days` is keyed by it; the `rest` rung reads it. Nothing local is stored any more. Schema version 2. See [§ The practice-day number](#the-practice-day-number).
+> **Amended 2026-11-12 ([alpha-plan](../alpha-plan.md) #12m session (6)):** `ramp_up_phases` and the phase API are gone, and the ladder writes `ramp_up_levels`, `stable_at` and `reach_presses`. Schema version 3: every older database is refused, reversing this ADR's "no second refusal" by the developer's decision. See the dated note at the end of [§ The ladder](#the-ladder-ramp_up_levels-the-bar-and-reach_presses).
 
 ---
 
@@ -126,17 +127,6 @@ CREATE TABLE practice_days (           -- every practice day a key had an attemp
     PRIMARY KEY (profile_id, key_char, practice_day)
 );
 
-CREATE TABLE ramp_up_phases (
-    profile_id         INTEGER NOT NULL REFERENCES profiles(id),
-    key_char           TEXT    NOT NULL,
-    phase              TEXT    NOT NULL,   -- "A", "B", "C" (ADR-024's ramp-up)
-    started_attempts   INTEGER NOT NULL,   -- key_stats.attempt_count when the step reached the phase
-    started_at         TEXT    NOT NULL,   -- UTC, ISO-8601
-    completed_attempts INTEGER,            -- key_stats.attempt_count when it was passed; NULL = in the phase
-    completed_at       TEXT,               -- UTC, ISO-8601; NULL = in the phase
-    PRIMARY KEY (profile_id, key_char, phase)
-);
-
 CREATE TABLE milestones (
     profile_id  INTEGER NOT NULL REFERENCES profiles(id),
     level       TEXT    NOT NULL,   -- slug: "anchor", "third", "half", "two_thirds",
@@ -169,7 +159,7 @@ CREATE TABLE letter_lengths (       -- one row per playback of a letter that ran
     recorded_at TEXT    NOT NULL    -- UTC; when the row was written, at a block boundary
 );
 
-PRAGMA user_version = 2;            -- the schema's version (1: #12m session 2; 2: session 4b); a database below it is refused
+PRAGMA user_version = 3;            -- the schema's version (1: #12m session 2; 2: session 4b; 3: session (6)); a database below it is refused
 ```
 
 ### Timestamps are UTC
@@ -202,7 +192,7 @@ The `key_attempts` table is a rolling window: at most 200 rows per (profile_id, 
 **A counted attempt is one transaction** *(added 2026-10-07, alpha-plan #12k.)* A first press writes two things, the lifetime counters in `key_stats` and a row in `key_attempts`. They were two commits, and a process killed between them left the count one ahead of the rows for good. Since `ramp_up_phases` (above), a phase's evidence is the rows since the lifetime count at its start, so that tear moved a phase's evidence by one row: a bar could be met one answer early, or a miss from before the phase charged to it. `Store.count_attempt` writes both in one transaction and `AttemptCounter` calls only that. `upsert_key_stat` and `append_attempt` remain for what writes one without the other.
 - **`introductions`** answers *which step is current*, which nothing could answer before: Active is row presence in `key_stats`, and insertion order was recoverable only from an implicit `rowid`. The **`step` ordinal** is what groups a step's members and orders the steps — deliberately not the timestamp. A timestamp cannot do either job: two steps introduced inside one clock tick read as one step of four members, and `max()` over clock strings picks the wrong step for good whenever the clock has stepped backwards, at which point the genuinely current step can never be resumed again. **UTC removes the seasonal case and not the general one:** there is no fall-back hour in UTC, but `datetime.now(UTC)` reads the system clock, which is not monotonic — an NTP correction, a manual fix, or a boot with a dead CMOS battery all step it back. An ordinal is not a clock and needs none of this to be true. `position` keeps the member order ADR-023 defines, since the drill generator reads `members[0]` as the left-hand member.
 
-- **`ramp_up_phases`** records that a member has **passed** a phase of ADR-024's ramp-up, write-once *(and, since 2026-10-04, where the phase began: see "`ramp_up_phases` records both ends of a phase" below)*. See ADR-024 § A phase completion is an event for why this is stored rather than re-derived; the short version is that `key_attempts` is a window built to forget, so a phase read off it un-passes itself when the window rolls, and the curriculum can lock. `completed_attempts` (named `attempts_at` until 2026-10-04) is the key's lifetime `key_stats.attempt_count` at that moment, a count no rolling window can evict.
+- *(Dropped 2026-11-12, #12m session (6), with the phases: [§ The ladder](#the-ladder-ramp_up_levels-the-bar-and-reach_presses) holds the levels. Kept as the record.)* **`ramp_up_phases`** records that a member has **passed** a phase of ADR-024's ramp-up, write-once *(and, since 2026-10-04, where the phase began: see "`ramp_up_phases` records both ends of a phase" below)*. See ADR-024 § A phase completion is an event for why this is stored rather than re-derived; the short version is that `key_attempts` is a window built to forget, so a phase read off it un-passes itself when the window rolls, and the curriculum can lock. `completed_attempts` (named `attempts_at` until 2026-10-04) is the key's lifetime `key_stats.attempt_count` at that moment, a count no rolling window can evict.
 
   **It is its own table rather than an `introduced_at` column on `key_stats`, and that is not a filing preference.** A `key_stats` row *is* Active ([ADR-027](0027-key-and-accuracy-state-model.md) § Key States), so stamping the introduction there would make a key Active before the child had answered a single prompt on it. The introducer reads Active as "already had", so the step would never be offered again and its script — which [ADR-023](0023-key-introduction-protocol.md) § What the introducer remembers calls that letter's only teaching moment — would be silently spent on a child who heard it once and typed nothing. That case is not hypothetical: it is in the #12b-2 log, where `u` was introduced, never answered, and correctly introduced again next session. Keeping introductions separate leaves Active, the milestone denominators, the Layer-2 unlock and ADR-010's gate exactly as they were.
 
@@ -325,6 +315,13 @@ A row in `milestones` under the slug `rest`, stored and ordered like any rung **
 - moves `progress_dump`'s ramp-up table to the levels.
 
 A database that still has the old table is not refused: nothing reads it. So there is no second refusal **[A]**.
+
+*(Done 2026-11-12, #12m session (6), with one reversal.)* `ramp_up_phases` is dropped from the schema, with `begin_phase`, `record_phase`, `phase_records` and `PhaseRecord`, on both stores; `progress_dump` prints each letter's level runs (session, presses at its start and when its rule was met) and the bar's press count in their place **[T]**. **The sentence above is reversed: this is schema version 3, and every older database is refused**, with "schema version 2, older than this Takki's 3 … delete it", and left as found **[T]**. *Decided by the developer in the session:* a database holds exactly the schema the code creates, which one rule keeps simpler than a table nothing reads. It costs nothing: Takki is not run before #12h, which starts from a new database. Delete the development database on each machine again. Session (8)'s planned bump is therefore version 4.
+
+**How the ladder writes these records** *(2026-11-12, #12m session (6); the writer is `takki.lesson.rampup.StepLadder`, and `AttemptCounter` for presses)*:
+- **A level run is begun when the step reaches the level**, Reach included, so a step introduced and never answered has a Reach run with no presses **[T]**. Choose and Travel are begun only when the letter has no run of them, as above; a member found missing the step's level is begun then **[T]**. Travel's run is never completed: a letter leaves Travel on the bar, which is `stable_at` **[T]**.
+- **A Reach press is written at the prompt's first press**, as a counted attempt is, and nothing is written for a press too early to have heard the letter **[T]**.
+- **`prev_char` after a rest cue for a composite holds both fingers' ids**, in keystroke order, joined by `+`, for example `R-pink+L-mid` **[A]**: the cue asks back every finger the letter used (ADR-024, "Built, #12m session (6)"). It still contains `-` and is longer than one character. **`prev_char` names every prompt before**, counted or not: a Reach letter, a re-ask and a cue **[T]**, as "it names the prompt before this one" always said.
 
 `progress_dump` prints none of these records yet, except the practice days below. Printing them is session (8)'s, which is the dump tool's session.
 

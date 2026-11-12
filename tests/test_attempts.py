@@ -2,6 +2,7 @@ from typing import Any
 
 from takki import config
 from takki.lesson.attempts import AttemptCounter, PressOutcome
+from takki.lesson.drills import PromptKind
 from takki.lesson.letter_lengths import LetterLengths
 from takki.persistence import Attempt, KeyStat, WindowStats
 from tests.fakes.fake_clock import FakeClock
@@ -661,3 +662,69 @@ class TestPredecessor:
         h.counter.start_prompt("r")
         h.counter.press("r")
         assert [row.prev_char for row in self.rows(h, "r")] == ["j"]
+
+
+class TestPressesThatAreNotAttempts:
+    """ADR-027 § Presses that are not attempts: where each kind is kept."""
+
+    def test_a_reach_press_is_kept_apart_and_counts_nothing(self) -> None:
+        h = Harness()
+        h.store.mark_introduced(h.profile.id, ["e"])
+        h.counter.start_prompt("e", PromptKind.REACH)
+        assert h.counter.press("d") is PressOutcome.WRONG
+        assert h.counter.press("e") is PressOutcome.CORRECT
+        h.counter.start_prompt("e", PromptKind.REACH)
+        assert h.counter.press("e") is PressOutcome.CORRECT
+        # One row per prompt, from its first press; a retry is not another.
+        assert [p.correct for p in h.store.reach_presses(h.profile.id, "e")] == [False, True]
+        assert h.store.key_stats(h.profile.id) == {}
+        assert h.window("e") == WindowStats(0, 0, 0)
+
+    def test_a_re_ask_is_kept_nowhere(self) -> None:
+        h = Harness()
+        h.store.mark_introduced(h.profile.id, ["a"])
+        h.counter.start_prompt("a")
+        h.counter.press("s")
+        h.counter.press("a")
+        before = h.stat("a")
+        h.counter.start_prompt("a", PromptKind.REASK)
+        assert h.counter.press("s") is PressOutcome.WRONG
+        assert h.counter.press("a") is PressOutcome.CORRECT
+        # Not even the recency a retry on a counted prompt writes.
+        assert h.stat("a") == before
+        assert h.window("a") == WindowStats(1, 0, 1)
+        assert h.store.reach_presses(h.profile.id, "a") == []
+
+    def test_a_press_too_early_to_have_heard_a_reach_letter_is_not_kept(self) -> None:
+        h = TimedHarness()
+        h.store.mark_introduced(h.profile.id, ["e"])
+        h.counter.start_prompt("e", PromptKind.REACH)
+        h.counter.letter_sent()
+        h.clock.advance((config.HEARD_MIN_MS - 1) / 1000)
+        assert h.counter.press("e") is PressOutcome.CORRECT
+        assert h.store.reach_presses(h.profile.id, "e") == []
+
+    def test_prev_char_names_every_prompt_before_and_a_rest_cue_by_its_fingers(self) -> None:
+        # ADR-011: `prev_char` is the previous prompt, counted or not, and
+        # after a rest cue the id of the fingers it asked back.
+        h = TimedHarness()
+        h.store.mark_introduced(h.profile.id, ["e", "a"])
+        h.counter.start_prompt("e", PromptKind.REACH)
+        h.counter.press("e")
+        h.counter.rest_cue("L-mid")
+        h.counter.start_prompt("a")
+        h.counter.press("a")
+        h.counter.start_prompt("a", PromptKind.REASK)
+        h.counter.press("a")
+        h.counter.start_prompt("f")
+        h.counter.press("f")
+        assert [row.prev_char for row in h.store.window_attempts(h.profile.id, "a")] == ["L-mid"]
+        assert [row.prev_char for row in h.store.window_attempts(h.profile.id, "f")] == ["a"]
+
+    def test_a_rest_cue_leaves_nothing_to_count(self) -> None:
+        h = Harness()
+        h.counter.start_prompt("f")
+        h.counter.press("f")
+        h.counter.rest_cue("L-idx")
+        assert h.counter.press("f") is PressOutcome.IGNORED
+        assert h.window("f") == WindowStats(1, 1, 1)

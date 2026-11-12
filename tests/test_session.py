@@ -3,7 +3,7 @@ import random
 import threading
 from collections import Counter
 from collections.abc import Callable
-from itertools import pairwise
+from itertools import groupby
 from typing import Any
 
 import pytest
@@ -16,13 +16,12 @@ from takki.events import Quit
 from takki.focus_model import PAUSED_ANNOUNCEMENT, RESUMED_ANNOUNCEMENT
 from takki.input import KeyEvent
 from takki.language import WordSource
-from takki.lesson.drills import DrillGenerator
+from takki.lesson.drills import DrillBlock, DrillGenerator, Prompt
 from takki.lesson.introducer import KeyIntroducer, describe, introduction_sequence
 from takki.lesson.key_state import KeyStates
-from takki.lesson.rampup import RampUpProgress
-from takki.persistence import Attempt, PhaseRecord, Profile, WindowStats
+from takki.persistence import Attempt, Profile, WindowStats
 from takki.platform.layout import L_PINK, Grapheme, Layout, PhysicalKey, build_en
-from takki.session import Celebrant, InboundEvent, SessionLoop
+from takki.session import REST_CUE, Celebrant, InboundEvent, SessionLoop
 from tests.fakes.fake_clock import FakeClock
 from tests.fakes.fake_focus_source import FakeFocusSource
 from tests.fakes.fake_frames import FakeFrameLimiter
@@ -35,6 +34,7 @@ from tests.fakes.scripted_key_stream import ScriptedKeyStream
 from tests.fakes.waiting_queue import install
 from tests.rest import READY, seed_rest
 from tests.sessions import session_for
+from tests.test_drills import FirstChoice
 
 EN_WORDS: dict[str, float] = {
     "the": 100.0,
@@ -93,6 +93,7 @@ class Harness:
         rate: float = config.TTS_RATE,
         not_ready: tuple[str, ...] = (),
         rest_keys: bool = True,
+        rng: random.Random | None = None,
     ) -> None:
         self.layout = build_en()
         self.source = source or FixedListSource(words if words is not None else EN_WORDS)
@@ -143,7 +144,7 @@ class Harness:
             voice=voice,
             rate=rate,
             cues=self.cues,
-            rng=random.Random(1),
+            rng=rng or random.Random(1),
             celebrant=celebrant,
             now=now,
             max_keys_in_progress=max_keys_in_progress,
@@ -157,9 +158,9 @@ class Harness:
         self.letters.finish()
 
     def settle(self, limit: int = 60) -> None:
-        """Tick until a prompt is open, letting queued speech finish first."""
+        """Tick until a prompt or a rest cue is open, letting queued speech finish first."""
         for _ in range(limit):
-            if self.loop.prompt is not None or not self.loop.running:
+            if self.loop.open_prompt is not None or not self.loop.running:
                 return
             self.pump()
             self.loop.tick()
@@ -191,15 +192,43 @@ class Harness:
         return "j" if target == "f" else "f"
 
     def answer(self, count: int = 1) -> list[str]:
-        """Answer `count` prompts correctly; returns the graphemes asked for."""
+        """Answer `count` letter prompts correctly, and every rest cue between them.
+
+        Returns the letters asked for. A rest cue is answered by pressing the
+        rest keys it waits for, and is not in the list: `walk` shows them.
+        """
+        return [entry for entry in self.walk(count, letters=True) if not entry.startswith("rest")]
+
+    def walk(self, count: int, *, letters: bool = False) -> list[str]:
+        """Answer `count` prompts correctly, a rest cue as `rest:<keys>`; returns what was asked.
+
+        With `letters`, `count` counts only letter prompts.
+        """
         asked: list[str] = []
-        for _ in range(count):
+        while (
+            len([a for a in asked if not a.startswith("rest")]) if letters else len(asked)
+        ) < count:
             self.settle()
+            cue = self.loop.cue
+            if cue is not None:
+                asked.append("rest:" + "+".join(cue))
+                for key in cue:
+                    self.press(key)
+                    self.loop.tick()
+                continue
             target = self.loop.prompt
             assert target is not None
             asked.append(target)
             self.press(target)
             self.loop.tick()
+        return asked
+
+    def until_step(self, steps: int, limit: int = 2000) -> list[str]:
+        """Answer every prompt correctly until `steps` steps have been introduced."""
+        asked: list[str] = []
+        while len(steps_of(self.store, self.profile.id)) < steps:
+            assert len(asked) < limit, "the step never came"
+            asked += self.walk(1)
         return asked
 
 
@@ -312,11 +341,12 @@ class TestStartup:
         store.count_attempt(profile.id, earlier, "f", True, "2026-01-01T10:00:00+00:00")
         harness = Harness(store=store, profile=profile)
         harness.loop.start()
-        asked = harness.answer(4)
-        assert Counter(asked) == {"f": 2, "j": 2}
+        asked = Counter(harness.answer(4))
+        assert asked["f"] and asked["j"]
         assert store.practice_days_by_session(profile.id) == {earlier: 1, earlier + 1: 2}
-        assert store.window_stats(profile.id, "f") == WindowStats(3, 3, 2)
-        assert store.window_stats(profile.id, "j") == WindowStats(2, 2, 1)
+        f, j = 1 + asked["f"], asked["j"]
+        assert store.window_stats(profile.id, "f") == WindowStats(f, f, 2)
+        assert store.window_stats(profile.id, "j") == WindowStats(j, j, 1)
 
     def test_nothing_is_spoken_before_the_first_introduction(self) -> None:
         harness = Harness()
@@ -340,44 +370,139 @@ class TestFirstStepEndToEnd:
     def test_a_cold_profile_runs_the_first_step_to_completion(self) -> None:
         harness = Harness()
         harness.loop.start()
-
-        # Phase A of the first step is the L-R interleave of f and j: each
-        # member alone, as for any pair. Ten cycles, capped by the phase's own
-        # remaining requirement (PHASE_A_STREAK). The *order* within a block
-        # is shuffled (ADR-024 property 1), so each phase is checked by what it
-        # asked for and how often, and by the one thing the shuffle must never
-        # do: ask for the same letter twice running.
-        phase_a = harness.answer(2 * config.PHASE_A_STREAK)
-        assert Counter(phase_a) == {"f": config.PHASE_A_STREAK, "j": config.PHASE_A_STREAK}
-        assert [a for a, b in pairwise(phase_a) if a == b] == []
-
-        # Phase B keeps the same alternation -- the pair has no anchor behind it
-        # yet -- and runs to its own bar, per member.
-        phase_b = harness.answer(2 * config.PHASE_B_ATTEMPTS)
-        assert Counter(phase_b) == {"f": config.PHASE_B_ATTEMPTS, "j": config.PHASE_B_ATTEMPTS}
-        assert [a for a, b in pairwise(phase_b) if a == b] == []
-
-        # Phase C: no partner is Active yet and the corpus has no f-f or j-j
-        # bigram, so each member alternates solo (ADR-024 § Phase C fallback).
-        phase_c = harness.answer(2 * config.PHASE_C_ATTEMPTS)
-        assert Counter(phase_c) == {"f": config.PHASE_C_ATTEMPTS, "j": config.PHASE_C_ATTEMPTS}
-
-        # Out the other side: the ramp-up has ended and there are free slots,
-        # so the boundary asks the introducer for the second step, the default
-        # order's next pair, whose Phase A asks for each new letter alone.
-        harness.settle()
-        assert harness.engine.spoken == intro_lines(("f", "j")) + intro_lines(STEPS[1])
-        assert harness.loop.prompt in set(STEPS[1])
-
-        counted = config.PHASE_A_STREAK + config.PHASE_B_ATTEMPTS + config.PHASE_C_ATTEMPTS
+        # The bump letters have no Reach (ADR-024): the first step is one even
+        # draw of `f` and `j` through Choose and Travel, with no rest cue, until
+        # both meet the bar. The order is drawn, so it is read by its rules.
+        asked = harness.until_step(2)
+        assert set(asked) == {"f", "j"}
+        drawn = [name for name in asked]
+        assert max(len(list(g)) for _, g in groupby(drawn)) <= config.MAX_SAME_IN_A_ROW
         for name in ("f", "j"):
+            entry = next(
+                e for e in harness.store.introductions(harness.profile.id) if e.key_char == name
+            )
+            # All right, so the bar is met at the thirtieth listened press.
+            assert entry.stable_attempts == config.STABLE_ATTEMPTS
+            assert [r.level for r in harness.store.level_records(harness.profile.id, name)] == [
+                "choose",
+                "travel",
+            ]
             window = harness.store.window_stats(harness.profile.id, name)
-            assert (window.attempt_count, window.correct_count) == (counted, counted)
+            assert window.attempt_count == window.correct_count == Counter(asked)[name]
         # Every prompt chimed once, none errored.
-        assert harness.cues.played == ["correct"] * (2 * counted)
+        assert harness.cues.played == ["correct"] * len(asked)
+        # Out the other side: the boundary introduces the second step, whose
+        # letters both reach and so begin at Reach, each followed by the cue.
+        assert STEPS[1] == ("r", "u")
+        assert harness.walk(4) == ["r", "rest:f", "u", "rest:j"]
+        # The cue's word is cut by the press that answers it: `TestRestCue`
+        # lets it be heard.
+        assert harness.engine.spoken == [*intro_lines(("f", "j")), *intro_lines(STEPS[1])]
+        assert harness.store.key_stats(harness.profile.id).keys() == {"f", "j"}
+        assert [p.correct for p in harness.store.reach_presses(harness.profile.id, "r")] == [True]
         # No rung: `rest` reads landings, which nothing writes before the
         # alignment (#12m session 7), and `third` needs eight Known letters.
         assert harness.store.achieved_milestones(harness.profile.id) == []
+
+
+class TestRestCue:
+    """ADR-024 § Reach in the loop: the cue after each Reach letter, answered by the rest key.
+
+    #12m session (6) builds the cue's basic handling. The guidance after wrong
+    presses, the script's line about the cue, and what a pause, the re-read key
+    and the restart key say while one is open are session (6b)'s.
+    """
+
+    def at_reach(self) -> Harness:
+        """A profile past the first step, at the second's Reach: `r`, then its cue, then `u`."""
+        store = FakeStore()
+        profile = store.create_profile("kid")
+        finish(store, profile.id, [("f", "j")])
+        harness = Harness(store=store, profile=profile)
+        harness.loop.start()
+        assert harness.opened() == "r"
+        harness.press("r")
+        harness.loop.tick()
+        harness.pump()
+        harness.loop.tick()
+        return harness
+
+    def test_the_cue_is_spoken_after_the_letter_and_waits_for_the_rest_key(self) -> None:
+        harness = self.at_reach()
+        assert harness.loop.prompt is None
+        assert harness.loop.cue == ("f",)
+        assert harness.engine.spoken[-1] == REST_CUE
+        harness.press("f")
+        harness.loop.tick()
+        assert harness.cues.played == ["correct", "correct"]
+        assert harness.opened() == "u"
+
+    def test_a_wrong_key_is_rejected_and_the_cue_stays_open(self) -> None:
+        harness = self.at_reach()
+        spoken = len(harness.engine.spoken)
+        harness.press("g")
+        harness.loop.tick()
+        harness.pump()
+        assert harness.cues.played == ["correct", "error"]
+        assert harness.loop.cue == ("f",)
+        assert harness.engine.spoken[spoken:] == [REST_CUE]
+
+    def test_a_press_on_the_cue_is_never_counted_even_on_an_active_letter(self) -> None:
+        harness = self.at_reach()
+        before = harness.store.window_stats(harness.profile.id, "f")
+        stat = harness.store.key_stats(harness.profile.id)["f"]
+        harness.press("g")
+        harness.loop.tick()
+        harness.press("f")
+        harness.loop.tick()
+        assert harness.store.window_stats(harness.profile.id, "f") == before
+        assert harness.store.key_stats(harness.profile.id)["f"] == stat
+        assert harness.store.window_stats(harness.profile.id, "g") == WindowStats(0, 0, 0)
+
+    def test_a_held_key_repeating_is_not_a_press(self) -> None:
+        harness = self.at_reach()
+        harness.press("g", release=False)
+        harness.loop.tick()
+        harness.press("g", release=False)
+        harness.loop.tick()
+        assert harness.cues.played == ["correct", "error"]
+
+    def test_a_timeout_speaks_the_cue_again(self) -> None:
+        harness = self.at_reach()
+        spoken = len(harness.engine.spoken)
+        harness.clock.advance(config.PROMPT_TIMEOUT_SECONDS)
+        harness.loop.tick()
+        harness.pump()
+        assert harness.engine.spoken[spoken:] == [REST_CUE]
+        assert harness.loop.cue == ("f",)
+
+    def test_the_restart_key_opens_the_cue_again_and_not_the_letter_before_it(self) -> None:
+        harness = self.at_reach()
+        spoken = len(harness.engine.spoken)
+        harness.key(config.RESTART_KEY)
+        harness.loop.tick()
+        harness.clock.advance(config.RESTART_HOLD_MS / 1000)
+        harness.loop.tick()
+        harness.pump()
+        harness.loop.tick()
+        assert harness.loop.cue == ("f",)
+        assert harness.engine.spoken[spoken:] == [REST_CUE]
+        assert [p.correct for p in harness.store.reach_presses(harness.profile.id, "r")] == [True]
+
+    def test_the_first_listened_press_after_reach_names_the_cued_finger(self) -> None:
+        # ADR-011: `prev_char` after a rest cue holds the id of the finger it
+        # asked for. Reach ends on `u`'s cue, which asks for the right index.
+        harness = self.at_reach()
+        harness.press("f")
+        harness.loop.tick()
+        asked = harness.walk(4 * config.LEVEL_UP_CORRECT - 2)
+        assert asked[-1] == "rest:j"
+        # Reach's presses are not attempts: neither letter has a row yet.
+        for name in ("r", "u"):
+            assert harness.store.window_attempts(harness.profile.id, name) == []
+        first = harness.walk(1)[0]
+        (row,) = harness.store.window_attempts(harness.profile.id, first)[-1:]
+        assert row.prev_char == "R-idx"
 
 
 class TestLifetimes:
@@ -403,8 +528,8 @@ class TestLifetimes:
         monkeypatch.setattr("takki.session.DrillGenerator", CountingDrills)
         harness = Harness()
         harness.loop.start()
-        # Far enough to cross three block boundaries and two introductions.
-        harness.answer(2 * (config.PHASE_A_STREAK + config.PHASE_B_ATTEMPTS))
+        # Far enough to cross several block boundaries and two introductions.
+        harness.until_step(3)
         assert built == {"introducer": 1, "drills": 1}
 
     def test_the_key_states_are_told_which_keys_have_the_bump(
@@ -461,10 +586,14 @@ class TestLifetimes:
         harness = Harness()
         harness.loop.start()
         assert len(built) == 1
-        harness.answer(2 * config.PHASE_A_STREAK)
+        # Choose ends when both bump letters meet its rule, and its block with it.
+        asked = harness.answer(config.LEVEL_UP_CORRECT)
+        while harness.loop.open_prompt is not None and len(built) == 1:
+            asked += harness.answer(1)
         harness.settle()
         # One per block boundary crossed, not one per prompt.
         assert len(built) == 2
+        assert len(asked) < config.FIRST_BLOCK_PROMPTS
 
 
 class TestAttemptPairing:
@@ -472,9 +601,9 @@ class TestAttemptPairing:
         recorded: list[tuple[str, bool]] = []
 
         class SpyDrills(DrillGenerator):
-            def record_attempt(self, grapheme: str, correct: bool) -> None:
-                recorded.append((grapheme, correct))
-                super().record_attempt(grapheme, correct)
+            def record_answer(self, prompt: Prompt, correct: bool) -> None:
+                recorded.append((prompt.grapheme or "", correct))
+                super().record_answer(prompt, correct)
 
         monkeypatch.setattr("takki.session.DrillGenerator", SpyDrills)
         return recorded
@@ -486,14 +615,13 @@ class TestAttemptPairing:
         harness = Harness()
         harness.loop.start()
         asked = harness.answer(4)
-        assert Counter(asked) == {"f": 2, "j": 2}
         assert recorded == [(name, True) for name in asked]
 
-    def test_a_retry_press_never_reaches_record_attempt(
+    def test_a_retry_press_never_reaches_record_answer(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # Phase C's accuracy stops being first-attempt accuracy the moment a
-        # retry counts (ADR-027 § First-Attempt Counting).
+        # The ladder's accuracy stops being first-attempt accuracy the moment
+        # a retry counts (ADR-027 § First-Attempt Counting).
         recorded = self.spy(monkeypatch)
         harness = Harness()
         harness.loop.start()
@@ -641,24 +769,21 @@ class TestTypeAhead:
     def test_the_next_prompt_is_open_before_the_next_keystroke_is_dispatched(self) -> None:
         # roadmap § D "keystrokes typed between prompts are dropped": two
         # keystrokes queued in one drain, and the second must still land.
-        harness = Harness()
+        # The draw takes the first letter its rules allow, so the second prompt
+        # is `f` again and the second keystroke is known before it is drawn.
+        harness = Harness(rng=FirstChoice())
         harness.loop.start()
         target = harness.opened()
-        partner = harness.partner(target)
+        assert target == "f"
         harness.press(target)
-        harness.press(partner)
+        harness.press(target)
         harness.loop.tick()
         assert harness.cues.played == ["correct", "correct"]
         # It lands, and it is not an attempt: its letter was sent in the same
         # drain, so the press cannot be an answer to it (ADR-027, alpha-plan
         # #12f). It answered a guess at what would come next.
-        assert harness.letters.played[:4] == [*HOME, target, partner]
-        assert len(harness.letters.played) == 5
-        counts = {
-            name: harness.store.window_stats(harness.profile.id, name).attempt_count
-            for name in (target, partner)
-        }
-        assert counts == {target: 1, partner: 0}
+        assert harness.letters.played == [*HOME, "f", "f", "j"]
+        assert harness.store.window_stats(harness.profile.id, "f").attempt_count == 1
 
 
 class TestInterruptedIntroductionScript:
@@ -1091,7 +1216,8 @@ class TestLetterLengths:
         hear_out(harness)
         assert self.stored(harness, "f") == []
         block = harness.loop._block  # pyright: ignore[reportPrivateUsage]
-        harness.answer(len(block.prompts))
+        while harness.loop._block is block:  # pyright: ignore[reportPrivateUsage]
+            harness.answer(1)
         assert (self.stored(harness, "f"), self.stored(harness, "j")) == ([LETTER_MS], [LETTER_MS])
 
     def test_what_was_measured_is_stored_when_the_session_ends(self) -> None:
@@ -1793,23 +1919,10 @@ class TestIntroductionPacingAcrossSessions:
 
     def test_a_finished_ramp_up_lets_the_next_session_introduce(self) -> None:
         # The gate must not become a lock. A profile whose newest step has met
-        # every bar -- Phase A + B + C worth of clean attempts on both members --
-        # resumes nothing and moves on to the second step.
+        # the bar on both members resumes nothing and moves on to the second step.
         store = FakeStore()
         profile = store.create_profile("kid")
-        store.mark_introduced(profile.id, ["f", "j"])
-        progress = RampUpProgress(store, profile.id)
-        for name in ("f", "j"):
-            for bar in (
-                config.PHASE_A_STREAK,
-                config.PHASE_B_ATTEMPTS,
-                config.PHASE_C_ATTEMPTS,
-            ):
-                progress.begin(progress.member(name))
-                for _ in range(bar):
-                    store.upsert_key_stat(profile.id, name, True)
-                    store.append_attempt(profile.id, session_for(store, profile.id), name, True)
-                assert progress.advance(progress.member(name)) is True
+        finish(store, profile.id, [("f", "j")])
 
         harness = Harness(store=store, profile=profile)
         harness.loop.start()
@@ -1817,31 +1930,30 @@ class TestIntroductionPacingAcrossSessions:
         introduced = {i.key_char for i in store.introductions(profile.id)}
         assert sorted(introduced - {"f", "j"}) == sorted(STEPS[1])
 
-    def test_the_phase_the_child_reached_is_recorded_and_survives_the_restart(self) -> None:
-        # The durable half of the fix. Session 1 gets past Phase A's bar; the
-        # completion is written, so session 2 resumes in Phase B instead of
-        # re-deriving it from a window that may since have forgotten.
+    def test_the_level_the_child_reached_is_recorded_and_survives_the_restart(self) -> None:
+        # The durable half of #12d. Session 1 gets the first step past Choose;
+        # the level runs are written, so session 2 resumes at Travel and begins
+        # nothing again (ADR-024 § What survives a restart).
         store = FakeStore()
         profile = store.create_profile("kid")
         first = Harness(store=store, profile=profile)
         first.loop.start()
-        first.answer(2 * config.PHASE_A_STREAK)
+        while len(store.level_records(profile.id, "f")) < 2:
+            first.answer(1)
         first.loop.stop()
-        # Both members passed Phase A on their tenth press, which is when the
-        # step reached Phase B for both.
-        in_b = {
-            "A": PhaseRecord(0, config.PHASE_A_STREAK),
-            "B": PhaseRecord(config.PHASE_A_STREAK),
-        }
-        assert store.phase_records(profile.id, "f") == in_b
-        assert store.phase_records(profile.id, "j") == in_b
+        runs = {name: store.level_records(profile.id, name) for name in "fj"}
+        for name in "fj":
+            assert [(r.level, r.completed_presses is not None) for r in runs[name]] == [
+                ("choose", True),
+                ("travel", False),
+            ]
 
         second = Harness(store=store, profile=profile)
         second.loop.start()
         second.answer(4)
-        # Still the same step, and no new letter -- the ramp-up is in Phase B.
+        # Still the same step, and no new letter: the step is at Travel.
         assert {i.key_char for i in store.introductions(profile.id)} == {"f", "j"}
-        assert store.phase_records(profile.id, "f") == in_b
+        assert {name: store.level_records(profile.id, name) for name in "fj"} == runs
 
     def test_a_resumed_session_can_still_re_read_the_introduction(self) -> None:
         # The re-read key reads the script off the introducer's `last_step`, and a
@@ -1892,8 +2004,9 @@ class TestIntroductionPacingAcrossSessions:
         assert remembered is not None
         assert [describe(intro) for intro in remembered.keys] == intro_texts(STEPS[1])
         assert all("Reach" in rest for _, rest in intro_texts(STEPS[1]))
-        # Both members were answered, so nothing is spoken again.
-        assert second.engine.spoken == []
+        # The step had not reached Choose, so it is introduced again, script
+        # first, and Reach begins from nothing (ADR-024, "Two kinds of press").
+        assert second.engine.spoken == intro_lines(STEPS[1])
 
     def test_a_resumed_step_is_described_from_todays_rest_keys(self) -> None:
         # Decided 2026-11-09 (#12m session (5b)): a rest key changed between the
@@ -1930,13 +2043,17 @@ class TestIntroductionPacingAcrossSessions:
                 "Reach one row down and one position to the left from where that finger rests.",
             ),
         ]
-        # The member never answered is spoken again, from where its finger
-        # rests today: it was introduced as the key that finger rested on.
+        # The step had not reached Choose, so the whole script is spoken again
+        # (ADR-024), each member from where its finger rests today: `a` was
+        # introduced as the key its finger rested on, and now takes a reach.
         assert second.engine.spoken == [
             "New letter:",
             "Use your left little finger. Reach one row down from where that finger rests.",
+            "New letter:",
+            "Use your right index finger. "
+            "Reach one row down and one position to the left from where that finger rests.",
         ]
-        assert second.letters.played[0] == "a"
+        assert second.letters.played[:2] == ["a", "n"]
 
     def test_a_half_answered_pair_is_resumed_as_a_pair(self) -> None:
         # alpha-plan #12j, O3. The session used to refuse the resume, and the
@@ -1965,8 +2082,7 @@ class TestIntroductionPacingAcrossSessions:
         assert [describe(i) for i in introducer.last_step.keys] == intro_texts(("f", "j"))
         # Nothing new was introduced, and the pair is drilled as a pair.
         assert steps_of(store, profile.id) == [("f", "j")]
-        asked = Counter(second.answer(2 * config.PHASE_A_STREAK))
-        assert asked == {"f": config.PHASE_A_STREAK, "j": config.PHASE_A_STREAK}
+        assert set(second.answer(2 * config.LEVEL_UP_CORRECT)) == {"f", "j"}
 
     def half_answered(self) -> tuple[FakeStore, Profile, list[str]]:
         """One profile whose first pair was quit after one answer; returns the script still owed."""
@@ -2063,11 +2179,6 @@ def finish(
     A key named in `known` also has a press on a second day, which is all it
     lacked (ADR-027).
     """
-    marks = {
-        "A": config.PHASE_A_STREAK,
-        "B": config.PHASE_A_STREAK + config.PHASE_B_ATTEMPTS,
-        "C": config.PHASE_A_STREAK + config.PHASE_B_ATTEMPTS + config.PHASE_C_ATTEMPTS,
-    }
     for step in steps:
         store.mark_introduced(profile_id, list(step))
         for name in step:
@@ -2076,11 +2187,8 @@ def finish(
                 store.append_attempt(
                     profile_id, session_for(store, profile_id, DAY_ONE), name, True, DAY_ONE
                 )
-            began = 0
-            for phase, attempts_at in marks.items():
-                store.begin_phase(profile_id, name, phase, began)
-                store.record_phase(profile_id, name, phase, attempts_at)
-                began = attempts_at
+            # The bar met: the ramp-up has ended (ADR-024 § The one bar).
+            store.record_stable(profile_id, name, config.KNOWN_MIN_ATTEMPTS)
             if name in known:
                 store.upsert_key_stat(profile_id, name, True, DAY_TWO)
                 store.append_attempt(
@@ -2180,8 +2288,10 @@ class TestSlots:
         assert first_day(2) == 2
         harness = Harness(now=lambda: DAY_ONE, max_keys_in_progress=2)
         harness.loop.start()
-        ramp_up = config.PHASE_A_STREAK + config.PHASE_B_ATTEMPTS + config.PHASE_C_ATTEMPTS
-        harness.answer(4 * ramp_up + 2 * config.FIRST_BLOCK_PROMPTS)
+        # Far past both steps' ramp-ups: the bar is thirty listened presses a
+        # letter, and a draw of three or four letters gives each about a third.
+        harness.answer(10 * config.STABLE_ATTEMPTS)
+        assert all(e.stable_at for e in harness.store.introductions(harness.profile.id))
         assert steps_of(harness.store, harness.profile.id) == STEPS[:2]
 
     def test_a_key_becoming_known_mid_session_opens_the_gate_at_the_next_boundary(self) -> None:
@@ -2229,10 +2339,12 @@ class TestRestState:
         assert harness.loop.running
         assert harness.engine.spoken == []
         block = harness.loop._block  # pyright: ignore[reportPrivateUsage]
+        assert isinstance(block, DrillBlock)
         assert set(harness.answer(len(block.prompts))) == {"f", "j"}
         assert steps_of(store, profile.id) == STEPS[:1]
         store.mark_rest_key_ready(profile.id, "L-idx")
         block = harness.loop._block  # pyright: ignore[reportPrivateUsage]
+        assert isinstance(block, DrillBlock)
         harness.answer(len(block.prompts))
         assert steps_of(store, profile.id) == STEPS[:2]
         harness.settle()
@@ -2262,13 +2374,8 @@ class TestEndOfTheCurriculum:
         profile = harness.profile.id
 
         def all_six_through_their_ramp_up() -> bool:
-            done = [
-                harness.store.phase_records(profile, row.key_char).get("C")
-                for row in harness.store.introductions(profile)
-            ]
-            return len(done) == 6 and all(
-                record is not None and record.completed_attempts is not None for record in done
-            )
+            done = [row.stable_at for row in harness.store.introductions(profile)]
+            return len(done) == 6 and all(done)
 
         for _ in range(1000):
             if all_six_through_their_ramp_up():

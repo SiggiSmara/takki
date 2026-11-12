@@ -16,7 +16,6 @@ from takki.persistence import (
     Landing,
     Level,
     LevelRecord,
-    PhaseRecord,
     ReachPress,
     RestKey,
     Store,
@@ -86,11 +85,6 @@ WRITES: dict[str, Callable[[Store, int, str], object]] = {
     "upsert_key_stat": lambda s, pid, at: s.upsert_key_stat(pid, "f", True, practised_at=at),
     "bump_key_recency": lambda s, pid, at: s.bump_key_recency(pid, "f", practised_at=at),
     "mark_introduced": lambda s, pid, at: s.mark_introduced(pid, ["f", "j"], at),
-    "begin_phase": lambda s, pid, at: s.begin_phase(pid, "f", "A", 0, started_at=at),
-    "record_phase": lambda s, pid, at: (
-        s.begin_phase(pid, "f", "A", 0),
-        s.record_phase(pid, "f", "A", 10, completed_at=at),
-    ),
     "append_attempt": lambda s, pid, at: s.append_attempt(
         pid, s.start_session(pid), "f", True, attempted_at=at
     ),
@@ -1129,8 +1123,8 @@ class TestWindowAttempts:
         assert any_store.window_attempts(pid, "f") == []
 
     def test_a_limit_keeps_the_latest_rows_and_zero_keeps_none(self, any_store: Store) -> None:
-        # How a ramp-up phase reads its evidence: the rows since it began
-        # (ADR-024 § Ramp-up variability), and none of the ones before.
+        # How a ladder level reads its evidence: the rows since the step
+        # reached it (ADR-024 § The ramp-up restated), and none of the ones before.
         pid = any_store.create_profile("Alice").id
         for correct in (True, True, False, True, False):
             any_store.append_attempt(
@@ -1213,58 +1207,6 @@ class TestCountedAttempt:
         assert store.key_stats(pid) == {}
         assert store.window_attempts(pid, "f") == []
         assert store.window_stats(pid, "f") == WindowStats(0, 0, 0)
-
-
-class TestPhaseRecords:
-    """ADR-011's `ramp_up_phases`: one record per key per phase, with both ends."""
-
-    def test_a_phase_is_begun_and_then_completed(self, any_store: Store) -> None:
-        p = any_store.create_profile("Alice")
-        any_store.begin_phase(p.id, "f", "A", 0)
-        assert any_store.phase_records(p.id, "f") == {"A": PhaseRecord(0)}
-        any_store.record_phase(p.id, "f", "A", 10)
-        any_store.begin_phase(p.id, "f", "B", 14)
-        assert any_store.phase_records(p.id, "f") == {
-            "A": PhaseRecord(0, 10),
-            "B": PhaseRecord(14),
-        }
-
-    def test_both_ends_are_written_once(self, any_store: Store) -> None:
-        # The start bounds the phase's evidence and the completion is a fact
-        # about the child: neither moves once written.
-        p = any_store.create_profile("Alice")
-        any_store.begin_phase(p.id, "f", "A", 0)
-        any_store.begin_phase(p.id, "f", "A", 5)
-        any_store.record_phase(p.id, "f", "A", 10)
-        any_store.record_phase(p.id, "f", "A", 25)
-        any_store.begin_phase(p.id, "f", "A", 30)
-        assert any_store.phase_records(p.id, "f") == {"A": PhaseRecord(0, 10)}
-
-    def test_a_completion_without_a_start_is_refused(self, any_store: Store) -> None:
-        p = any_store.create_profile("Alice")
-        with pytest.raises(ValueError, match="never begun"):
-            any_store.record_phase(p.id, "f", "A", 10)
-        assert any_store.phase_records(p.id, "f") == {}
-
-    def test_records_belong_to_one_profile_and_one_key(self, any_store: Store) -> None:
-        alice = any_store.create_profile("Alice")
-        bob = any_store.create_profile("Bob")
-        any_store.begin_phase(alice.id, "f", "A", 0)
-        any_store.begin_phase(alice.id, "j", "A", 3)
-        any_store.begin_phase(bob.id, "f", "A", 7)
-        assert any_store.phase_records(alice.id, "f") == {"A": PhaseRecord(0)}
-        assert any_store.phase_records(alice.id, "j") == {"A": PhaseRecord(3)}
-        assert any_store.phase_records(bob.id, "f") == {"A": PhaseRecord(7)}
-
-    def test_the_stored_stamps_are_utc(self, store: SqliteStore) -> None:
-        p = store.create_profile("Alice")
-        store.begin_phase(p.id, "f", "A", 0)
-        store.record_phase(p.id, "f", "A", 10)
-        (started_at, completed_at) = store.conn.execute(
-            "SELECT started_at, completed_at FROM ramp_up_phases"
-        ).fetchone()
-        assert utc_stamp(started_at) == started_at
-        assert utc_stamp(completed_at) == completed_at
 
 
 T1 = "2026-11-01T10:00:00+00:00"
@@ -1634,7 +1576,6 @@ class TestRefusalsLeaveNoTransactionOpen:
         sid = store.start_session(pid)
         store.mark_introduced(pid, ["d"])
         refusals: list[tuple[type[Exception], Callable[[], object]]] = [
-            (ValueError, lambda: store.record_phase(pid, "f", "A", 10)),
             (ValueError, lambda: store.record_stable(pid, "f", 30)),
             (ValueError, lambda: store.complete_level(pid, "f", "choose", sid, 10)),
             (ValueError, lambda: store.mark_rest_key_ready(pid, "L-mid")),
@@ -1732,12 +1673,6 @@ class TestOrderOfResults:
             any_store.upsert_key_stat(profile.id, name, True)
         assert list(any_store.key_stats(profile.id)) == ["a", "d", "f", "j"]
 
-    def test_phase_records_come_back_by_phase(self, any_store: Store) -> None:
-        profile = any_store.create_profile("kid")
-        for phase in ("C", "A", "B"):
-            any_store.begin_phase(profile.id, "f", phase, 0)
-        assert list(any_store.phase_records(profile.id, "f")) == ["A", "B", "C"]
-
     def test_milestones_with_one_stamp_come_back_in_the_order_earned(
         self, any_store: Store
     ) -> None:
@@ -1788,7 +1723,7 @@ class TestMigration:
             for row in store.conn.execute("SELECT name FROM sqlite_master WHERE type = 'index'")
         }
         assert "idx_landings_round" in names
-        assert store.conn.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert store.conn.execute("PRAGMA user_version").fetchone()[0] == 3
 
     def test_a_database_with_the_old_phase_table_is_refused_at_open(self, tmp_path: Path) -> None:
         # ADR-011, 2026-10-04: `ramp_up_phases` changed shape with no migration.
@@ -1847,7 +1782,7 @@ class TestMigration:
         old.commit()
         old.close()
         with pytest.raises(
-            RuntimeError, match=r"schema version 1, older than this Takki's 2.*delete it"
+            RuntimeError, match=r"schema version 1, older than this Takki's 3.*delete it"
         ):
             SqliteStore(path)
         with closing(sqlite3.connect(path)) as conn:
@@ -1861,11 +1796,11 @@ class TestMigration:
         path = str(tmp_path / "takki.sqlite")
         SqliteStore(path).conn.close()
         with closing(sqlite3.connect(path)) as conn:
-            conn.execute("PRAGMA user_version = 3")
-        with pytest.raises(RuntimeError, match="schema version 3, newer"):
+            conn.execute("PRAGMA user_version = 4")
+        with pytest.raises(RuntimeError, match="schema version 4, newer"):
             SqliteStore(path)
         with closing(sqlite3.connect(path)) as conn:
-            assert conn.execute("PRAGMA user_version").fetchone() == (3,)
+            assert conn.execute("PRAGMA user_version").fetchone() == (4,)
 
     def test_a_file_that_is_not_a_database_is_not_held_open(self, tmp_path: Path) -> None:
         # A file the error says to delete must be deletable while Takki runs.
@@ -1889,8 +1824,35 @@ class TestMigration:
         path = str(tmp_path / "takki.sqlite")
         SqliteStore(path).conn.close()
         store = SqliteStore(path)
-        assert store.conn.execute("PRAGMA user_version").fetchone() == (2,)
+        assert store.conn.execute("PRAGMA user_version").fetchone() == (3,)
         store.conn.close()
+
+    def test_a_database_with_the_phases_is_refused_at_open(self, tmp_path: Path) -> None:
+        # ADR-011, #12m session (6): version 3 drops `ramp_up_phases` with the
+        # phases. Nothing would read the old table, but a database holds
+        # exactly the schema the code creates (decided by the developer).
+        path = str(tmp_path / "takki.sqlite")
+        SqliteStore(path).conn.close()
+        with closing(sqlite3.connect(path)) as conn:
+            conn.executescript("""
+                CREATE TABLE ramp_up_phases (
+                    profile_id INTEGER NOT NULL, key_char TEXT NOT NULL, phase TEXT NOT NULL,
+                    started_attempts INTEGER NOT NULL, started_at TEXT NOT NULL,
+                    completed_attempts INTEGER, completed_at TEXT,
+                    PRIMARY KEY (profile_id, key_char, phase)
+                );
+                PRAGMA user_version = 2;
+            """)
+        with pytest.raises(
+            RuntimeError, match=r"schema version 2, older than this Takki's 3.*delete it"
+        ):
+            SqliteStore(path)
+        with closing(sqlite3.connect(path)) as conn:
+            assert conn.execute("PRAGMA user_version").fetchone() == (2,)
+
+    def test_a_new_database_has_no_phase_table(self, store: SqliteStore) -> None:
+        tables = {r[0] for r in store.conn.execute("SELECT name FROM sqlite_master")}
+        assert "ramp_up_phases" not in tables
 
     def test_a_first_open_that_fails_leaves_no_tables(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

@@ -1,9 +1,10 @@
 import math
 import random
 from collections import Counter
+from collections.abc import Callable, Sequence
 from datetime import datetime, timedelta
-from itertools import pairwise
-from typing import ClassVar
+from itertools import groupby, pairwise
+from typing import ClassVar, TypeVar
 
 import pytest
 
@@ -11,29 +12,30 @@ from takki import config
 from takki.language import WordSource
 from takki.lesson.drills import (
     MAX_KEY_SHARE,
+    Block,
     DrillBlock,
     DrillGenerator,
-    RampUpPhase,
+    Prompt,
+    PromptKind,
     plan_targets,
     presses_needed,
 )
 from takki.lesson.introducer import (
     IntroductionStep,
     KeyIntroduction,
+    RestCell,
     base_key,
     home_anchor_keys,
-    home_row_fill,
-    introduction_sequence,
 )
 from takki.lesson.key_state import CONFIDENCE_Z, Evidence, KeyStates, accuracy_bound
-from takki.lesson.rampup import RampUpProgress
-from takki.persistence import PhaseRecord
-from takki.platform.layout import Layout, build_en, build_is
+from takki.platform.layout import L_MID, Layout, build_en, build_is
 from tests.fakes.fake_clock import FakeClock
 from tests.fakes.fake_store import FakeStore
 from tests.fakes.fixed_list_source import FixedListSource
 from tests.rest import READY
 from tests.sessions import session_for
+
+T = TypeVar("T")
 
 # Real English words so the bigram pool is a real one, weighted so the drill
 # content is decided by this table and not by a corpus.
@@ -78,6 +80,21 @@ def make_step(layout: Layout, *names: str) -> IntroductionStep:
     return IntroductionStep(tuple(member(layout, name) for name in names))
 
 
+class FirstChoice(random.Random):
+    """Draws the first letter the rules allow, so a draw's sequence is the rules' alone."""
+
+    def choice(self, seq: Sequence[T]) -> T:  # type: ignore[override]
+        return seq[0]
+
+
+def shown(prompt: Prompt) -> tuple[str, str]:
+    """A prompt as a test reads it: its kind, and its letter or the rest keys it waits for."""
+    if prompt.kind is PromptKind.REST:
+        return ("rest", "+".join(prompt.owed))
+    assert prompt.grapheme is not None
+    return (prompt.kind.name.lower(), prompt.grapheme)
+
+
 class Fixture:
     """One profile, one generator, and the store behind both."""
 
@@ -89,6 +106,8 @@ class Fixture:
         active: str = "",
         seed: int = 7,
         now: str | None = None,
+        rest: dict[str, RestCell] | None = None,
+        rng: random.Random | None = None,
     ) -> None:
         self.layout = layout or build_en()
         self.source = source or FixedListSource(EN_WORDS)
@@ -105,15 +124,25 @@ class Fixture:
         self.clock = FakeClock()
         for name in active:
             self.activate(name)
-        self.progress = RampUpProgress(self.store, self.profile)
+        self.rest = dict(READY if rest is None else rest)
+        self.session = 0
+        self.generator = self.new_session(rng or random.Random(seed))
+
+    def new_session(self, rng: random.Random | None = None) -> DrillGenerator:
+        """A restart: a new session and a new generator, on the same store."""
+        self.session = self.store.start_session(self.profile)
         self.generator = DrillGenerator(
             self.layout,
             self.source,
             self.states,
             self.clock,
-            random.Random(seed),
-            self.progress,
+            rng or random.Random(7),
+            self.store,
+            self.profile,
+            self.session,
+            lambda: self.rest,
         )
+        return self.generator
 
     def activate(self, grapheme: str, *, attempts: int = 1, wrong: int = 0) -> None:
         for index in range(attempts):
@@ -123,21 +152,60 @@ class Fixture:
                 self.profile, session_for(self.store, self.profile), grapheme, correct
             )
 
+    def begin(self, *names: str) -> None:
+        self.store.mark_introduced(self.profile, list(names))
+        assert self.generator.begin_step(make_step(self.layout, *names))
+
     def attempt(self, grapheme: str, correct: bool, *, latency_ms: int | None = None) -> None:
         # The store first, then the generator -- the order the session loop uses
-        # (`AttemptCounter.press` writes, then `DrillGenerator.record_attempt`).
-        # Since 2026-09-29 it is load-bearing: the ramp-up's phase is derived
-        # from these rows, so a generator told about an attempt that was never
-        # written would read the window as one attempt short.
+        # (`AttemptCounter.press` writes, then `DrillGenerator.record_answer`).
+        # The ladder reads these rows back, so a generator told about an
+        # attempt that was never written would read the window one short.
         self.store.upsert_key_stat(self.profile, grapheme, correct)
         self.store.append_attempt(
-            self.profile,
-            session_for(self.store, self.profile),
-            grapheme,
-            correct,
-            latency_ms=latency_ms,
+            self.profile, self.session, grapheme, correct, latency_ms=latency_ms
         )
-        self.generator.record_attempt(grapheme, correct)
+        self.generator.record_answer(Prompt(PromptKind.COUNTED, grapheme), correct)
+
+    def reach(self, grapheme: str, correct: bool = True) -> None:
+        self.store.append_reach_press(self.profile, grapheme, correct)
+        self.generator.record_answer(Prompt(PromptKind.REACH, grapheme), correct)
+
+    def first(self, prompt: Prompt, correct: bool) -> None:
+        """A prompt's first press, written where the session loop's counter writes it."""
+        if prompt.kind is PromptKind.COUNTED:
+            assert prompt.grapheme is not None
+            self.attempt(prompt.grapheme, correct)
+        elif prompt.kind is PromptKind.REACH:
+            assert prompt.grapheme is not None
+            self.reach(prompt.grapheme, correct)
+        else:
+            self.generator.record_answer(prompt, correct)
+
+    def run(
+        self, block: Block, wrong: Callable[[int, Prompt], bool] = lambda _, __: False
+    ) -> list[Prompt]:
+        """Answer a whole block; `wrong(index, prompt)` decides which first presses miss."""
+        issued: list[Prompt] = []
+        while (prompt := block.current()) is not None:
+            assert len(issued) < 1000, "a block that never ends"
+            self.first(prompt, not wrong(len(issued), prompt))
+            issued.append(prompt)
+            block.close()
+        return issued
+
+    def ladder(self, wrong: Callable[[int, Prompt], bool] = lambda _, __: False) -> list[Prompt]:
+        """Every block until the step's ramp-up has ended."""
+        issued: list[Prompt] = []
+        while self.generator.ramp_up is not None:
+            assert len(issued) < 2000, "a ladder that never ends"
+            issued += self.run(self.generator.next_block(), lambda i, p: wrong(len(issued) + i, p))
+        return issued
+
+    def steady(self) -> DrillBlock:
+        block = self.generator.next_block()
+        assert isinstance(block, DrillBlock)
+        return block
 
     def answer(
         self, block_prompts: tuple[str, ...], *, correct: bool = True, seconds_each: float = 0.0
@@ -149,6 +217,36 @@ class Fixture:
     def practise_all(self) -> None:
         for grapheme in sorted(self.states.active_keys()):
             self.attempt(grapheme, True)
+
+    def levels(self, grapheme: str) -> list[tuple[str, int, int, int | None]]:
+        """A letter's level runs: level, session, presses at its start and when its rule was met."""
+        return [
+            (r.level, r.session_id, r.started_presses, r.completed_presses)
+            for r in self.store.level_records(self.profile, grapheme)
+        ]
+
+    def stable(self, grapheme: str) -> int | None:
+        entries = self.store.introductions(self.profile)
+        return next(e.stable_attempts for e in entries if e.key_char == grapheme)
+
+    def to_choose(self, *names: str) -> None:
+        self.begin(*names)
+        for name in names:
+            if self.generator.level == "reach" and name in self.reaching():
+                for _ in range(config.LEVEL_UP_CORRECT):
+                    self.reach(name)
+        assert self.generator.level == "choose"
+
+    def to_travel(self, *names: str) -> None:
+        self.to_choose(*names)
+        for name in names:
+            press(self, name, config.LEVEL_UP_CORRECT)
+        assert self.generator.level == "travel"
+
+    def reaching(self) -> list[str]:
+        ladder = self.generator.ramp_up
+        assert ladder is not None
+        return [name for name in ladder.graphemes if ladder.takes_reach(name)]
 
 
 def press(
@@ -163,442 +261,424 @@ def press(
         fixture.attempt(grapheme, correct, latency_ms=latency_ms)
 
 
-class TestPhaseA:
-    def test_solo_step_repeats_the_member_and_engages_the_other_hand(self) -> None:
-        # ADR-024 property 3: Phase A keeps the new key isolated on its own hand
-        # -- no same-finger anchor -- but the other hand's home key joins the
-        # inventory so no hand sits idle. `a` on English is the audible case:
-        # column 10's home cell holds no letter, so nothing pairs with it.
-        fixture = Fixture(active=ANCHOR_SIX)
-        fixture.generator.begin_step(make_step(fixture.layout, "a"))
-        block = fixture.generator.next_block()
-        assert Counter(block.units) == {
-            ("a",): config.PHASE_A_STREAK,
-            ("j",): config.PHASE_A_STREAK,
-        }
-
-    def test_pair_engages_both_hands_without_borrowing_an_anchor(self) -> None:
-        # A pair already uses both hands (ADR-028 § Pair ramp-up), so nothing is
-        # borrowed and each member gets the same number of prompts. Order is
-        # shuffled per ADR-024 property 1, so the count is the contract.
-        fixture = Fixture(active=ANCHOR_SIX)
-        fixture.generator.begin_step(make_step(fixture.layout, "d", "k"))
-        block = fixture.generator.next_block()
-        assert Counter(block.units) == {
-            ("d",): config.PHASE_A_STREAK,
-            ("k",): config.PHASE_A_STREAK,
-        }
-
-    def test_ten_in_succession_advances(self) -> None:
-        fixture = Fixture(active=ANCHOR_SIX)
-        fixture.generator.begin_step(make_step(fixture.layout, "d", "k"))
-        press(fixture, "d", 10)
-        assert fixture.generator.ramp_up is not None
-        assert fixture.generator.ramp_up.phase is RampUpPhase.A
-        press(fixture, "k", 10)
-        assert fixture.generator.ramp_up.phase is RampUpPhase.B
-
-    def test_a_wrong_press_resets_the_streak(self) -> None:
-        fixture = Fixture(active=ANCHOR_SIX)
-        fixture.generator.begin_step(make_step(fixture.layout, "d"))
-        press(fixture, "d", 9)
-        fixture.attempt("d", False)
-        press(fixture, "d", 9)
-        assert fixture.generator.ramp_up is not None
-        assert fixture.generator.ramp_up.phase is RampUpPhase.A
-        press(fixture, "d", 1)
-        assert fixture.generator.ramp_up.phase is RampUpPhase.B
-
-    def test_an_anchor_press_does_not_advance_the_new_letter(self) -> None:
-        fixture = Fixture(active=ANCHOR_SIX)
-        fixture.generator.begin_step(make_step(fixture.layout, "d"))
-        press(fixture, "f", 30)
-        assert fixture.generator.ramp_up is not None
-        assert fixture.generator.ramp_up.phase is RampUpPhase.A
+def runs(prompts: Sequence[str]) -> int:
+    """The longest run of one prompt following itself."""
+    return max((len(list(group)) for _, group in groupby(prompts)), default=0)
 
 
-class TestPhaseB:
-    def test_four_way_alternation_for_a_pair(self) -> None:
-        fixture = Fixture(active=ANCHOR_SIX)
-        fixture.generator.begin_step(make_step(fixture.layout, "d", "k"))
-        press(fixture, "d", 10)
-        press(fixture, "k", 10)
-        block = fixture.generator.next_block()
-        # Each member alternates with its own anchor (ADR-028 § Pair ramp-up).
-        # Either direction may be emitted -- `d f` is the return `f d` leaves
-        # owed -- so the pairing is the contract and the order is not.
-        assert Counter(frozenset(unit) for unit in block.units) == {
-            frozenset({"f", "d"}): len(block.units) // 2,
-            frozenset({"j", "k"}): len(block.units) // 2,
-        }
-
-    def test_anchor_is_the_same_finger_home_row_key(self) -> None:
-        fixture = Fixture(active=ANCHOR_SIX + "dk")
-        # ADR-024's own example: E is L-mid row 2, so it alternates with D.
-        fixture.generator.begin_step(make_step(fixture.layout, "e"))
-        press(fixture, "e", 10)
-        block = fixture.generator.next_block()
-        # The other hand joins as its own unit, never paired with the member: a
-        # cross-hand pair would carry the member's hand off home with no home key
-        # of that hand to return to (ADR-024 properties 2 and 3).
-        assert {frozenset(unit) for unit in block.units} == {
-            frozenset({"d", "e"}),
-            frozenset({"j"}),
-        }
-
-    def test_same_hand_fallback_when_no_same_finger_anchor_exists(self) -> None:
-        fixture = Fixture(active=ANCHOR_SIX)
-        # D is L-mid; the only home-row keys the child has are F and J, neither
-        # L-mid, so the nearest key on the same hand stands in.
-        fixture.generator.begin_step(make_step(fixture.layout, "d"))
-        press(fixture, "d", 10)
-        block = fixture.generator.next_block()
-        assert {frozenset(unit) for unit in block.units} == {
-            frozenset({"f", "d"}),
-            frozenset({"j"}),
-        }
-
-    def test_twenty_correct_with_one_rejection_advances(self) -> None:
-        fixture = Fixture(active=ANCHOR_SIX)
-        fixture.generator.begin_step(make_step(fixture.layout, "d"))
-        press(fixture, "d", 10)
-        press(fixture, "d", 10)
-        fixture.attempt("d", False)
-        press(fixture, "d", 9)
-        assert fixture.generator.ramp_up is not None
-        assert fixture.generator.ramp_up.phase is RampUpPhase.B
-        press(fixture, "d", 1)
-        assert fixture.generator.ramp_up.phase is RampUpPhase.C
-
-    def test_a_second_rejection_restarts_the_run(self) -> None:
-        fixture = Fixture(active=ANCHOR_SIX)
-        fixture.generator.begin_step(make_step(fixture.layout, "d"))
-        press(fixture, "d", 10)
-        press(fixture, "d", 19)
-        fixture.attempt("d", False)
-        fixture.attempt("d", False)
-        press(fixture, "d", 19)
-        assert fixture.generator.ramp_up is not None
-        assert fixture.generator.ramp_up.phase is RampUpPhase.B
-        press(fixture, "d", 1)
-        assert fixture.generator.ramp_up.phase is RampUpPhase.C
+CYCLE_E = [("reach", "e"), ("rest", "d")]
 
 
-class TestPairAdvancesTogether:
-    """alpha-plan #12j, O1: a member is judged only for the phase its step is in.
+class TestReach:
+    """ADR-024 § Reach: the letter, then the rest cue, until 8 of the latest 10 are right."""
 
-    A member that met its bar first kept being judged for the *next* phase on
-    its own evidence, while the step was still drilling this one's content, and
-    could record the whole ramp-up without ever being given Phase B or C.
-    """
+    def test_a_letter_with_a_reach_cycles_with_the_rest_cue_until_its_rule(self) -> None:
+        fixture = Fixture(active="fj")
+        fixture.begin("e")
+        assert fixture.generator.level == "reach"
+        # One cycle per press Reach still needs, inside the first block's target.
+        assert config.FIRST_BLOCK_PROMPTS >= 2 * config.LEVEL_UP_CORRECT
+        prompts = fixture.run(fixture.generator.next_block())
+        assert [shown(p) for p in prompts] == CYCLE_E * config.LEVEL_UP_CORRECT
+        # The cue asks back the finger the letter used, by its id.
+        assert {p.fingers for p in prompts if p.kind is PromptKind.REST} == {L_MID}
+        assert fixture.generator.level == "choose"
 
-    @pytest.mark.parametrize(
-        ("pair", "active"),
-        [(("d", "k"), ANCHOR_SIX), (("f", "j"), "")],
-    )
-    def test_a_member_ahead_of_its_partner_records_nothing_while_it_waits(
-        self, pair: tuple[str, str], active: str
+    def test_reach_presses_are_kept_apart_and_make_nothing_active(self) -> None:
+        fixture = Fixture(active="fj")
+        fixture.begin("e")
+        fixture.run(fixture.generator.next_block())
+        assert len(fixture.store.reach_presses(fixture.profile, "e")) == config.LEVEL_UP_CORRECT
+        assert fixture.store.window_attempts(fixture.profile, "e") == []
+        assert "e" not in fixture.store.key_stats(fixture.profile)
+        assert "e" not in fixture.states.active_keys()
+        # The run met its rule at the eighth press, and Choose begins with no
+        # counted press behind it.
+        assert fixture.levels("e") == [
+            ("reach", fixture.session, 0, config.LEVEL_UP_CORRECT),
+            ("choose", fixture.session, 0, None),
+        ]
+
+    def test_a_miss_is_read_back_from_the_latest_press_and_the_block_owes_what_is_left(
+        self,
     ) -> None:
-        # The review's own scenario: one member right every time, the other
-        # wrong every time, for eight blocks.
-        fixture = Fixture(active=active)
-        ahead, behind = pair
-        fixture.generator.begin_step(make_step(fixture.layout, *pair))
-        began_at = fixture.store.key_stats(fixture.profile).get(ahead)
-        start = began_at.attempt_count if began_at is not None else 0
-        for _ in range(8):
+        fixture = Fixture(active="fj")
+        fixture.begin("e")
+        first = fixture.run(fixture.generator.next_block(), lambda i, _: i == 0)
+        assert len(first) == 2 * config.LEVEL_UP_CORRECT
+        # One miss in eight: seven right is short of the rule by one.
+        assert fixture.generator.level == "reach"
+        assert [shown(p) for p in fixture.run(fixture.generator.next_block())] == CYCLE_E
+        assert fixture.generator.level == "choose"
+        assert fixture.levels("e")[0] == (
+            "reach",
+            fixture.session,
+            0,
+            config.LEVEL_UP_CORRECT + 1,
+        )
+
+    def test_the_bump_letters_and_a_rest_letter_start_at_choose(self) -> None:
+        for names, active in ((("f", "j"), ""), (("a",), "fj"), (("k",), "fj")):
+            fixture = Fixture(active=active)
+            fixture.begin(*names)
+            assert fixture.generator.level == "choose"
+            for name in names:
+                assert fixture.levels(name) == [("choose", fixture.session, 0, None)]
+
+    def test_a_non_conventional_rest_key_moves_which_letter_reaches(self) -> None:
+        # The left middle finger rests on `e`: `e` is its rest letter and has
+        # no Reach, and `d` reaches down from it, its cue waiting for `e`.
+        rest = {**READY, L_MID: RestCell(2, 3, True)}
+        fixture = Fixture(active="fj", rest=rest)
+        fixture.begin("e")
+        assert fixture.generator.level == "choose"
+        fixture = Fixture(active="fj", rest=rest)
+        fixture.begin("d")
+        prompts = fixture.run(fixture.generator.next_block())
+        assert [shown(p) for p in prompts] == [("reach", "d"), ("rest", "e")] * (
+            config.LEVEL_UP_CORRECT
+        )
+
+    def test_a_pair_takes_turns_left_hand_first(self) -> None:
+        fixture = Fixture(active="fj")
+        fixture.begin("e", "i")
+        cycles = min(config.LEVEL_UP_CORRECT, -(-config.FIRST_BLOCK_PROMPTS // 4))
+        prompts = fixture.run(fixture.generator.next_block())
+        assert [shown(p) for p in prompts] == [*CYCLE_E, ("reach", "i"), ("rest", "k")] * cycles
+
+    def test_a_member_with_no_reach_waits_for_choose(self) -> None:
+        fixture = Fixture(active="fj")
+        fixture.begin("e", "k")
+        prompts = fixture.run(fixture.generator.next_block())
+        assert [shown(p) for p in prompts] == CYCLE_E * config.LEVEL_UP_CORRECT
+        assert fixture.levels("k") == [("choose", fixture.session, 0, None)]
+
+    def test_a_member_ahead_keeps_being_prompted_and_its_rule_is_met_once(self) -> None:
+        fixture = Fixture(active="fj")
+        fixture.begin("e", "i")
+        misses = 2
+        seen: list[int] = []
+
+        def wrong(_: int, prompt: Prompt) -> bool:
+            if prompt.grapheme != "i":
+                return False
+            seen.append(1)
+            return len(seen) <= misses
+
+        first = fixture.run(fixture.generator.next_block(), wrong)
+        assert len(first) == 4 * config.LEVEL_UP_CORRECT
+        assert fixture.generator.level == "reach"
+        second = fixture.run(fixture.generator.next_block())
+        # `i` owes two right presses, and `e`, which met its rule, still reaches.
+        assert [shown(p) for p in second] == [*CYCLE_E, ("reach", "i"), ("rest", "k")] * misses
+        assert fixture.generator.level == "choose"
+        assert fixture.levels("e")[0][3] == config.LEVEL_UP_CORRECT
+        assert fixture.levels("i")[0][3] == config.LEVEL_UP_CORRECT + misses
+
+    def test_a_block_of_one_owed_press_is_one_cycle(self) -> None:
+        fixture = Fixture(active="fj")
+        fixture.begin("e")
+        for _ in range(config.LEVEL_UP_CORRECT - 1):
+            fixture.reach("e")
+        assert [shown(p) for p in fixture.run(fixture.generator.next_block())] == CYCLE_E
+
+
+class TestCompositeReach:
+    """Decided 2026-11-12: a composite takes Reach, and its cue waits for every finger it used."""
+
+    def test_the_cue_waits_for_both_fingers_in_keystroke_order(self) -> None:
+        layout = build_is()
+        for letter, owed, fingers in (
+            ("á", ("æ", "a"), "R-pink+L-pink"),
+            ("é", ("æ", "d"), "R-pink+L-mid"),
+        ):
+            fixture = Fixture(layout, FixedListSource({"ást": 10.0, "éta": 5.0}), active="fj")
+            fixture.begin(letter)
+            assert fixture.generator.level == "reach"
             block = fixture.generator.next_block()
-            assert {len(unit) for unit in block.units} == {1}
-            for grapheme in block.prompts:
-                fixture.attempt(grapheme, grapheme == ahead)
-            assert fixture.generator.ramp_up is not None
-            assert fixture.generator.ramp_up.phase is RampUpPhase.A
-        assert fixture.store.phase_records(fixture.profile, ahead) == {
-            "A": PhaseRecord(start, start + config.PHASE_A_STREAK)
-        }
-        assert fixture.store.phase_records(fixture.profile, behind) == {"A": PhaseRecord(start)}
+            assert block.current() == Prompt(PromptKind.REACH, letter)
+            block.close()
+            assert block.current() == Prompt(PromptKind.REST, owed=owed, fingers=fingers)
 
-    def test_the_next_phase_starts_for_both_when_the_slower_member_arrives(self) -> None:
-        fixture = Fixture(active=ANCHOR_SIX)
-        fixture.generator.begin_step(make_step(fixture.layout, "d", "k"))
-        waited = 7
-        press(fixture, "d", config.PHASE_A_STREAK + waited)
-        press(fixture, "k", config.PHASE_A_STREAK)
-        ramp = fixture.generator.ramp_up
-        assert ramp is not None and ramp.phase is RampUpPhase.B
-        # `d` starts Phase B where the step did, not where it passed Phase A:
-        # the presses it made while waiting were on Phase A's content.
-        d_start = config.PHASE_A_STREAK + waited
-        assert fixture.store.phase_records(fixture.profile, "d") == {
-            "A": PhaseRecord(0, config.PHASE_A_STREAK),
-            "B": PhaseRecord(d_start),
-        }
-        assert fixture.store.phase_records(fixture.profile, "k") == {
-            "A": PhaseRecord(0, config.PHASE_A_STREAK),
-            "B": PhaseRecord(config.PHASE_A_STREAK),
-        }
-        assert ramp.progress["d"].evidence == ()
-        # So all of Phase B's twenty are still owed, and the twentieth passes it.
-        press(fixture, "d", config.PHASE_B_ATTEMPTS - 1)
-        assert fixture.store.phase_records(fixture.profile, "d")["B"] == PhaseRecord(d_start)
-        press(fixture, "d", 1)
-        assert fixture.store.phase_records(fixture.profile, "d")["B"] == PhaseRecord(
-            d_start, d_start + config.PHASE_B_ATTEMPTS
-        )
-        # And `d` now waits again: Phase C has not begun for it.
-        assert "C" not in fixture.store.phase_records(fixture.profile, "d")
-        assert ramp.phase is RampUpPhase.B
-
-    def test_a_block_is_sized_by_the_member_still_in_the_phase(self) -> None:
-        # The member that is ahead owes this phase nothing. It used to be sized
-        # as if it owed the whole of the next one.
-        fixture = Fixture(active=ANCHOR_SIX)
-        fixture.generator.begin_step(make_step(fixture.layout, "d", "k"))
-        owed = 3
-        press(fixture, "d", config.PHASE_A_STREAK)
-        press(fixture, "k", config.PHASE_A_STREAK - owed)
-        block = fixture.generator.next_block()
-        assert Counter(block.units) == {("d",): owed, ("k",): owed}
-
-    def test_a_start_that_was_never_written_is_written_on_the_next_read(self) -> None:
-        # A session killed after the last member's completion was recorded and
-        # before the next phase was begun. The next session begins it.
-        fixture = Fixture(active=ANCHOR_SIX)
-        step = make_step(fixture.layout, "d", "k")
+    def test_a_composite_paired_with_a_rest_letter_reaches_alone(self) -> None:
+        layout = build_is()
+        fixture = Fixture(layout, FixedListSource({"ást": 10.0, "æði": 5.0}), active="fj")
+        # Two members, three physical keys (ADR-028 § Pair ramp-up, session 8c).
+        step = make_step(layout, "á", "æ")
+        assert sum(len(intro.keys) for intro in step.keys) == 3
+        fixture.store.mark_introduced(fixture.profile, ["á", "æ"])
         fixture.generator.begin_step(step)
-        press(fixture, "d", config.PHASE_A_STREAK)
-        for _ in range(config.PHASE_A_STREAK):
-            fixture.store.upsert_key_stat(fixture.profile, "k", True)
-            fixture.store.append_attempt(
-                fixture.profile, session_for(fixture.store, fixture.profile), "k", True
-            )
-        assert fixture.progress.advance(fixture.progress.member("k")) is True
-        assert "B" not in fixture.store.phase_records(fixture.profile, "k")
-
-        restarted = DrillGenerator(
-            fixture.layout,
-            fixture.source,
-            fixture.states,
-            fixture.clock,
-            random.Random(7),
-            RampUpProgress(fixture.store, fixture.profile),
+        prompts = fixture.run(fixture.generator.next_block())
+        assert [shown(p) for p in prompts] == [("reach", "á"), ("rest", "æ+a")] * (
+            config.LEVEL_UP_CORRECT
         )
-        assert restarted.resume_step(step) is True
-        assert restarted.ramp_up is not None and restarted.ramp_up.phase is RampUpPhase.B
-        for name in ("d", "k"):
-            assert fixture.store.phase_records(fixture.profile, name) == {
-                "A": PhaseRecord(0, config.PHASE_A_STREAK),
-                "B": PhaseRecord(config.PHASE_A_STREAK),
-            }
 
 
-class TestPhaseCAndD:
-    def _into_phase_c(self, fixture: Fixture, *names: str) -> None:
-        fixture.generator.begin_step(make_step(fixture.layout, *names))
-        for name in names:
-            press(fixture, name, config.PHASE_A_STREAK)
-        for name in names:
-            press(fixture, name, config.PHASE_B_ATTEMPTS)
+class TestDraw:
+    """ADR-024 § Choose and § The draw: one even draw, a cap of two, and misses asked again."""
 
-    def test_thirty_attempts_at_the_accuracy_bar_advances_to_steady_state(self) -> None:
+    def test_choose_draws_the_step_and_the_bump_letters_and_ends_when_the_step_climbs(
+        self,
+    ) -> None:
+        fixture = Fixture(active="fj", rng=FirstChoice())
+        fixture.begin("a")
+        prompts = fixture.run(fixture.generator.next_block())
+        # The first letter the rules allow, twice, then the cap moves it on.
+        # `a` meets Choose's rule at its eighth right press, and the block ends there.
+        cap = config.MAX_SAME_IN_A_ROW
+        cycle = ["a"] * cap + ["f"]
+        drawn = cycle * config.LEVEL_UP_CORRECT
+        eighth = [i for i, name in enumerate(drawn) if name == "a"][config.LEVEL_UP_CORRECT - 1]
+        expected = drawn[: eighth + 1]
+        assert [shown(p) for p in prompts] == [("counted", name) for name in expected]
+        assert Counter(expected)["a"] == config.LEVEL_UP_CORRECT
+        assert fixture.generator.level == "travel"
+
+    def test_a_miss_is_asked_again_once_right_and_the_draw_moves_on(self) -> None:
+        fixture = Fixture(active="fj", rng=FirstChoice())
+        fixture.begin("a")
+        prompts = fixture.run(fixture.generator.next_block(), lambda i, _: i == 0)
+        assert [shown(p) for p in prompts[:5]] == [
+            ("counted", "a"),
+            ("reask", "a"),
+            ("counted", "f"),
+            ("counted", "a"),
+            ("counted", "a"),
+        ]
+
+    def test_a_letter_missed_again_is_asked_again_up_to_its_limit(self) -> None:
+        fixture = Fixture(active="fj", rng=FirstChoice())
+        fixture.begin("a")
+        misses = 1 + config.MISS_REPEATS
+        prompts = fixture.run(fixture.generator.next_block(), lambda i, _: i < misses)
+        assert [shown(p) for p in prompts[: misses + 1]] == [
+            ("counted", "a"),
+            *[("reask", "a")] * config.MISS_REPEATS,
+            ("counted", "f"),
+        ]
+
+    def test_a_re_ask_is_outside_the_cap_and_the_worst_case_is_four_running(self) -> None:
+        # Drawn twice, the second missed, and asked again twice (ADR-024).
+        fixture = Fixture(active="fj", rng=FirstChoice())
+        fixture.begin("a")
+        cap = config.MAX_SAME_IN_A_ROW
+        missed = range(cap - 1, cap + config.MISS_REPEATS)
+        prompts = fixture.run(fixture.generator.next_block(), lambda i, _: i in missed)
+        letters = [p.grapheme for p in prompts]
+        assert letters[: cap + config.MISS_REPEATS + 1] == ["a"] * (cap + config.MISS_REPEATS) + [
+            "f"
+        ]
+        assert runs([str(g) for g in letters]) == cap + config.MISS_REPEATS
+
+    @pytest.mark.parametrize("seed", range(5))
+    def test_no_drawn_prompt_follows_itself_more_than_the_cap(self, seed: int) -> None:
+        # The first step, a set of two, is where the cap binds most.
+        fixture = Fixture(seed=seed)
+        fixture.begin("f", "j")
+        drawn = [p.grapheme or "" for p in fixture.ladder() if p.kind is PromptKind.COUNTED]
+        assert runs(drawn) <= config.MAX_SAME_IN_A_ROW
+        assert set(drawn) == {"f", "j"}
+
+    def test_a_restarted_draw_comes_back_as_a_re_ask(self) -> None:
+        fixture = Fixture(active="fj", rng=FirstChoice())
+        fixture.begin("a")
+        block = fixture.generator.next_block()
+        assert block.current() == Prompt(PromptKind.COUNTED, "a")
+        block.restart(heard=True)
+        assert block.current() == Prompt(PromptKind.REASK, "a")
+
+    def test_a_draw_not_yet_heard_stays_a_draw_through_a_restart(self) -> None:
+        # Found by #12m session (6)'s review: the next letter is drawn as soon
+        # as the last one closes, and waits behind speech. A restart then
+        # abandons nothing the child heard, so it must not make the press
+        # that answers it uncounted.
+        fixture = Fixture(active="fj", rng=FirstChoice())
+        fixture.begin("a")
+        block = fixture.generator.next_block()
+        assert block.current() == Prompt(PromptKind.COUNTED, "a")
+        block.restart(heard=False)
+        assert block.current() == Prompt(PromptKind.COUNTED, "a")
+
+
+class TestTravel:
+    def test_travel_draws_the_step_and_the_two_most_used_active_letters(self) -> None:
+        fixture = Fixture(active="fjruvm")
+        fixture.to_travel("d")
+        weights = fixture.source.grapheme_weights(fixture.layout)
+        ranked = sorted(set("fjruvm"), key=lambda name: (-weights.get(name, 0.0), name))
+        partners = set(ranked[: config.TRAVEL_PARTNERS])
+        prompts = fixture.run(fixture.generator.next_block())
+        assert {p.grapheme for p in prompts} == {"d"} | partners
+        assert {p.kind for p in prompts} == {PromptKind.COUNTED}
+
+    def test_the_first_step_is_one_even_draw_of_the_bump_letters_to_the_end(self) -> None:
+        # E3: `f` is no longer drawn from a pool of `ff` alone.
+        fixture = Fixture(source=FixedListSource({"ff": 0.0047, "jj": 0.000002}))
+        fixture.begin("f", "j")
+        prompts = fixture.ladder()
+        assert {shown(p)[0] for p in prompts} == {"counted"}
+        assert {p.grapheme for p in prompts} == {"f", "j"}
+        assert fixture.stable("f") == fixture.stable("j") == config.STABLE_ATTEMPTS
+        assert fixture.generator.ramp_up is None
+
+
+class TestTheBar:
+    def test_it_is_read_on_choose_and_travel_presses_together_once_at_travel(self) -> None:
         fixture = Fixture(active=ANCHOR_SIX)
-        self._into_phase_c(fixture, "d")
-        assert fixture.generator.ramp_up is not None
-        assert fixture.generator.ramp_up.phase is RampUpPhase.C
-        press(fixture, "d", 29)
-        assert fixture.generator.ramp_up is not None
+        fixture.to_travel("d")
+        press(fixture, "d", config.STABLE_ATTEMPTS - config.LEVEL_UP_CORRECT - 1)
+        assert fixture.stable("d") is None
         press(fixture, "d", 1)
+        assert fixture.stable("d") == config.STABLE_ATTEMPTS
         assert fixture.generator.ramp_up is None
 
-    def test_below_the_accuracy_bar_takes_another_thirty(self) -> None:
+    def test_below_the_accuracy_bar_another_thirty_are_owed(self) -> None:
         fixture = Fixture(active=ANCHOR_SIX)
-        self._into_phase_c(fixture, "d")
-        press(fixture, "d", 25)
-        press(fixture, "d", 5, correct=False)  # 25/30 = 83%, under the 85% bar
-        assert fixture.generator.ramp_up is not None
-        assert fixture.generator.ramp_up.phase is RampUpPhase.C
-        press(fixture, "d", 30)
+        fixture.to_travel("d")
+        right = math.ceil(config.STABLE_ATTEMPTS * config.STABLE_MIN_ACCURACY) - 1
+        press(fixture, "d", right - config.LEVEL_UP_CORRECT)
+        press(fixture, "d", config.STABLE_ATTEMPTS - right, correct=False)
+        ladder = fixture.generator.ramp_up
+        assert ladder is not None and fixture.stable("d") is None
+        assert ladder.owed("d") == config.STABLE_ATTEMPTS
+        press(fixture, "d", config.STABLE_ATTEMPTS)
         assert fixture.generator.ramp_up is None
 
-    def test_a_new_letter_past_twice_the_bump_keys_speed_stays_in_phase_c(self) -> None:
-        # alpha-plan #12f: `f` and `j` are the baseline from the first step on,
-        # so the term is no longer skipped until something is Known.
+    def test_a_new_letter_past_twice_the_bump_keys_speed_is_held(self) -> None:
         fixture = Fixture(active=ANCHOR_SIX)
         for name in home_anchor_keys(fixture.layout):
             press(fixture, name, config.SPEED_MIN_SAMPLE, latency_ms=1000)
-        self._into_phase_c(fixture, "d")
-        slow = round(1000 * config.PHASE_C_MAX_LATENCY_RATIO) + 1
-        press(fixture, "d", config.PHASE_C_ATTEMPTS, latency_ms=slow)
-        assert fixture.generator.ramp_up is not None
-        assert fixture.generator.ramp_up.phase is RampUpPhase.C
+        fixture.to_choose("d")
+        slow = round(1000 * config.STABLE_MAX_LATENCY_RATIO) + 1
+        press(fixture, "d", config.LEVEL_UP_CORRECT, latency_ms=slow)
+        press(fixture, "d", config.STABLE_ATTEMPTS - config.LEVEL_UP_CORRECT, latency_ms=slow)
+        assert fixture.generator.level == "travel"
         # The bar reads the median of the latest thirty, so it clears when
         # more than half of them are within the ratio.
-        press(fixture, "d", config.PHASE_C_ATTEMPTS // 2, latency_ms=slow - 1)
+        press(fixture, "d", config.STABLE_ATTEMPTS // 2, latency_ms=slow - 1)
         assert fixture.generator.ramp_up is not None
         press(fixture, "d", 1, latency_ms=slow - 1)
         assert fixture.generator.ramp_up is None
 
-    def test_the_bump_keys_own_ramp_up_has_no_speed_term(self) -> None:
-        # The first step: `f` nine times slower than `j` and through. Known
-        # now gives `f` a baseline, `j`'s (ADR-027, 2026-11-08), so this is the
-        # generator skipping the term for the bump letters, as ADR-024's bar does.
+    def test_the_bump_letters_own_step_has_no_speed_term(self) -> None:
+        # `f` nine times slower than `j` and through. Known gives `f` a
+        # baseline, `j`'s (ADR-027, 2026-11-08); the bar skips it in this step.
         fixture = Fixture()
-        self._into_phase_c(fixture, "f", "j")
-        press(fixture, "j", config.PHASE_C_ATTEMPTS, latency_ms=1000)
-        press(fixture, "f", config.PHASE_C_ATTEMPTS, latency_ms=9000)
+        fixture.to_travel("f", "j")
+        press(fixture, "j", config.STABLE_ATTEMPTS, latency_ms=1000)
+        press(fixture, "f", config.STABLE_ATTEMPTS, latency_ms=9000)
         assert fixture.states.speed_baseline("f") == 1000
         assert fixture.generator.ramp_up is None
 
-    def test_every_phase_c_unit_carries_a_new_letter(self) -> None:
+    def test_a_member_ahead_at_choose_still_gets_travel_presses_of_its_own(self) -> None:
+        # Decided 2026-11-12 (#12m session (6), from its review): `d` met
+        # Choose's rule early and kept being prompted, so it reaches Travel
+        # with the bar's thirty good presses; the bar waits for its own
+        # LEVEL_UP_CORRECT presses at Travel.
         fixture = Fixture(active=ANCHOR_SIX)
-        self._into_phase_c(fixture, "d", "k")
-        block = fixture.generator.next_block()
-        assert all(2 <= len(unit) <= 3 for unit in block.units)
-        assert all({"d", "k"} & set(unit) for unit in block.units)
-        # Alternating members, so neither can be starved of its thirty attempts.
-        assert ["d" in unit for unit in block.units[:4]] == [True, False, True, False]
+        fixture.to_choose("d", "k")
+        press(fixture, "d", config.STABLE_ATTEMPTS)
+        press(fixture, "k", config.LEVEL_UP_CORRECT)
+        ladder = fixture.generator.ramp_up
+        assert ladder is not None and ladder.level == "travel"
+        assert fixture.stable("d") is None
+        assert ladder.owed("d") == config.LEVEL_UP_CORRECT
+        press(fixture, "d", config.LEVEL_UP_CORRECT - 1)
+        assert fixture.stable("d") is None
+        press(fixture, "d", 1)
+        assert fixture.stable("d") == config.STABLE_ATTEMPTS + config.LEVEL_UP_CORRECT
 
-    def test_the_two_new_letters_are_never_mixed_with_each_other(self) -> None:
-        # Both are brand new, so pairing them is the several-new-keys-at-once
-        # mix the ramp-up exists to prevent.
-        fixture = Fixture(active=ANCHOR_SIX + "dk")
-        self._into_phase_c(fixture, "e", "o")
-        block = fixture.generator.next_block()
-        assert block.units
-        assert not any({"e", "o"} <= set(unit) for unit in block.units)
+    def test_a_pair_climbs_together_and_ends_when_both_meet_the_bar(self) -> None:
+        fixture = Fixture(active=ANCHOR_SIX)
+        fixture.to_choose("d", "k")
+        press(fixture, "d", config.LEVEL_UP_CORRECT)
+        assert fixture.generator.level == "choose"
+        press(fixture, "k", config.LEVEL_UP_CORRECT)
+        assert fixture.generator.level == "travel"
+        press(fixture, "d", config.STABLE_ATTEMPTS - config.LEVEL_UP_CORRECT)
+        assert fixture.stable("d") == config.STABLE_ATTEMPTS
+        assert fixture.generator.level == "travel"
+        press(fixture, "k", config.STABLE_ATTEMPTS - config.LEVEL_UP_CORRECT)
+        assert fixture.generator.ramp_up is None
 
-    def test_the_partners_are_the_most_frequent_keys_the_child_has(self) -> None:
-        # u, r and m carry the weight and f, j and v none, and `d` meets only
-        # `u` in this corpus. Every weight is under 1, so a key missing from
-        # the table cannot outrank one that is in it.
-        source = FixedListSource({"dud": 0.5, "red": 0.3, "mud": 0.2})
-        fixture = Fixture(source=source, active=ANCHOR_SIX)
-        self._into_phase_c(fixture, "d")
-        block = fixture.generator.next_block()
-        assert block.units
-        assert all("u" in unit for unit in block.units)
 
-    def test_a_letter_no_bigram_carries_is_paired_with_the_heaviest_partner(self) -> None:
-        source = FixedListSource({"uuu": 0.5, "rrr": 0.3, "mmm": 0.2})
-        fixture = Fixture(source=source, active=ANCHOR_SIX)
-        self._into_phase_c(fixture, "d")
-        assert set(fixture.generator.next_block().units) == {("u", "d")}
+class TestRestart:
+    """ADR-024 § What survives a restart."""
 
-    def test_a_trigram_is_two_corpus_bigrams_drawn_by_weight(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setattr(config, "PHASE_C_TRIGRAM_CHANCE", 1.0)
-        source = FixedListSource({"dud": 1000.0, "mud": 1.0})
-        fixture = Fixture(source=source, active=ANCHOR_SIX)
-        self._into_phase_c(fixture, "d")
-        bigrams = set(source.bigram_weights(fixture.layout))
-        units = [unit for _ in range(5) for unit in fixture.generator.next_block().units]
-        assert all(len(unit) == 3 for unit in units)
-        assert all(first + second in bigrams for unit in units for first, second in pairwise(unit))
-        # `mu` is one two-thousandth of what `ud` can grow from, and a third of
-        # it when the weights are ignored.
-        assert units.count(("m", "u", "d")) <= 1
+    def test_a_step_at_reach_begins_reach_again_from_nothing(self) -> None:
+        fixture = Fixture(active="fj")
+        fixture.begin("e")
+        for _ in range(config.LEVEL_UP_CORRECT - 1):
+            fixture.reach("e")
+        before = fixture.session
+        fixture.new_session()
+        assert fixture.generator.resume_step(make_step(fixture.layout, "e"))
+        assert fixture.generator.level == "reach"
+        prompts = fixture.run(fixture.generator.next_block())
+        assert [shown(p) for p in prompts] == CYCLE_E * config.LEVEL_UP_CORRECT
+        assert fixture.levels("e") == [
+            ("reach", before, 0, None),
+            (
+                "reach",
+                fixture.session,
+                config.LEVEL_UP_CORRECT - 1,
+                2 * config.LEVEL_UP_CORRECT - 1,
+            ),
+            ("choose", fixture.session, 0, None),
+        ]
+
+    def test_a_reach_met_before_the_restart_is_history_not_progress(self) -> None:
+        fixture = Fixture(active="fj")
+        fixture.begin("e", "i")
+        for _ in range(config.LEVEL_UP_CORRECT):
+            fixture.reach("e")
+        fixture.new_session()
+        assert fixture.generator.resume_step(make_step(fixture.layout, "e", "i"))
+        ladder = fixture.generator.ramp_up
+        assert ladder is not None and ladder.level == "reach"
+        assert ladder.owed("e") == config.LEVEL_UP_CORRECT
+
+    def test_a_step_at_choose_resumes_at_choose_with_its_evidence(self) -> None:
+        fixture = Fixture(active="fj")
+        fixture.to_choose("e")
+        press(fixture, "e", config.LEVEL_UP_CORRECT - 1)
+        fixture.new_session()
+        assert fixture.generator.resume_step(make_step(fixture.layout, "e"))
+        assert fixture.generator.level == "choose"
+        press(fixture, "e", 1)
+        assert fixture.generator.level == "travel"
+        # Nothing was begun again: one run per level.
+        assert [run[0] for run in fixture.levels("e")] == ["reach", "choose", "travel"]
+
+    def test_a_step_nobody_pressed_is_not_resumed(self) -> None:
+        fixture = Fixture(active="fj")
+        fixture.begin("e")
+        fixture.new_session()
+        assert not fixture.generator.resume_step(make_step(fixture.layout, "e"))
+
+    def test_a_step_whose_members_met_the_bar_starts_nothing(self) -> None:
+        fixture = Fixture(active="fj")
+        fixture.to_travel("a")
+        press(fixture, "a", config.STABLE_ATTEMPTS)
+        fixture.new_session()
+        assert not fixture.generator.resume_step(make_step(fixture.layout, "a"))
+        assert fixture.generator.ramp_up is None
 
 
 class TestComposites:
-    def test_solo_composite_ramps_up_solo(self) -> None:
+    def test_a_composite_climbs_like_any_letter(self) -> None:
         layout = build_is()
-        fixture = Fixture(layout, FixedListSource({"úúú": 10.0, "sumar": 5.0}), active="us")
-        fixture.generator.begin_step(make_step(layout, "ú"))
-        # No other hand to engage: `ú` is right-handed and `f` is not Active in
-        # this fixture, and ADR-024 property 3 borrows a key the child already
-        # has rather than teaching one to fill the gap.
-        assert set(fixture.generator.next_block().units) == {("ú",)}
-        press(fixture, "ú", config.PHASE_A_STREAK)
-        # ADR-028 § Phase B: the anchor for a composite is its own base letter.
-        assert {frozenset(unit) for unit in fixture.generator.next_block().units} == {
-            frozenset({"u", "ú"})
-        }
-
-    def test_composite_paired_with_a_letter_takes_the_pair_path(self) -> None:
-        layout = build_is()
-        fixture = Fixture(layout, FixedListSource({"ást": 10.0, "æði": 5.0}), active="aæfjruvm")
-        # Two members, three physical keys — the first step whose member count
-        # and key count come apart (ADR-028 § Pair ramp-up, session 8c).
-        step = make_step(layout, "á", "ð")
-        assert sum(len(intro.keys) for intro in step.keys) == 3
-        fixture.generator.begin_step(step)
-        block = fixture.generator.next_block()
-        assert Counter(block.units) == {
-            ("á",): config.PHASE_A_STREAK,
-            ("ð",): config.PHASE_A_STREAK,
-        }
-        press(fixture, "á", config.PHASE_A_STREAK)
-        press(fixture, "ð", config.PHASE_A_STREAK)
-        # Each composite alternates with its own base letter, which ADR-028
-        # § Phase B makes its anchor: the same physical key with and without the
-        # modifier gesture.
-        block = fixture.generator.next_block()
-        assert Counter(frozenset(unit) for unit in block.units) == {
-            frozenset({"a", "á"}): len(block.units) // 2,
-            frozenset({"æ", "ð"}): len(block.units) // 2,
-        }
-
-
-class TestFirstSteps:
-    """ADR-033: no Stage 0. The first steps take the ordinary ramp-up."""
-
-    def steps(self) -> tuple[Layout, WordSource, list[IntroductionStep]]:
-        layout = build_en()
-        source = FixedListSource(EN_WORDS)
-        return (
-            layout,
-            source,
-            introduction_sequence(layout, source, set(), READY, home_row_fill)[:3],
-        )
-
-    def test_the_first_step_is_the_bump_letters(self) -> None:
-        _, _, steps = self.steps()
-        assert [[k.grapheme for k in step.keys] for step in steps] == [
-            ["f", "j"],
-            ["d", "k"],
-            ["s", "l"],
-        ]
-
-    def test_the_bump_pair_alternates_the_two_bump_letters(self) -> None:
-        layout, source, steps = self.steps()
-        fixture = Fixture(layout, source)
-        fixture.generator.begin_step(steps[0])
-        assert Counter(fixture.generator.next_block().units) == {
-            ("f",): config.PHASE_A_STREAK,
-            ("j",): config.PHASE_A_STREAK,
-        }
-
-    def test_r_and_u_take_the_ordinary_phase_a_and_not_stage_0s_alternation(self) -> None:
-        # Stage 0 gave `r u` the anchors in Phase A (`f r`, `j u`). Ordinary
-        # Phase A is each new letter on its own, as for any pair.
-        layout, source, _ = self.steps()
-        fixture = Fixture(layout, source, active="fj")
-        fixture.generator.begin_step(make_step(layout, "r", "u"))
-        assert Counter(fixture.generator.next_block().units) == {
-            ("r",): config.PHASE_A_STREAK,
-            ("u",): config.PHASE_A_STREAK,
-        }
-
-    def test_no_first_step_block_ever_repeats_a_prompt(self) -> None:
-        layout, source, steps = self.steps()
-        active = ""
-        for step in steps:
-            fixture = Fixture(layout, source, active=active)
-            for phase_presses in (0, config.PHASE_A_STREAK):
-                fixture.generator.begin_step(step)
-                for intro in step.keys:
-                    press(fixture, intro.grapheme, phase_presses)
-                prompts = fixture.generator.next_block().prompts
-                assert all(a != b for a, b in pairwise(prompts))
-            active += "".join(intro.grapheme for intro in step.keys)
+        fixture = Fixture(layout, FixedListSource({"úúú": 10.0, "sumar": 5.0}), active="fjus")
+        fixture.to_travel("ú")
+        press(fixture, "ú", config.STABLE_ATTEMPTS - config.LEVEL_UP_CORRECT)
+        assert fixture.generator.ramp_up is None
 
 
 class TestSteadyState:
     def test_block_is_bigrams_over_the_active_set_only(self) -> None:
         fixture = Fixture(active=ANCHOR_SIX)
         fixture.practise_all()
-        block = fixture.generator.next_block()
+        block = fixture.steady()
         assert all(len(unit) == 2 for unit in block.units)
         assert set(block.prompts) <= set(ANCHOR_SIX)
 
@@ -607,7 +687,7 @@ class TestSteadyState:
         for _ in range(2):
             fixture = Fixture(active=ANCHOR_SIX + "dk", seed=11)
             fixture.practise_all()
-            blocks.append([fixture.generator.next_block() for _ in range(3)])
+            blocks.append([fixture.steady() for _ in range(3)])
         assert blocks[0] == blocks[1]
 
     def test_a_different_seed_gives_different_content(self) -> None:
@@ -615,7 +695,7 @@ class TestSteadyState:
         for seed in (11, 12):
             fixture = Fixture(active=ANCHOR_SIX + "dk", seed=seed)
             fixture.practise_all()
-            blocks.append(fixture.generator.next_block())
+            blocks.append(fixture.steady())
         assert blocks[0] != blocks[1]
 
 
@@ -625,9 +705,10 @@ def doubles(letters: str) -> FixedListSource:
     return FixedListSource({letter * 2: 1.0 for letter in letters})
 
 
-# What a finished ramp-up leaves in each member's window (ADR-024 § New-key
-# ramp-up): the presses of phases A, B and C, all correct.
-RAMP_UP_PRESSES = config.PHASE_A_STREAK + config.PHASE_B_ATTEMPTS + config.PHASE_C_ATTEMPTS
+# What a finished ramp-up leaves in each member's window at the least (ADR-024
+# § The one bar): thirty listened presses, all correct. Reach's presses are
+# not attempts and leave nothing there.
+RAMP_UP_PRESSES = config.STABLE_ATTEMPTS
 FIRST_SLOTS = config.FIRST_BLOCK_PROMPTS // 2
 
 
@@ -863,7 +944,7 @@ class TestSteadyPlan:
             fixture.activate(name, attempts=RAMP_UP_PRESSES)
         limit = cap(FIRST_SLOTS, len(ANCHOR_SIX))
         assert config.KNOWN_MIN_ATTEMPTS - RAMP_UP_PRESSES >= limit
-        counts = Counter(unit[0] for unit in fixture.generator.next_block().units)
+        counts = Counter(unit[0] for unit in fixture.steady().units)
         assert counts["v"] == counts["m"] == limit
         rest = [counts[name] for name in "fjru"]
         assert sum(rest) == FIRST_SLOTS - 2 * limit
@@ -891,7 +972,7 @@ class TestSteadyPlan:
         evidence = fixture.states.evidence("f")
         assert presses_needed(evidence, config.KNOWN_MIN_ACCURACY) == 0
         assert presses_needed(evidence, STRICT_BAR) > 0
-        counts = Counter(unit[0] for unit in fixture.generator.next_block().units)
+        counts = Counter(unit[0] for unit in fixture.steady().units)
         assert sum(counts.values()) == FIRST_SLOTS
         shares = [counts[name] for name in letters]
         assert max(shares) - min(shares) <= 1
@@ -918,7 +999,7 @@ class TestSteadyPlan:
         for name in "jruvm":
             fixture.activate(name)
         assert 5 * cap(FIRST_SLOTS, len(ANCHOR_SIX)) > FIRST_SLOTS
-        counts = Counter(unit[0] for unit in fixture.generator.next_block().units)
+        counts = Counter(unit[0] for unit in fixture.steady().units)
         assert counts["f"] == planned
         assert sum(counts.values()) == FIRST_SLOTS
 
@@ -947,7 +1028,7 @@ class TestSteadyPlan:
                     ms,
                 )
         assert fixture.states.slow_keys() == ({"d"} if slow else set())
-        counts = Counter(unit[0] for unit in fixture.generator.next_block().units)
+        counts = Counter(unit[0] for unit in fixture.steady().units)
         assert sum(counts.values()) == FIRST_SLOTS
         even_share = math.ceil(FIRST_SLOTS / len(letters))
         planned = min(cap(FIRST_SLOTS, len(letters)), config.SLOW_KEY_NEED)
@@ -966,10 +1047,10 @@ class TestSteadyPlan:
         fixture.activate("f", attempts=config.KNOWN_MIN_ATTEMPTS)
         for name in "jruvm":
             fixture.activate(name)
-        first = Counter(unit[0] for unit in fixture.generator.next_block().units)
+        first = Counter(unit[0] for unit in fixture.steady().units)
         assert first["f"] == 1
         press(fixture, "f", 1)
-        second = Counter(unit[0] for unit in fixture.generator.next_block().units)
+        second = Counter(unit[0] for unit in fixture.steady().units)
         assert second["f"] == 0
 
     def test_a_key_at_the_session_ceiling_is_not_planned(self) -> None:
@@ -979,7 +1060,7 @@ class TestSteadyPlan:
         # Wrong every time: d needs more practice than anything, and has had
         # all this sitting should give it.
         press(fixture, "d", config.SESSION_KEY_CEILING, correct=False)
-        units = fixture.generator.next_block().units
+        units = fixture.steady().units
         assert len(units) == FIRST_SLOTS
         assert set(units) == {("k", "k")}
 
@@ -988,7 +1069,7 @@ class TestSteadyPlan:
         for name in "dk":
             fixture.activate(name)
             press(fixture, name, config.SESSION_KEY_CEILING)
-        units = fixture.generator.next_block().units
+        units = fixture.steady().units
         # Neither needs anything, so the block goes round both evenly.
         counts = Counter(units)
         assert set(counts) == {("d", "d"), ("k", "k")}
@@ -1004,7 +1085,7 @@ class TestSteadyPlan:
         fixture.activate("d", attempts=RAMP_UP_PRESSES)
         for name in "kl":
             fixture.activate(name, attempts=config.KNOWN_MIN_ATTEMPTS)
-        units = fixture.generator.next_block().units
+        units = fixture.steady().units
         assert Counter(units) == {("d", "d"): 5, ("k", "k"): 5, ("l", "l"): 5}
         for name in "dkl":
             positions = [i for i, unit in enumerate(units) if unit[0] == name]
@@ -1015,7 +1096,7 @@ class TestSteadyPlan:
         # it with the heaviest active letter -- and f and j weigh the same,
         # which without a name tie-break would resolve by set order.
         fixture = Fixture(source=FixedListSource({"fff": 10.0, "jjj": 10.0}), active="fjz", seed=3)
-        carried = [unit for unit in fixture.generator.next_block().units if "z" in unit]
+        carried = [unit for unit in fixture.steady().units if "z" in unit]
         assert carried
         assert set(carried) == {("z", "f")}
 
@@ -1043,7 +1124,7 @@ class TestStarvationRegression:
             fixture.activate(name, attempts=RAMP_UP_PRESSES)
         prompts: list[str] = []
         for _ in range(20):
-            block = fixture.generator.next_block()
+            block = fixture.steady()
             # Every j unit carries at least one j, and j's need never falls
             # below f's -- f gets two presses from each `ff` -- so j is planned
             # for at least the smaller half of every block.
@@ -1086,7 +1167,7 @@ class TestNoAnchorMaintenance:
     )
     def test_a_slipping_key_is_planned_by_need_alone(self, planned: dict[str, int]) -> None:
         assert (FIRST_SLOTS, cap(FIRST_SLOTS, len(ANCHOR_SIX + "dk"))) == (15, 5)
-        units = self.slipping(*planned).generator.next_block().units
+        units = self.slipping(*planned).steady().units
         assert len(units) == FIRST_SLOTS
         assert all(len(set(unit)) == 1 for unit in units)
         counts = Counter(unit[0] for unit in units)
@@ -1112,7 +1193,7 @@ class TestNoAnchorMaintenance:
                     True,
                     stamp,
                 )
-        units = fixture.generator.next_block().units
+        units = fixture.steady().units
         assert len(units) == FIRST_SLOTS
         assert all(len(set(unit)) == 1 for unit in units)
         counts = Counter(unit[0] for unit in units)
@@ -1127,7 +1208,7 @@ class TestLanguageWeights:
         # the weights are ignored.
         source = FixedListSource({"fj": 1000.0, "ff": 1.0, "jj": 1.0})
         fixture = Fixture(source=source, active="fj")
-        units = [unit for _ in range(4) for unit in fixture.generator.next_block().units]
+        units = [unit for _ in range(4) for unit in fixture.steady().units]
         assert len(units) == 4 * FIRST_SLOTS
         assert len([unit for unit in units if unit[0] == unit[1]]) <= 2
 
@@ -1135,114 +1216,33 @@ class TestLanguageWeights:
         # j is in both words and f in one, so j is the heavier; r is in neither.
         source = FixedListSource({"fjj": 10.0, "jjj": 5.0})
         fixture = Fixture(source=source, active="fjr")
-        units = fixture.generator.next_block().units
+        units = fixture.steady().units
         assert {unit for unit in units if "r" in unit} == {("r", "j")}
 
     def test_a_lone_key_no_bigram_carries_is_doubled(self) -> None:
         fixture = Fixture(source=FixedListSource({"jjj": 1.0}), active="f")
-        assert set(fixture.generator.next_block().units) == {("f", "f")}
-
-
-class TestAnchorChoice:
-    def test_a_new_key_alternates_with_its_own_fingers_home_key(self) -> None:
-        # ADR-024 Phase B. `r` is the nearer key to `t` and on the same hand,
-        # and `f` is the home key of the finger that types it.
-        fixture = Fixture(active=ANCHOR_SIX)
-        fixture.generator.begin_step(make_step(fixture.layout, "t"))
-        press(fixture, "t", config.PHASE_A_STREAK)
-        units = fixture.generator.next_block().units
-        assert {frozenset(unit) for unit in units if "t" in unit} == {frozenset("ft")}
+        assert set(fixture.steady().units) == {("f", "f")}
 
 
 class TestBlockLength:
     def test_first_block_uses_the_configured_default(self) -> None:
         fixture = Fixture(active=ANCHOR_SIX)
         fixture.practise_all()
-        assert len(fixture.generator.next_block().prompts) == config.FIRST_BLOCK_PROMPTS
+        assert len(fixture.steady().prompts) == config.FIRST_BLOCK_PROMPTS
 
     def test_length_scales_with_the_measured_pace(self) -> None:
         fixture = Fixture(active=ANCHOR_SIX)
         fixture.practise_all()
         # 30 prompts at 2 s each = 0.5/s, over a 100 s block target.
-        fixture.answer(fixture.generator.next_block().prompts, seconds_each=2.0)
-        assert len(fixture.generator.next_block().prompts) == 50
-
-    def test_a_ramp_up_block_stops_at_the_phase_bar(self) -> None:
-        fixture = Fixture(active=ANCHOR_SIX)
-        fixture.practise_all()
-        # 3 prompts/s, which would buy a 300-prompt steady block.
-        fixture.answer(fixture.generator.next_block().prompts, seconds_each=1 / 3)
-        fixture.generator.begin_step(make_step(fixture.layout, "d", "k"))
-        assert len(fixture.generator.next_block().prompts) == 2 * config.PHASE_A_STREAK
-
-    def test_a_solo_step_is_sized_by_the_bar_and_not_by_the_inventory(self) -> None:
-        # The member owes PHASE_A_STREAK prompts and appears once per cycle, so
-        # the block is PHASE_A_STREAK cycles -- of two prompts each, the member
-        # and the borrowed other hand. Counting prompts owed instead of cycles
-        # owed would double it, and only a solo step can show the difference.
-        fixture = Fixture(active=ANCHOR_SIX)
-        fixture.practise_all()
-        fixture.answer(fixture.generator.next_block().prompts, seconds_each=1 / 3)
-        fixture.generator.begin_step(make_step(fixture.layout, "d"))
-        block = fixture.generator.next_block()
-        assert len(block.units) == 2 * config.PHASE_A_STREAK
-        assert Counter(block.prompts) == {
-            "d": config.PHASE_A_STREAK,
-            "j": config.PHASE_A_STREAK,
-        }
-
-    def test_a_solo_phase_b_block_is_sized_by_the_bar(self) -> None:
-        fixture = Fixture(active=ANCHOR_SIX)
-        fixture.practise_all()
-        fixture.answer(fixture.generator.next_block().prompts, seconds_each=1 / 3)
-        fixture.generator.begin_step(make_step(fixture.layout, "d"))
-        press(fixture, "d", config.PHASE_A_STREAK)
-        block = fixture.generator.next_block()
-        # Inventory ('f','d') and ('j',): the member owes PHASE_B_ATTEMPTS and
-        # gets one prompt per three.
-        assert Counter(block.prompts)["d"] == config.PHASE_B_ATTEMPTS
-        assert len(block.prompts) == 3 * config.PHASE_B_ATTEMPTS
-
-    def test_a_phase_a_block_is_one_cycle_when_one_press_is_owed(self) -> None:
-        fixture = Fixture(active=ANCHOR_SIX)
-        fixture.generator.begin_step(make_step(fixture.layout, "d"))
-        press(fixture, "d", config.PHASE_A_STREAK - 1)
-        assert Counter(fixture.generator.next_block().prompts) == {"d": 1, "j": 1}
-
-    def test_a_phase_b_block_is_one_cycle_when_one_press_is_owed(self) -> None:
-        fixture = Fixture(active=ANCHOR_SIX)
-        fixture.generator.begin_step(make_step(fixture.layout, "d"))
-        press(fixture, "d", config.PHASE_A_STREAK)
-        press(fixture, "d", config.PHASE_B_ATTEMPTS - 1)
-        assert Counter(fixture.generator.next_block().prompts) == {"f": 1, "d": 1, "j": 1}
-
-    def test_a_phase_c_block_is_one_unit_when_one_press_is_owed(self) -> None:
-        fixture = Fixture(active=ANCHOR_SIX)
-        fixture.generator.begin_step(make_step(fixture.layout, "d"))
-        press(fixture, "d", config.PHASE_A_STREAK + config.PHASE_B_ATTEMPTS)
-        press(fixture, "d", config.PHASE_C_ATTEMPTS - 1)
-        (unit,) = fixture.generator.next_block().units
-        assert "d" in unit
-
-    def test_a_phase_c_block_is_filled_to_the_target_and_no_further(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        # Bigrams only, so the count is exact: the member owes thirty rounds
-        # and the block's thirty prompts are reached after fifteen.
-        monkeypatch.setattr(config, "PHASE_C_TRIGRAM_CHANCE", 0.0)
-        fixture = Fixture(active=ANCHOR_SIX)
-        fixture.generator.begin_step(make_step(fixture.layout, "d"))
-        press(fixture, "d", config.PHASE_A_STREAK + config.PHASE_B_ATTEMPTS)
-        block = fixture.generator.next_block()
-        assert all(len(unit) == 2 for unit in block.units)
-        assert len(block.prompts) == config.FIRST_BLOCK_PROMPTS
+        fixture.answer(fixture.steady().prompts, seconds_each=2.0)
+        assert len(fixture.steady().prompts) == 50
 
     def test_blocks_end_on_a_unit_boundary(self) -> None:
         fixture = Fixture(active=ANCHOR_SIX)
         fixture.practise_all()
         # 30 prompts over 61.2 s -> 49.02 prompts per block, rounded to 49.
-        fixture.answer(fixture.generator.next_block().prompts, seconds_each=2.04)
-        block = fixture.generator.next_block()
+        fixture.answer(fixture.steady().prompts, seconds_each=2.04)
+        block = fixture.steady()
         assert len(block.prompts) == 50
         assert all(len(unit) == 2 for unit in block.units)
 
@@ -1253,13 +1253,13 @@ class TestBlockLength:
         paced, idle = (Fixture(active=ANCHOR_SIX) for _ in range(2))
         for fixture in (paced, idle):
             fixture.practise_all()
-            prompts = fixture.generator.next_block().prompts
+            prompts = fixture.steady().prompts
             fixture.answer(prompts[:15], seconds_each=2.0)
             if fixture is idle:
                 fixture.clock.advance(300.0)
             fixture.answer(prompts[15:], seconds_each=2.0)
-        assert len(idle.generator.next_block().prompts) == 50
-        assert len(paced.generator.next_block().prompts) == 50
+        assert len(idle.steady().prompts) == 50
+        assert len(paced.steady().prompts) == 50
 
     @pytest.mark.parametrize("before_the_first_answer", [2.0, 12.0, 25.0])
     def test_what_precedes_a_blocks_first_answer_is_not_charged_to_the_pace(
@@ -1273,24 +1273,22 @@ class TestBlockLength:
         seconds_each = 2.0
         fixture = Fixture(active=ANCHOR_SIX)
         fixture.practise_all()
-        prompts = fixture.generator.next_block().prompts
+        prompts = fixture.steady().prompts
         fixture.clock.advance(before_the_first_answer)
         fixture.answer(prompts[:1])
         fixture.answer(prompts[1:], seconds_each=seconds_each)
-        assert len(fixture.generator.next_block().prompts) == round(
-            config.BLOCK_TARGET_SECONDS / seconds_each
-        )
+        assert len(fixture.steady().prompts) == round(config.BLOCK_TARGET_SECONDS / seconds_each)
 
     def test_a_block_nobody_answered_contributes_no_pace_sample(self) -> None:
         fixture = Fixture(active=ANCHOR_SIX)
         fixture.practise_all()
-        fixture.answer(fixture.generator.next_block().prompts, seconds_each=2.0)
-        fixture.generator.next_block()
+        fixture.answer(fixture.steady().prompts, seconds_each=2.0)
+        fixture.steady()
         fixture.clock.advance(600.0)
-        assert len(fixture.generator.next_block().prompts) == 50
+        assert len(fixture.steady().prompts) == 50
 
     def test_no_active_keys_gives_an_empty_block(self) -> None:
-        assert Fixture().generator.next_block() == DrillBlock(())
+        assert Fixture().steady() == DrillBlock(())
 
 
 class TestStepShape:

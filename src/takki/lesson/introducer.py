@@ -601,16 +601,6 @@ def _locate(key: PhysicalKey, rest: Rest) -> Location | None:
     return Location(key.row - cell.row, key.col - cell.col)
 
 
-def key_distance(key: PhysicalKey, other: PhysicalKey) -> tuple[int, int, str]:
-    """Sort key for "closest key to `key`": the drill generator's Phase B anchor
-    (alpha session 9), until ADR-024's ladder replaces Phase B (#12m session (6))."""
-    row_gap, col_gap = abs(key.row - other.row), abs(key.col - other.col)
-    # Manhattan, then prefer the straight vertical reach: it is the motion the
-    # finger already makes from its home position and the one that describes
-    # itself by touch. Name last so ties never depend on dict order.
-    return (row_gap + col_gap, col_gap, other.name)
-
-
 # Placeholder English, in the style of focus_model's announcements. The real
 # strings -- finger names, modifier names, example words -- are ADR-022's
 # per-language YAML tier, which does not exist yet.

@@ -76,11 +76,14 @@ def _seed_db(path: Path) -> int:
         profile.id, session_for(store, profile.id, day), "j", True, day, timeouts=2
     )
     store.mark_introduced(profile.id, ["f", "j"], introduced_at="2026-09-19T09:00:00+00:00")
-    store.begin_phase(profile.id, "f", "A", 0, started_at="2026-09-19T09:00:00+00:00")
-    store.record_phase(profile.id, "f", "A", 10, completed_at="2026-09-19T09:05:00+00:00")
-    store.begin_phase(profile.id, "f", "B", 14, started_at="2026-09-19T09:06:00+00:00")
     store.record_milestone(profile.id, "anchor", achieved_at="2026-09-20T11:00:00+00:00")
     ended = store.start_session(profile.id, started_at="2026-09-19T09:00:00+00:00")
+    store.begin_level(profile.id, "j", "reach", ended, 0, started_at="2026-09-19T09:00:00+00:00")
+    store.complete_level(
+        profile.id, "j", "reach", ended, 10, completed_at="2026-09-19T09:05:00+00:00"
+    )
+    store.begin_level(profile.id, "j", "choose", ended, 0, started_at="2026-09-19T09:06:00+00:00")
+    store.record_stable(profile.id, "f", 30, stable_at="2026-09-19T09:10:00+00:00")
     store.end_session(ended, ended_at="2026-09-19T09:20:00+00:00")
     store.start_session(profile.id, started_at="2026-09-20T10:00:00+00:00")
     store.conn.close()
@@ -173,11 +176,16 @@ class TestMain:
             "  letter length not known             1        1    100.0%",
             "  not timed                           3        2     66.7%",
         ]
-        # Introductions and phases: the only place a resumed ramp-up is visible.
-        assert "introductions and ramp-up phases" in out
-        # Where each phase began and was passed, in the key's lifetime attempts;
-        # the open end is the phase the key is in.
-        assert "A@0-10 B@14- " in out
+        # Introductions and levels: the only place a resumed ramp-up is visible.
+        assert "introductions and ramp-up levels" in out
+        # Each level run's session, and where it began and was met in the
+        # letter's lifetime presses; an open end is a level not yet met. The
+        # bar is the lifetime count at which it was met.
+        rows = [line for line in lines if line.startswith(("     1 f", "     1 j"))]
+        assert [row.split()[:5] for row in rows] == [
+            ["1", "f", "0", "(none)", "30"],
+            ["1", "j", "1", "reach#3@0-10", "choose#3@0-"],
+        ]
         assert "milestones" in out
         assert "anchor" in out
         assert "sessions" in out

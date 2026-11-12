@@ -387,6 +387,7 @@ Also measured: Win+Space switched without taking focus, so it does not pause a l
   - a pause line that recognises the dialog. That needs the foreground window's identity, which `FocusSource` does not expose.
 
   *(Beta; Alpha's #12h run may meet it by accident.)*
+- **A rest cue that waits for a dead key cannot be answered** ([ADR-024](adr/0024-drill-content-and-lesson-granularity.md), "Built, #12m session (6)"; [ADR-028 § Composite ramp-up](adr/0028-composite-input-and-keyboard-ownership.md#composite-ramp-up-b5), the dated note). *(Added 2026-11-12, alpha-plan #12m session (6).)* At Reach the cue waits for a press on the rest key of every finger the letter used, and matches the press by its character. [ADR-033](adr/0033-rest-keys-and-keyboard-alignment.md) allows a dead key as a rest key, and a dead key's press reaches the engine with no character, so a cue owed one would stay open for good. Nothing can land on a dead key yet, so no rest key is one, and English has none. It goes with the first dead-key language's landing work, which [ADR-028 § Event model](adr/0028-composite-input-and-keyboard-ownership.md), "Decided", already assigns there: the cue then matches the press by scan code, as the landing will.
 
 ### Suggested resolution path
 

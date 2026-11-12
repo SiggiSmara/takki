@@ -13,7 +13,6 @@ from takki.persistence import (
     Landing,
     Level,
     LevelRecord,
-    PhaseRecord,
     Profile,
     ReachPress,
     RestKey,
@@ -52,7 +51,6 @@ class FakeStore:
         self._next_session_id = 1
         self._key_stats: dict[tuple[int, str], tuple[int, int, str | None]] = {}
         self._introductions: dict[tuple[int, str], Introduction] = {}
-        self._phases: dict[tuple[int, str, str], PhaseRecord] = {}
         self._key_attempts: dict[tuple[int, str], list[Attempt]] = {}
         self._practice_days: dict[tuple[int, str], set[int]] = {}
         # Each list in insertion order, which is SqliteStore's rowid order.
@@ -172,42 +170,6 @@ class FakeStore:
                 Introduction(key_char=key_char, step=step, position=position, introduced_at=ts),
             )
         return step
-
-    def begin_phase(
-        self,
-        profile_id: int,
-        key_char: str,
-        phase: str,
-        attempts_at: int,
-        started_at: str | None = None,
-    ) -> None:
-        _stamp(started_at)  # Checked as the real store checks it; the fake has no reader for it.
-        self._phases.setdefault((profile_id, key_char, phase), PhaseRecord(attempts_at))
-
-    def record_phase(
-        self,
-        profile_id: int,
-        key_char: str,
-        phase: str,
-        attempts_at: int,
-        completed_at: str | None = None,
-    ) -> None:
-        _stamp(completed_at)
-        record = self._phases.get((profile_id, key_char, phase))
-        if record is None:
-            raise ValueError(f"phase {phase!r} of {key_char!r} was never begun")
-        if record.completed_attempts is None:
-            self._phases[(profile_id, key_char, phase)] = replace(
-                record, completed_attempts=attempts_at
-            )
-
-    def phase_records(self, profile_id: int, key_char: str) -> dict[str, PhaseRecord]:
-        # By phase, and `key_stats` by key, as SqliteStore orders them.
-        return {
-            phase: record
-            for (pid, name, phase), record in sorted(self._phases.items())
-            if pid == profile_id and name == key_char
-        }
 
     def append_attempt(
         self,
