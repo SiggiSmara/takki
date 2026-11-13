@@ -388,6 +388,17 @@ Also measured: Win+Space switched without taking focus, so it does not pause a l
 
   *(Beta; Alpha's #12h run may meet it by accident.)*
 - **A rest cue that waits for a dead key cannot be answered** ([ADR-024](adr/0024-drill-content-and-lesson-granularity.md), "Built, #12m session (6)"; [ADR-028 § Composite ramp-up](adr/0028-composite-input-and-keyboard-ownership.md#composite-ramp-up-b5), the dated note). *(Added 2026-11-12, alpha-plan #12m session (6).)* At Reach the cue waits for a press on the rest key of every finger the letter used, and matches the press by its character. [ADR-033](adr/0033-rest-keys-and-keyboard-alignment.md) allows a dead key as a rest key, and a dead key's press reaches the engine with no character, so a cue owed one would stay open for good. Nothing can land on a dead key yet, so no rest key is one, and English has none. It goes with the first dead-key language's landing work, which [ADR-028 § Event model](adr/0028-composite-input-and-keyboard-ownership.md), "Decided", already assigns there: the cue then matches the press by scan code, as the landing will.
+- **Small code points the #12m reviews left as they are** *(filed 2026-11-13 from alpha-plan, when its finished notes were collapsed; no decision changes. Each was judged by the session's `/code-review` (Sonnet) and left; for whoever next touches that code, to take or leave again.)*
+  - `SqliteStore._landings` takes a constant `WHERE` fragment through an f-string. Both callers pass literals, and two plain queries would be as short. *(Session (4).)*
+  - `milestones.rest_reached` would raise `KeyError` for a landing whose session is not the profile's. Both stores refuse to write one, so only a broken store reaches it. *(Session (4b).)*
+  - `SessionLoop._attempts` exists only from `start`, and nothing dispatches before it. *(Session (4b).)*
+  - `room_for_step` always lets a step through when nothing holds a slot, because a step is one or two letters and a cap below the first step's size would otherwise never let one in. *(Session (5).)*
+  - A composite's modifier is found with a bare `next(...)` in `introducer.py` (the step builder, `describe` and `_introduce_modifier`), which assumes every composite names a modifier besides its base. *(Session (5).)*
+  - The introduction order is worked out again at each call, where `WordfreqSource` caches the ranking and the shares; and `KeyIntroducer` reads `rest_keys` twice at a boundary that introduces (`upcoming`, then `introduce_next`) where [ADR-032](adr/0032-grapheme-led-introduction-and-selectable-ordering.md) says once is enough. Two reads of an eight-row table were left. *(Session (5).)*
+  - `config.KEYBOARD_SHAPE` is not checked at run time: `config.py` is not user-editable and pyright checks the `Literal`; the yaml tier validates it when it exists ([ADR-025](adr/0025-configuration-system.md)). *(Session (5b).)*
+  - `build_en`, `build_de` and `build_is` each build the whole scan-code grid to read one cell (0x2B), at startup. *(Session (5b).)*
+  - `StepLadder._read` asserts a Choose run that only hand-edited records could lack, since every member's Choose is begun before any Travel. *(Session (6).)*
+  - Judged not reachable by session (6b)'s review: an owed guidance outliving its cue (the next prompt's opening clears it); a mismatch of owed keys and fingers (`_cue` builds both in one loop); the script's line read from a ladder of another step (nothing presses during a script).
 
 ### Suggested resolution path
 
