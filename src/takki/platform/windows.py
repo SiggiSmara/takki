@@ -3,11 +3,10 @@ import ctypes.wintypes
 import logging
 import subprocess
 import sys
-import unicodedata
 from collections.abc import Callable
 
 from takki.audio.tts import TTSEngine
-from takki.platform.layout import Grapheme, Layout, PhysicalKey, scan_code_grid
+from takki.platform.layout import Grapheme, Layout, PhysicalKey, dead_key_name, scan_code_grid
 
 logger = logging.getLogger(__name__)
 
@@ -216,22 +215,6 @@ def _flush(hkl: int) -> None:
     for _ in range(8):
         if to_unicode(hkl, _SPACE_SCAN_CODE)[0] >= 0:
             return
-
-
-def dead_key_name(standalone: str) -> str:
-    """A dead key's name, from the character it produces when followed by space.
-
-    Unicode names these "ACUTE ACCENT", "DIAERESIS", "CIRCUMFLEX ACCENT"; the
-    first word is the diacritic, which is the spelling build_is already uses
-    ("dead-acute"). Derived rather than tabulated so a diacritic nobody has
-    measured still gets a stable name instead of a guess.
-    """
-    if not standalone:
-        return "dead-unknown"
-    try:
-        return "dead-" + unicodedata.name(standalone).split()[0].lower()
-    except ValueError:
-        return f"dead-u{ord(standalone):04x}"
 
 
 def language_for_hkl(hkl: int) -> str:

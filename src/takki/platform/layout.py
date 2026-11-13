@@ -1,3 +1,4 @@
+import unicodedata
 from dataclasses import dataclass
 from typing import Literal
 
@@ -75,7 +76,7 @@ class PhysicalKey:
     @property
     def dead(self) -> bool:
         # From the name, which the reader derives for every dead key
-        # (windows.dead_key_name), so a flag and a name can never disagree.
+        # (dead_key_name), so a flag and a name can never disagree.
         return self.name.startswith("dead-")
 
     @property
@@ -119,6 +120,33 @@ def letters_by_position(layout: Layout) -> dict[tuple[int, int], str]:
     return {
         (key.row, key.col): name for name, key in layout.keys.items() if name in layout.graphemes
     }
+
+
+def dead_key_name(standalone: str) -> str:
+    """A dead key's name, from the character it produces when followed by space.
+
+    Unicode names these "ACUTE ACCENT", "DIAERESIS", "CIRCUMFLEX ACCENT"; the
+    first word is the diacritic, which is the spelling build_is already uses
+    ("dead-acute"). Derived rather than tabulated so a diacritic nobody has
+    measured still gets a stable name instead of a guess.
+    """
+    if not standalone:
+        return "dead-unknown"
+    try:
+        return "dead-" + unicodedata.name(standalone).split()[0].lower()
+    except ValueError:
+        return f"dead-u{ord(standalone):04x}"
+
+
+def cell_of(layout: Layout, char: str) -> tuple[int, int] | None:
+    """The cell a press of `char` came from, or None if it is no cell of `layout`.
+
+    A dead key is a cell like any other (ADR-033: a rest key in every
+    language). Today's key source hands its press over as the character it
+    produces on its own, the Icelandic acute accent, which names the key (#12m session (7)).
+    """
+    key = layout.keys.get(char) or layout.keys.get(dead_key_name(char))
+    return None if key is None else (key.row, key.col)
 
 
 def curriculum_positions(layout: Layout) -> dict[str, tuple[int, int]]:

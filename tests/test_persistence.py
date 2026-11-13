@@ -125,6 +125,7 @@ WRITES: dict[str, Callable[[Store, int, str], object]] = {
     ),
     "mark_rest_key_passed": lambda s, pid, at: (
         s.choose_rest_key(pid, "L-mid", 3, 3, "landings"),
+        s.mark_rest_key_ready(pid, "L-mid"),
         s.mark_rest_key_passed(pid, "L-mid", passed_at=at),
     ),
 }
@@ -1528,6 +1529,16 @@ class TestRestKeys:
             any_store.mark_rest_key_passed(pid, "R-mid", T2)
         assert any_store.rest_keys(pid) == [RestKey("L-mid", 2, 3, "landings", T1)]
 
+    def test_a_key_that_is_not_ready_cannot_pass(self, any_store: Store) -> None:
+        # Passed means settled and tested (decided 2026-11-13, #12m session (7)).
+        pid = any_store.create_profile("Alice").id
+        any_store.choose_rest_key(pid, "L-mid", 2, 3, "landings", T1)
+        with pytest.raises(ValueError, match="not ready"):
+            any_store.mark_rest_key_passed(pid, "L-mid", T2)
+        any_store.mark_rest_key_ready(pid, "L-mid", T3)
+        any_store.mark_rest_key_passed(pid, "L-mid", T4)
+        assert any_store.rest_keys(pid) == [RestKey("L-mid", 2, 3, "landings", T1, T3, T4)]
+
     def test_fingers_and_profiles_are_kept_apart(self, any_store: Store) -> None:
         # An index finger's key is the bump, which the child does not choose.
         alice = any_store.create_profile("Alice").id
@@ -1575,11 +1586,13 @@ class TestRefusalsLeaveNoTransactionOpen:
         pid = store.create_profile("Alice").id
         sid = store.start_session(pid)
         store.mark_introduced(pid, ["d"])
+        store.choose_rest_key(pid, "R-mid", 3, 8, "landings")
         refusals: list[tuple[type[Exception], Callable[[], object]]] = [
             (ValueError, lambda: store.record_stable(pid, "f", 30)),
             (ValueError, lambda: store.complete_level(pid, "f", "choose", sid, 10)),
             (ValueError, lambda: store.mark_rest_key_ready(pid, "L-mid")),
             (ValueError, lambda: store.mark_rest_key_passed(pid, "L-mid")),
+            (ValueError, lambda: store.mark_rest_key_passed(pid, "R-mid")),
             # Refused by SQLite itself, partway through an INSERT.
             (sqlite3.IntegrityError, lambda: store.begin_level(pid, "d", cast(Level, "x"), sid, 0)),
             (ValueError, lambda: store.append_reach_press(pid, "q", True)),

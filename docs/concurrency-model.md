@@ -50,7 +50,21 @@ while running:
 
 A guidance owed and not yet heard is never turned back into the word by a later event (`SessionLoop._reissue`). Tests: `tests/test_session.py::TestRestCue`.
 
-**An invariant the guard on misses rests on.** A wrong press is swallowed while the guidance is speaking (ADR-012's note). The loop reads "speaking" as `_guiding` (the guidance was the last thing it spoke for this cue) together with `Speaker.busy`. Nothing else speaks while a cue is open in ACTIVE: every other cue utterance goes through `_speak_prompt`, which sets `_guiding`, and the pause clears it before the resume announcement. Anything new that speaks while a cue is open must clear `_guiding` too, or a real miss over it is swallowed. Session (7)'s alignment is the first candidate. *(Found by session (6b)'s review; not reachable today.)*
+**An invariant the guard on misses rests on.** A wrong press is swallowed while the guidance is speaking (ADR-012's note). The loop reads "speaking" as `_guiding` (the guidance was the last thing it spoke for this cue) together with `Speaker.busy`. Nothing else speaks while a cue is open in ACTIVE: every other cue utterance goes through `_speak_prompt`, which sets `_guiding`, and the pause clears it before the resume announcement. Anything new that speaks while a cue is open must clear `_guiding` too, or a real miss over it is swallowed. *(Found by session (6b)'s review.)*
+
+### While the keyboard alignment runs
+
+Every session opens with the alignment ([ADR-033 § The alignment](adr/0033-rest-keys-and-keyboard-alignment.md#the-alignment)), before the resumed step and the first block: the resume describes the step from the rest keys the alignment has just found. The alignment is a state of the loop (`SessionLoop._alignment`), and asks for one finger at a time. An ask is spoken like a prompt and opens when it has been heard. The lines ahead of it (the hands coming off, the feedback for the last press) are not an ask, and a press over them answers nothing. The alignment is not timed: no press of it touches an attempt, a latency, the pace or a block, and the first block is built after it ends. What five events do while it runs, one rule each:
+
+- **A pause** (a loss of focus). The child's hands left the keys for whatever took the focus, so the round is started again from off the keyboard. On resume, after the resume announcement: *"Take your hands off the keyboard."*, then the first finger of a new round. The first lesson comes first while it is still owed, which is until the child's first landing: the pause may have cut it. The landings already written stay, and the cut round counts toward the cap. A round with no landing yet is kept. A question is asked again as it was.
+- **The re-read key.** The ask again.
+- **The restart key.** The round is the alignment's unit, so it starts again as after a pause, hands off first.
+- **A timeout.** The ask again, bounded by `PROMPT_MAX_REPROMPTS` as a prompt's re-prompts are, and charged to nothing.
+- **A key held.** The next finger waits until the key of the last press is up. If it is still down `ALIGNMENT_HOLD_SECONDS` after the press, checked as a deadline each tick, Takki says *"Let go of the key."* once. A pause disarms the deadline, and the resume arms it again, so a key still down on the way back is told the same. A held key's repeats are not presses. The focus model says whether a key is down (`FocusModel.is_down`), by its folded character or its name.
+
+No rest cue is open while the alignment runs, so nothing it speaks can leave `_guiding` set. It clears `_guiding` whenever it speaks all the same, which keeps the invariant above true by construction. Tests: `tests/test_session.py::TestAlignment`.
+
+**A session left open overnight is one session** (ADR-011 § The practice-day number). A long pause does not end the session, so the morning runs no alignment. Decided by the developer in #12m session (7) for Alpha; the idea for Beta is in [roadmap § D](roadmap.md#d-smaller-gaps-worth-a-line-in-the-relevant-adr).
 
 ## TTS: the one blocking subsystem
 
@@ -262,3 +276,8 @@ Default tests drive the loop and the worker by hand, on the test's own thread, a
 - **asyncio event loop:** rejected — see rule 5.
 - **Actor-per-subsystem (thread per module with message passing everywhere):** more threads than problems; the only genuinely blocking Alpha subsystem is TTS.
 - **Blocking `queue.get(timeout=…)` instead of a ticked loop:** cannot coexist with the SDL pump, which must be polled on the main thread; the 60 Hz tick serves both.
+
+## Changes
+
+- 2026-11-13, alpha-plan #12m session (7): § While the keyboard alignment runs added, with what a pause, the re-read and restart keys, a timeout and a held key do during it, and the decision that a long pause does not end the session.
+- 2026-11-13, alpha-plan #12m session (7), after its review: a pause re-speaks the first lesson while it is owed, and re-arms the hold deadline for a key still down.

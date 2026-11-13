@@ -1281,6 +1281,24 @@ class TestBlockLength:
         fixture.answer(prompts[1:], seconds_each=seconds_each)
         assert len(fixture.steady().prompts) == round(config.BLOCK_TARGET_SECONDS / seconds_each)
 
+    def test_a_gap_left_out_is_not_charged_to_the_pace(self) -> None:
+        # The gap a rest cue's guidance was spoken in is Takki's time (ADR-024
+        # § Lesson granularity, restated), however short it is.
+        paced, guided = (Fixture(active=ANCHOR_SIX) for _ in range(2))
+        for fixture in (paced, guided):
+            fixture.practise_all()
+            prompts = fixture.steady().prompts
+            fixture.answer(prompts[:15], seconds_each=2.0)
+            if fixture is guided:
+                fixture.generator.leave_out_gap()
+                fixture.clock.advance(15.0)
+                fixture.answer(prompts[15:16], seconds_each=2.0)
+                fixture.answer(prompts[16:], seconds_each=2.0)
+            else:
+                fixture.answer(prompts[15:], seconds_each=2.0)
+        assert len(paced.steady().prompts) == 50
+        assert len(guided.steady().prompts) == 50
+
     def test_a_block_nobody_answered_contributes_no_pace_sample(self) -> None:
         fixture = Fixture(active=ANCHOR_SIX)
         fixture.practise_all()

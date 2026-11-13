@@ -9,10 +9,11 @@ from typing import Any
 
 import pytest
 
-import takki.main
 from takki.audio.cues import CueOutputError
 from takki.audio.tts import SpeechOutputError
 from takki.audio.tts_worker import TTSWorker
+from takki.input import KeyEvent
+from takki.lesson.alignment import FIRST_LESSON, HANDS_OFF, ROUND, Ask, ask_text
 from takki.main import (
     EXIT_LAYOUT_MISMATCH,
     EXIT_NO_AUDIO,
@@ -21,7 +22,6 @@ from takki.main import (
     resolve_language,
     verify_layout,
 )
-from takki.persistence import Profile, Store
 from takki.persistence.sqlite_store import SqliteStore
 from takki.platform.layout import build_de, build_en, build_is, describe_mismatch
 from takki.session import InboundEvent
@@ -29,7 +29,6 @@ from tests.fakes.fake_focus_source import FakeFocusSource
 from tests.fakes.fake_platform import FakePlatformInterface
 from tests.fakes.fake_sound_cues import FakeSoundCues
 from tests.fakes.scripted_key_stream import ScriptedKeyStream
-from tests.rest import seed_rest
 
 
 class TestResolveLanguage:
@@ -222,24 +221,47 @@ class TestStartup:
                 super().__init__(inbound)
                 self.gain_focus()
 
+        # A child who rests where the keyboard is marked: each ask of the
+        # alignment is answered with that finger's conventional rest key.
+        layout = build_en()
+        answers = {
+            ask_text(layout, Ask(finger)): next(
+                name for name, key in layout.keys.items() if (key.row, key.col) == (3, col)
+            )
+            for finger, col in zip(ROUND, (4, 7, 1, 10, 3, 8, 2, 9), strict=True)
+        }
+
         class Keys(ScriptedKeyStream):
             joined = False
+            inbound: "queue.Queue[InboundEvent] | None" = None
 
             def __init__(self, inbound: queue.Queue[InboundEvent]) -> None:
                 super().__init__([], inbound)
+                Keys.inbound = inbound
 
             def join(self, timeout: float) -> None:
                 Keys.joined = True
 
         class Frames:
             waits = 0
+            heard = 0
 
             def wait(self) -> None:
-                # The pair's two scripts are three utterances each. SIGINT is
-                # how a session ends, so the handler is under test as well.
+                # SIGINT is how a session ends, so the handler is under test
+                # as well: once the pair's two scripts, three utterances
+                # each, have been spoken after the alignment.
                 Frames.waits += 1
                 time.sleep(0.001)
-                if len(engine.spoken) >= 6 or Frames.waits > 5000:
+                spoken = engine.spoken
+                for line in spoken[Frames.heard :]:
+                    if line in answers and Keys.inbound is not None:
+                        char = answers[line]
+                        Keys.inbound.put(KeyEvent(pressed=True, char=char, name=None))
+                        Keys.inbound.put(KeyEvent(pressed=False, char=char, name=None))
+                Frames.heard = len(spoken)
+                if (spoken.count("New letter:") == 2 and spoken[-1].endswith("finger rests.")) or (
+                    Frames.waits > 20000
+                ):
                     signal.raise_signal(signal.SIGINT)
 
         monkeypatch.setattr("takki.main.config.LANGUAGE", "en")
@@ -258,18 +280,11 @@ class TestStartup:
 
         monkeypatch.setattr(SqliteStore, "close", recording_close)
 
-        # Nothing writes rest keys before the alignment (#12m session (7)), and
-        # without them nothing is introduced (ADR-032 rest rule 1).
-        def profile_at_rest(store: Store, language: str) -> Profile:
-            profile = make_profile(store, language)
-            seed_rest(store, profile.id)
-            return profile
-
-        make_profile = takki.main._profile  # pyright: ignore[reportPrivateUsage]
-        monkeypatch.setattr("takki.main._profile", profile_at_rest)
-
         assert main() == 0
-        assert engine.spoken[:6] == [
+        # The alignment comes first (ADR-033): three rounds settle every
+        # finger, and then the bump letters are introduced.
+        assert engine.spoken[:3] == [FIRST_LESSON, HANDS_OFF, ask_text(layout, Ask(ROUND[0]))]
+        assert engine.spoken[-6:] == [
             "New letter:",
             "f",
             "Use your left index finger. It is the key with the bump, where that finger rests.",
@@ -288,6 +303,8 @@ class TestStartup:
         assert (profile.name, profile.language) == ("dev", "en")
         introduced = [(row.key_char, row.step) for row in store.introductions(profile.id)]
         assert introduced == [("f", 1), ("j", 1)]
+        assert {landing.round for landing in store.landings(profile.id)} == {1, 2, 3}
+        assert all(key.ready_at is not None for key in store.rest_keys(profile.id))
         with sqlite3.connect(database) as connection:
             sessions = connection.execute("SELECT ended_at IS NOT NULL FROM sessions").fetchall()
         assert sessions == [(1,)]
@@ -297,7 +314,7 @@ class TestStartup:
     ) -> None:
         # The fix round's review, 2026-10-10. `run()` shuts down in a
         # `finally`, and `start()` is not inside it: by the time the first
-        # block is built the session row is open and the listener started.
+        # ask is owed the session row is open and the listener started.
         database = tmp_path / "data" / "takki.sqlite"
 
         class Window(FakeFocusSource):
@@ -322,8 +339,8 @@ class TestStartup:
                 super().__init__(*args, **kwargs)
                 made.append(self)
 
-        def no_first_block(loop: object) -> None:
-            raise RuntimeError("first block")
+        def no_first_ask(loop: object) -> None:
+            raise RuntimeError("first ask")
 
         monkeypatch.setattr("takki.main.config.LANGUAGE", "en")
         monkeypatch.setattr("takki.main.select_platform_interface", FakePlatformInterface)
@@ -332,9 +349,10 @@ class TestStartup:
         monkeypatch.setattr("takki.main.PynputKeyStream", Keys)
         monkeypatch.setattr("takki.main.TTSWorker", Worker)
         monkeypatch.setattr("takki.main.database_path", lambda: database)
-        monkeypatch.setattr("takki.session.SessionLoop._begin_block", no_first_block)
+        # The last thing `start()` does: the alignment's first ask.
+        monkeypatch.setattr("takki.session.SessionLoop._next_ask", no_first_ask)
 
-        with pytest.raises(RuntimeError, match="first block"):
+        with pytest.raises(RuntimeError, match="first ask"):
             main()
         assert (Keys.stops, Window.closes) == (1, 1)
         (worker,) = made

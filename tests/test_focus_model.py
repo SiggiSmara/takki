@@ -11,6 +11,7 @@ from takki.focus_model import (
     FocusModel,
     FocusState,
     LessonCommand,
+    OtherKey,
     RereadPrompt,
     RestartWord,
     TypedCharacter,
@@ -119,12 +120,25 @@ class TestTaxonomyDispatch:
         assert harness.commands == []
         assert harness.spoken() == []
 
-    def test_boundary_and_system_keys_are_ignored(self) -> None:
+    def test_boundary_and_system_keys_are_passed_on_once_per_press(self) -> None:
+        # Only the alignment answers one (#12m session (7)); a held key's
+        # repeats are not new presses, and a release is nothing.
         harness = Harness()
-        for name in ("backspace", "tab", "delete", "enter", "space", "f2", "cmd"):
+        names = ("backspace", "tab", "delete", "enter", "space", "f2", "cmd", "shift")
+        for name in names:
+            harness.press(name=name)
             harness.press(name=name)
             harness.release(name=name)
-        assert harness.commands == []
+        assert harness.commands == [OtherKey(name) for name in names]
+
+    def test_a_held_key_is_down_until_it_is_released(self) -> None:
+        harness = Harness()
+        harness.press(name="shift")
+        harness.press(char="a")
+        assert harness.model.is_down("shift") and harness.model.is_down("a")
+        harness.release(name="shift")
+        harness.release(char="A")
+        assert not harness.model.is_down("shift") and not harness.model.is_down("a")
 
     def test_dead_key_arm_is_ignored(self) -> None:
         harness = Harness()
@@ -409,7 +423,7 @@ class TestResume:
         harness = Harness()
         harness.press(name=config.RESUME_KEY)
         harness.tick(RESUME_HOLD * 10)
-        assert harness.commands == []
+        assert harness.commands == [OtherKey(config.RESUME_KEY)]
         assert harness.focus.foreground_requests == 0
 
 

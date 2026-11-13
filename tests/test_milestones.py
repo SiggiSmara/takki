@@ -541,6 +541,9 @@ class TestRestRung:
         store = RecordingStore()
         seat(store, 1)
         check = self.found(store)
+        # A key passes only once it is ready (#12m session (7)).
+        for finger in FINGERS:
+            store.mark_rest_key_ready(1, finger, noon(2))
         for finger in sorted(FINGERS)[:-1]:
             store.mark_rest_key_passed(1, finger, noon(2))
             assert check() == ()
@@ -552,10 +555,12 @@ class TestRestRung:
         store = RecordingStore()
         seat(store, 1)
         for finger in FINGERS:
+            store.mark_rest_key_ready(1, finger, noon(2))
             store.mark_rest_key_passed(1, finger, noon(2))
         store_two = RecordingStore()
         seat(store_two, 1)
         for finger in FINGERS:
+            store_two.mark_rest_key_ready(1, finger, noon(2))
             store_two.mark_rest_key_passed(1, finger, noon(2))
         store_two.choose_rest_key(1, L_MID, 2, 3, "answer", noon(3))
         assert self.found(store)() == (REST,)

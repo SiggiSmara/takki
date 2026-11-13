@@ -5,11 +5,13 @@ from takki.clock import Clock
 from takki.display.focus import FocusEvent, FocusGained, FocusLost, FocusSource
 from takki.input import KeyEvent
 from takki.input.taxonomy import (
+    Boundary,
     Character,
     Classification,
     KeyBindings,
     RecoveryKey,
     ResumeKey,
+    System,
     classify,
 )
 from takki.speech import Speaker
@@ -45,7 +47,18 @@ class RestartWord:
     pass
 
 
-LessonCommand = TypedCharacter | RereadPrompt | RestartWord
+@dataclass(frozen=True)
+class OtherKey:
+    """A press of a key that is no letter cell: Shift, Enter, Tab, Caps Lock, the space bar.
+
+    Nothing in a lesson answers one. The alignment does: a finger asked for
+    may land there, and is guided off it (ADR-033; #12m session (7)).
+    """
+
+    name: str
+
+
+LessonCommand = TypedCharacter | RereadPrompt | RestartWord | OtherKey
 
 
 class FocusState(Enum):
@@ -170,10 +183,16 @@ class FocusModel:
             return None
         if isinstance(classification, RecoveryKey):
             return self._on_recovery_press(classification)
+        if isinstance(classification, Boundary | System) and event.name is not None:
+            return OtherKey(event.name)
         # TalkKey is classified and then dropped: the voice subsystem is Beta
-        # (ADR-020), so Alpha has nothing to route it to. Composing, Boundary
-        # and System are ignored by the taxonomy itself.
+        # (ADR-020), so Alpha has nothing to route it to. Composing is ignored
+        # by the taxonomy itself.
         return None
+
+    def is_down(self, key: str) -> bool:
+        """Whether a key, by its folded character or its name, is still held."""
+        return key in self._chars_down or key in self._down
 
     def _on_recovery_press(self, key: RecoveryKey) -> LessonCommand | None:
         if key.reread and key.restart:

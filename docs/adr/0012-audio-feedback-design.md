@@ -4,7 +4,7 @@
 **Date:** 2026-05-17
 
 > Part of the [Takki architecture](../architecture.md).  
-> **Amendment pending from [ADR-033](0033-rest-keys-and-keyboard-alignment.md) (2026-10-10):** feedback for a press in the keyboard alignment, which has no wrong answer. Not yet made here ([alpha-plan](../alpha-plan.md) #12m).
+> **Amended for [ADR-033](0033-rest-keys-and-keyboard-alignment.md):** feedback for a press in the keyboard alignment, which has no wrong answer, in [§ Feedback in the keyboard alignment](#feedback-in-the-keyboard-alignment).
 
 ---
 
@@ -88,6 +88,22 @@ Triggered when `remaining = alpha_size − keys_mastered ≤ 6`. The coverage fr
 When the child types while TTS is still speaking the prompt, the TTS is cancelled immediately and the keypress is processed normally. Confident typers — especially older or more fluent children — should not be slowed by the prompt audio they already know. The sound cue and any re-prompt that follow play against silence, not over a tail of unfinished speech. The cancellation is per-utterance: only the current spoken prompt is interrupted, not the application's audio pipeline.
 
 This applies in both layers and to any non-essential TTS (encouragement, between-word remarks). Universal voice commands and milestone announcements complete their utterance and are not interrupted by keypresses, since they are not part of the current type-this-character loop.
+
+### Feedback in the keyboard alignment
+
+The alignment ([ADR-033 § The alignment](0033-rest-keys-and-keyboard-alignment.md#the-alignment)) asks for one finger at a time. A landing has no wrong answer, so the reject-wrong-key model above does not apply to it. What each press gets:
+
+| The press | Cue | Spoken after it | Then |
+|---|---|---|---|
+| A landing in the finger's column | `boundary`, the neutral keypress tone | nothing | the next finger |
+| An index finger's press in its column, off the bump | `error` | *"That was not the key with the bump."* | the next finger; the hand's other landings in the round are not counted |
+| A press outside the finger's column, or on a key that is no cell (Shift, Enter, Tab, Caps Lock, the space bar) | `error` | *"That key is for another finger."* | the same finger is asked again; nothing is written |
+| The key chosen in answer to "which one do you want" | `boundary` | nothing | the next question, or the end of the alignment |
+
+- **`boundary` and not `correct`.** `correct` says the key was the one asked for, and in the alignment there is no such key: the key pressed is the finding. A missed bump is the one wrong answer the alignment has, and it gets `error`.
+- **A press cuts the ask, as it cuts a prompt.** A line spoken ahead of an ask (the hands coming off, the feedback above) is not an ask: a press over it answers nothing and is not cut.
+- **A key held is told to let go.** A key still down `ALIGNMENT_HOLD_SECONDS` after its press gets *"Let go of the key."* once, and the next finger is asked once it comes up. The landing stands.
+- **Nothing in the alignment is timed or counted** (ADR-033), so none of this touches an attempt, a latency or the pace.
 
 ### TTS utterance sequencing and cancellation
 
@@ -214,3 +230,7 @@ The `correct` cue does real work for keys that are **not yet Known** (ADR-027) �
 The acknowledgement is its own cue class and so takes a third reserved channel. A click and a tone occupy different spectral space, so the outcome cue overlapping the tail of a click reads as an attack transient rather than as mud.
 
 **3. Hard upper bound on cue duration once cues are user-configurable.** When `takki_config.yaml` can point a cue at an arbitrary `.wav` (ADR-025), a multi-second file breaks the assumptions above: it masks the TTS prompt for the next character, bleeds across drill-block boundaries, and makes the monophonic newest-wins policy truncate constantly. Validate `Sound.get_length()` at load — a system boundary, which is where validation belongs — and on violation fall back to the bundled or generated cue with a warning rather than truncating, since a hard cut produces its own click artifact. The cap belongs in the same change that introduces cue-file overrides, not in a later pass. The same boundary check covers the generated-tone parameters (`TONE_*` in `config.py`, also overridable): a fade longer than half the tone's duration makes the fade-in and fade-out windows overlap, so the tone jumps to near-full amplitude partway through and ends on the click the fade exists to prevent.
+
+### Changes
+
+- 2026-11-13, alpha-plan #12m session (7): § Feedback in the keyboard alignment added, for ADR-033.

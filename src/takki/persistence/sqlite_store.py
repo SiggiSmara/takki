@@ -178,6 +178,12 @@ def _never_introduced(key_char: str) -> str:
     return f"{key_char!r} was never introduced"
 
 
+def _not_ready(finger: str) -> str:
+    # Passed means settled and tested: a key is not passed before it is ready
+    # (decided 2026-11-13, #12m session (7)).
+    return f"finger {finger!r}'s rest key is not ready"
+
+
 def _now() -> str:
     # UTC. Every timestamp this module writes is UTC, and local time is a
     # presentation concern (ADR-011 § Timestamps are UTC): naive local strings
@@ -832,7 +838,17 @@ class SqliteStore:
     def mark_rest_key_passed(
         self, profile_id: int, finger: str, passed_at: str | None = None
     ) -> None:
-        self._mark_rest_key(profile_id, finger, "passed_at", _stamp(passed_at))
+        ts = _stamp(passed_at)
+        current = self.conn.execute(
+            """
+            SELECT ready_at FROM rest_keys
+            WHERE profile_id = ? AND finger = ? AND replaced_at IS NULL
+            """,
+            (profile_id, finger),
+        ).fetchone()
+        if current is not None and current[0] is None:
+            raise ValueError(_not_ready(finger))
+        self._mark_rest_key(profile_id, finger, "passed_at", ts)
 
     def _mark_rest_key(
         self, profile_id: int, finger: str, column: Literal["ready_at", "passed_at"], ts: str

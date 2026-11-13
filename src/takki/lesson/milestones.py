@@ -88,6 +88,18 @@ def rest_reached(
     # frozen for good. Retirement is the same judgement the rung makes.
     if all(finger in current and current[finger].passed_at is not None for finger in FINGERS):
         return True
+    starts = cold_starts(first_rounds, practice_days, days)
+    return len(starts) == days and all(settled(start, current) for start in starts)
+
+
+def cold_starts(
+    first_rounds: Sequence[Landing], practice_days: Mapping[int, int], days: int
+) -> list[list[Landing]]:
+    """Round 1 of the latest `days` practice days that had a complete one, oldest first.
+
+    Read by the `rest` rung and by a weak rest key's own test, which count
+    alike (decided 2026-11-13, #12m session (7)).
+    """
     rounds: dict[int, list[Landing]] = {}
     for landing in first_rounds:
         rounds.setdefault(landing.session_id, []).append(landing)
@@ -98,11 +110,11 @@ def rest_reached(
     for session_id, landings in rounds.items():
         if {landing.finger for landing in landings} >= FINGERS:
             starts.setdefault(practice_days[session_id], landings)
-    latest = sorted(starts)[-days:]
-    return len(latest) == days and all(_settled(starts[day], current) for day in latest)
+    return [starts[day] for day in sorted(starts)[-days:]]
 
 
-def _settled(landings: Sequence[Landing], current: dict[str, RestKey]) -> bool:
+def settled(landings: Sequence[Landing], current: Mapping[str, RestKey]) -> bool:
+    """Every landing validated and on its finger's current rest key."""
     # A hand whose bump press missed has its landings unvalidated, so its
     # round fails; so does a finger with no current key.
     return all(

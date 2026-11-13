@@ -358,7 +358,11 @@ class FakeStore:
     def mark_rest_key_passed(
         self, profile_id: int, finger: str, passed_at: str | None = None
     ) -> None:
-        self._mark_rest_key(profile_id, finger, "passed_at", _stamp(passed_at))
+        ts = _stamp(passed_at)
+        current = self._current_rest_key(profile_id, finger)
+        if current is not None and self._rest_keys[profile_id][current].ready_at is None:
+            raise ValueError(f"finger {finger!r}'s rest key is not ready")
+        self._mark_rest_key(profile_id, finger, "passed_at", ts)
 
     def _current_rest_key(self, profile_id: int, finger: str) -> int | None:
         keys = self._rest_keys.get(profile_id, [])

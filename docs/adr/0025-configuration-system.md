@@ -4,7 +4,6 @@
 **Date:** 2026-05-23
 
 > Part of the [Takki architecture](../architecture.md).  
-> **Amendment pending from [ADR-033](0033-rest-keys-and-keyboard-alignment.md) (2026-10-10):** the keyboard alignment's numbers, `ANCHOR_MIN_ATTEMPTS` and `ANCHOR_MIN_ACCURACY` removed, and rest keys as per-profile state. Not yet made here ([alpha-plan](../alpha-plan.md) #12m).
 > **Amended 2026-11-08 ([alpha-plan](../alpha-plan.md) #12m session 4), in part:** the anchor bar's two numbers are removed, `REST_SETTLED_SESSION_STARTS` is added, and rest keys are recorded as per-profile state, not configuration. ADR-033's other numbers arrive with the sessions that build them: § Amended 2026-11-08, below.
 
 ---
@@ -171,7 +170,7 @@ The binding is chosen against a constraint the other three do not have: this key
 
 - **`ANCHOR_MIN_ATTEMPTS` (25) and `ANCHOR_MIN_ACCURACY` (0.95) are removed** from `config.py`, with the anchor rung and the lifelong hold of `f` and `j` they configured ([ADR-027 § The Anchor Gate is retired](0027-key-and-accuracy-state-model.md#the-anchor-gate-is-retired)). This listing never carried them, so nothing above changes for them.
 - **`REST_SETTLED_SESSION_STARTS` (5) is added.** It is how many days, one session start each, the `rest` rung reads ([ADR-027 § The `rest` rung](0027-key-and-accuracy-state-model.md#the-rest-rung)). The name is ADR-033's and says what is counted: session starts, the first complete one of each local day. Like Known's floors it is not a parent's preference; it is listed so that a run can shorten it, as #12h does on the laptop (set to 2, and set back before anything is committed).
-- **ADR-033's other numbers** (`REST_LETTER_MIN_SHARE`, `ALIGNMENT_MAX_ROUNDS`, `REST_CHOSEN_ROUNDS`, `REST_READY_ROUNDS`, `REST_CHANGE_ROUNDS`) are added by the #12m sessions that read them, (5) and (7). A constant nothing reads is not listed. ADR-033's own `MAX_KEYS_IN_PROGRESS` row keeps the 6 above, on a new reason ([ADR-010](0010-lesson-structure-and-progression.md), "Why 6, since Stage 0 went").
+- **ADR-033's other numbers** are compiled defaults like Known's floors, listed so that a run can change them: `REST_LETTER_MIN_SHARE` (0.02, session (5)); and from session (7), `ALIGNMENT_MAX_ROUNDS` (8, the rounds a session may run), `REST_CHOSEN_ROUNDS` (2) and `REST_READY_ROUNDS` (3, rounds in a row on one key for chosen and ready), `REST_CHANGE_ROUNDS` (3, rounds in a row on another key before a ready finger is asked again) and `ALIGNMENT_HOLD_SECONDS` (1.0, how long a key may stay down after an alignment press before the child is told to let go). ADR-033's own `MAX_KEYS_IN_PROGRESS` row keeps the 6 above, on a new reason ([ADR-010](0010-lesson-structure-and-progression.md), "Why 6, since Stage 0 went").
 - **Rest keys are per-profile state, not configuration.** They live in [ADR-011](0011-persistence-and-state.md)'s `rest_keys` and are found by the alignment, not set by a parent. They are not a field of the per-profile tier and are not in `takki_config.yaml`.
 
 **Amended 2026-10-06 (alpha-plan #12l). `LETTER_LENGTH_SAMPLE`, and `TTS_RATE` in the compiled defaults.**
@@ -249,3 +248,7 @@ Key bindings, `tts_rate`, `tts_voice`, and `push_to_talk_mode` may be overridden
 - **Env-var overrides.** Rejected. Nothing Takki does is configured by the environment: the data directory comes from `platformdirs`, the layout from Windows, and the language from the tiers above.
 
 **Amended 2026-09-20, then re-amended the same day.** A first pass added `TAKKI_LANG` / `TAKKI_LAYOUT` alongside a proposed `TAKKI_DATA_DIR`, on the grounds that the Windows test laptop reports `en-150` on a German QWERTZ layout. That was the wrong instrument and all three were withdrawn: an env var is a *developer's* escape hatch, and the situation it was escaping — a machine with several keyboard layouts installed — is an ordinary one that a child's computer will meet too. A parent has no environment variables. `TAKKI_DATA_DIR` went with them: the resolved path is now correct on every platform, so there is nothing left for it to work around in Alpha. What replaces them is the section below.
+
+### Changes
+
+- 2026-11-13, alpha-plan #12m session (7): the alignment's numbers listed, and the banner saying ADR-033's amendment was pending removed.

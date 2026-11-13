@@ -4,7 +4,7 @@
 **Date:** 2026-05-17
 
 > Part of the [Takki architecture](../architecture.md).  
-> **Amendment pending from [ADR-033](0033-rest-keys-and-keyboard-alignment.md) (2026-10-10):** the keyboard alignment's strings, and "rest" in place of "home" in child-facing text. Not yet made here ([alpha-plan](../alpha-plan.md) #12m).
+> **Amended for [ADR-033](0033-rest-keys-and-keyboard-alignment.md):** the keyboard alignment's strings, and "rest" in place of "home" in child-facing text, in [§ The keyboard alignment's strings](#the-keyboard-alignments-strings).
 
 ---
 
@@ -53,6 +53,29 @@ didnt_catch_that:
 ```
 
 A list-valued key triggers random selection at lookup time. Single-value keys are returned verbatim.
+
+### The keyboard alignment's strings
+
+Child-facing text says "rest", never "home" (ADR-033 § Vocabulary). The alignment uses the terms of the rest letter's script, "the bump" and "where that finger rests" ([ADR-023 § The key introduction script](0023-key-introduction-protocol.md#the-key-introduction-script)), so the child hears one vocabulary from placing the hands to the introduction of a letter. A change to one changes both.
+
+The strings, as placeholder English in `takki.lesson.alignment` until the YAML tier exists:
+
+| Key | English |
+|---|---|
+| `alignment_first_lesson` | Before we type, we find where your fingers rest. Two keys have a small bump, and your index fingers rest on them. |
+| `alignment_hands_off` | Take your hands off the keyboard. |
+| `alignment_ask_bump` | Find the bump with your {finger}. Press it and let go. |
+| `alignment_ask_rest` | Put your {finger} down where it rests. Press and let go. |
+| `alignment_question` | Where should your {finger} rest? It landed on {keys}. Press the key you want, and let go. |
+| `alignment_off_bump` | That was not the key with the bump. |
+| `alignment_elsewhere` | That key is for another finger. |
+| `alignment_let_go` | Let go of the key. |
+| `alignment_closing` | Well done. Finding the bumps takes practice. That is all for today. Next time we will start with the bumps again. |
+
+- **The first lesson** is said before a session's first round until the profile has landed once. **The hands come off** before every round (ADR-033).
+- **The question names keys** (`{keys}`, a list joined with "and"): a letter by itself, a modifier by its name ("the accent key"), and any other cell by a spoken name per language ("semicolon", "apostrophe"). The sentence naming them is left out when the finger has no landing in the session.
+- **Finger names** are the introduction script's.
+- **The closing line** is said when the alignment reaches its cap with an index finger not ready, so that no letter may come and nothing is Active: only in a child's first sessions.
 
 ### Pluralisation
 
@@ -103,3 +126,7 @@ clean_words_today:
 - **Fluent (Mozilla).** Promising — natively handles plural categories, grammatical gender, and selectors. Adds `fluent.runtime` as a dependency. Reserved as a future option if YAML proves insufficient for languages with very complex morphology. The cost is a learning curve for contributors who don't already know Fluent.
 - **Weblate / Crowdin integration.** Both support YAML in addition to .po. No integration at v1 scope — contributors edit YAML via PRs. Possible future addition without changing the file format.
 - **Mixed approach (gettext for UI strings, YAML for everything else).** Rejected. Fragmenting the contribution pattern for one surface adds friction with no proportionate benefit.
+
+### Changes
+
+- 2026-11-13, alpha-plan #12m session (7): § The keyboard alignment's strings added, for ADR-033.

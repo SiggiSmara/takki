@@ -140,6 +140,19 @@ SLOW_KEY_NEED = 5
 # each practice day (ADR-011 `sessions`).
 REST_SETTLED_SESSION_STARTS = 5
 
+# ADR-033 § The alignment. Rounds a session may run before typing; a finger
+# whose key lands the same this many rounds in a row is chosen, or ready; a
+# ready finger that lands on another key this many rounds in a row is asked
+# which key it wants. Rounds in a row are counted across sessions.
+ALIGNMENT_MAX_ROUNDS = 8
+REST_CHOSEN_ROUNDS = 2
+REST_READY_ROUNDS = 3
+REST_CHANGE_ROUNDS = 3
+# A key still down this long after an alignment press is held, and the child
+# is told to let go (#12m session (7)). Above a deliberate press, well under
+# the 8 s that opens Windows' Filter Keys box (ADR-033 § Work, the #13 note).
+ALIGNMENT_HOLD_SECONDS = 1.0
+
 # ADR-010 § Progression Rules. The gate on *when* a new key is introduced, as
 # opposed to which one: the most keys a child may have Active but not yet
 # Known. Every key that becomes Known frees a slot. The bump letters hold none

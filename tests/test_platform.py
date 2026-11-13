@@ -15,11 +15,11 @@ from takki.platform.layout import (
     build_de,
     build_en,
     build_is,
+    dead_key_name,
     describe_mismatch,
     scan_code_grid,
 )
 from takki.platform.windows import (
-    dead_key_name,
     nvda_in_tasklist_output,
     primary_subtag,
 )

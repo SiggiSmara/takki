@@ -1380,10 +1380,11 @@ class TestTheOrderIsAForecast:
         store.mark_rest_key_ready(pid, "L-mid")
         store.choose_rest_key(pid, "L-mid", 2, 3, "landings")
         store.choose_rest_key(pid, "R-mid", 3, 8, "answer")
+        store.mark_rest_key_ready(pid, "R-mid")
         store.mark_rest_key_passed(pid, "R-mid")
         assert current_rest(store.rest_keys(pid)) == {
             "L-mid": RestCell(2, 3, False),
-            "R-mid": RestCell(3, 8, False),
+            "R-mid": RestCell(3, 8, True),
         }
 
 

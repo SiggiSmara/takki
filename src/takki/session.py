@@ -18,6 +18,7 @@ things are called in, and the three lifetimes those calls have:
 import queue
 import random
 from collections.abc import Callable, Sequence
+from typing import Literal
 
 from takki import config
 from takki.audio.cues import SoundCuePlayer
@@ -30,6 +31,7 @@ from takki.focus_model import (
     FocusModel,
     FocusState,
     LessonCommand,
+    OtherKey,
     RereadPrompt,
     RestartWord,
     TypedCharacter,
@@ -37,6 +39,8 @@ from takki.focus_model import (
 from takki.input import KeyEvent, KeyEventStream
 from takki.input.taxonomy import KeyBindings
 from takki.language import WordSource, warm
+from takki.lesson import alignment
+from takki.lesson.alignment import Alignment, Press
 from takki.lesson.attempts import AttemptCounter, PressOutcome
 from takki.lesson.drills import Block, DrillGenerator, Prompt, PromptKind
 from takki.lesson.introducer import (
@@ -46,6 +50,7 @@ from takki.lesson.introducer import (
     KeyIntroducer,
     KeyIntroduction,
     Rest,
+    bumps_ready,
     current_rest,
     describe,
     home_anchor_keys,
@@ -58,7 +63,7 @@ from takki.lesson.letter_lengths import LetterLengths
 from takki.lesson.milestones import MilestoneDetector
 from takki.lesson.progression import layer_two_unlocked, room_for_step
 from takki.persistence import Store
-from takki.platform.layout import Layout
+from takki.platform.layout import Layout, cell_of
 from takki.speech import Letter, Speaker
 
 InboundEvent = KeyEvent | FocusEvent | SpeechFinished | Quit
@@ -70,6 +75,10 @@ InboundEvent = KeyEvent | FocusEvent | SpeechFinished | Quit
 # half of the problem -- when a celebration happens and in what order -- so
 # that the tier, when it lands, has nothing left to decide about sequencing.
 Celebrant = Callable[[str], str | None]
+
+# What the loop owes the child once speech is idle, beside a new prompt: the
+# open prompt's word again, a rest cue's guidance, or the alignment's ask.
+Reissue = Literal["word", "guidance", "ask"]
 
 
 class SessionLoop:
@@ -140,14 +149,25 @@ class SessionLoop:
         # Wrong presses on the open cue since it opened or the child came back;
         # every REST_CUE_GUIDE_AFTER-th is answered with the guidance.
         self._cue_wrong = 0
-        # The re-issue owed is the cue's guidance, not its word.
-        self._guidance_due = False
         # The cue's guidance was the last thing the loop spoke for it.
         self._guiding = False
         self._first_press = False
         self._prompt_due = False
-        self._reprompt_due = False
+        self._reissue_due: Reissue | None = None
         self._prompt_deadline: float | None = None
+        # The keyboard alignment (ADR-033), from `start` until it is done.
+        # Its time is charged to nothing: no attempt, no pace, no block.
+        self._alignment: Alignment | None = None
+        # An alignment ask has been spoken and waits for its press.
+        self._asking = False
+        # Lines owed ahead of the next ask: feedback, the hands coming off.
+        self._lead: list[str] = []
+        # The key the last alignment press was made with, until it comes up;
+        # the next ask waits for it. The deadline is when it counts as held.
+        self._held: str | None = None
+        self._hold_deadline: float | None = None
+        # The session ends once the closing line has been heard.
+        self._closing = False
         self._reprompts = 0
         # The introduction script that is speaking, from the moment it starts
         # until the prompt it precedes opens. The one thing a resume needs to
@@ -188,7 +208,9 @@ class SessionLoop:
         session-lifetime objects that read them.
         """
         warm(self._source, self._layout)
-        self._session_id = self._store.start_session(self._profile_id)
+        self._session_id = self._store.start_session(
+            self._profile_id, self._now() if self._now is not None else None
+        )
         self._attempts = AttemptCounter(
             self._store,
             self._profile_id,
@@ -211,7 +233,15 @@ class SessionLoop:
             self._session_id,
             self._rest,
         )
-        self._resume_ramp_up()
+        self._alignment = Alignment(
+            self._layout,
+            self._store,
+            self._profile_id,
+            self._session_id,
+            known=self._states.known_keys,
+            shares=self._source.key_shares(self._layout),
+            now=self._now,
+        )
         self._keys.start()
         # Set first and the flag read after, in that order: the handlers are
         # installed before this is called, and a signal that lands between a
@@ -222,10 +252,12 @@ class SessionLoop:
         if self._stop_requested:
             self.running = False
             return
-        # The first spoken line of the session comes out of here: a cold
-        # profile's first block boundary introduces the first step, the bump
-        # letters, and its script is what the child hears. Nothing before this point speaks.
-        self._begin_block()
+        # The first spoken line of the session comes out of here: every
+        # session opens with the alignment (ADR-033), and the resumed step and
+        # the first block wait for it. Nothing before this point speaks.
+        if self._alignment.cold:
+            self._lead.append(alignment.FIRST_LESSON)
+        self._next_ask()
 
     def stop(self) -> None:
         """Signal-handler entry point (concurrency-model.md § Shutdown)."""
@@ -312,6 +344,12 @@ class SessionLoop:
             # A child who is not in Takki is not ignoring the prompt.
             return
         now = self._clock.monotonic()
+        if self._hold_deadline is not None and now >= self._hold_deadline:
+            # ADR-033: a key held is detected, and the child told to let go,
+            # before the next finger is asked for. The landing stands.
+            self._hold_deadline = None
+            if self._held is not None and self._focus_model.is_down(self._held):
+                self._speaker.say(alignment.LET_GO)
         if self._prompt_deadline is not None and now >= self._prompt_deadline:
             self._on_timeout()
 
@@ -330,14 +368,19 @@ class SessionLoop:
             # Nothing is issued at a child who is not in Takki: what is owed
             # waits for the resume, which is what re-speaks it.
             return
+        if self._closing:
+            self.running = False
+            return
+        if self._alignment is not None:
+            self._advance_alignment()
+            return
         if self._prompt_due:
             self._prompt_due = False
-            self._reprompt_due = False
-            self._guidance_due = False
+            self._reissue_due = None
             self._start_prompt()
-        elif self._reprompt_due:
-            self._reprompt_due = False
-            guide, self._guidance_due = self._guidance_due, False
+        elif self._reissue_due is not None:
+            guide = self._reissue_due == "guidance"
+            self._reissue_due = None
             self._speak_prompt(guide=guide)
 
     def _reissue(self, *, guide: bool = False) -> None:
@@ -346,8 +389,8 @@ class SessionLoop:
         A guidance already owed is never turned back into the word: the child
         who was owed it has not heard it yet.
         """
-        self._guidance_due = guide or (self._reprompt_due and self._guidance_due)
-        self._reprompt_due = True
+        if guide or self._reissue_due != "guidance":
+            self._reissue_due = "guidance" if guide else "word"
 
     # ---- prompts -------------------------------------------------------
 
@@ -433,6 +476,79 @@ class SessionLoop:
             self._speaker.say(Letter(letter), interruptible=False)
         self._attempts.letter_sent(cuttable=cuttable)
 
+    # ---- the alignment ---------------------------------------------------
+
+    def _advance_alignment(self) -> None:
+        """The alignment's next line, once the last press's key is up and speech is idle."""
+        assert self._alignment is not None
+        if self._held is not None:
+            if self._focus_model.is_down(self._held):
+                return
+            self._held = None
+            self._hold_deadline = None
+        if self._lead:
+            # Spoken on their own, so a press over them answers nothing: the
+            # ask opens only once they have been heard.
+            lines, self._lead = self._lead, []
+            self._guiding = False
+            self._speaker.say(*lines)
+            return
+        if self._alignment.done:
+            self._end_alignment()
+            return
+        if self._reissue_due == "ask":
+            self._reissue_due = None
+            ask = self._alignment.ask
+            assert ask is not None
+            self._asking = True
+            self._guiding = False
+            self._prompt_deadline = self._clock.monotonic() + config.PROMPT_TIMEOUT_SECONDS
+            self._speaker.say(alignment.ask_text(self._layout, ask))
+
+    def _next_ask(self) -> None:
+        """Owe the alignment's next ask, behind the hands coming off if a round starts."""
+        assert self._alignment is not None
+        if self._alignment.take_new_round():
+            self._lead.append(alignment.HANDS_OFF)
+        self._reissue_due = "ask"
+
+    def _on_alignment_press(self, cell: tuple[int, int] | None, key: str) -> None:
+        """A press while the alignment asks (ADR-033). It is not timed and not counted."""
+        assert self._alignment is not None
+        if not self._asking:
+            # Nothing asked yet: a line ahead of the ask is still speaking.
+            return
+        self._asking = False
+        self._speaker.interrupt()
+        self._prompt_deadline = None
+        self._reprompts = 0
+        outcome = self._alignment.press(cell)
+        # A landing has no wrong answer, so it gets the neutral sound
+        # (ADR-012); a missed bump and a press that is no landing get the error.
+        self._cues.play("boundary" if outcome in (Press.LANDED, Press.ANSWERED) else "error")
+        if outcome is Press.OFF_BUMP:
+            self._lead.append(alignment.OFF_BUMP)
+        elif outcome is Press.ELSEWHERE:
+            self._lead.append(alignment.ELSEWHERE)
+        self._held = key
+        self._hold_deadline = self._clock.monotonic() + config.ALIGNMENT_HOLD_SECONDS
+        self._next_ask()
+
+    def _end_alignment(self) -> None:
+        """The hands are placed: the resumed step and the first block, from today's rest keys."""
+        assert self._alignment is not None
+        self._prompt_deadline = None
+        # The last press owed an ask that will never come: the lesson's
+        # branch in `_advance` would take it for a prompt to re-speak.
+        self._reissue_due = None
+        # One read of each key's window serves the passed marks and the
+        # boundary: nothing in between writes an attempt.
+        with self._states.held():
+            self._alignment.mark_passed()
+            self._alignment = None
+            self._resume_ramp_up()
+            self._begin_block()
+
     def _on_timeout(self) -> None:
         """Carry-forward "D auto-advance": a Layer-1 timeout re-prompts.
 
@@ -446,10 +562,14 @@ class SessionLoop:
         first attempt.
         """
         self._prompt_deadline = None
-        self._attempts.timed_out()
+        if self._alignment is None:
+            self._attempts.timed_out()
         if self._reprompts >= config.PROMPT_MAX_REPROMPTS:
             return
         self._reprompts += 1
+        if self._alignment is not None:
+            self._reissue_due = "ask"
+            return
         # A rest cue's timeout speaks the word again, not the guidance.
         self._reissue()
 
@@ -459,6 +579,7 @@ class SessionLoop:
         # in the past on the way back and would spend a re-prompt the child
         # never sat through. Re-armed by the resume's own re-prompt.
         self._prompt_deadline = None
+        self._hold_deadline = None
         # The same reasoning for the answer's latency: a press over the resume
         # announcement would otherwise be timed across the whole time away.
         self._attempts.mark_inaudible()
@@ -473,7 +594,25 @@ class SessionLoop:
         disoriented state the re-read key exists to serve. Queued rather than
         spoken now -- `_advance` holds it until the announcement finishes.
         """
-        if self._open is not None:
+        if self._alignment is not None:
+            # The hands left the keys: the round is started again, from off
+            # the keyboard, and what was owed before the pause is stale.
+            self._reprompts = 0
+            self._asking = False
+            self._lead = []
+            if self._held is not None:
+                # The pause disarmed the hold deadline; a key still down on
+                # the way back is told to let go, not waited on in silence.
+                self._hold_deadline = self._clock.monotonic() + config.ALIGNMENT_HOLD_SECONDS
+            if not self._alignment.done:
+                self._alignment.abandon_round()
+                self._alignment.take_new_round()
+                if self._alignment.cold:
+                    # The pause may have cut it, and it is owed until a landing.
+                    self._lead.append(alignment.FIRST_LESSON)
+                self._lead.append(alignment.HANDS_OFF)
+                self._reissue_due = "ask"
+        elif self._open is not None:
             # A child who has come back is engaging again, so the budget they
             # spent before leaving is not held against them.
             self._reprompts = 0
@@ -501,9 +640,17 @@ class SessionLoop:
             self._on_reread()
         elif isinstance(command, RestartWord):
             self._on_restart()
+        elif isinstance(command, OtherKey) and self._alignment is not None:
+            # A key that is no cell is no landing (ADR-026), whatever the language.
+            self._on_alignment_press(None, command.name)
 
     def _on_character(self, typed: TypedCharacter) -> None:
         assert self._drills is not None
+        if self._alignment is not None:
+            # A held key's repeat is no new press; the hold deadline speaks to it.
+            if not typed.repeat:
+                self._on_alignment_press(cell_of(self._layout, typed.char), typed.char)
+            return
         prompt = self._open
         if prompt is None:
             # Nothing open to answer: a restart or a block boundary abandoned
@@ -544,7 +691,7 @@ class SessionLoop:
             # ADR-012 § Wrong character handling: auto-rejected, and the same
             # character is re-prompted. The prompt stays open and stays the
             # same prompt.
-            self._reprompt_due = True
+            self._reissue()
             return
         self._close_prompt()
 
@@ -596,6 +743,10 @@ class SessionLoop:
             self._begin_block()
 
     def _on_reread(self) -> None:
+        if self._alignment is not None:
+            if self._asking:
+                self._reissue_due = "ask"
+            return
         if self._open is not None:
             # On a rest cue the key asks for help, so it gets the guidance; it
             # is not a wrong press and leaves the count where it is.
@@ -625,6 +776,15 @@ class SessionLoop:
         On the ladder every prompt is a unit, and a drawn letter the child has
         heard comes back as a re-ask (the block decides; #12m session (6)).
         """
+        if self._alignment is not None:
+            # The round is the alignment's unit: it starts again, hands off.
+            if self._asking:
+                self._speaker.interrupt()
+                self._asking = False
+                self._prompt_deadline = None
+                self._alignment.abandon_round()
+                self._next_ask()
+            return
         if self._block is None:
             return
         if self._open is not None:
@@ -682,14 +842,20 @@ class SessionLoop:
         self._open = None
         self._prompt_deadline = None
         self._prompt_due = self._block.current() is not None
-        if not self._prompt_due:
-            # Nothing that may be introduced now and nothing Active to drill:
-            # an empty curriculum, or a profile whose index fingers are not
-            # both ready (ADR-032 rest rule 1), which is every profile until
-            # the alignment writes `rest_keys` (#12m session (7)). What the
-            # session says then is (7)'s. Without this the loop would spin
-            # forever issuing no prompts.
+        if self._prompt_due:
+            return
+        # Nothing that may be introduced now and nothing Active to drill.
+        # Without an end the loop would spin forever issuing no prompts.
+        if bumps_ready(self._rest()):
+            # An empty curriculum.
             self.running = False
+            return
+        # The alignment reached its cap with an index finger not ready, so no
+        # letter may come (ADR-032 rest rule 1): only in a child's first
+        # sessions. One line, heard whole, then the session ends (decided
+        # 2026-11-13, #12m session (7)).
+        self._speaker.say(alignment.CLOSING, interruptible=False)
+        self._closing = True
 
     def _rest(self) -> Rest:
         return current_rest(self._store.rest_keys(self._profile_id))
@@ -718,7 +884,7 @@ class SessionLoop:
             self._speaker.say(*lines, interruptible=False)
 
     def _resume_ramp_up(self) -> None:
-        """Re-enter the newest step's ramp-up before the first block boundary.
+        """Re-enter the newest step's ramp-up after the alignment, before the first block boundary.
 
         The cross-session half of alpha-plan #12d. Until this existed, a session
         started with no ramp-up in progress, so its first block boundary
@@ -745,8 +911,8 @@ class SessionLoop:
         # What the introducer's own `had` was when it emitted the step: the
         # rebuilt script is derived from it (alpha-plan #12j). Its locations are
         # from today's rest keys, not the ones it was first described from
-        # (decided 2026-11-09, #12m session (5b)). Until the alignment runs
-        # ahead of this (#12m session (7)), today's are the last ones stored.
+        # (decided 2026-11-09, #12m session (5b)), which the alignment has
+        # just found.
         had = active | {entry.key_char for entry in introduced}
         step = resume_step(self._layout, members, had, self._rest())
         if not self._drills.resume_step(step):
