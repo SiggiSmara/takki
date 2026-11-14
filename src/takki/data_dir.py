@@ -1,7 +1,7 @@
 """Where Takki's persistent files live (ADR-011, ADR-025).
 
-Kept out of main.py -- which pulls in the full startup graph (pygame, pynput,
-the TTS worker, ...) -- so a read-only tool like progress_dump.py can resolve
+Kept out of main.py -- which pulls in the full startup graph (pygame, the TTS
+worker, ...) -- so a read-only tool like progress_dump.py can resolve
 the same path without importing any of that.
 """
 

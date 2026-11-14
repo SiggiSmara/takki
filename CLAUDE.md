@@ -18,7 +18,7 @@ Typing tutor for visually impaired children. Audio is the primary interface. See
   - **A rejected alternative is kept, once,** with its reason, so that a later session does not propose it again.
   - **A change of direction is a new ADR** that supersedes the old one, not a restatement inside it.
   - Older ADRs still carry dated notes. Do not rewrite them in passing; that is a session of its own for each ADR, after the Windows re-validation run (alpha-plan #12h).
-- **All external I/O behind a `typing.Protocol`.** Lesson engine, intent pipeline, and progression logic depend on the Protocol, not the implementation. No direct calls to Piper, pynput, Whisper, `pygame`, etc. from logic code. The Windows-specific platform interfaces below are the most prominent case; the rule applies to every external interface. See ADR-019.
+- **All external I/O behind a `typing.Protocol`.** Lesson engine, intent pipeline, and progression logic depend on the Protocol, not the implementation. No direct calls to Piper, Whisper, `pygame`, SAPI, etc. from logic code. The Windows-specific platform interfaces below are the most prominent case; the rule applies to every external interface. See ADR-019.
 - **Tests use fakes by default.** Each Protocol ships with a fake implementation in `tests/fakes/`. Hardware- and model-dependent tests are gated by pytest markers (`audio`, `model`, `windows_only`, `slow`, `no_audio_output`) and excluded from the default `uv run pytest`. `no_audio_output` runs only on the `windows-latest` runner, which has a voice and no audio device, and fails on a machine that can play sound. See ADR-019.
 
 ## Development environment
@@ -27,7 +27,7 @@ Typing tutor for visually impaired children. Audio is the primary interface. See
 - **Tests:** `uv run pytest`
 - **Layout:** `src/` layout. All application source lives under `src/takki/`.
 - **Primary dev machine:** Linux (headless box, SSH from Windows laptop) — for everything that is not OS-specific.
-- **Where a chunk is developed follows what it touches.** The OS-specific code is deliberately confined behind Protocols so the other ~90% of the codebase is portable and stays here (see *Platform interfaces* below, ADR-019, ADR-026). But **implementing those platform stubs, and anything whose behaviour only exists on the target OS, is developed on that OS** — you cannot write `ctypes.windll` scan-code mapping, SAPI/COM threading, real focus transitions, or pynput's live event stream against a machine that can run none of them. Writing blind and pasting results back is for *spikes* — a script, one question, one answer. It is not a way to build a module.
+- **Where a chunk is developed follows what it touches.** The OS-specific code is deliberately confined behind Protocols so the other ~90% of the codebase is portable and stays here (see *Platform interfaces* below, ADR-019, ADR-026). But **implementing those platform stubs, and anything whose behaviour only exists on the target OS, is developed on that OS** — you cannot write `ctypes.windll` scan-code mapping, SAPI/COM threading, real focus transitions, or the window's live key events against a machine that can run none of them. Writing blind and pasting results back is for *spikes* — a script, one question, one answer. It is not a way to build a module.
 - **Moving the session is fine; splitting it is not.** Move the whole working session to the machine that can run the code, and move back when the chunk is done. What must not happen is two Claude Code sessions on two machines for one chunk — that fragments context, which is the thing this rule has always been protecting. Alpha #12a/#12b are developed on the Windows laptop for this reason; Beta's engine work returns here.
 - **Spike scripts** still follow the old loop where they genuinely are spikes: write here, run on the laptop, paste results back into a `docs/research/` note.
 
@@ -46,7 +46,7 @@ These are decided. Do not introduce code that violates them without opening a di
 
 ## Platform interfaces
 
-Five functions isolate all Windows-specific code. Implement these first; call them everywhere else.
+Six functions isolate all Windows-specific code. Implement these first; call them everywhere else.
 
 ```
 get_system_language()   # Windows locale API → language code
@@ -54,6 +54,7 @@ get_layout_positions()  # Windows keyboard scan codes → Layout (keys + graphem
 find_voice(language)    # SAPI5 + OneCore voice tokens → voice id | None  (registry only, no COM)
 get_fallback_tts(voice) # voice id → a factory the TTS worker calls on its own thread
 detect_screen_reader()  # SPI_GETSCREENREADER + process scan → reader id | None
+disarm_dead_key()       # ToUnicodeEx(Space) on the window's thread: clears an armed dead key
 ```
 
 `get_fallback_tts` returns a *factory*, not an engine, and that is not a style choice: a COM
@@ -71,7 +72,7 @@ Never call platform APIs directly from application logic. Always go through thes
 | Voice activity detection | `webrtcvad` | End-of-utterance only (push-to-talk supplies start). Tiny C extension, no ML runtime. See ADR-021. |
 | TTS (primary) | Piper TTS | Confirmed on Windows (Python 3.11 MSVC). Load ~2.3s once, synthesis ~0.19s. |
 | TTS (fallback) | Windows SAPI, driven directly (`SAPI.SpVoice` via comtypes) | Always available on Windows, no install needed. **Not pyttsx3** — it truncates every utterance after the first and rejects OneCore voice ids (ADR-003, alpha session 12a-2). pyttsx3 remains the Linux dev path only. |
-| Keyboard capture | `pynput` | No elevated privileges needed on Windows. Push-to-talk key handled via same pipeline. |
+| Keyboard capture | Takki's own window (SDL via pygame) | `TEXTINPUT` gives the character Windows composed, dead keys included; `KEYDOWN`/`KEYUP` give the physical key by scan code. Read from `PygameFocusSource.poll()`'s one drain on the main thread: no hook, no extra thread, no elevated privileges. Keys arrive only while Takki has focus; Alt+Tab is the way back. **Not pynput** — its hook never composes a dead key and mixes layouts after a switch (alpha #13); it is a dev dependency for old spikes only. |
 | Localisation | YAML per language | UI strings, encouragement, intents, voice catalog — all YAML. No gettext. See ADR-022. |
 | Language data | `wordfreq` | ~40 languages, bundled, no network. |
 | Persistence | SQLite (`sqlite3`) | Built-in, single file, no server. |
@@ -90,7 +91,7 @@ src/
     audio/          # TTS wrapper, sound cues, feedback generator
     persistence/    # SQLite schema and access
     display/        # pygame visual display (conditional) + focus source
-    input/          # keyboard stream, keypress taxonomy
+    input/          # window key reader, keypress taxonomy
     voice/          # faster-whisper wrapper
     clock.py        # Clock Protocol + SystemClock — all timing is deadline checks
     config.py       # Global lesson progression thresholds, key bindings, compiled defaults

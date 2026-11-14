@@ -4,7 +4,7 @@ Takki is an offline-first desktop application. It does not communicate over the 
 
 Despite the offline design, Takki has security-relevant surfaces worth disclosing responsibly:
 
-- **Runtime dependencies.** `faster-whisper`, `pygame`, `pynput`, `pyttsx3`, `wordfreq`, optional `piper-tts`, optional `llama-cpp-python`.
+- **Runtime dependencies.** `faster-whisper`, `pygame`, `pyttsx3`, `wordfreq`, optional `piper-tts`, optional `llama-cpp-python`.
 - **Model files downloaded at first run.** Piper voice models, optionally Whisper models and LLM tier models. Integrity is verified against the publisher's metadata where available.
 - **Locally stored data.** SQLite database per installation containing child profile names, progress, voice/display settings.
 - **Native code paths.** PyInstaller-bundled Windows executable.

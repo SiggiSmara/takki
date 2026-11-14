@@ -43,7 +43,7 @@ Both frameworks specify outcomes, not pedagogy. Takki's adaptive lesson engine i
 
 ### Cross-Platform Readiness
 
-The v1 target is Windows, but the architecture is intentionally portable. Almost the entire chosen stack — `faster-whisper`, Piper TTS, `pynput`, `wordfreq`, SQLite, `pygame`, PyInstaller — runs on Windows, macOS, and Linux without modification.
+The v1 target is Windows, but the architecture is intentionally portable. Almost the entire chosen stack — `faster-whisper`, Piper TTS, `wordfreq`, SQLite, `pygame` (which is also the key source), PyInstaller — runs on Windows, macOS, and Linux without modification.
 
 The three areas that are genuinely Windows-specific are isolated behind clean interfaces from the start:
 
@@ -67,7 +67,7 @@ Individual decisions are recorded in `docs/adr/`. Each ADR is self-contained and
 | [ADR-002](adr/0002-speech-recognition.md) | Speech Recognition | `faster-whisper` local Whisper; `tiny`+`base` bundled, auto-selected by CPU benchmark |
 | [ADR-003](adr/0003-text-to-speech.md) | Text-to-Speech | Piper TTS default; pyttsx3/SAPI fallback |
 | [ADR-004](adr/0004-llm-integration.md) | LLM Integration | *Superseded by ADR-031.* Negative decisions (no cloud LLM, no encouragement generation, no word filtering) carried forward |
-| [ADR-005](adr/0005-keyboard-handling.md) | Keyboard Handling | Keys from Takki's own window (SDL `TEXTINPUT`/`KEYDOWN`/`KEYUP`) since 2026-11-01, built in alpha #14; was `pynput`. Rely on Windows layout translation; no custom layout files |
+| [ADR-005](adr/0005-keyboard-handling.md) | Keyboard Handling | Keys from Takki's own window (SDL `TEXTINPUT`/`KEYDOWN`/`KEYUP`), not a global hook. Rely on Windows layout translation; no custom layout files |
 | [ADR-006](adr/0006-language-and-keyboard-layout-scope.md) | Language and Keyboard Layout Scope | Latin-script, direct-input only; IME languages excluded |
 | [ADR-007](adr/0007-language-data-word-frequency.md) | Language Data — Word Frequency | `wordfreq` for word/letter/bigram frequency; derived at startup |
 | [ADR-008](adr/0008-word-list-strategy.md) | Word List Strategy | *Superseded in part by ADR-029.* Family override file + no-LLM-filtering retained |
@@ -106,9 +106,9 @@ Individual decisions are recorded in `docs/adr/`. Each ADR is self-contained and
 │                    App Core (Python)                    │
 ├──────────────────────┬──────────────────────────────────┤
 │    Input Layer       │    Audio Layer                   │
-│  • pynput            │  • Piper TTS (default)           │
-│  • Windows layout    │  • pyttsx3/SAPI (fallback)       │
-│    API               │  • pygame (sound cues)           │
+│  • Takki's window    │  • Piper TTS (default)           │
+│    (SDL keys + text) │  • pyttsx3/SAPI (fallback)       │
+│  • Windows layout API│  • pygame (sound cues)           │
 │                      │  • Cloud TTS (optional plugin)   │
 ├──────────────────────┼──────────────────────────────────┤
 │    Voice Input       │    Lesson Engine                 │

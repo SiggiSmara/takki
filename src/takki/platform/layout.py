@@ -138,17 +138,6 @@ def dead_key_name(standalone: str) -> str:
         return f"dead-u{ord(standalone):04x}"
 
 
-def cell_of(layout: Layout, char: str) -> tuple[int, int] | None:
-    """The cell a press of `char` came from, or None if it is no cell of `layout`.
-
-    A dead key is a cell like any other (ADR-033: a rest key in every
-    language). Today's key source hands its press over as the character it
-    produces on its own, the Icelandic acute accent, which names the key (#12m session (7)).
-    """
-    key = layout.keys.get(char) or layout.keys.get(dead_key_name(char))
-    return None if key is None else (key.row, key.col)
-
-
 def curriculum_positions(layout: Layout) -> dict[str, tuple[int, int]]:
     """Letters, modifiers and dead keys as name → (row, col): what describe_mismatch compares."""
     needed = {key for grapheme in layout.graphemes.values() for key in grapheme.prereq_keys}

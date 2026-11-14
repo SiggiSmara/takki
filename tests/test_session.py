@@ -14,7 +14,7 @@ from takki.audio.tts_worker import SpeechFinished, TTSWorker
 from takki.display.focus import FocusLost
 from takki.events import Quit
 from takki.focus_model import PAUSED_ANNOUNCEMENT, RESUMED_ANNOUNCEMENT
-from takki.input import KeyEvent
+from takki.input.window_keys import KeyDown, KeyUp, TextTyped
 from takki.language import WordSource
 from takki.lesson import alignment
 from takki.lesson.alignment import ROUND, Alignment, Ask
@@ -52,11 +52,12 @@ from tests.fakes.fake_clock import FakeClock
 from tests.fakes.fake_focus_source import FakeFocusSource
 from tests.fakes.fake_frames import FakeFrameLimiter
 from tests.fakes.fake_letters import FakeLetterAudioSource
+from tests.fakes.fake_platform import FakePlatformInterface
 from tests.fakes.fake_sound_cues import FakeSoundCues
 from tests.fakes.fake_store import FakeStore
 from tests.fakes.fake_tts import FakeTTSEngine
 from tests.fakes.fixed_list_source import FixedListSource
-from tests.fakes.scripted_key_stream import ScriptedKeyStream
+from tests.fakes.keys import keystroke, scancode, typed
 from tests.fakes.waiting_queue import install
 from tests.rest import READY, seed_rest
 from tests.sessions import session_for
@@ -95,6 +96,10 @@ HOME = ["f", "j"]
 # Just inside ADR-027's floor: a press this soon after the letter was sent
 # cannot be an answer to it.
 TOO_EARLY_SECONDS = (config.HEARD_MIN_MS - 1) / 1000
+# SDL scan codes of keys that type nothing, or (the space bar) are no letter.
+SDL_LSHIFT, SDL_ENTER, SDL_SPACE = 225, 40, 44
+SDL_IS_DEAD_ACUTE = 52  # Icelandic, cell (3, 11) (alpha-plan #14a's trace)
+SDL_IS_LEFT_OF_ONE = 53  # Icelandic's dead ring, off the grid (ADR-026)
 
 
 def _rung_line(rung: str) -> str:
@@ -109,7 +114,6 @@ class Harness:
         source: WordSource | None = None,
         celebrant: Celebrant | None = None,
         now: Callable[[], str] | None = None,
-        key_events: list[KeyEvent] | None = None,
         seed: dict[str, int] | None = None,
         synthetic_letters: bool = False,
         store: FakeStore | None = None,
@@ -136,7 +140,7 @@ class Harness:
         self.letters = FakeLetterAudioSource(self.inbound)
         self.cues = FakeSoundCues()
         self.focus = FakeFocusSource(self.inbound)
-        self.stream = ScriptedKeyStream(key_events or [], self.inbound)
+        self.platform = FakePlatformInterface(layout=self.layout)
         self.frames = FakeFrameLimiter()
         # A caller may pass both, to run several sessions against one profile
         # the way a child restarting Takki does (alpha-plan #12d).
@@ -167,7 +171,7 @@ class Harness:
             clock=self.clock,
             frames=self.frames,
             focus=self.focus,
-            keys=self.stream,
+            dead_keys=self.platform,
             speech=self.worker,
             # Production Alpha's letters go through the TTS worker; the fake
             # keeps them off it, which is simpler to assert on but cannot show
@@ -241,12 +245,19 @@ class Harness:
 
     def press(self, char: str, *, release: bool = True, after: float = KEYSTROKE_SECONDS) -> None:
         self.clock.advance(after)
-        self.inbound.put(KeyEvent(pressed=True, char=char, name=None))
-        if release:
-            self.inbound.put(KeyEvent(pressed=False, char=char, name=None))
+        self.focus.keys(*typed(self.layout, char, release=release))
 
-    def key(self, name: str, *, pressed: bool = True) -> None:
-        self.inbound.put(KeyEvent(pressed=pressed, char=None, name=name))
+    def repeat(self, char: str) -> None:
+        """An OS auto-repeat of the held key that types `char`: its text again, not fresh."""
+        self.focus.keys(TextTyped(char, scancode(self.layout, char), fresh=False))
+
+    def release(self, char: str) -> None:
+        """The release of the key that types `char`, held since a `press(release=False)`."""
+        self.focus.keys(KeyUp(scancode(self.layout, char), 0))
+
+    def key(self, code: int, *, pressed: bool = True) -> None:
+        """A press or release of a key by SDL scan code: a binding, Shift, a dead key."""
+        self.focus.keys(KeyDown(code, 0) if pressed else KeyUp(code, 0))
 
     def opened(self) -> str:
         """The prompt now open, whichever member of the step it is.
@@ -417,10 +428,9 @@ class TestStartup:
         assert warmed[:3] == ["grapheme_weights", "bigram_weights", "key_shares"]
         assert harness.letters.played != []
 
-    def test_start_opens_a_session_row_and_starts_the_key_stream(self) -> None:
+    def test_start_opens_a_session_row(self) -> None:
         harness = Harness()
         harness.start()
-        assert harness.stream.started is True
         assert harness.loop.running is True
         assert harness.store.sessions() == [(harness.profile.id, ANY_TS, None)]
 
@@ -733,7 +743,7 @@ class TestRestCue:
         harness = self.at_reach()
         harness.press("g", release=False)
         harness.loop.tick()
-        harness.press("g", release=False)
+        harness.repeat("g")
         harness.loop.tick()
         assert harness.cues.played == ["correct", "error"]
 
@@ -1059,7 +1069,7 @@ class TestAttemptPairing:
         harness.press(target, release=False)
         harness.loop.tick()
         # Same key, still physically down: an OS auto-repeat.
-        harness.press(target, release=False)
+        harness.repeat(target)
         harness.loop.tick()
         assert recorded == [(target, True)]
         assert harness.cues.played == ["correct"]
@@ -1161,7 +1171,7 @@ class TestKeypressInterrupt:
         before = harness.letters.stopped
         # Same wrong key, still down: an OS auto-repeat, which counts for
         # nothing and must not truncate the re-prompt it would otherwise cut.
-        harness.press("j", release=False)
+        harness.repeat("j")
         harness.loop.tick()
         assert harness.letters.stopped == before
 
@@ -2031,7 +2041,6 @@ class TestShutdown:
         harness.focus.quit()
         harness.loop.run()
         assert harness.loop.running is False
-        assert harness.stream.stopped is True
         assert harness.focus.closed is True
         assert harness.worker.run_one() is False
         assert harness.store.sessions() == [(harness.profile.id, ANY_TS, ANY_TS)]
@@ -2042,7 +2051,6 @@ class TestShutdown:
         harness.settle()
         harness.loop.stop()
         harness.loop.run()
-        assert harness.stream.stopped is True
         assert harness.focus.closed is True
 
     def test_a_stop_during_startup_is_not_lost(self) -> None:
@@ -2064,7 +2072,7 @@ class TestShutdown:
         harness.pump()
         assert harness.engine.spoken == []
         assert harness.store.introductions(harness.profile.id) == []
-        assert harness.stream.stopped is True
+        assert harness.focus.closed is True
         assert harness.store.sessions() == [(harness.profile.id, ANY_TS, ANY_TS)]
 
     def test_an_exception_in_a_tick_still_shuts_down(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -2078,7 +2086,6 @@ class TestShutdown:
         monkeypatch.setattr(harness.loop, "tick", broken)
         with pytest.raises(RuntimeError, match="tick"):
             harness.loop.run()
-        assert harness.stream.stopped is True
         assert harness.focus.closed is True
         assert harness.store.sessions() == [(harness.profile.id, ANY_TS, ANY_TS)]
 
@@ -2144,7 +2151,7 @@ class TestShutdown:
         harness.focus.lose_focus()
         harness.loop.tick()
         assert harness.loop.running is False
-        assert queued(harness) == [KeyEvent(pressed=True, char=target, name=None), FocusLost()]
+        assert queued(harness) == [*typed(harness.layout, target, release=False), FocusLost()]
         assert harness.cues.played == []
         assert harness.store.window_stats(harness.profile.id, target).attempt_count == 0
         harness.pump()
@@ -2182,7 +2189,6 @@ class TestShutdown:
         assert ticks == []
         assert harness.engine.spoken == []
         assert harness.store.introductions(harness.profile.id) == []
-        assert harness.stream.stopped is True
         assert harness.focus.closed is True
         assert harness.store.sessions() == [(harness.profile.id, ANY_TS, ANY_TS)]
 
@@ -2198,7 +2204,6 @@ class TestShutdown:
         harness.start()
         with pytest.raises(RuntimeError, match="disk"):
             harness.loop.shutdown()
-        assert harness.stream.stopped is True
         assert harness.focus.closed is True
         assert harness.engine.stopped == 1
         assert harness.worker.run_one() is True
@@ -2729,10 +2734,11 @@ class TestSlots:
         assert steps_of(harness.store, harness.profile.id) == STEPS[: day + 1]
 
 
-def drive(harness: Harness, pick: Callable[[Ask, int], str], limit: int = 2000) -> None:
+def drive(harness: Harness, pick: Callable[[Ask, int], str | int], limit: int = 2000) -> None:
     """Answer the alignment by hand until it ends: `pick(ask, round)` names the key.
 
-    A name longer than one character is a key with no character (Shift, Enter).
+    A character is pressed on the key that types it; an SDL scan code is a
+    press that types nothing (Shift, Enter, a dead key).
     """
     loop = harness.loop
     for _ in range(limit):
@@ -2743,9 +2749,8 @@ def drive(harness: Harness, pick: Callable[[Ask, int], str], limit: int = 2000) 
             ask = alignment.ask
             assert ask is not None
             key = pick(ask, alignment.rounds)
-            if len(key) > 1:
-                harness.key(key)
-                harness.key(key, pressed=False)
+            if isinstance(key, int):
+                harness.focus.keys(*keystroke(key))
             else:
                 harness.press(key, after=0.0)
         harness.pump()
@@ -2902,8 +2907,8 @@ class TestAlignment:
         }
         assert harness.cues.played == ["error"] + ["boundary"] * 7
 
-    @pytest.mark.parametrize("key", ["l", "shift", "enter", "space"])
-    def test_a_press_outside_the_column_is_guided_and_is_no_landing(self, key: str) -> None:
+    @pytest.mark.parametrize("key", ["l", SDL_LSHIFT, SDL_ENTER, SDL_SPACE])
+    def test_a_press_outside_the_column_is_guided_and_is_no_landing(self, key: str | int) -> None:
         harness = self.cold()
         asking(harness)
         harness.press("f", after=0.0)
@@ -2912,9 +2917,9 @@ class TestAlignment:
         harness.press("j", after=0.0)
         harness.loop.tick()
         assert asking(harness) == Ask(L_PINK)
-        if len(key) > 1:
-            harness.key(key)
-            harness.key(key, pressed=False)
+        if isinstance(key, int):
+            # The space bar types `' '` too; the alignment answers its key.
+            harness.focus.keys(*keystroke(key, " " if key == SDL_SPACE else None))
         else:
             harness.press(key, after=0.0)
         harness.loop.tick()
@@ -2945,7 +2950,7 @@ class TestAlignment:
         assert not harness.loop._asking  # pyright: ignore[reportPrivateUsage]
         # The landing stands; the next finger is asked once the key is up.
         assert len(harness.store.landings(harness.profile.id)) == 1
-        harness.inbound.put(KeyEvent(pressed=False, char="f", name=None))
+        harness.release("f")
         assert asking(harness) == Ask(R_IDX)
         assert harness.engine.spoken.count(alignment.LET_GO) == 1
 
@@ -2958,26 +2963,28 @@ class TestAlignment:
         assert asking(harness) == Ask(R_IDX)
         assert alignment.LET_GO not in harness.engine.spoken
 
-    def test_a_key_held_across_a_pause_is_told_to_let_go_after_the_resume(self) -> None:
+    def test_a_key_held_across_a_pause_is_released_by_the_window(self) -> None:
+        # SDL releases every held key just before it reports the focus lost,
+        # and a key still held on the way back is invisible to the window
+        # (alpha-plan #13). So the round starts again with no "let go".
         harness = self.cold()
         asking(harness)
         harness.press("f", release=False, after=0.0)
         harness.loop.tick()
+        harness.release("f")
         harness.focus.lose_focus()
         harness.loop.tick()
         harness.pump()
         harness.clock.advance(config.ALIGNMENT_HOLD_SECONDS * 2)
         harness.focus.gain_focus()
         harness.loop.tick()
-        harness.pump()
-        assert alignment.LET_GO not in harness.engine.spoken
-        harness.clock.advance(config.ALIGNMENT_HOLD_SECONDS)
-        harness.loop.tick()
-        harness.pump()
-        assert harness.engine.spoken[-2:] == [RESUMED_ANNOUNCEMENT, alignment.LET_GO]
-        harness.inbound.put(KeyEvent(pressed=False, char="f", name=None))
         assert asking(harness) == Ask(L_IDX)
-        assert harness.engine.spoken[-2:] == [alignment.HANDS_OFF, bump_ask(L_IDX)]
+        assert alignment.LET_GO not in harness.engine.spoken
+        assert harness.engine.spoken[-3:] == [
+            RESUMED_ANNOUNCEMENT,
+            alignment.HANDS_OFF,
+            bump_ask(L_IDX),
+        ]
 
     def test_a_first_lesson_cut_by_a_pause_is_spoken_again(self) -> None:
         harness = self.cold()
@@ -3044,11 +3051,11 @@ class TestAlignment:
         held.loop.tick()
         current = alignment_of(held.loop)
         assert current is not None and current.done
+        held.release(held.rest_char(ask.finger))
         held.focus.lose_focus()
         held.loop.tick()
         held.pump()
         held.focus.gain_focus()
-        held.inbound.put(KeyEvent(pressed=False, char=held.rest_char(ask.finger), name=None))
         heard = len(held.engine.spoken)
         held.settle()
         assert held.engine.spoken[heard:] == [RESUMED_ANNOUNCEMENT, *intro_lines(("f", "j"))]
@@ -3127,21 +3134,74 @@ class TestAlignment:
         assert (current[L_PINK].row, current[L_PINK].col) == (2, 1)
         assert current[L_PINK].chosen_by == "answer"
 
-    def test_a_dead_key_is_a_landing(self) -> None:
+    def test_a_dead_key_is_a_landing_and_every_key_is_disarmed_once_up(self) -> None:
         # Icelandic's right little finger may rest on the dead acute (ADR-033).
-        # The key source hands it over as the accent it makes on its own.
+        # From the window it is a press with no text, named by its scan code,
+        # and it leaves a composition armed for the next letter (alpha-plan #13).
         harness = self.cold(layout=build_is(), words={"aa": 1.0})
-        accent = "\u00b4"
-        drive(
-            harness,
-            lambda ask, _: accent if ask.finger == R_PINK else harness.rest_char(ask.finger),
-        )
+        presses: list[str | int] = []
+
+        def pick(ask: Ask, _: int) -> str | int:
+            key = SDL_IS_DEAD_ACUTE if ask.finger == R_PINK else harness.rest_char(ask.finger)
+            presses.append(key)
+            return key
+
+        drive(harness, pick)
         current = {
             key.finger: (key.row, key.col)
             for key in harness.store.rest_keys(harness.profile.id)
             if key.replaced_at is None
         }
         assert current[R_PINK] == (3, 11)
+        assert presses.count(SDL_IS_DEAD_ACUTE) == 3
+        assert harness.platform.disarmed == len(presses) == 3 * len(ROUND)
+
+    def test_a_held_dead_key_is_disarmed_when_it_comes_up_and_not_before(self) -> None:
+        # Its repeats flip the armed state by their parity (alpha-plan #13), so
+        # a disarm while it is still down could be undone by the next one.
+        harness = self.cold(layout=build_is(), words={"aa": 1.0})
+        asking(harness)
+        harness.focus.keys(*keystroke(SDL_IS_DEAD_ACUTE, release=False))
+        harness.loop.tick()
+        harness.clock.advance(config.ALIGNMENT_HOLD_SECONDS * 2)
+        harness.loop.tick()
+        assert harness.platform.disarmed == 0
+        harness.key(SDL_IS_DEAD_ACUTE, pressed=False)
+        harness.loop.tick()
+        assert harness.platform.disarmed == 1
+        harness.loop.tick()
+        assert harness.platform.disarmed == 1
+
+    @pytest.mark.parametrize(
+        "key",
+        [
+            SDL_IS_DEAD_ACUTE,
+            # Icelandic's key left of `1`: dead, plain and shifted, and off the
+            # grid, so no cell of the layout says so (review of #14b, finding 1).
+            SDL_IS_LEFT_OF_ONE,
+            # No dead key: the disarm changes nothing, and costs one call.
+            4,
+        ],
+    )
+    def test_a_key_pressed_while_nothing_is_asked_is_disarmed_too(self, key: int) -> None:
+        harness = self.cold(layout=build_is(), words={"aa": 1.0})
+        harness.loop.tick()  # the first lesson is speaking: nothing is asked
+        assert not harness.loop._asking  # pyright: ignore[reportPrivateUsage]
+        harness.focus.keys(*keystroke(key))
+        harness.loop.tick()
+        assert harness.platform.disarmed == 1
+        assert harness.store.landings(harness.profile.id) == []
+
+    def test_a_lesson_never_disarms_a_dead_key(self) -> None:
+        # A composite must still compose when the child types it (ADR-028).
+        harness = Harness(layout=build_is(), words={"aa": 1.0})
+        harness.start()
+        harness.opened()
+        aligned = harness.platform.disarmed
+        harness.focus.keys(*keystroke(SDL_IS_DEAD_ACUTE))
+        harness.loop.tick()
+        harness.loop.tick()
+        assert harness.platform.disarmed == aligned
 
     def test_a_retired_full_round_opens_with_the_two_bumps(self) -> None:
         store = FakeStore()

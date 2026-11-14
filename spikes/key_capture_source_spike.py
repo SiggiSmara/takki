@@ -1,6 +1,10 @@
 """
 Spike: where should Takki take its characters from? (alpha-plan #13)
 
+Needs pynput: a dev dependency only since alpha-plan #14b (2026-11-14), kept
+for spikes like this one and to be removed in time. If it is gone, add it
+back before running this.
+
 Opens a window like PygameFocusSource's, optionally starts a pynput hook beside
 it, and logs every key on one clock from three places:
 

@@ -11,7 +11,7 @@
 
 ### Rationale
 
-The project has many awkward-to-test dependencies: Piper TTS (model download, Windows-confirmed), `faster-whisper` (model download, audio in), `pynput` (keyboard hardware), `pygame.mixer` (sound card), Windows locale and keyboard APIs (Windows-only). Without architectural discipline, testing the lesson engine, intent pipeline, and progression rules would require setting up these dependencies — slow, flaky, and incompatible with the headless Linux dev environment.
+The project has many awkward-to-test dependencies: Piper TTS (model download, Windows-confirmed), `faster-whisper` (model download, audio in), the keyboard (SDL events from Takki's window), `pygame.mixer` (sound card), Windows locale and keyboard APIs (Windows-only). Without architectural discipline, testing the lesson engine, intent pipeline, and progression rules would require setting up these dependencies — slow, flaky, and incompatible with the headless Linux dev environment.
 
 The fix is to push every external interface behind a `Protocol` boundary. The pattern is already proven by the three Windows-specific platform interfaces (ADR-005, ADR-006, ADR-013) — this ADR generalises it to every external interface in the system.
 
@@ -29,16 +29,18 @@ Each protocol is introduced when its consuming component is first built. Real im
 |---|---|---|
 | `TTSEngine` | `PiperTTS`; `SapiTTS` (Windows fallback, SAPI driven directly); `FallbackTTS` (pyttsx3/espeak, the Linux dev path only — ADR-003) | `FakeTTSEngine` |
 | `SoundCuePlayer` | `PygameMixerCues` | `FakeSoundCues` |
-| `KeyEventStream` | `PynputKeyStream` | `ScriptedKeyStream` |
 | `VoiceTranscriber` | `WhisperTranscriber` | `ScriptedTranscriber` |
 | `WordSource` | `WordfreqSource` | `FixedListSource` |
 | `Clock` | `SystemClock` | `FakeClock` |
 | `HardwareProbe` | `RealHardwareProbe` | `FixedHardwareProbe` |
-| `FocusSource` | `PygameFocusSource` (always-on SDL window; emits foreground gained/lost, handles re-acquire requests) | `FakeFocusSource` |
+| `FocusSource` | `PygameFocusSource` (always-on SDL window; from its one drain of SDL's queue it emits focus gained/lost, `Quit`, and the window's key events through `WindowKeyReader` — ADR-005, ADR-028) | `FakeFocusSource`, which emits key events built by `tests/fakes/keys.py` and does not run the real reader |
+| `DeadKeys` | the platform interface's `disarm_dead_key()` (ADR-026) | `FakePlatformInterface`, which counts the calls |
 
 `HardwareProbe` runs the CPU microbenchmark that auto-selects the Whisper model (ADR-002). An `LLMRunner` Protocol was originally catalogued here; it was removed with LLM integration ([ADR-031](0031-no-llm-integration.md)).
 
-The platform functions bundled in `PlatformInterface` (`get_system_language`, `get_layout_positions`, `find_voice`, `get_fallback_tts`, and `detect_screen_reader` — ADR-026) are the Windows-specific instances of this same pattern.
+The platform functions bundled in `PlatformInterface` (`get_system_language`, `get_layout_positions`, `find_voice`, `get_fallback_tts`, `detect_screen_reader`, and `disarm_dead_key` — ADR-026) are the Windows-specific instances of this same pattern. The session loop takes the last of them through `DeadKeys`, a Protocol of that one method, so it depends on nothing else of the platform.
+
+`WindowKeyReader` (`takki.input.window_keys`) has no Protocol and no fake: it is a pure function of the SDL events it is given, tested directly (`tests/test_window_keys.py`), and through the real `PygameFocusSource.poll()` under the dummy video driver (`tests/test_focus.py`).
 
 **The Protocol boundary is also the plugin boundary.** Any third-party or community-contributed alternative — a different TTS engine, an alternative wake-word handler, a cloud-LLM adapter forked downstream — is a new Protocol implementation drop-in. There is no separate plugin framework; the Protocol set above is the public extension surface.
 
@@ -50,7 +52,7 @@ Default `uv run pytest` runs only Tiers 1 and 2 — fast, deterministic, no mode
 |---|---|---|---|---|
 | 1. Unit | Logic against fakes — lesson engine, progression rules, intent layers 1–3, milestone gates, encouragement selection | Linux | every PR | seconds; ~80% of suite |
 | 2. Integration (stubbed I/O) | SQLite in-memory, `wordfreq` for 2 languages, pygame headless, Whisper on WAV fixtures. *(pyttsx3+espeak is `audio`-marked and runs on the dev box only.)* | Linux | every PR | ~1 minute |
-| 3. Platform smoke | Windows platform interfaces (every shipped keyboard layout, via `LoadKeyboardLayout`), `pynput`, pyright's Windows pass with Windows dependencies installed, `pygame.mixer` cues, the no-audio-output startup refusal, Piper. **Not SAPI speech** — a runner has no audio output; see § Headless audio/video | `windows-latest` | every PR | a few minutes |
+| 3. Platform smoke | Windows platform interfaces (every shipped keyboard layout, via `LoadKeyboardLayout`; the dead-key disarm on a layout it activates for its own thread), the window on a real video driver, pyright's Windows pass with Windows dependencies installed, `pygame.mixer` cues, the no-audio-output startup refusal, Piper. **Not SAPI speech** — a runner has no audio output; see § Headless audio/video | `windows-latest` | every PR | a few minutes |
 | 4. Slow integration | Full Whisper corpus, all `wordfreq` languages | matrix | nightly | longer; off critical path |
 | 5. Release | PyInstaller bundle + `.exe` smoke test | `windows-latest` | on tag (from Beta pre-releases onward — the unsigned bundle ships in Beta per [roadmap.md](../roadmap.md)) | rare |
 
@@ -116,3 +118,7 @@ These require human testing. The Beta friends/family pilot in [roadmap.md](roadm
 - **Dependency injection container:** Rejected. Overkill at this codebase size. Direct constructor injection of Protocol implementations is sufficient.
 - **No isolation, real I/O in tests:** Rejected. Slow tests get skipped; skipped tests rot.
 - **Abstract base classes instead of Protocols:** Rejected. Forces inheritance, blocks structural typing, more verbose for no benefit.
+
+### Changes
+
+- 2026-11-14, alpha-plan #14b: `KeyEventStream`, a start/stop Protocol for pynput's listener thread, removed with pynput (`PynputKeyStream`, `ScriptedKeyStream`): the window has no thread to start, and its key events come through `FocusSource`. `DeadKeys` added; the platform functions are six; the platform smoke tier lists the window and the disarm instead of pynput.

@@ -21,8 +21,8 @@ def primary_subtag(locale_name: str) -> str:
     # not a country code -- there is no second component to strip separately,
     # splitting on "-" already isolates the primary subtag.
     #
-    # Module level (not nested in a method), like pynput_stream.translate(),
-    # so tests can exercise the parsing directly without a live Windows call.
+    # Module level (not nested in a method), so tests can exercise the
+    # parsing directly without a live Windows call.
     primary = locale_name.split("-")[0].lower()
     return primary or "en"
 
@@ -344,6 +344,11 @@ class WindowsPlatformInterface:
 
             return lambda: SapiTTS(voice_id)
         raise NotImplementedError("WindowsPlatformInterface requires Windows")
+
+    def disarm_dead_key(self) -> None:
+        # The calling thread's layout, as get_layout_positions() reads it: the
+        # main thread owns the window, and its composition is that thread's.
+        _flush(user32().GetKeyboardLayout(0))
 
     def detect_screen_reader(self) -> str | None:
         if sys.platform == "win32":

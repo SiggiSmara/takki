@@ -1,6 +1,10 @@
 """
 Spike: can the C7 trace listener and Takki's own listener run at once?
 
+Needs pynput, and no longer runs: it drove takki.input.pynput_stream, which
+left Takki in alpha-plan #14b (2026-11-14). spikes/window_trace.py traces
+the window that replaced it.
+
 Alpha session 12b-1 (2026-09-24). windows-validation.md C7 compares a trace
 taken *while Takki runs* against what Takki wrote, which is only meaningful
 if neither low-level keyboard hook misses events because the other exists.

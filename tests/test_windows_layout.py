@@ -293,6 +293,59 @@ class TestDeadKeyState:
         assert describe_mismatch(build_is(), layout) is None
 
 
+@contextmanager
+def active(hkl: int) -> Generator[None]:
+    """`hkl` as this thread's layout, which GetKeyboardLayout(0) reads, and the old one back after.
+
+    For this thread only: ActivateKeyboardLayout with no flags changes neither
+    the process nor the user's settings.
+    """
+    if sys.platform != "win32":
+        raise NotImplementedError("Windows only")
+    # A library object of its own, so its argtypes touch nothing the product sets.
+    lib = ctypes.WinDLL("user32", use_last_error=True)
+    lib.ActivateKeyboardLayout.restype = ctypes.wintypes.HKL
+    lib.ActivateKeyboardLayout.argtypes = [ctypes.wintypes.HKL, ctypes.wintypes.UINT]
+    previous = lib.ActivateKeyboardLayout(hkl, 0)
+    assert previous, f"ActivateKeyboardLayout failed: {ctypes.get_last_error()}"
+    try:
+        yield
+    finally:
+        lib.ActivateKeyboardLayout(previous, 0)
+
+
+class TestDisarmDeadKey:
+    """ADR-033 (alpha-plan #14 (m)): the alignment disarms what a dead key armed.
+
+    disarm_dead_key() works on the calling thread's layout, which in Takki is
+    the window's. Each test makes that Icelandic for its own thread, whatever
+    the machine has active, so it never passes or skips by the machine's
+    layout. Armed here through ToUnicodeEx, unflagged; that the window's own
+    key handling arms the same state is 14c's check on hardware.
+    """
+
+    def test_an_armed_acute_composes_the_next_letter_unless_disarmed(self) -> None:
+        from takki.platform.windows import WindowsPlatformInterface, to_unicode
+
+        with loaded(ICELANDIC) as hkl, active(hkl):
+            # The control: armed and not disarmed, `a` comes back composed.
+            assert to_unicode(hkl, 0x28)[0] < 0
+            assert to_unicode(hkl, 0x1E) == (1, "\u00e1")
+            assert to_unicode(hkl, 0x28)[0] < 0
+            WindowsPlatformInterface().disarm_dead_key()
+            assert to_unicode(hkl, 0x1E) == (1, "a")
+
+    def test_a_disarm_with_nothing_armed_changes_nothing(self) -> None:
+        # The session disarms after every key of the alignment, dead or not.
+        from takki.platform.windows import WindowsPlatformInterface, to_unicode
+
+        with loaded(ICELANDIC) as hkl, active(hkl):
+            WindowsPlatformInterface().disarm_dead_key()
+            assert to_unicode(hkl, 0x1E) == (1, "a")
+            assert to_unicode(hkl, 0x28)[0] < 0
+            assert to_unicode(hkl, 0x1E) == (1, "\u00e1")
+
+
 class TestLanguageComesFromTheKeyboard:
     def test_lang_is_the_layouts_not_the_system_locale(self) -> None:
         # The laptop reports locale en-150 with a German layout active, so these

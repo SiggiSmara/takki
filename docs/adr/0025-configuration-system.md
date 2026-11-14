@@ -93,15 +93,12 @@ LAYER_PROPORTIONS = [        # (max_keys_known_exclusive, layer1_frac, layer2_fr
     (None, 0.20, 0.80),
 ]
 
-# Key bindings (pynput key name strings)
-TALK_KEY    = "ctrl_r"
-REREAD_KEY  = "esc"
-RESTART_KEY = "esc"          # held; tap on the same key re-reads — see ADR-012
+# Key bindings (SDL scan codes: the physical key, whatever the layout)
+TALK_KEY    = 228            # Right Ctrl
+REREAD_KEY  = 41             # Escape
+RESTART_KEY = 41             # Escape, held; tap on the same key re-reads — see ADR-012
 RESTART_HOLD_MS = 800        # hold duration that separates restart from re-read;
                              # unused when reread_key and restart_key differ
-RESUME_KEY  = "f1"           # held while PAUSED, to re-acquire foreground — see ADR-028 §C8
-RESUME_HOLD_MS = 1000        # hold duration before the foreground request is made
-RESUME_REQUEST_TIMEOUT_MS = 1500   # request_foreground() deadline; expiry speaks the Alt+Tab hint
 
 # Key & accuracy state model (ADR-027)
 ATTEMPT_WINDOW          = 200    # rolling key_attempts window per (profile, key)
@@ -144,15 +141,9 @@ TONE_CHIRP_ON  = dict(freq_start=660,  freq_end=1100, duration_ms=150)
 TONE_CHIRP_OFF = dict(freq_start=1100, freq_end=660,  duration_ms=150)
 ```
 
-**Amended 2026-08-22 (alpha session 6b), two corrections to the block above.**
+**Bindings are SDL scan codes.** Takki reads its keys from its own window ([ADR-005](0005-keyboard-handling.md)), whose `KEYDOWN`/`KEYUP` name the physical key by SDL scan code, so that is what a binding is: Right Ctrl is 228 and Escape 41, on every layout. How the `takki_config.yaml` tier and the profile tier name a key for a parent is decided when those tiers are built.
 
-**The resume binding was missing.** [ADR-028 §C8](0028-composite-input-and-keyboard-ownership.md)'s keypress taxonomy has a **Resume hold** row — "configured held-key, while PAUSED" — but this ADR's binding list never defined it, so implementing the focus model had no key and no threshold to read. `RESUME_KEY`, `RESUME_HOLD_MS`, and `RESUME_REQUEST_TIMEOUT_MS` close that.
-
-The binding is chosen against a constraint the other three do not have: this key is held *while another application has focus*, so it must be one nobody holds for a second by accident. That rules out the bare modifiers — Ctrl (Ctrl+click, Ctrl+scroll, Ctrl+Shift+arrow) and Shift (Shift+arrow selection) are routinely held past a second, and Right Shift held 8 s additionally trips Windows FilterKeys, a trap for exactly this audience. `f1` is held by nobody, needs no chord, and is located by edge and by its neighbour Escape rather than by counting or by F-group gaps, which laptops and dense keyboards do not have. Its one side effect — opening the foreground app's help — costs a window Takki is about to raise past anyway. The Escape adjacency cuts the right way: Escape is live only while ACTIVE and `RESUME_KEY` only while PAUSED, so the two never contend, and a child groping for their reflex recovery key while paused lands on the key that brings them back.
-
-`RESUME_HOLD_MS` is longer than `RESTART_HOLD_MS` for the same reason. `RESUME_REQUEST_TIMEOUT_MS` is not a preference but the deadline that stands in for a return value: `request_foreground()` cannot report success (ADR-028 § Re-acquire has no synchronous answer), so a `FocusGained` inside this window is the success signal and expiry is the failure signal that speaks the Alt+Tab hint.
-
-**`"escape"` is not a pynput key name.** These values are `pynput.keyboard.Key` member names — what `Key.<member>.name` returns, which is what the keyboard stream puts in `KeyEvent.name`. pynput's member is `Key.esc`, so `"escape"` matched nothing: Escape would have fallen through to the taxonomy's **System** row and re-read would silently never have worked. Corrected to `"esc"` above.
+**No resume binding.** A key held while Takki is paused, to ask Windows to raise it, is rejected ([ADR-028 § C8](0028-composite-input-and-keyboard-ownership.md), "No held resume key"): the raise never got past the foreground lock on the test laptop, and the window cannot see a key while another application has focus. Alt+Tab is the way back.
 
 **Amended 2026-10-04 (alpha-plan #12f). The speed term's four keys, and `PHASE_C_MAX_LATENCY_RATIO`.**
 
@@ -208,13 +199,10 @@ sounds:
   chirp_off: ""
 
 keys:
-  talk:    "ctrl_r"       # pynput key name; also overridable per profile
-  reread:  "esc"
-  restart: "esc"         # same key as reread → tap re-reads, hold restarts
+  talk:    228           # Right Ctrl, as an SDL scan code; also overridable per profile
+  reread:  41            # Escape
+  restart: 41            # same key as reread → tap re-reads, hold restarts
   restart_hold_ms: 800   # ignored when reread and restart are bound to different keys
-  resume:  "f1"          # held while paused, to bring Takki back to the foreground
-  resume_hold_ms: 1000
-  resume_request_timeout_ms: 1500
 
 voice:
   tts_rate:          1.0             # speech rate multiplier; also overridable per profile
@@ -252,3 +240,4 @@ Key bindings, `tts_rate`, `tts_voice`, and `push_to_talk_mode` may be overridden
 ### Changes
 
 - 2026-11-13, alpha-plan #12m session (7): the alignment's numbers listed, and the banner saying ADR-033's amendment was pending removed.
+- 2026-11-14, alpha-plan #14b: key bindings are SDL scan codes (talk 228, re-read and restart 41), no longer pynput key names; the resume binding and its two timings removed (ADR-028 § C8, no held resume key).

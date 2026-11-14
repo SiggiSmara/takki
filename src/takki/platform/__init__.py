@@ -37,6 +37,16 @@ class PlatformInterface(Protocol):
 
     def detect_screen_reader(self) -> str | None: ...
 
+    def disarm_dead_key(self) -> None:
+        """Clear a dead key's armed composition in Takki's window.
+
+        The sixth function, added 2026-11-14 (alpha-plan #14). From the window
+        a dead key composes, and a dead key landed on in the alignment would
+        compose the next letter typed (ADR-033). Main thread only: the
+        composition belongs to the thread that owns the window.
+        """
+        ...
+
 
 def select_platform_interface() -> PlatformInterface:
     if sys.platform == "win32":

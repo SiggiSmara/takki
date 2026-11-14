@@ -8,7 +8,7 @@
 
 ---
 
-**Decision:** Five functions isolate all platform-specific behaviour behind a single `PlatformInterface` Protocol (three from the original cut; `detect_screen_reader()` added 2026-06-21 per ADR-028; `find_voice()` added 2026-09-20, see below). A `select_platform_interface()` factory maps `sys.platform` to the right concrete implementation; new platforms slot in here without touching any other code. A `DevStubInterface` acts as the fallback for platforms that do not yet have a real implementation, so the full codebase runs on any platform during development. The `Layout` / `PhysicalKey` / `Grapheme` data model from the key-introduction spike becomes the canonical return type for `get_layout_positions()` and lives in `src/takki/platform/layout.py`.
+**Decision:** Six functions isolate all platform-specific behaviour behind a single `PlatformInterface` Protocol (three from the original cut; `detect_screen_reader()` added per ADR-028; `find_voice()` and `disarm_dead_key()`, see below). A `select_platform_interface()` factory maps `sys.platform` to the right concrete implementation; new platforms slot in here without touching any other code. A `DevStubInterface` acts as the fallback for platforms that do not yet have a real implementation, so the full codebase runs on any platform during development. The `Layout` / `PhysicalKey` / `Grapheme` data model from the key-introduction spike becomes the canonical return type for `get_layout_positions()` and lives in `src/takki/platform/layout.py`.
 
 ### Why These Functions
 
@@ -21,6 +21,7 @@ The boundary is: *the underlying system API is unavoidably platform-specific and
 | `get_fallback_tts(voice_id)` | **SpVoice direct** → SAPI | pyttsx3 → nsss | pyttsx3 → espeak |
 | `detect_screen_reader()` | `SPI_GETSCREENREADER` + process scan | `NSWorkspace` / AX API | AT-SPI / process scan |
 | `find_voice(language)` | SAPI voice tokens in the registry | `NSSpeechSynthesizer` voices | espeak-ng voice list |
+| `disarm_dead_key()` | `ToUnicodeEx(VK_SPACE)`, unflagged, on the window's thread | not yet known | not yet known |
 
 `detect_screen_reader()` was added by ADR-028's 2026-06-21 revision and passes the same test that `get_app_data_dir()` failed: there is no maintained pure-Python cross-platform library that reports whether an assistive screen reader is active, whereas `platformdirs` covers app-data paths across Windows, macOS, and Linux with no platform-specific code (see ADR-025). The boundary admits exactly what the test admits.
 
@@ -33,11 +34,14 @@ class PlatformInterface(Protocol):
     def get_fallback_tts(self, voice_id: str) -> Callable[[], TTSEngine]: ...
     def detect_screen_reader(self) -> str | None: ...
     def find_voice(self, language: str) -> str | None: ...
+    def disarm_dead_key(self) -> None: ...
 ```
 
-`TTSEngine` is the TTS Protocol defined in ADR-003. All five methods on concrete implementations are called once at startup and their results cached by the caller.
+`TTSEngine` is the TTS Protocol defined in ADR-003. The first five methods are called once at startup and their results cached by the caller. `disarm_dead_key()` is the exception, below.
 
 **`find_voice()` and why the boundary grew to five** *(added 2026-09-20).* It answers "what can this machine speak", which is a question *about the platform* rather than a request for an object, and it has to answer during startup **before any audio object exists** — because a missing voice for the lesson language is a graceful stop ([ADR-003](0003-text-to-speech.md)), not something to discover mid-lesson. It could not be folded into `get_fallback_tts()`: that function yields an engine, and on Windows the engine can only be constructed on the TTS worker thread ([concurrency-model.md § TTS](../concurrency-model.md)), which is created later and cannot be asked a question synchronously. The Windows implementation reads the SAPI voice tokens out of the registry and touches no COM at all, which is what lets it run on the main thread at startup.
+
+**`disarm_dead_key()` and why the boundary grew to six.** Takki reads its keys from its own window ([ADR-005](0005-keyboard-handling.md)), whose thread composes dead keys. A dead key pressed during the keyboard alignment leaves a composition armed that would turn the child's next letter into a composite ([ADR-033](0033-rest-keys-and-keyboard-alignment.md)), so the session loop clears it. It is the one function that changes state rather than answering a question, and the one called during the session rather than at startup: after every key of the alignment, once that key is up, and never in a lesson, where a composite must still compose. The state belongs to the thread that owns the window, so it is called on the main thread only. On Windows it is the layout reader's own flush: Space through `ToUnicodeEx` with no flags, for the calling thread's layout (`GetKeyboardLayout(0)`), measured to clear a dead key the window armed in 10 of 10 trials (alpha #13). No cross-platform library touches another program's compose state, let alone the calling window's, so it passes the boundary test above. The session loop depends on it through `DeadKeys` (`takki.input`), a Protocol of that one method ([ADR-019](0019-testing-strategy-and-io-isolation.md)).
 
 This is the second instance of a pattern worth naming, the first being [ADR-025 § Language and layout must agree](0025-configuration-system.md): **a startup precondition that cannot be degraded.** Both ask the platform a question, compare the answer against the configured curriculum, and stop the app when they disagree, because continuing would mean teaching against a keyboard the child does not have or a voice they cannot understand. A third would be worth looking for before it becomes a third ad-hoc check in `main()`.
 
@@ -106,7 +110,7 @@ Finger assignment is derived from `col` via a universal `COL_TO_FINGER` mapping 
 - **A plain cell is a key, never a grapheme.** It is never a typing target (ADR-033 § Four tiers of key), so the word pool, the introduction order and the milestone denominators are unchanged. `build_en`, `build_de` and `build_is` still have 26, 30 and 36 graphemes **[T]**. Every engine use of `keys` either looks a key up from a grapheme or keeps only the keys that are graphemes. Stage 0's lookups by position (`anchor_keys`, `home_anchor_keys`) did neither until this amendment's review. They now go through `letters_by_position()`, so a position with no letter still raises, as their comments require **[T]**. A plain cell therefore reaches no lesson code **[A, from reading every use; one existing test changed, because it counted every home-row key as a letter]**.
 - **It goes in `keys`, not in a field of its own.** `keys` has always been the physical keys, a dead key included, which no consumer treats as a letter. The engine already reads letters through `graphemes`. A separate field would hold the letters' cells a second time, because a letter's key is a rest key too. Or it would split one keyboard across two dictionaries that the alignment would have to search together. The cost is the rule above: code that wants letters asks `graphemes`, or `letters_by_position()` when it looks a letter up by position. The review of this amendment suggested the separate field; it was weighed and not taken.
 - **Its name is the character the key produces unshifted**, as Windows reports it (`;`, `'`, `1`). A dead key keeps its `dead-<diacritic>` name. The name is what ADR-033's spoken key names will be looked up by (ADR-022). Those names are not part of this amendment.
-- **`PhysicalKey.dead`** is true for a dead key and only for a dead key **[M, T]**. #13 asked for the flag, because the alignment must disarm a dead key after a landing on it ([ADR-033 § Work](0033-rest-keys-and-keyboard-alignment.md#work-this-adr-requires-before-it-can-be-built)). `describe_mismatch` reads it too (below). **It is derived from the name, not stored.** The reader names every dead key `dead-<diacritic>` (`dead_key_name`), and a plain cell's name is one character. So the flag and the name cannot disagree. A stored flag could, and the review of this amendment found exactly that: a test fixture with a `dead-acute` key that was not flagged.
+- **`PhysicalKey.dead`** is true for a dead key and only for a dead key **[M, T]**. #13 asked for it for the alignment's disarm. As built (alpha #14) the alignment disarms after every key, because a dead key can lie off the grid or behind a modifier where no cell says so, so the flag is read by `describe_mismatch` (below). **It is derived from the name, not stored.** The reader names every dead key `dead-<diacritic>` (`dead_key_name`), and a plain cell's name is one character. So the flag and the name cannot disagree. A stored flag could, and the review of this amendment found exactly that: a test fixture with a `dead-acute` key that was not flagged.
 - **`PhysicalKey.scan_code`** is the cell's set-1 scan code, which is the code the reader asks Windows about. It is **derived from the position, not stored**, so a table, the fake and the reader cannot disagree about it. For every cell of the four keyboards, the code read back through `ToUnicodeEx` gives the cell's own character, or a dead key for a dead cell **[M]**. To make that possible, `SCAN_CODE_GRID` moved from `takki.platform.windows` to `takki.platform.layout`, beside `COL_TO_FINGER`. Like `COL_TO_FINGER`, it is keyboard geometry and not a Windows call. Moving it also lets the default suite check that every key in every hand-built table is a grid cell **[T]**. From #14 a key press is identified by its *SDL* scan code. The table from SDL's codes to set-1 is in `spikes/key_capture_source_spike.py` (`SET1_TO_SDL`); bringing it into product code is the job of #14 or of #12m's session 7 (the alignment), not this amendment.
 
 **What "every cell" covers.**
@@ -164,7 +168,7 @@ Returns a short identifier for an active screen reader (`"nvda"`, `"jaws"`, `"na
 ### Concrete Implementations
 
 **`WindowsPlatformInterface`** — `src/takki/platform/windows.py`  
-Real implementations calling Windows APIs. Only imported on `win32`. `detect_screen_reader()` uses `SPI_GETSCREENREADER` plus a process-name scan.
+Real implementations calling Windows APIs. Only imported on `win32`. `detect_screen_reader()` uses `SPI_GETSCREENREADER` plus a process-name scan. `disarm_dead_key()` flushes the calling thread's layout as `read_layout()` does before it reads.
 
 **`DevStubInterface`** — `src/takki/platform/dev_stub.py`  
 Fallback for platforms without a real implementation. Logs a startup warning so it is never silently used in production:
@@ -173,6 +177,7 @@ Fallback for platforms without a real implementation. Logs a startup warning so 
 - `get_fallback_tts(voice_id)` → the `FallbackTTS` class itself as the factory; pyttsx3 picks its own backend, and `voice_id` is ignored because espeak selects by text language rather than by token id
 - `detect_screen_reader()` → returns `None` (no cross-platform detection in the stub)
 - `find_voice()` → returns the language code itself; espeak-ng, the Linux pyttsx3 backend, ships every language Takki teaches, so the dev box never hits the graceful stop
+- `disarm_dead_key()` → does nothing; the stub's English has no dead key
 
 The stub produces real output — pyttsx3 speaks, the layout is valid — but cannot reflect the user's actual keyboard layout or system language beyond what `$LANG` reports. Acceptable for development; not acceptable for a shipped product targeting a specific platform.
 
@@ -184,6 +189,7 @@ Configurable fake for unit tests:
 - `get_layout_positions()` → returns a configurable `Layout`, default US QWERTY (`build_en()`, so the same cells as the dev stub)
 - `get_fallback_tts(voice_id)` → returns a factory over one shared `FakeTTSEngine`, and records the id it was asked for so a test can assert the verified voice reached the engine
 - `detect_screen_reader()` → returns a configurable value, default `None`
+- `disarm_dead_key()` → counts the calls (`disarmed`)
 
 All logic code depends on `PlatformInterface`, not on a concrete class. Tests instantiate `FakePlatformInterface` directly — no monkey-patching.
 
@@ -201,3 +207,4 @@ The original name in the architecture doc was `get_home_row_keys()`. ADR-023's k
 ### Changes
 
 - 2026-11-13, alpha-plan #12m session (7): a press on a key that produces no character is not a landing, as the alignment is built; the open question to session 7 closed.
+- 2026-11-14, alpha-plan #14b: `disarm_dead_key()` added as the sixth function (ADR-033's disarm, built from the window); `PhysicalKey.dead`'s reason restated, since the alignment disarms after every key.

@@ -48,3 +48,7 @@ class DevStubInterface:
 
     def detect_screen_reader(self) -> str | None:
         return None
+
+    def disarm_dead_key(self) -> None:
+        # The dev box's English has no dead key.
+        pass

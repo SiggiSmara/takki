@@ -1,20 +1,18 @@
 from dataclasses import dataclass
 
 from takki import config
-from takki.input import KeyEvent
+from takki.input.window_keys import KeyDown, KeyUp, TextTyped
 
 
 @dataclass(frozen=True)
 class KeyBindings:
     """Compiled defaults (ADR-025 tier 1); the yaml and per-profile tiers construct this with overrides."""
 
-    talk: str = config.TALK_KEY
-    reread: str = config.REREAD_KEY
-    restart: str = config.RESTART_KEY
-    resume: str = config.RESUME_KEY
+    # SDL scan codes, as config.py's.
+    talk: int = config.TALK_KEY
+    reread: int = config.REREAD_KEY
+    restart: int = config.RESTART_KEY
     restart_hold_ms: int = config.RESTART_HOLD_MS
-    resume_hold_ms: int = config.RESUME_HOLD_MS
-    resume_request_timeout_ms: int = config.RESUME_REQUEST_TIMEOUT_MS
 
 
 @dataclass(frozen=True)
@@ -30,11 +28,6 @@ class RecoveryKey:
     # (ADR-012 § Recovery).
     reread: bool
     restart: bool
-
-
-@dataclass(frozen=True)
-class ResumeKey:
-    pass
 
 
 @dataclass(frozen=True)
@@ -63,20 +56,24 @@ class System:
     pass
 
 
-Classification = TalkKey | RecoveryKey | ResumeKey | Character | Composing | Boundary | System
+Classification = TalkKey | RecoveryKey | Character | Composing | Boundary | System
 
-# ADR-028's Boundary row. Backspace sits here and nowhere else: ADR-012 disables
+# ADR-028's Boundary row, as SDL scan codes: Backspace, Tab, Delete, Enter and
+# the keypad's Enter. Backspace sits here and nowhere else: ADR-012 disables
 # it outright, so there is no buffer or undo path for it to reach.
-BOUNDARY_KEYS = frozenset({"backspace", "tab", "delete", "enter"})
+BOUNDARY_KEYS = frozenset({42, 43, 76, 40, 88})
+SPACE = 44
 
 
-def classify(event: KeyEvent, bindings: KeyBindings, *, paused: bool) -> Classification:
-    """ADR-028 § C8's keypress taxonomy, as a pure function of the event, the bindings and the state."""
-    # KeyEvent.name is set only for pynput Key.* members and char only for
-    # KeyCode (session 5's translate()), so name-vs-char is the Key/KeyCode
-    # split. Bindings are Key.* names per ADR-025 and so are matched on name.
-    if event.name is None:
-        if event.char is None or not event.char.isprintable():
+def classify(event: KeyDown | KeyUp | TextTyped, bindings: KeyBindings) -> Classification:
+    """ADR-028 § C8's keypress taxonomy, as a pure function of the event and the bindings."""
+    if isinstance(event, TextTyped):
+        # The space bar types `' '` but is System by its key: it is never
+        # introduced (ADR-023 § "The space bar is likewise never introduced"),
+        # so it has no lesson meaning to classify.
+        if event.scancode == SPACE:
+            return System()
+        if not event.text.isprintable():
             return Composing()
         # Case is folded here, once, and never reaches the lesson engine
         # (ADR-027 § Case is folded at the boundary). Takki teaches letters,
@@ -89,19 +86,18 @@ def classify(event: KeyEvent, bindings: KeyBindings, *, paused: bool) -> Classif
         # characters, which would make the German curriculum untypeable.
         # `.lower()` is single-character for every letter in every alphabet
         # Takki teaches, `ẞ` included.
-        return Character(event.char.lower())
-    if paused and event.name == bindings.resume:
-        return ResumeKey()
-    if event.name == bindings.talk:
+        return Character(event.text.lower())
+    if event.scancode == bindings.talk:
         return TalkKey()
-    if event.name in (bindings.reread, bindings.restart):
+    if event.scancode in (bindings.reread, bindings.restart):
         return RecoveryKey(
-            reread=event.name == bindings.reread,
-            restart=event.name == bindings.restart,
+            reread=event.scancode == bindings.reread,
+            restart=event.scancode == bindings.restart,
         )
-    if event.name in BOUNDARY_KEYS:
+    if event.scancode in BOUNDARY_KEYS:
         return Boundary()
-    # Everything left is System, which includes Key.space: the space bar is
-    # never introduced (ADR-023 § "The space bar is likewise never introduced"),
-    # so it has no lesson meaning to classify.
+    # Every other key's press and release, a letter's included: they say only
+    # which key it was. What a press typed, if anything, arrives as its own
+    # TextTyped. A press that types nothing (a dead key arming, Shift) is
+    # ADR-028's Composing, and nothing in a lesson answers it.
     return System()

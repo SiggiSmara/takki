@@ -2,6 +2,10 @@
 Read a log from key_capture_source_spike.py and report, per step, what each candidate source
 delivers (alpha-plan #13).
 
+Needs pynput: a dev dependency only since alpha-plan #14b (2026-11-14), kept
+for spikes like this one and to be removed in time. If it is gone, add it
+back before running this.
+
     uv run python spikes/key_capture_source_analyse.py <log.jsonl> [more.jsonl ...]
 
 Writes <log>.txt beside each log and prints it.

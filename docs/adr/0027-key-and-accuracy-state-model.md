@@ -215,7 +215,7 @@ This is accepted until there is more to go on. Nothing has been measured on a bl
 
 **Timeouts:** a configurable auto-advance timeout (Layer-1, see ADR-012) that fires when the child has not responded does not affect `key_stats`. The prompt is silently re-issued. Only a keystroke response triggers counting.
 
-**Held keys and OS auto-repeat — resolved 2026-08-22 (alpha session 7; raised by session 6b).** Holding a key makes Windows emit repeated press events, and [ADR-005](0005-keyboard-handling.md)/session 5 pass them through faithfully. The focus model suppresses repeats only for its own *gesture* keys (Escape's tap/hold, the resume hold), because whether a held **character** counts as repeated attempts is a counting question, not a gating one — so the engine receives every repeat.
+**Held keys and OS auto-repeat — resolved 2026-08-22 (alpha session 7; raised by session 6b).** Holding a key makes Windows repeat its character, and Takki's window passes every repeat through ([ADR-005](0005-keyboard-handling.md)). The focus model labels a repeat and suppresses none, because whether a held **character** counts as repeated attempts is a counting question, not a gating one — so the engine receives every repeat.
 
 The rule above absorbs the harmless case: repeats of a *wrong* press are already ignored until the correct character arrives. The damaging case is a held *correct* key — the first press is counted and advances the prompt, and the repeats that follow land on the **next** prompt as wrong first presses, each one incrementing `attempt_count` with `correct_count + 0` and firing an auto-rejection. One key held a beat too long can therefore tank the accuracy of a character the child never actually got wrong, and on a rolling 200-attempt window that distortion persists for a long time.
 
@@ -223,18 +223,13 @@ The rule above absorbs the harmless case: repeats of a *wrong* press are already
 
 **The doubled letter decides itself under this rule.** `ll` in "hello" is two prompts. A child who releases between them produces two distinct actuations, neither of which repeats a key that is down, so both count normally. A child who holds the key through both produces one attempt, and the second `l` stays open until they lift and press again — which is the thing being taught: a doubled letter is two keystrokes, and the tutor must not accept one held key as two. The rule is therefore *not* de-duplication by character or by elapsed time, either of which would have to choose between these two cases by guessing. It keys off physical down-state, which is exactly what separates them.
 
-**Two Windows assumptions this rests on, unverified until alpha session 12.** Both are behaviours of the real pynput path that no Linux test can exercise, and the rule is wrong if either fails. (1) OS auto-repeat delivers repeated *press* events with no intervening release — if Windows or pynput synthesises a release between repeats, every repeat reads as a fresh actuation and the rule silently does nothing. (2) A press and its release report the same character for the same physical key. `KeyCode.char` is recomputed from live modifier state, so a Shift released a beat before the letter reports `A` down and `a` up; the focus model case-folds both sides to absorb that, which fails if release instead reports `None` or an unrelated character, leaking a down entry that costs one ignored press of that key. Confirm both by hand on Windows and correct here if either is wrong.
+**What the rule reads, from Takki's window** (measured in alpha #13, [research/key-capture-source.md](../research/key-capture-source.md) § 2; built in alpha-plan #14b).
+- **A repeat is text that is not fresh.** pygame drops SDL's repeat `KEYDOWN`s, so there is exactly one `KEYDOWN` per physical press, and the character repeats as `TEXTINPUT`s with no fresh `KEYDOWN`. "Fresh exactly when a `KEYDOWN` arrived since the previous `TEXTINPUT`, while that key is down" agreed with SDL's own repeat flag for 764 of 764 `TEXTINPUT`s **[M]**. `ll` released between presses gives two presses; held, it gives one **[M]**. Text with no key down behind it is never fresh.
+- **A press that produced two characters is one attempt, judged by its first character.** A dead key that cannot combine with the letter after it gives two `TEXTINPUT`s from one press (`´` then `k`); the second is not fresh, so it is a repeat ([ADR-028 § Event model](0028-composite-input-and-keyboard-ownership.md#event-model)).
+- **Down-state is keyed on the scan code**, which is the same on press and release by construction, including with Shift released first **[M]**, so a release never needs a character.
+- **No down entry leaks off the foreground.** SDL releases every held key just before it reports the focus lost **[M]**. A key still held when focus comes back is invisible until it is pressed again **[M]**, which costs nothing: the key counts on its next real press. Whether a repeat still running as focus returns can arrive as a fresh `KEYDOWN` is checked by hand in alpha-plan #14c.
 
-*(2026-11-01, alpha #13: key events move from pynput to Takki's own window ([ADR-028 § Event model](0028-composite-input-and-keyboard-ownership.md), "Decided"; [research/key-capture-source.md](../research/key-capture-source.md) § 2). The rule stands; how its two assumptions read changes.*
-- *(1) Auto-repeat:*
-  - *SDL flags every repeat, and pygame drops the repeat `KEYDOWN`s, so there is exactly one `KEYDOWN` per physical press. The characters repeat as `TEXTINPUT`s with no fresh `KEYDOWN`.*
-  - *"Fresh exactly when a `KEYDOWN` arrived since the previous `TEXTINPUT`" agreed with SDL's own repeat flag for 764 of 764 `TEXTINPUT`s [measured].*
-  - *`ll` released between presses gives two presses; held, it gives one [measured].*
-- *(2) Press and release, same key:* down-state is keyed on the scan code, which is the same on both sides by construction, including with Shift released first [measured]. The case-folding workaround in the focus model is no longer what makes the release find its entry.
-- *A release missed off the foreground:* SDL synthesises a `KEYUP` for every held key when focus leaves, so no down entry leaks [measured]. A key still held when focus comes back is invisible until it is pressed again [measured]. That costs nothing: the key counts on its next real press.
-- *#14 builds it, and re-runs windows-validation tier C against the new source.)*
-
-**Where each half lives.** The focus model labels the press — `TypedCharacter.repeat` — because down-state is a physical fact of the input stream and the gate already tracks it for gesture keys; it still suppresses nothing, so the engine sees every repeat. The counting decision, *repeat ⇒ not an attempt*, is this section's, implemented in `AttemptCounter` (`takki.lesson.attempts`). A release missed while Takki is off the foreground (the secure desktop) leaks one down entry, and the next release of that character clears it: the cost is one ignored press of one key, never a stuck prompt.
+**Where each half lives.** The window's key reader marks text fresh or not (`TextTyped.fresh`, `takki.input.window_keys`), and the focus model labels the press from it — `TypedCharacter.repeat` is `not fresh` — because a repeat is a physical fact of the input stream; it still suppresses nothing, so the engine sees every repeat. The counting decision, *repeat ⇒ not an attempt*, is this section's, implemented in `AttemptCounter` (`takki.lesson.attempts`).
 
 **Consequence:** `correct_count / attempt_count` is true first-attempt accuracy. It cannot be inflated by retry presses.
 
@@ -250,7 +245,7 @@ The question was raised by a review finding that `AttemptCounter.press` compared
 
 **`str.lower()`, never `str.casefold()`.** Casefold maps `ß` to `ss` — two characters — and no prompt target is ever two characters, so casefolding would make the German curriculum untypeable. `str.lower()` is single-character for every letter in every alphabet Takki teaches, `ẞ` → `ß` included. Pinned by `tests/test_taxonomy.py::TestCaseFolding`. (Turkish `İ` lower-cases to two codepoints, but Turkish is outside the ADR-006 layout set; it would read as a wrong answer, not a crash.)
 
-This also removes an assumption from the held-key rule above. The focus model folded case in its own down-state tracking to absorb pynput recomputing `KeyCode.char` from live modifier state — `A` down, `a` up for one physical key. That fold now happens once, upstream, so the down-state set is keyed on the physical key rather than on whichever case Shift happened to produce. Point (2) of the two Windows assumptions still needs hand-confirmation, but the failure it guards against is now a missing character rather than a case mismatch.
+Case never reaches the held-key rule: down-state is keyed on the scan code, so which case Shift produced on the press or the release cannot leave a key down.
 
 ### Bronze Criterion
 
@@ -470,3 +465,7 @@ None of these is made here, except where the row says so.
 | [ADR-023](0023-key-introduction-protocol.md) | What the guided presses are, with its amendment. If the child is told the letter, they are predictable and not attempts |
 | [ADR-025](0025-configuration-system.md) | `ANCHOR_MIN_ATTEMPTS` and `ANCHOR_MIN_ACCURACY` removed, already in ADR-033's row |
 | [alpha-plan](../alpha-plan.md) | Session (4)'s bullets, corrected with this: `f` and `j` get a speed term; the rung is read by day against the current key. #12h's row, with this: the rung needs five days, not five sittings; `REST_SETTLED_SESSION_STARTS` is set to 2 in `config.py` on the laptop for the run and set back after it; test configs and staged databases are decided when the run sheet is written; and the run notes when the first celebration comes |
+
+### Changes
+
+- 2026-11-14, alpha-plan #14b: § First-Attempt Counting's held-key rule restated as read from Takki's window: a repeat is text that is not fresh, a press with two characters is one attempt judged by the first, down-state is keyed on scan code, and no down entry leaks off the foreground. The two pynput assumptions it rested on, and the resume hold, went with pynput.

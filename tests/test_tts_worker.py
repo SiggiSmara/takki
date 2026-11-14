@@ -6,12 +6,10 @@ import pytest
 from takki.audio.synthetic_letters import SyntheticLetterAudioSource
 from takki.audio.tts import TTSEngine
 from takki.audio.tts_worker import Command, Shutdown, Speak, SpeechFinished, TTSWorker
-from takki.display.focus import FocusEvent, FocusLost
-from takki.events import Quit
+from takki.display.focus import FocusLost
 from takki.focus_model import FocusModel
 from takki.speech import Speaker
 from tests.fakes.fake_clock import FakeClock
-from tests.fakes.fake_focus_source import FakeFocusSource
 from tests.fakes.fake_tts import FakeTTSEngine
 from tests.fakes.waiting_queue import install
 
@@ -84,10 +82,7 @@ class TestTTSWorkerRunOne:
         outbound: queue.Queue[SpeechFinished] = queue.Queue()
         worker = TTSWorker(FakeTTSEngine, outbound)
         letters = SyntheticLetterAudioSource(worker)
-        focus_events: queue.Queue[FocusEvent | Quit] = queue.Queue()
-        focus = FocusModel(
-            FakeFocusSource(focus_events), Speaker(worker, letters, FakeClock()), FakeClock()
-        )
+        focus = FocusModel(Speaker(worker, letters, FakeClock()), FakeClock())
         letters.play("a")
         focus.handle(FocusLost())
         letters.play("b")

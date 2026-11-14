@@ -20,6 +20,7 @@ class FakePlatformInterface:
         # Every voice id get_fallback_tts() was asked to build with, so a test
         # can assert the verified id actually reached the engine (ADR-003).
         self.fallback_voice_ids: list[str] = []
+        self.disarmed = 0
 
     def get_system_language(self) -> str:
         return self._language
@@ -36,3 +37,6 @@ class FakePlatformInterface:
 
     def detect_screen_reader(self) -> str | None:
         return self._screen_reader
+
+    def disarm_dead_key(self) -> None:
+        self.disarmed += 1

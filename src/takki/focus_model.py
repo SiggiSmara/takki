@@ -2,38 +2,27 @@ from dataclasses import dataclass
 from enum import Enum, auto
 
 from takki.clock import Clock
-from takki.display.focus import FocusEvent, FocusGained, FocusLost, FocusSource
-from takki.input import KeyEvent
-from takki.input.taxonomy import (
-    Boundary,
-    Character,
-    Classification,
-    KeyBindings,
-    RecoveryKey,
-    ResumeKey,
-    System,
-    classify,
-)
+from takki.display.focus import FocusEvent, FocusGained, FocusLost
+from takki.input.taxonomy import Boundary, Character, KeyBindings, RecoveryKey, System, classify
+from takki.input.window_keys import KeyDown, KeyUp, TextTyped, WindowKeyEvent
 from takki.speech import Speaker
 
 # Placeholder English. ADR-022 moves every user-facing string to per-language
 # YAML; no string table exists yet, so these live here until it does.
-# Names the way back, not just the state: Alt+Tab is the one resume path that
-# works on every machine. The held-key raise never got past Windows' foreground
-# lock on the test laptop, and its F1 sat behind Fn there (windows-validation
-# E2/E3, 2026-09-28; ADR-028 § Resume in Alpha).
+# Names the way back, not just the state: Takki's window sees no key while
+# another window has focus (alpha-plan #13), so Alt+Tab is the way back.
 PAUSED_ANNOUNCEMENT = "Paused. Press Alt+Tab to come back to Takki."
 RESUMED_ANNOUNCEMENT = "Back in Takki."
-ALT_TAB_HINT = "Press Alt+Tab to come back to Takki."
 
 
 @dataclass(frozen=True)
 class TypedCharacter:
     char: str
-    # True when this press is an OS auto-repeat of a character key that never
-    # came up. The gate reports the physical fact and suppresses nothing; what
-    # a repeat means for counting is ADR-027 § First-Attempt Counting's call,
-    # and the answer there is that it is not an attempt.
+    # True when the text was not fresh (takki.input.window_keys): an OS
+    # auto-repeat of a key that never came up, or the second character of one
+    # press. The gate reports the fact and suppresses nothing; what a repeat
+    # means for counting is ADR-027 § First-Attempt Counting's call, and the
+    # answer there is that it is not an attempt.
     repeat: bool = False
 
 
@@ -48,17 +37,18 @@ class RestartWord:
 
 
 @dataclass(frozen=True)
-class OtherKey:
-    """A press of a key that is no letter cell: Shift, Enter, Tab, Caps Lock, the space bar.
+class Pressed:
+    """A fresh press of a key that is no binding, by its SDL scan code: letters, Shift, a dead key.
 
-    Nothing in a lesson answers one. The alignment does: a finger asked for
-    may land there, and is guided off it (ADR-033; #12m session (7)).
+    Nothing in a lesson answers one: a lesson answers the text a press typed.
+    The alignment does, by the key's cell, since a landing is a physical key
+    whatever it types (ADR-033).
     """
 
-    name: str
+    scancode: int
 
 
-LessonCommand = TypedCharacter | RereadPrompt | RestartWord | OtherKey
+LessonCommand = TypedCharacter | RereadPrompt | RestartWord | Pressed
 
 
 class FocusState(Enum):
@@ -75,12 +65,10 @@ class FocusModel:
 
     def __init__(
         self,
-        focus: FocusSource,
         speech: Speaker,
         clock: Clock,
         bindings: KeyBindings | None = None,
     ) -> None:
-        self._focus = focus
         self._speech = speech
         self._clock = clock
         self._bindings = bindings if bindings is not None else KeyBindings()
@@ -88,24 +76,29 @@ class FocusModel:
         # A window that does not is corrected by the seed event FocusSource
         # emits at construction, which arrives before any key event.
         self.state = FocusState.ACTIVE
-        # Named keys currently held, so OS auto-repeat is not read as a new
-        # press (ADR-012 § Recovery). Character keys are held separately and
-        # are labelled rather than swallowed -- see _on_key.
-        self._down: set[str] = set()
-        self._chars_down: set[str] = set()
+        # The keys held, by SDL scan code. SDL releases every held key just
+        # before it reports the focus lost, and a key still held when focus
+        # returns is invisible until it is pressed again (alpha-plan #13), so
+        # nothing is left down that is not.
+        self._down: set[int] = set()
         self._restart_deadline: float | None = None
         self._restart_fired = False
-        self._resume_deadline: float | None = None
-        self._request_deadline: float | None = None
 
-    def handle(self, event: KeyEvent | FocusEvent) -> LessonCommand | None:
+    def handle(self, event: WindowKeyEvent | FocusEvent) -> LessonCommand | None:
         if isinstance(event, FocusGained):
             self._on_focus_gained()
             return None
         if isinstance(event, FocusLost):
             self._on_focus_lost()
             return None
-        return self._on_key(event)
+        if isinstance(event, KeyDown):
+            return self._on_press(event)
+        if isinstance(event, KeyUp):
+            return self._on_release(event)
+        if isinstance(event, TextTyped):
+            return self._on_text(event)
+        # KeymapChanged: what Takki says about a layout switch is roadmap § D's.
+        return None
 
     def check_deadlines(self) -> LessonCommand | None:
         now = self._clock.monotonic()
@@ -118,17 +111,11 @@ class FocusModel:
             # the confirmation the moment the gesture qualifies (ADR-012).
             self._restart_fired = True
             return RestartWord()
-        if self._resume_deadline is not None and now >= self._resume_deadline:
-            self._resume_deadline = None
-            self._focus.request_foreground()
-            self._request_deadline = now + _seconds(self._bindings.resume_request_timeout_ms)
-        if self._request_deadline is not None and now >= self._request_deadline:
-            # Expiry is the only failure signal: the raise may have been refused
-            # or downgraded to a taskbar flash, and request_foreground() cannot
-            # say which (ADR-028 § Re-acquire has no synchronous answer).
-            self._request_deadline = None
-            self._announce(ALT_TAB_HINT)
         return None
+
+    def is_down(self, scancode: int) -> bool:
+        """Whether a key, by its SDL scan code, is still held."""
+        return scancode in self._down
 
     def _on_focus_lost(self) -> None:
         if self.state is FocusState.PAUSED:
@@ -143,56 +130,37 @@ class FocusModel:
         if self.state is FocusState.ACTIVE:
             return
         self.state = FocusState.ACTIVE
-        # Clears _request_deadline too: an arriving FocusGained *is* the success
-        # signal, whether it came from the held key's request or a manual
-        # Alt+Tab -- both resume routes converge here.
         self._clear_gestures()
-        # An Alt+Tab hint still being spoken is now false, and announce()
+        # A pause announcement still being spoken is now false, and announce()
         # cuts it rather than letting it delay the resume line.
         self._announce(RESUMED_ANNOUNCEMENT)
 
-    def _on_key(self, event: KeyEvent) -> LessonCommand | None:
-        classification = classify(event, self._bindings, paused=self.state is FocusState.PAUSED)
-        if not event.pressed:
-            return self._on_release(event, classification)
-        if isinstance(classification, Character):
-            # Down-state is recorded even while PAUSED, exactly as named keys
-            # are: a key held across the transition is still physically down,
-            # so its repeats must keep reading as repeats on the way back.
-            # Already lower case -- `classify()` folds it (ADR-027 § Case is
-            # folded at the boundary), so down-state is keyed on the physical
-            # key rather than on whichever case Shift happened to produce.
-            held = classification.char
-            repeat = held in self._chars_down
-            self._chars_down.add(held)
-            if self.state is FocusState.PAUSED:
-                return None
-            return TypedCharacter(classification.char, repeat=repeat)
-        if event.name is not None:
-            if event.name in self._down:
-                return None
-            self._down.add(event.name)
+    def _on_press(self, event: KeyDown) -> LessonCommand | None:
+        # Every KEYDOWN is a new press: pygame passes none for an auto-repeat,
+        # and SDL posts one only for a key its own state has up. No guard for
+        # a key already down, which could only ever drop a key's every later
+        # press if the two states disagreed (review of #14b, decided by the
+        # developer).
+        self._down.add(event.scancode)
         if self.state is FocusState.PAUSED:
-            # Focus gating: lesson input is dropped before any lesson logic
-            # runs. The resume key is the one exception -- pynput's hook is
-            # global, so it is still seen, and it is the way back.
-            if isinstance(classification, ResumeKey):
-                self._resume_deadline = self._clock.monotonic() + _seconds(
-                    self._bindings.resume_hold_ms
-                )
+            # Focus gating: lesson input is dropped before any lesson logic runs.
             return None
+        classification = classify(event, self._bindings)
         if isinstance(classification, RecoveryKey):
             return self._on_recovery_press(classification)
-        if isinstance(classification, Boundary | System) and event.name is not None:
-            return OtherKey(event.name)
+        if isinstance(classification, Boundary | System):
+            return Pressed(event.scancode)
         # TalkKey is classified and then dropped: the voice subsystem is Beta
-        # (ADR-020), so Alpha has nothing to route it to. Composing is ignored
-        # by the taxonomy itself.
+        # (ADR-020), so Alpha has nothing to route it to.
         return None
 
-    def is_down(self, key: str) -> bool:
-        """Whether a key, by its folded character or its name, is still held."""
-        return key in self._chars_down or key in self._down
+    def _on_text(self, event: TextTyped) -> LessonCommand | None:
+        if self.state is FocusState.PAUSED:
+            return None
+        classification = classify(event, self._bindings)
+        if not isinstance(classification, Character):
+            return None
+        return TypedCharacter(classification.char, repeat=not event.fresh)
 
     def _on_recovery_press(self, key: RecoveryKey) -> LessonCommand | None:
         if key.reread and key.restart:
@@ -204,23 +172,11 @@ class FocusModel:
         # Two different keys: each fires its own action on press, no hold timing.
         return RereadPrompt() if key.reread else RestartWord()
 
-    def _on_release(self, event: KeyEvent, classification: Classification) -> LessonCommand | None:
-        if event.name is not None:
-            self._down.discard(event.name)
-        if isinstance(classification, Character):
-            # Folded by `classify()` on both sides, which is what makes this
-            # discard find its entry: pynput recomputes KeyCode.char from live
-            # modifier state, so a Shift released a moment before the letter
-            # reports "A" down and "a" up -- one physical key, and the entry
-            # has to clear. That was the original reason for folding here and
-            # it survives the move to the boundary. A release missed entirely
-            # (secure desktop) leaks one entry, which the next release of that
-            # key clears, costing one ignored press of it and never the key.
-            self._chars_down.discard(classification.char)
+    def _on_release(self, event: KeyUp) -> LessonCommand | None:
+        self._down.discard(event.scancode)
         if self.state is FocusState.PAUSED:
-            if isinstance(classification, ResumeKey):
-                self._resume_deadline = None
             return None
+        classification = classify(event, self._bindings)
         if (
             isinstance(classification, RecoveryKey)
             and classification.reread
@@ -235,15 +191,8 @@ class FocusModel:
         return None
 
     def _clear_gestures(self) -> None:
-        # Deadlines only. _down survives on purpose: a key held across the
-        # transition keeps auto-repeating, and clearing it here would let the
-        # next repeat read as a fresh press and fire an unasked-for restart.
-        # A release missed on the secure desktop leaks one entry, which the
-        # next release of that key clears -- costing one gesture, not a word.
         self._restart_deadline = None
         self._restart_fired = False
-        self._resume_deadline = None
-        self._request_deadline = None
 
     def _announce(self, text: str) -> None:
         self._speech.announce(text)

@@ -16,7 +16,6 @@ dependencies = [
     "faster-whisper>=1.2.1",
     "platformdirs>=4.9.6",
     "pygame>=2.6.1",
-    "pynput>=1.8.2 ; sys_platform == 'win32'",
     "pyttsx3>=2.99",
     "wordfreq>=3.1.1",
 ]
@@ -31,6 +30,10 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     "pre-commit>=4.6.0",
+    # Spikes only, marked "Needs pynput" in their docstrings. Takki reads its
+    # keys from its own window (alpha-plan #14), and pynput goes for good once
+    # no spike that needs it is to run again.
+    "pynput>=1.8.2 ; sys_platform == 'win32'",
     "pyright[nodejs]>=1.1.414",
     "pytest>=9.0.3",
     "ruff>=0.15.13",
@@ -77,7 +80,7 @@ addopts = [
 markers = [
     "audio: tests that require a working audio output device or SDL audio init",
     "model: tests that require downloading or loading a Piper, Whisper, or LLM model",
-    "windows_only: tests that only run on Windows (platform interfaces, SAPI, pynput on Windows)",
+    "windows_only: tests that only run on Windows (platform interfaces, SAPI, the real window)",
     "slow: integration tests that take more than a few seconds to run",
     "release: tests that run only on release tags (PyInstaller bundle smoke tests)",
     "no_audio_output: tests that need a SAPI voice and NO audio output device (the windows-latest runner)",

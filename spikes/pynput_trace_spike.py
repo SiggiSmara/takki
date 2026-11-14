@@ -1,6 +1,10 @@
 """
 Spike: pynput event trace — timestamp, pressed/released, char, name
 
+Needs pynput, and no longer runs: it drove takki.input.pynput_stream, which
+left Takki in alpha-plan #14b (2026-11-14). spikes/window_trace.py traces
+the window that replaced it.
+
 Split off the front of alpha session #12a (2026-09-20) so #12a's Windows
 carry-forward decisions -- letter case above all -- can be read against a
 real event log instead of argued from memory. Also feeds

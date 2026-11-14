@@ -12,7 +12,6 @@ import pytest
 from takki.audio.cues import CueOutputError
 from takki.audio.tts import SpeechOutputError
 from takki.audio.tts_worker import TTSWorker
-from takki.input import KeyEvent
 from takki.lesson.alignment import FIRST_LESSON, HANDS_OFF, ROUND, Ask, ask_text
 from takki.main import (
     EXIT_LAYOUT_MISMATCH,
@@ -28,7 +27,7 @@ from takki.session import InboundEvent
 from tests.fakes.fake_focus_source import FakeFocusSource
 from tests.fakes.fake_platform import FakePlatformInterface
 from tests.fakes.fake_sound_cues import FakeSoundCues
-from tests.fakes.scripted_key_stream import ScriptedKeyStream
+from tests.fakes.keys import typed
 
 
 class TestResolveLanguage:
@@ -210,16 +209,19 @@ class TestStartup:
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, signals: None
     ) -> None:
         # Everything main() builds is real except the four things that need a
-        # machine: the window, the mixer, the voice and the keyboard hook.
+        # machine: the window, which is also the keyboard, the mixer and the voice.
         platform = FakePlatformInterface()
         engine = platform.get_fallback_tts("fake-en")()
         platform.fallback_voice_ids.clear()
         database = tmp_path / "data" / "takki.sqlite"
 
         class Window(FakeFocusSource):
+            made: "Window | None" = None
+
             def __init__(self, inbound: queue.Queue[InboundEvent]) -> None:
                 super().__init__(inbound)
                 self.gain_focus()
+                Window.made = self
 
         # A child who rests where the keyboard is marked: each ask of the
         # alignment is answered with that finger's conventional rest key.
@@ -230,17 +232,6 @@ class TestStartup:
             )
             for finger, col in zip(ROUND, (4, 7, 1, 10, 3, 8, 2, 9), strict=True)
         }
-
-        class Keys(ScriptedKeyStream):
-            joined = False
-            inbound: "queue.Queue[InboundEvent] | None" = None
-
-            def __init__(self, inbound: queue.Queue[InboundEvent]) -> None:
-                super().__init__([], inbound)
-                Keys.inbound = inbound
-
-            def join(self, timeout: float) -> None:
-                Keys.joined = True
 
         class Frames:
             waits = 0
@@ -254,10 +245,8 @@ class TestStartup:
                 time.sleep(0.001)
                 spoken = engine.spoken
                 for line in spoken[Frames.heard :]:
-                    if line in answers and Keys.inbound is not None:
-                        char = answers[line]
-                        Keys.inbound.put(KeyEvent(pressed=True, char=char, name=None))
-                        Keys.inbound.put(KeyEvent(pressed=False, char=char, name=None))
+                    if line in answers and Window.made is not None:
+                        Window.made.keys(*typed(layout, answers[line]))
                 Frames.heard = len(spoken)
                 # Counted from the first script line, never read from the last
                 # line: the speech thread may already have spoken the prompt
@@ -270,7 +259,6 @@ class TestStartup:
         monkeypatch.setattr("takki.main.select_platform_interface", lambda: platform)
         monkeypatch.setattr("takki.main.PygameFocusSource", Window)
         monkeypatch.setattr("takki.main.PygameMixerCues", FakeSoundCues)
-        monkeypatch.setattr("takki.main.PynputKeyStream", Keys)
         monkeypatch.setattr("takki.main.SleepFrameLimiter", Frames)
         monkeypatch.setattr("takki.main.database_path", lambda: database)
         closed: list[bool] = []
@@ -296,7 +284,9 @@ class TestStartup:
             "Use your right index finger. It is the key with the bump, where that finger rests.",
         ]
         assert platform.fallback_voice_ids == ["fake-en"]
-        assert Keys.joined
+        # Each key of the alignment is disarmed once up, dead or not: three
+        # rounds of eight presses.
+        assert platform.disarmed == 3 * len(ROUND)
         # Closed, so the one file is the whole profile (ADR-011): no WAL beside it.
         assert closed == [True]
         assert [path.name for path in database.parent.iterdir()] == ["takki.sqlite"]
@@ -317,7 +307,7 @@ class TestStartup:
     ) -> None:
         # The fix round's review, 2026-10-10. `run()` shuts down in a
         # `finally`, and `start()` is not inside it: by the time the first
-        # ask is owed the session row is open and the listener started.
+        # ask is owed the session row is open and the speech thread started.
         database = tmp_path / "data" / "takki.sqlite"
 
         class Window(FakeFocusSource):
@@ -325,15 +315,6 @@ class TestStartup:
 
             def close(self) -> None:
                 Window.closes += 1
-
-        class Keys(ScriptedKeyStream):
-            stops = 0
-
-            def __init__(self, inbound: queue.Queue[InboundEvent]) -> None:
-                super().__init__([], inbound)
-
-            def stop(self) -> None:
-                Keys.stops += 1
 
         made: list[TTSWorker] = []
 
@@ -349,7 +330,6 @@ class TestStartup:
         monkeypatch.setattr("takki.main.select_platform_interface", FakePlatformInterface)
         monkeypatch.setattr("takki.main.PygameFocusSource", Window)
         monkeypatch.setattr("takki.main.PygameMixerCues", FakeSoundCues)
-        monkeypatch.setattr("takki.main.PynputKeyStream", Keys)
         monkeypatch.setattr("takki.main.TTSWorker", Worker)
         monkeypatch.setattr("takki.main.database_path", lambda: database)
         # The last thing `start()` does: the alignment's first ask.
@@ -357,7 +337,7 @@ class TestStartup:
 
         with pytest.raises(RuntimeError, match="first ask"):
             main()
-        assert (Keys.stops, Window.closes) == (1, 1)
+        assert Window.closes == 1
         (worker,) = made
         thread = worker._thread  # pyright: ignore[reportPrivateUsage]
         assert thread is not None and not thread.is_alive()

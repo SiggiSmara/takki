@@ -18,7 +18,7 @@ Research confirmed three categories of Latin-script keyboard layouts:
 2. **QWERTY with dedicated special-character keys** (Nordic languages, Polish, Romanian, etc.) — base positions unchanged, some keys repurposed for native characters
 3. **QWERTY with dead keys / AltGr only** (Dutch, Spanish, Italian, etc.) — base QWERTY essentially intact
 
-All three categories are handled transparently by the Windows + pynput approach in ADR-005. No special handling is needed per category.
+All three categories are handled transparently by ADR-005's approach: Windows composes the character for Takki's own window. No special handling is needed per category.
 
 **On native vs. English layout for learning:**
 
@@ -28,6 +28,10 @@ Pedagogical consensus is clear: children should learn on their native language k
 
 **On IME languages:**
 
-Chinese, Japanese, and Vietnamese use Input Method Editors — the user types Latin keystrokes that are converted by IME software into native characters. This is architecturally a different problem: the "typing" is a two-stage process, and the child is effectively learning QWERTY regardless of their native language. This is out of scope for v1. The Windows + pynput approach would receive IME-converted characters in some configurations, creating unpredictable behaviour.
+Chinese, Japanese, and Vietnamese use Input Method Editors — the user types Latin keystrokes that are converted by IME software into native characters. This is architecturally a different problem: the "typing" is a two-stage process, and the child is effectively learning QWERTY regardless of their native language. This is out of scope for v1. Takki's window (ADR-005) would receive IME-converted text, with the composition in progress between keystrokes, creating unpredictable behaviour.
 
 **Direct-script non-Latin languages** (Arabic, Russian/Cyrillic, Greek, Korean, Thai) are architecturally compatible — the input model is the same as European languages — but are not targeted in v1 due to TTS voice availability and lesson content requirements. The architecture does not preclude adding them later.
+
+### Changes
+
+- 2026-11-14, alpha-plan #14b: ADR-005's approach named as Takki's window, not pynput.

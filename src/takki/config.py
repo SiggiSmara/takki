@@ -21,36 +21,13 @@ LANGUAGE: str | None = None
 # finger rests on that key, whose reaches are described from it (ADR-023).
 KEYBOARD_SHAPE: Literal["iso", "ansi"] = "iso"
 
-# Key bindings (ADR-025). Values are pynput key *name* strings -- what
-# Key.<member>.name returns, which is what session 5's translate() puts in
-# KeyEvent.name. ADR-025's listing writes REREAD/RESTART as "escape"; pynput
-# has no such member, so the binding that actually matches is "esc".
-TALK_KEY = "ctrl_r"
-REREAD_KEY = "esc"
-RESTART_KEY = "esc"  # held; a tap on the same key re-reads -- ADR-012 § Recovery
+# Key bindings (ADR-025), as SDL scan codes: the physical key, whatever the
+# layout, which is what the window's KEYDOWN and KEYUP name it by (alpha-plan
+# #14). A Windows set-1 code is in takki.platform.scan_codes.
+TALK_KEY = 228  # Right Ctrl
+REREAD_KEY = 41  # Escape
+RESTART_KEY = 41  # Escape, held; a tap on the same key re-reads -- ADR-012 § Recovery
 RESTART_HOLD_MS = 800  # separates restart from re-read; unused when the two keys differ
-
-# Resume-from-PAUSED held key (ADR-028 § C8 "Resume hold"). Not in ADR-025's
-# binding list -- proposed here as an amendment, see the session 6b report.
-# This key is held while *another* app has focus, so the binding must be one
-# nobody holds for a second by accident. That rules out the bare modifiers:
-# Ctrl (Ctrl+click, Ctrl+scroll, Ctrl+Shift+arrow) and Shift (Shift+arrow
-# selection) are held past a second constantly, and Right Shift held 8 s also
-# trips Windows FilterKeys. F1 is held by nobody, needs no chord, and is found
-# by edge and by its neighbour Escape -- no counting and no reliance on F-group
-# gaps, which laptops and dense keyboards do not have. Its one side effect,
-# opening the foreground app's help, costs a window Takki is about to raise
-# past anyway. The Escape adjacency cuts the right way: the two keys are live
-# in opposite states, so a child groping for Escape while PAUSED lands on the
-# key that brings them back.
-RESUME_KEY = "f1"
-# Longer than RESTART_HOLD_MS: this gesture fires while another app holds focus,
-# where an accidental trigger yanks the user out of what they were doing.
-RESUME_HOLD_MS = 1000
-# How long a request_foreground() gets to produce a FocusGained before Takki
-# speaks the Alt+Tab fallback. The request has no synchronous answer (ADR-028
-# § Re-acquire), so expiry is the only failure signal there is.
-RESUME_REQUEST_TIMEOUT_MS = 1500
 
 # Speaking rate as ADR-003's `tts_rate`, a Piper length_scale: 1.0 is the
 # voice's own pace and higher is slower. Fixed in Alpha. A letter's measured

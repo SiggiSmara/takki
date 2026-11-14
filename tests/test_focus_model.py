@@ -5,36 +5,45 @@ from takki.audio.tts_worker import SpeechFinished, TTSWorker
 from takki.display.focus import FocusEvent, FocusGained, FocusLost
 from takki.events import Quit
 from takki.focus_model import (
-    ALT_TAB_HINT,
     PAUSED_ANNOUNCEMENT,
     RESUMED_ANNOUNCEMENT,
     FocusModel,
     FocusState,
     LessonCommand,
-    OtherKey,
+    Pressed,
     RereadPrompt,
     RestartWord,
     TypedCharacter,
 )
-from takki.input import KeyEvent
 from takki.input.taxonomy import KeyBindings
+from takki.input.window_keys import KeyDown, KeymapChanged, KeyUp, TextTyped, WindowKeyEvent
 from takki.speech import Speaker
 from tests.fakes.fake_clock import FakeClock
 from tests.fakes.fake_focus_source import FakeFocusSource
 from tests.fakes.fake_letters import FakeLetterAudioSource
 from tests.fakes.fake_tts import FakeTTSEngine
-from tests.fakes.scripted_key_stream import ScriptedKeyStream
+from tests.fakes.keys import keystroke
 
 HOLD = config.RESTART_HOLD_MS / 1000.0
-RESUME_HOLD = config.RESUME_HOLD_MS / 1000.0
-REQUEST_TIMEOUT = config.RESUME_REQUEST_TIMEOUT_MS / 1000.0
+ESC = config.REREAD_KEY
+TALK = config.TALK_KEY
+# SDL scan codes (research/key-capture-source.md).
+BACKSPACE, TAB, DELETE, ENTER, SPACE = 42, 43, 76, 40, 44
+F2, F5, LEFT_WINDOWS, LEFT_SHIFT = 59, 62, 227, 225
+IS_DEAD_ACUTE = 52
+ACUTE = "\u00b4"
+
+
+def sc(letter: str) -> int:
+    """The SDL scan code of a letter key on a US-shaped row: `a` is 4, `z` is 29."""
+    return 4 + ord(letter) - ord("a")
 
 
 class Harness:
     """The core loop of concurrency-model.md, driven synchronously: one queue, dispatch, deadline check."""
 
     def __init__(self, bindings: KeyBindings | None = None) -> None:
-        self.inbound: queue.Queue[KeyEvent | FocusEvent | Quit] = queue.Queue()
+        self.inbound: queue.Queue[WindowKeyEvent | FocusEvent | Quit] = queue.Queue()
         self.focus = FakeFocusSource(self.inbound)
         self.engine = FakeTTSEngine()
         self.speech = TTSWorker(lambda: self.engine, queue.Queue[SpeechFinished]())
@@ -47,18 +56,23 @@ class Harness:
         # clear (alpha session 11).
         self.clock = FakeClock()
         self.speaker = Speaker(self.speech, self.letters, self.clock)
-        self.model = FocusModel(self.focus, self.speaker, self.clock, bindings)
+        self.model = FocusModel(self.speaker, self.clock, bindings)
         self.commands: list[LessonCommand] = []
 
-    def keys(self, *events: KeyEvent) -> None:
-        ScriptedKeyStream(list(events), self.inbound).run()
+    def keys(self, *events: WindowKeyEvent | FocusEvent) -> None:
+        """Events in the order one drain of the window hands them over."""
+        for event in events:
+            self.inbound.put(event)
         self.drain()
 
-    def press(self, name: str | None = None, char: str | None = None) -> None:
-        self.keys(KeyEvent(pressed=True, char=char, name=name))
+    def type(self, letter: str, *, release: bool = True) -> None:
+        self.keys(*keystroke(sc(letter.lower()), letter, release=release))
 
-    def release(self, name: str | None = None, char: str | None = None) -> None:
-        self.keys(KeyEvent(pressed=False, char=char, name=name))
+    def press(self, code: int) -> None:
+        self.keys(KeyDown(code, 0))
+
+    def release(self, code: int) -> None:
+        self.keys(KeyUp(code, 0))
 
     def lose_focus(self) -> None:
         self.focus.lose_focus()
@@ -103,61 +117,90 @@ class Harness:
 
 
 class TestTaxonomyDispatch:
-    def test_printable_character_reaches_the_lesson(self) -> None:
+    def test_a_letter_is_its_press_and_then_its_text(self) -> None:
+        # The press is for the alignment, which answers the key; the text is
+        # for a lesson, which answers what it typed.
         harness = Harness()
-        harness.keys(
-            KeyEvent(pressed=True, char="h", name=None),
-            KeyEvent(pressed=False, char="h", name=None),
-            KeyEvent(pressed=True, char="i", name=None),
-        )
-        assert harness.commands == [TypedCharacter("h"), TypedCharacter("i")]
+        harness.type("h")
+        harness.type("i")
+        assert harness.commands == [
+            Pressed(sc("h")),
+            TypedCharacter("h"),
+            Pressed(sc("i")),
+            TypedCharacter("i"),
+        ]
 
     def test_talk_key_is_classified_and_dropped(self) -> None:
         # Alpha has no voice subsystem to route it to (ADR-020 is Beta).
         harness = Harness()
-        harness.press(name=config.TALK_KEY)
-        harness.release(name=config.TALK_KEY)
+        harness.press(TALK)
+        harness.release(TALK)
         assert harness.commands == []
         assert harness.spoken() == []
 
-    def test_boundary_and_system_keys_are_passed_on_once_per_press(self) -> None:
-        # Only the alignment answers one (#12m session (7)); a held key's
-        # repeats are not new presses, and a release is nothing.
+    def test_keys_that_type_nothing_are_passed_on_once_per_press(self) -> None:
+        # Only the alignment answers one (#12m session (7)); a release is nothing.
         harness = Harness()
-        names = ("backspace", "tab", "delete", "enter", "space", "f2", "cmd", "shift")
-        for name in names:
-            harness.press(name=name)
-            harness.press(name=name)
-            harness.release(name=name)
-        assert harness.commands == [OtherKey(name) for name in names]
+        codes = (BACKSPACE, TAB, DELETE, ENTER, SPACE, F2, LEFT_WINDOWS, LEFT_SHIFT, IS_DEAD_ACUTE)
+        for code in codes:
+            harness.press(code)
+            harness.release(code)
+        assert harness.commands == [Pressed(code) for code in codes]
+
+    def test_every_keydown_is_a_new_press(self) -> None:
+        # pygame passes no auto-repeat KEYDOWN, so a second one with no release
+        # between is never a repeat. Ignoring it would drop every later press
+        # of the key if the down-state ever disagreed with SDL's (review of
+        # #14b, decided by the developer).
+        harness = Harness()
+        harness.press(LEFT_SHIFT)
+        harness.press(LEFT_SHIFT)
+        harness.release(LEFT_SHIFT)
+        assert harness.commands == [Pressed(LEFT_SHIFT), Pressed(LEFT_SHIFT)]
+        assert not harness.model.is_down(LEFT_SHIFT)
+
+    def test_the_space_bar_types_a_space_and_stays_system_by_its_key(self) -> None:
+        # ADR-023: the space bar is never introduced. The window gives it the
+        # text `' '`, which pynput never did (alpha-plan #14 (d)).
+        harness = Harness()
+        harness.keys(*keystroke(SPACE, " "))
+        assert harness.commands == [Pressed(SPACE)]
+
+    def test_text_that_is_not_printable_is_composing_and_ignored(self) -> None:
+        harness = Harness()
+        harness.keys(TextTyped("\u200b", sc("a"), fresh=True))
+        assert harness.commands == []
 
     def test_a_held_key_is_down_until_it_is_released(self) -> None:
         harness = Harness()
-        harness.press(name="shift")
-        harness.press(char="a")
-        assert harness.model.is_down("shift") and harness.model.is_down("a")
-        harness.release(name="shift")
-        harness.release(char="A")
-        assert not harness.model.is_down("shift") and not harness.model.is_down("a")
+        harness.press(LEFT_SHIFT)
+        harness.type("A", release=False)
+        assert harness.model.is_down(LEFT_SHIFT) and harness.model.is_down(sc("a"))
+        harness.release(LEFT_SHIFT)
+        harness.release(sc("a"))
+        assert not harness.model.is_down(LEFT_SHIFT) and not harness.model.is_down(sc("a"))
 
-    def test_dead_key_arm_is_ignored(self) -> None:
+    def test_a_layout_switch_reaches_the_gate_and_changes_nothing(self) -> None:
+        # What Takki says about it is roadmap § D's (alpha-plan #14 (h)).
         harness = Harness()
-        harness.press(char=None, name=None)
+        harness.keys(KeymapChanged())
         assert harness.commands == []
+        assert harness.model.state is FocusState.ACTIVE
+        assert harness.spoken() == []
 
 
 class TestEscapeTapHold:
     def test_tap_rereads_on_release(self) -> None:
         harness = Harness()
-        harness.press(name=config.REREAD_KEY)
+        harness.press(ESC)
         harness.tick(HOLD / 2)
         assert harness.commands == []
-        harness.release(name=config.REREAD_KEY)
+        harness.release(ESC)
         assert harness.commands == [RereadPrompt()]
 
     def test_hold_restarts_at_the_threshold_while_the_key_is_still_down(self) -> None:
         harness = Harness()
-        harness.press(name=config.RESTART_KEY)
+        harness.press(ESC)
         harness.tick(HOLD - 0.001)
         assert harness.commands == []
         harness.tick(0.001)
@@ -165,70 +208,68 @@ class TestEscapeTapHold:
 
     def test_hold_fires_once_and_the_release_does_not_also_reread(self) -> None:
         harness = Harness()
-        harness.press(name=config.RESTART_KEY)
+        harness.press(ESC)
         harness.tick(HOLD)
         harness.tick(HOLD)
         harness.tick(HOLD)
-        harness.release(name=config.RESTART_KEY)
+        harness.release(ESC)
         harness.tick(HOLD)
         assert harness.commands == [RestartWord()]
 
-    def test_auto_repeat_presses_do_not_re_arm_the_hold_timer(self) -> None:
-        # The OS repeats the press while the key is down. If a repeat restarted
-        # the timer the restart would never fire on a steadily held key.
+    def test_a_second_keydown_arms_a_fresh_hold(self) -> None:
+        # Every KEYDOWN is a new press, so the hold counts from the latest one.
         harness = Harness()
-        harness.press(name=config.RESTART_KEY)
+        harness.press(ESC)
         harness.tick(HOLD / 2)
-        harness.press(name=config.RESTART_KEY)
-        harness.press(name=config.RESTART_KEY)
-        assert harness.commands == []
+        harness.press(ESC)
         harness.tick(HOLD / 2 + 0.001)
+        assert harness.commands == []
+        harness.tick(HOLD / 2)
         assert harness.commands == [RestartWord()]
 
-    def test_auto_repeat_before_an_early_release_still_rereads_once(self) -> None:
+    def test_a_second_keydown_before_an_early_release_still_rereads_once(self) -> None:
         harness = Harness()
-        harness.press(name=config.REREAD_KEY)
+        harness.press(ESC)
         harness.tick(HOLD / 2)
-        harness.press(name=config.REREAD_KEY)
-        harness.release(name=config.REREAD_KEY)
+        harness.press(ESC)
+        harness.release(ESC)
         assert harness.commands == [RereadPrompt()]
 
     def test_a_second_tap_after_a_release_arms_a_fresh_gesture(self) -> None:
         harness = Harness()
-        harness.press(name=config.REREAD_KEY)
-        harness.release(name=config.REREAD_KEY)
-        harness.press(name=config.REREAD_KEY)
+        harness.press(ESC)
+        harness.release(ESC)
+        harness.press(ESC)
         harness.tick(HOLD)
         assert harness.commands == [RereadPrompt(), RestartWord()]
 
     def test_release_without_an_armed_press_does_nothing(self) -> None:
         harness = Harness()
-        harness.release(name=config.REREAD_KEY)
+        harness.release(ESC)
         assert harness.commands == []
 
 
 class TestDistinctRecoveryKeys:
-    BINDINGS = KeyBindings(reread="esc", restart="f5")
+    BINDINGS = KeyBindings(reread=ESC, restart=F5)
 
     def test_each_key_fires_on_press_with_no_hold_timing(self) -> None:
         harness = Harness(self.BINDINGS)
-        harness.press(name="esc")
+        harness.press(ESC)
         assert harness.commands == [RereadPrompt()]
         harness.tick(HOLD * 10)
-        harness.release(name="esc")
+        harness.release(ESC)
         assert harness.commands == [RereadPrompt()]
-        harness.press(name="f5")
+        harness.press(F5)
         assert harness.commands == [RereadPrompt(), RestartWord()]
         harness.tick(HOLD * 10)
-        harness.release(name="f5")
+        harness.release(F5)
         assert harness.commands == [RereadPrompt(), RestartWord()]
 
-    def test_auto_repeat_does_not_re_fire_the_action(self) -> None:
+    def test_every_keydown_fires_the_action(self) -> None:
         harness = Harness(self.BINDINGS)
-        harness.press(name="f5")
-        harness.press(name="f5")
-        harness.press(name="f5")
-        assert harness.commands == [RestartWord()]
+        harness.press(F5)
+        harness.press(F5)
+        assert harness.commands == [RestartWord(), RestartWord()]
 
 
 class TestFocusGating:
@@ -245,57 +286,46 @@ class TestFocusGating:
         assert harness.letters.stopped == 1
 
     def test_key_events_after_focus_loss_are_dropped(self) -> None:
+        # A backstop: the window gets no key while another has focus (#13).
         harness = Harness()
-        harness.keys(KeyEvent(pressed=True, char="h", name=None))
+        harness.type("h")
         harness.lose_focus()
-        harness.keys(
-            KeyEvent(pressed=True, char="o", name=None),
-            KeyEvent(pressed=True, char="u", name=None),
-            KeyEvent(pressed=True, char=None, name=config.REREAD_KEY),
-            KeyEvent(pressed=False, char=None, name=config.REREAD_KEY),
-        )
-        assert harness.commands == [TypedCharacter("h")]
+        harness.type("o")
+        harness.type("u")
+        harness.press(ESC)
+        harness.release(ESC)
+        assert harness.commands == [Pressed(sc("h")), TypedCharacter("h")]
 
     def test_no_hold_timing_runs_while_paused(self) -> None:
         harness = Harness()
         harness.lose_focus()
-        harness.press(name=config.RESTART_KEY)
+        harness.press(ESC)
         harness.tick(HOLD * 10)
         assert harness.commands == []
 
-    def test_a_gesture_in_flight_is_dropped_by_the_pause(self) -> None:
-        # The release may never arrive — a low-level hook sees nothing on the
-        # secure desktop — so the transition clears the held state.
+    def test_sdls_release_before_the_focus_loss_clears_a_held_key(self) -> None:
+        # SDL releases every held key just before it reports the focus lost, in
+        # the same drain (alpha-plan #13, #14a's trace). The release reaches
+        # the gate while it is still ACTIVE: a tap's re-read fires, which the
+        # pause announcement cuts, and the key is up for its next press.
         harness = Harness()
-        harness.press(name=config.REREAD_KEY)
-        harness.lose_focus()
+        harness.keys(KeyDown(ESC, 0))
+        harness.tick(HOLD / 2)
+        harness.keys(KeyUp(ESC, 0), FocusLost())
+        assert not harness.model.is_down(ESC)
         harness.gain_focus()
-        harness.release(name=config.REREAD_KEY)
-        harness.tick(HOLD * 10)
-        assert harness.commands == []
-
-    def test_a_key_still_held_across_the_pause_stays_de_repeated(self) -> None:
-        # The OS keeps repeating the press throughout. None of those repeats is
-        # a new press, so nothing may arm a gesture when focus comes back.
-        harness = Harness()
-        harness.press(name=config.REREAD_KEY)
-        harness.lose_focus()
-        harness.press(name=config.REREAD_KEY)
-        harness.gain_focus()
-        harness.press(name=config.REREAD_KEY)
-        harness.tick(HOLD * 2)
-        harness.release(name=config.REREAD_KEY)
-        assert harness.commands == []
-
-    def test_the_key_works_again_after_that_release(self) -> None:
-        harness = Harness()
-        harness.press(name=config.REREAD_KEY)
-        harness.lose_focus()
-        harness.gain_focus()
-        harness.release(name=config.REREAD_KEY)
-        harness.press(name=config.REREAD_KEY)
+        harness.press(ESC)
         harness.tick(HOLD)
-        assert harness.commands == [RestartWord()]
+        assert harness.commands == [RereadPrompt(), RestartWord()]
+
+    def test_a_gesture_is_dropped_by_the_pause(self) -> None:
+        harness = Harness()
+        harness.press(ESC)
+        harness.lose_focus()
+        harness.gain_focus()
+        harness.tick(HOLD * 10)
+        harness.release(ESC)
+        assert harness.commands == []
 
     def test_resume_interrupts_the_stale_announcement(self) -> None:
         harness = Harness()
@@ -304,6 +334,13 @@ class TestFocusGating:
         assert harness.engine.stopped == 0
         harness.gain_focus()
         assert harness.engine.stopped == 1
+
+    def test_alt_tab_back_resumes_and_announces(self) -> None:
+        harness = Harness()
+        harness.lose_focus()
+        harness.gain_focus()
+        assert harness.model.state is FocusState.ACTIVE
+        assert harness.spoken() == [PAUSED_ANNOUNCEMENT, RESUMED_ANNOUNCEMENT]
 
     def test_repeated_focus_loss_announces_once(self) -> None:
         harness = Harness()
@@ -320,111 +357,10 @@ class TestFocusGating:
     def test_typing_works_again_after_resume(self) -> None:
         harness = Harness()
         harness.lose_focus()
-        harness.keys(KeyEvent(pressed=True, char="x", name=None))
+        harness.type("x")
         harness.gain_focus()
-        harness.keys(KeyEvent(pressed=True, char="y", name=None))
-        assert harness.commands == [TypedCharacter("y")]
-
-
-class TestResume:
-    def test_the_resume_key_is_still_seen_while_paused(self) -> None:
-        harness = Harness()
-        harness.lose_focus()
-        harness.press(name=config.RESUME_KEY)
-        harness.tick(RESUME_HOLD)
-        assert harness.focus.foreground_requests == 1
-
-    def test_the_hold_must_complete_before_a_request_is_made(self) -> None:
-        harness = Harness()
-        harness.lose_focus()
-        harness.press(name=config.RESUME_KEY)
-        harness.tick(RESUME_HOLD - 0.001)
-        assert harness.focus.foreground_requests == 0
-
-    def test_releasing_early_cancels_the_request(self) -> None:
-        harness = Harness()
-        harness.lose_focus()
-        harness.press(name=config.RESUME_KEY)
-        harness.tick(RESUME_HOLD / 2)
-        harness.release(name=config.RESUME_KEY)
-        harness.tick(RESUME_HOLD * 10)
-        assert harness.focus.foreground_requests == 0
-        assert harness.spoken() == [PAUSED_ANNOUNCEMENT]
-
-    def test_auto_repeat_during_the_resume_hold_does_not_re_arm_it(self) -> None:
-        harness = Harness()
-        harness.lose_focus()
-        harness.press(name=config.RESUME_KEY)
-        harness.tick(RESUME_HOLD / 2)
-        harness.press(name=config.RESUME_KEY)
-        harness.tick(RESUME_HOLD / 2 + 0.001)
-        assert harness.focus.foreground_requests == 1
-
-    def test_the_request_is_made_once_per_hold(self) -> None:
-        harness = Harness()
-        harness.lose_focus()
-        harness.press(name=config.RESUME_KEY)
-        harness.tick(RESUME_HOLD)
-        harness.tick(0.001)
-        harness.tick(0.001)
-        assert harness.focus.foreground_requests == 1
-
-    def test_focus_gained_before_the_deadline_resumes(self) -> None:
-        harness = Harness()
-        harness.lose_focus()
-        harness.press(name=config.RESUME_KEY)
-        harness.tick(RESUME_HOLD)
-        harness.gain_focus()
-        assert harness.model.state is FocusState.ACTIVE
-        harness.tick(REQUEST_TIMEOUT * 2)
-        assert harness.spoken() == [PAUSED_ANNOUNCEMENT, RESUMED_ANNOUNCEMENT]
-
-    def test_deadline_expiry_speaks_the_alt_tab_fallback(self) -> None:
-        harness = Harness()
-        harness.lose_focus()
-        harness.press(name=config.RESUME_KEY)
-        harness.tick(RESUME_HOLD)
-        harness.tick(REQUEST_TIMEOUT - 0.001)
-        assert harness.spoken() == [PAUSED_ANNOUNCEMENT]
-        harness.tick(0.001)
-        assert harness.model.state is FocusState.PAUSED
-        assert harness.spoken() == [PAUSED_ANNOUNCEMENT, ALT_TAB_HINT]
-
-    def test_the_fallback_is_spoken_once(self) -> None:
-        harness = Harness()
-        harness.lose_focus()
-        harness.press(name=config.RESUME_KEY)
-        harness.tick(RESUME_HOLD)
-        harness.tick(REQUEST_TIMEOUT)
-        harness.tick(REQUEST_TIMEOUT)
-        harness.tick(REQUEST_TIMEOUT)
-        assert harness.spoken() == [PAUSED_ANNOUNCEMENT, ALT_TAB_HINT]
-
-    def test_alt_tab_after_a_refused_request_still_resumes(self) -> None:
-        # The held key and a manual Alt+Tab converge on the same FocusGained.
-        harness = Harness()
-        harness.lose_focus()
-        harness.press(name=config.RESUME_KEY)
-        harness.tick(RESUME_HOLD)
-        harness.tick(REQUEST_TIMEOUT)
-        harness.gain_focus()
-        assert harness.model.state is FocusState.ACTIVE
-        assert harness.spoken() == [PAUSED_ANNOUNCEMENT, ALT_TAB_HINT, RESUMED_ANNOUNCEMENT]
-
-    def test_manual_alt_tab_resumes_without_any_request(self) -> None:
-        harness = Harness()
-        harness.lose_focus()
-        harness.gain_focus()
-        assert harness.model.state is FocusState.ACTIVE
-        assert harness.focus.foreground_requests == 0
-        assert harness.spoken() == [PAUSED_ANNOUNCEMENT, RESUMED_ANNOUNCEMENT]
-
-    def test_the_resume_key_has_no_meaning_while_active(self) -> None:
-        harness = Harness()
-        harness.press(name=config.RESUME_KEY)
-        harness.tick(RESUME_HOLD * 10)
-        assert harness.commands == [OtherKey(config.RESUME_KEY)]
-        assert harness.focus.foreground_requests == 0
+        harness.type("y")
+        assert harness.commands == [Pressed(sc("y")), TypedCharacter("y")]
 
 
 class TestStartupSeed:
@@ -432,9 +368,7 @@ class TestStartupSeed:
         # PygameFocusSource emits its initial state at construction; a window
         # that comes up unfocused must land the FSM in PAUSED, not ACTIVE.
         harness = Harness()
-        harness.inbound.put(FocusLost())
-        harness.inbound.put(KeyEvent(pressed=True, char="a", name=None))
-        harness.drain()
+        harness.keys(FocusLost(), *keystroke(sc("a"), "a"))
         assert harness.model.state is FocusState.PAUSED
         assert harness.commands == []
 
@@ -442,13 +376,19 @@ class TestStartupSeed:
 class TestEventOrdering:
     def test_focus_and_key_events_are_interleaved_on_one_queue(self) -> None:
         harness = Harness()
-        harness.inbound.put(KeyEvent(pressed=True, char="a", name=None))
-        harness.inbound.put(FocusLost())
-        harness.inbound.put(KeyEvent(pressed=True, char="b", name=None))
-        harness.inbound.put(FocusGained())
-        harness.inbound.put(KeyEvent(pressed=True, char="c", name=None))
-        harness.drain()
-        assert harness.commands == [TypedCharacter("a"), TypedCharacter("c")]
+        harness.keys(
+            *keystroke(sc("a"), "a"),
+            FocusLost(),
+            *keystroke(sc("b"), "b"),
+            FocusGained(),
+            *keystroke(sc("c"), "c"),
+        )
+        assert harness.commands == [
+            Pressed(sc("a")),
+            TypedCharacter("a"),
+            Pressed(sc("c")),
+            TypedCharacter("c"),
+        ]
         # Only the resume is heard. The whole burst is dispatched before the
         # worker runs, so the pause announcement is still queued when the
         # resume supersedes it -- and announce() means "in place of what is
@@ -457,96 +397,90 @@ class TestEventOrdering:
         assert harness.spoken() == [RESUMED_ANNOUNCEMENT]
 
 
-class TestCharacterRepeats:
-    def test_a_first_press_is_not_a_repeat(self) -> None:
+class TestText:
+    def test_fresh_text_is_no_repeat(self) -> None:
         harness = Harness()
-        harness.press(char="f")
+        harness.keys(TextTyped("f", sc("f"), fresh=True))
         assert harness.commands == [TypedCharacter("f", repeat=False)]
 
-    def test_a_held_character_repeats_are_labelled_not_swallowed(self) -> None:
+    def test_a_held_keys_repeats_are_labelled_not_swallowed(self) -> None:
         # ADR-027 § Held keys: the engine must see every repeat -- it decides
         # they are not attempts -- so the count here is three, not one.
         harness = Harness()
-        harness.press(char="f")
-        harness.press(char="f")
-        harness.press(char="f")
+        harness.keys(
+            *keystroke(sc("f"), "f", release=False),
+            TextTyped("f", sc("f"), fresh=False),
+            TextTyped("f", sc("f"), fresh=False),
+            KeyUp(sc("f"), 0),
+        )
         assert harness.commands == [
+            Pressed(sc("f")),
             TypedCharacter("f", repeat=False),
             TypedCharacter("f", repeat=True),
             TypedCharacter("f", repeat=True),
         ]
 
-    def test_a_release_ends_the_repeat_run(self) -> None:
+    def test_a_press_with_two_characters_is_one_attempt_judged_by_the_first(self) -> None:
+        # A dead key that cannot combine with `k` gives the accent, then `k`, from
+        # one press. The reader marks the first fresh and the second not, so the
+        # second is a repeat and is no attempt (alpha-plan #14 (c)).
         harness = Harness()
-        harness.press(char="l")
-        harness.release(char="l")
-        harness.press(char="l")
+        harness.keys(
+            KeyDown(IS_DEAD_ACUTE, 0),
+            KeyUp(IS_DEAD_ACUTE, 0),
+            KeyDown(sc("k"), 0),
+            TextTyped(ACUTE, sc("k"), fresh=True),
+            TextTyped("k", sc("k"), fresh=False),
+            KeyUp(sc("k"), 0),
+        )
         assert harness.commands == [
-            TypedCharacter("l", repeat=False),
-            TypedCharacter("l", repeat=False),
+            Pressed(IS_DEAD_ACUTE),
+            Pressed(sc("k")),
+            TypedCharacter(ACUTE, repeat=False),
+            TypedCharacter("k", repeat=True),
         ]
 
-    def test_repeats_are_tracked_per_character(self) -> None:
+    def test_a_composed_letter_is_one_character_on_its_base_key(self) -> None:
         harness = Harness()
-        harness.press(char="f")
-        harness.press(char="j")
-        harness.press(char="f")
+        harness.keys(
+            KeyDown(IS_DEAD_ACUTE, 0),
+            KeyUp(IS_DEAD_ACUTE, 0),
+            *keystroke(sc("a"), "\u00e1"),
+        )
         assert harness.commands == [
-            TypedCharacter("f", repeat=False),
-            TypedCharacter("j", repeat=False),
-            TypedCharacter("f", repeat=True),
+            Pressed(IS_DEAD_ACUTE),
+            Pressed(sc("a")),
+            TypedCharacter("\u00e1", repeat=False),
         ]
 
-    def test_a_key_held_across_a_pause_still_repeats_on_resume(self) -> None:
+    def test_text_with_no_key_down_is_a_repeat(self) -> None:
         harness = Harness()
-        harness.press(char="f")
-        harness.lose_focus()
-        harness.press(char="f")
-        harness.gain_focus()
-        harness.press(char="f")
-        assert harness.commands == [
-            TypedCharacter("f", repeat=False),
-            TypedCharacter("f", repeat=True),
-        ]
-
-    def test_a_key_pressed_while_paused_is_down_on_resume(self) -> None:
-        harness = Harness()
-        harness.lose_focus()
-        harness.press(char="f")
-        harness.gain_focus()
-        harness.press(char="f")
-        assert harness.commands == [TypedCharacter("f", repeat=True)]
+        harness.keys(TextTyped("l", None, fresh=False))
+        assert harness.commands == [TypedCharacter("l", repeat=True)]
 
     def test_a_shift_released_before_the_letter_still_clears_the_key(self) -> None:
-        # pynput recomputes KeyCode.char from live modifier state, so the same
-        # physical key reports "A" down and "a" up. If that leaked, the next
-        # press of it would be labelled a repeat and silently ignored.
+        # The release names the key by scan code, never by the character, so
+        # Shift's state cannot leave it down (research/key-capture-source.md § 2).
         harness = Harness()
-        harness.press(char="A")
-        harness.release(char="a")
-        harness.press(char="A")
+        harness.press(LEFT_SHIFT)
+        harness.type("A", release=False)
+        harness.release(LEFT_SHIFT)
+        harness.release(sc("a"))
+        harness.type("a")
         assert harness.commands == [
+            Pressed(LEFT_SHIFT),
+            Pressed(sc("a")),
             TypedCharacter("a", repeat=False),
+            Pressed(sc("a")),
             TypedCharacter("a", repeat=False),
-        ]
-
-    def test_shifting_mid_hold_does_not_hide_a_repeat(self) -> None:
-        harness = Harness()
-        harness.press(char="a")
-        harness.press(char="A")
-        assert harness.commands == [
-            TypedCharacter("a", repeat=False),
-            TypedCharacter("a", repeat=True),
         ]
 
     def test_the_engine_never_sees_an_upper_case_character(self) -> None:
-        # ADR-027 § Case is folded at the boundary. Every command below is
+        # ADR-027 § Case is folded at the boundary. Every character below is
         # lower case whatever Shift or Caps Lock was doing.
         harness = Harness()
-        harness.press(char="F")
-        harness.release(char="F")
-        harness.press(char="Ä")
+        harness.keys(TextTyped("F", sc("f"), fresh=True), TextTyped("\u00c4", 52, fresh=True))
         assert harness.commands == [
             TypedCharacter("f", repeat=False),
-            TypedCharacter("ä", repeat=False),
+            TypedCharacter("\u00e4", repeat=False),
         ]

@@ -21,7 +21,6 @@ from takki.audio.tts_worker import TTSWorker
 from takki.clock import SleepFrameLimiter, SystemClock
 from takki.data_dir import database_path, ensure_parent
 from takki.display.focus import PygameFocusSource
-from takki.input.pynput_stream import PynputKeyStream
 from takki.language.wordfreq_source import WordfreqSource
 from takki.persistence import Profile, Store
 from takki.persistence.sqlite_store import SqliteStore
@@ -155,7 +154,6 @@ def main() -> int:
     store = SqliteStore(str(ensure_parent(database_path())))
     profile = _profile(store, language)
 
-    keys = PynputKeyStream(inbound)
     loop = SessionLoop(
         inbound=inbound,
         layout=layout,
@@ -165,7 +163,7 @@ def main() -> int:
         clock=SystemClock(),
         frames=SleepFrameLimiter(),
         focus=focus,
-        keys=keys,
+        dead_keys=platform,
         speech=speech,
         letters=letters,
         voice=voice,
@@ -186,17 +184,11 @@ def main() -> int:
             loop.start()
         except BaseException:
             # run() shuts down in a `finally` of its own and is not reached.
-            # start() has opened the session row and started the listener by
-            # the time it builds the first block.
+            # start() has opened the session row by the time it builds the
+            # first block.
             loop.shutdown()
             raise
         loop.run()
-        # Joining the listener is the only place a dead pynput hook becomes
-        # visible -- it re-raises a callback exception here. `join()` is not on
-        # the KeyEventStream Protocol, so the wiring holds the concrete stream
-        # to do it (concurrency-model.md § Shutdown). `stop()` already happened
-        # in SessionLoop.shutdown().
-        keys.join(config.WORKER_JOIN_SECONDS)
     finally:
         # ADR-011 § Profile portability: until the store is closed, part of
         # the profile is in the WAL beside the file a parent would copy.

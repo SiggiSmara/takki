@@ -3,13 +3,9 @@ from typing import Protocol
 
 import pygame
 
-# Private module, but the only route to SDL_RaiseWindow from pygame: there is
-# no public window-raise API. A pygame upgrade that moves or drops it breaks
-# this import loudly rather than degrading focus silently.
-import pygame._sdl2.video as sdl2_video
-
 from takki import config
 from takki.events import Quit
+from takki.input.window_keys import WindowKeyEvent, WindowKeyReader
 
 
 @dataclass(frozen=True)
@@ -27,16 +23,16 @@ FocusEvent = FocusGained | FocusLost
 
 class EventSink(Protocol):
     # Structural put(), not queue.Queue[FocusEvent] -- same convention as
-    # takki.input.EventSink and takki.audio.tts_worker.EventSink: session 11
-    # passes the core's single inbound queue, which carries every event type,
-    # and Queue's parameter is invariant.
-    def put(self, item: FocusEvent | Quit, /) -> None: ...
+    # takki.audio.tts_worker.EventSink: session 11 passes the core's single
+    # inbound queue, which carries every event type, and Queue's parameter is
+    # invariant.
+    def put(self, item: FocusEvent | WindowKeyEvent | Quit, /) -> None: ...
 
 
 class FocusSource(Protocol):
-    def poll(self) -> None: ...
+    """The window: its focus, its keys and its close button, from one drain (ADR-028 § C8)."""
 
-    def request_foreground(self) -> None: ...
+    def poll(self) -> None: ...
 
     def close(self) -> None: ...
 
@@ -49,23 +45,30 @@ class PygameFocusSource:
         pygame.display.set_mode((config.WINDOW_WIDTH, config.WINDOW_HEIGHT))
         pygame.display.set_caption(config.WINDOW_TITLE)
         self._outbound = outbound
+        self._keys = WindowKeyReader()
         self._focused = pygame.key.get_focused()
         # Seed the initial state. The FSM downstream (session 6b) has no way to
-        # read focus -- FocusSource deliberately offers no query, since a raise
-        # has no synchronous answer -- and poll() below is edge-triggered, so a
+        # read focus -- FocusSource deliberately offers no query -- and poll()
+        # below is edge-triggered, so a
         # window that comes up unfocused would otherwise never produce an event
         # and leave the FSM wrongly ACTIVE for the whole run.
         self._outbound.put(FocusGained() if self._focused else FocusLost())
 
     def poll(self) -> None:
-        # Unfiltered: takes every queued event in order, acts on each focus and
-        # QUIT event, and drops every other type. Nothing else reads this queue
-        # (keys come from pynput), so anything left on it stays there.
-        # A type-filtered get() let mouse motion and key events pile up to
-        # SDL's 65,535-event cap, after which SDL refuses QUIT and the close
-        # button stops working (alpha-plan #12c (3), windows-validation E10).
+        # Unfiltered: takes every queued event in order, hands each key event
+        # to the reader and acts on each focus and QUIT event, in the order
+        # they came, and drops every other type. Nothing else reads this queue,
+        # so anything left on it stays there. A type-filtered get() let mouse
+        # motion and key events pile up to SDL's 65,535-event cap, after which
+        # SDL refuses QUIT and the close button stops working (alpha-plan #12c
+        # (3), windows-validation E10). The order is what clears a held key's
+        # down-state: SDL posts its KEYUP just before WINDOWFOCUSLOST (#13).
         delivered = False
         for ev in pygame.event.get():
+            key = self._keys.read(ev)
+            if key is not None:
+                self._outbound.put(key)
+                continue
             if ev.type not in (pygame.WINDOWFOCUSGAINED, pygame.WINDOWFOCUSLOST, pygame.QUIT):
                 continue
             if ev.type == pygame.QUIT:
@@ -102,15 +105,6 @@ class PygameFocusSource:
             return
         self._focused = focused
         self._outbound.put(FocusGained() if focused else FocusLost())
-
-    def request_foreground(self) -> None:
-        # Fire-and-forget by necessity: SDL_RaiseWindow is asynchronous, so no
-        # synchronous answer exists -- get_focused() here would still read the
-        # pre-call state and report failure even when the raise succeeds. The
-        # Windows foreground-activation lock may also downgrade it to a taskbar
-        # flash (ADR-028 § Resume). Success is observed as a FocusGained event
-        # arriving before 6b's deadline, not as a return value.
-        sdl2_video.Window.from_display_module().focus()
 
     def close(self) -> None:
         pygame.display.quit()

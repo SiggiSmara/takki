@@ -1,6 +1,10 @@
 """
 Spike: pynput reality — composite keys, keyboard ownership, keypress taxonomy
 
+Needs pynput: a dev dependency only since alpha-plan #14b (2026-11-14), kept
+for spikes like this one and to be removed in time. If it is gone, add it
+back before running this.
+
 Resolves corner cases logged in docs/roadmap.md:
 
   B5  Dead-key / AltGr observability. ADR-005 says "dead keys and AltGr are

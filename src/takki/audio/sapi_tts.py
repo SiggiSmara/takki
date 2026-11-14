@@ -33,10 +33,8 @@ if sys.platform == "win32":
     # The ignores are for pyright's *Windows* pass run on a *Linux* machine --
     # CI and the dev box. comtypes is `sys_platform == 'win32'` in pyproject, so
     # it is not installed there and the import cannot resolve, while the
-    # --pythonplatform Windows pass still type-checks this branch. pynput has
-    # the same shape and only warns, because pyright bundles stubs for it and
-    # ships none for comtypes. On Windows the import resolves and these are
-    # inert. See ADR-019 § Headless audio/video on what that pass does and does
+    # --pythonplatform Windows pass still type-checks this branch. On Windows
+    # the import resolves and these are inert. See ADR-019 § Headless audio/video on what that pass does and does
     # not prove when the two do not match.
     import comtypes  # pyright: ignore[reportMissingImports]
     import comtypes.client  # pyright: ignore[reportMissingImports]

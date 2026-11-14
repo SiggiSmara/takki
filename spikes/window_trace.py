@@ -5,7 +5,8 @@ Trace: what Takki's own window reports for each key, through the production read
 (#13), so tier C's evidence (windows-validation.md) is taken from here and no
 longer from pynput_trace_spike.py. The window is a real PygameFocusSource, so
 it is Takki's window by construction (same set_mode, same text-input state),
-and every key event goes through takki.input.window_keys.WindowKeyReader.
+and since #14b every event is what its poll() hands the core: Takki's one
+drain, with takki.input.window_keys.WindowKeyReader behind it.
 
 One line per event, stamped at the drain with the tick it was drained in:
 events on one tick reached Takki together. SDL events carry no time of their
@@ -16,7 +17,8 @@ own here, so a stamp is accurate to one tick (~17 ms).
                 key=<SDL keycode> '<name>'
     TEXT        '<text>' <code points> fresh|repeat sdl=<key it belongs to>
     KEYMAP      the keyboard layout changed (Win+Space)
-    FOCUS       gained / lost; QUIT ends the trace
+    FOCUS       gained / lost, as poll() reports them: on change only, and
+                from its backup poll when no event came; QUIT ends the trace
 
 Run from the repo root:
     uv run python spikes/window_trace.py [output_path]
@@ -35,9 +37,9 @@ import pygame
 
 from takki import config
 from takki.clock import SleepFrameLimiter
-from takki.display.focus import FocusEvent, PygameFocusSource
+from takki.display.focus import FocusEvent, FocusGained, FocusLost, PygameFocusSource
 from takki.events import Quit
-from takki.input.window_keys import KeyDown, KeymapChanged, KeyUp, TextTyped, WindowKeyReader
+from takki.input.window_keys import KeyDown, KeymapChanged, KeyUp, TextTyped, WindowKeyEvent
 from takki.platform.layout import scan_code_grid
 from takki.platform.scan_codes import SDL_TO_SET1
 
@@ -68,9 +70,8 @@ def main(argv: list[str]) -> int:
     log_path = Path(argv[1]) if len(argv) > 1 else DEFAULT_LOG_PATH
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
-    seeded: queue.Queue[FocusEvent | Quit] = queue.Queue()
-    focus = PygameFocusSource(seeded)
-    reader = WindowKeyReader()
+    events: queue.Queue[FocusEvent | WindowKeyEvent | Quit] = queue.Queue()
+    focus = PygameFocusSource(events)
     frames = SleepFrameLimiter()
     tick = 0
 
@@ -89,16 +90,14 @@ def main(argv: list[str]) -> int:
             f" shape {config.KEYBOARD_SHAPE}) ===\n"
         )
         print(f"Tracing to {log_path}. Type in the Takki window; close it to stop.\n")
-        emit(f"SEED   {type(seeded.get_nowait()).__name__}")
+        emit(f"SEED   {type(events.get_nowait()).__name__}")
         try:
             running = True
             while running:
                 tick += 1
-                # The tool's one drain. PygameFocusSource.poll() is not called:
-                # in 14a it still drops key events. 14b joins the reader to
-                # poll() and this tool moves onto it.
-                for ev in pygame.event.get():
-                    out = reader.read(ev)
+                focus.poll()
+                while not events.empty():
+                    out = events.get_nowait()
                     if isinstance(out, KeyDown):
                         emit("DOWN   " + describe_key(out.scancode, out.key))
                     elif isinstance(out, KeyUp):
@@ -107,11 +106,11 @@ def main(argv: list[str]) -> int:
                         emit("TEXT   " + describe_text(out))
                     elif isinstance(out, KeymapChanged):
                         emit("KEYMAP")
-                    elif ev.type == pygame.WINDOWFOCUSGAINED:
+                    elif isinstance(out, FocusGained):
                         emit("FOCUS  gained")
-                    elif ev.type == pygame.WINDOWFOCUSLOST:
+                    elif isinstance(out, FocusLost):
                         emit("FOCUS  lost")
-                    elif ev.type == pygame.QUIT:
+                    elif isinstance(out, Quit):
                         emit("QUIT")
                         running = False
                 frames.wait()

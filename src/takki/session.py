@@ -31,13 +31,14 @@ from takki.focus_model import (
     FocusModel,
     FocusState,
     LessonCommand,
-    OtherKey,
+    Pressed,
     RereadPrompt,
     RestartWord,
     TypedCharacter,
 )
-from takki.input import KeyEvent, KeyEventStream
+from takki.input import DeadKeys
 from takki.input.taxonomy import KeyBindings
+from takki.input.window_keys import WindowKeyEvent
 from takki.language import WordSource, warm
 from takki.lesson import alignment
 from takki.lesson.alignment import Alignment, Press
@@ -63,10 +64,11 @@ from takki.lesson.letter_lengths import LetterLengths
 from takki.lesson.milestones import MilestoneDetector
 from takki.lesson.progression import layer_two_unlocked, room_for_step
 from takki.persistence import Store
-from takki.platform.layout import Layout, cell_of
+from takki.platform.layout import Layout
+from takki.platform.scan_codes import SET1_TO_SDL
 from takki.speech import Letter, Speaker
 
-InboundEvent = KeyEvent | FocusEvent | SpeechFinished | Quit
+InboundEvent = WindowKeyEvent | FocusEvent | SpeechFinished | Quit
 
 # A rung slug in, the line to speak out, or None to say nothing. Alpha says
 # nothing: the slug is an identifier and never spoken, and the spoken name
@@ -93,7 +95,7 @@ class SessionLoop:
         clock: Clock,
         frames: FrameLimiter,
         focus: FocusSource,
-        keys: KeyEventStream,
+        dead_keys: DeadKeys,
         speech: TTSWorker,
         letters: LetterAudioSource,
         voice: str,
@@ -114,7 +116,15 @@ class SessionLoop:
         self._clock = clock
         self._frames = frames
         self._focus = focus
-        self._keys = keys
+        self._dead_keys = dead_keys
+        # Each key of the layout by its SDL scan code, for the alignment, whose
+        # landing is a physical key whatever it types (ADR-033). The layout's
+        # own cells, so a cell is named as the layout names it.
+        self._cells: dict[int, tuple[int, int]] = {
+            SET1_TO_SDL[(key.scan_code, False)]: (key.row, key.col) for key in layout.keys.values()
+        }
+        # Keys pressed during the alignment, until each is up and disarmed.
+        self._armed: set[int] = set()
         self._speech = speech
         self._cues = cues
         self._rng = rng
@@ -130,7 +140,7 @@ class SessionLoop:
         # The gate speaks through the same Speaker the loop does: one object
         # knows what is audible, so the loop can hold a prompt behind a pause
         # or resume announcement instead of speaking over it.
-        self._focus_model = FocusModel(focus, self._speaker, clock, bindings)
+        self._focus_model = FocusModel(self._speaker, clock, bindings)
 
         self.running = False
         self._stop_requested = False
@@ -162,9 +172,10 @@ class SessionLoop:
         self._asking = False
         # Lines owed ahead of the next ask: feedback, the hands coming off.
         self._lead: list[str] = []
-        # The key the last alignment press was made with, until it comes up;
-        # the next ask waits for it. The deadline is when it counts as held.
-        self._held: str | None = None
+        # The key the last alignment press was made with, by SDL scan code,
+        # until it comes up; the next ask waits for it. The deadline is when it
+        # counts as held.
+        self._held: int | None = None
         self._hold_deadline: float | None = None
         # The session ends once the closing line has been heard.
         self._closing = False
@@ -242,7 +253,6 @@ class SessionLoop:
             shares=self._source.key_shares(self._layout),
             now=self._now,
         )
-        self._keys.start()
         # Set first and the flag read after, in that order: the handlers are
         # installed before this is called, and a signal that lands between a
         # read of the flag and this assignment has its `running = False`
@@ -266,7 +276,7 @@ class SessionLoop:
 
     def shutdown(self) -> None:
         # `finally`, so a failure in the store's work does not leave the
-        # worker and the key listener running.
+        # worker running.
         try:
             self._lengths.flush()
             if self._session_id is not None:
@@ -278,7 +288,6 @@ class SessionLoop:
             # speaking, and a long line outlasts the join below.
             self._speaker.stop()
             self._speech.enqueue_shutdown()
-            self._keys.stop()
             self._speech.join(config.WORKER_JOIN_SECONDS)
             self._focus.close()
 
@@ -286,7 +295,7 @@ class SessionLoop:
 
     def run(self) -> None:
         # `finally`, so an exception out of a tick still ends the session row,
-        # writes the block's letter lengths and stops the two threads.
+        # writes the block's letter lengths and stops the speech thread.
         try:
             while self.running:
                 self.tick()
@@ -340,6 +349,16 @@ class SessionLoop:
 
     def _check_deadlines(self) -> None:
         self._run(self._focus_model.check_deadlines())
+        up = {key for key in self._armed if not self._focus_model.is_down(key)}
+        if up:
+            # ADR-033: a dead key pressed in the alignment leaves a composition
+            # armed for the next letter, or not, by the parity of its presses
+            # while held. Once it is up it presses no more, and is disarmed.
+            # Every key is, not only the layout's dead cells: a dead key can lie
+            # off the grid (Icelandic's left of `1`) or behind a modifier
+            # (AltGr), and a disarm with nothing armed changes nothing.
+            self._armed -= up
+            self._dead_keys.disarm_dead_key()
         if self._focus_model.state is FocusState.PAUSED:
             # A child who is not in Takki is not ignoring the prompt.
             return
@@ -512,7 +531,7 @@ class SessionLoop:
             self._lead.append(alignment.HANDS_OFF)
         self._reissue_due = "ask"
 
-    def _on_alignment_press(self, cell: tuple[int, int] | None, key: str) -> None:
+    def _on_alignment_press(self, cell: tuple[int, int] | None, key: int) -> None:
         """A press while the alignment asks (ADR-033). It is not timed and not counted."""
         assert self._alignment is not None
         if not self._asking:
@@ -600,10 +619,9 @@ class SessionLoop:
             self._reprompts = 0
             self._asking = False
             self._lead = []
-            if self._held is not None:
-                # The pause disarmed the hold deadline; a key still down on
-                # the way back is told to let go, not waited on in silence.
-                self._hold_deadline = self._clock.monotonic() + config.ALIGNMENT_HOLD_SECONDS
+            # No hold is re-armed for `_held`: SDL released it before the focus
+            # was lost, and a key still held on the way back is invisible to
+            # the window until it is pressed again (alpha-plan #13).
             if not self._alignment.done:
                 self._alignment.abandon_round()
                 self._alignment.take_new_round()
@@ -640,16 +658,17 @@ class SessionLoop:
             self._on_reread()
         elif isinstance(command, RestartWord):
             self._on_restart()
-        elif isinstance(command, OtherKey) and self._alignment is not None:
+        elif isinstance(command, Pressed) and self._alignment is not None:
+            # Whether or not anything was asked: a dead key's press arms it.
+            self._armed.add(command.scancode)
             # A key that is no cell is no landing (ADR-026), whatever the language.
-            self._on_alignment_press(None, command.name)
+            self._on_alignment_press(self._cells.get(command.scancode), command.scancode)
 
     def _on_character(self, typed: TypedCharacter) -> None:
         assert self._drills is not None
         if self._alignment is not None:
-            # A held key's repeat is no new press; the hold deadline speaks to it.
-            if not typed.repeat:
-                self._on_alignment_press(cell_of(self._layout, typed.char), typed.char)
+            # The alignment answers the key, as its press (`Pressed`), not
+            # what it typed.
             return
         prompt = self._open
         if prompt is None:
