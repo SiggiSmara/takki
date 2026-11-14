@@ -259,9 +259,11 @@ class TestStartup:
                         Keys.inbound.put(KeyEvent(pressed=True, char=char, name=None))
                         Keys.inbound.put(KeyEvent(pressed=False, char=char, name=None))
                 Frames.heard = len(spoken)
-                if (spoken.count("New letter:") == 2 and spoken[-1].endswith("finger rests.")) or (
-                    Frames.waits > 20000
-                ):
+                # Counted from the first script line, never read from the last
+                # line: the speech thread may already have spoken the prompt
+                # after the scripts by the time this runs.
+                first = spoken.index("New letter:") if "New letter:" in spoken else None
+                if (first is not None and len(spoken) >= first + 6) or Frames.waits > 20000:
                     signal.raise_signal(signal.SIGINT)
 
         monkeypatch.setattr("takki.main.config.LANGUAGE", "en")
@@ -284,7 +286,8 @@ class TestStartup:
         # The alignment comes first (ADR-033): three rounds settle every
         # finger, and then the bump letters are introduced.
         assert engine.spoken[:3] == [FIRST_LESSON, HANDS_OFF, ask_text(layout, Ask(ROUND[0]))]
-        assert engine.spoken[-6:] == [
+        first = engine.spoken.index("New letter:")
+        assert engine.spoken[first : first + 6] == [
             "New letter:",
             "f",
             "Use your left index finger. It is the key with the bump, where that finger rests.",
