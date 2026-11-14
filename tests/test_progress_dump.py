@@ -212,3 +212,187 @@ class TestMain:
         _run(monkeypatch, "--db", str(db_path), "--profile", str(profile_id))
         lines = capsys.readouterr().out.splitlines()
         assert "  f           2        1    50.0%     -  2026-09-19T09:02:00+00:00" in lines
+
+
+def _section(out: str, heading: str) -> list[str]:
+    """The lines under `heading` up to the next blank line, heading excluded."""
+    lines = out.splitlines()
+    start = next(i for i, line in enumerate(lines) if line.startswith(heading)) + 1
+    end = next((i for i in range(start, len(lines)) if lines[i] == ""), len(lines))
+    return lines[start:end]
+
+
+def _dump(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    db_path: Path,
+    profile_id: int,
+) -> str:
+    _run(monkeypatch, "--db", str(db_path), "--profile", str(profile_id))
+    return capsys.readouterr().out
+
+
+def _seed_slow_corrections(path: Path) -> int:
+    """Row 2 has the shape of database A's row 210 (alpha-plan, #12m session (8))."""
+    store = SqliteStore(str(path))
+    profile = store.create_profile("dev", "en", created_at="2026-11-13T19:00:00+00:00")
+    session = store.start_session(profile.id, started_at="2026-11-13T19:20:00+00:00")
+    store.mark_introduced(profile.id, ["e"], introduced_at="2026-11-13T19:21:00+00:00")
+    store.mark_introduced(profile.id, ["t"], introduced_at="2026-11-13T19:22:00+00:00")
+    store.begin_level(profile.id, "t", "choose", session, 0, started_at="2026-11-13T19:23:00+00:00")
+    # `t` moves from Choose to Travel two seconds before the first press of row 2.
+    store.complete_level(
+        profile.id, "t", "choose", session, 30, completed_at="2026-11-13T19:26:55+00:00"
+    )
+    store.begin_level(
+        profile.id, "t", "travel", session, 30, started_at="2026-11-13T19:26:55+00:00"
+    )
+
+    def attempt(
+        key: str,
+        correct: bool,
+        at: str,
+        latency_ms: int | None,
+        prev: str | None,
+        session_id: int = session,
+    ) -> None:
+        store.append_attempt(
+            profile.id,
+            session_id,
+            key,
+            correct,
+            f"2026-11-13T{at}+00:00",
+            latency_ms=latency_ms,
+            prev_char=prev,
+        )
+
+    attempt("e", True, "19:26:50", 1000, None)
+    # Row 2: wrong at 0.9 s, and the right key not before the next letter was
+    # sent, 17 s later. Listed.
+    attempt("t", False, "19:26:57", 900, "e")
+    attempt("e", True, "19:27:15", 1500, "t")
+    # Row 4: an ordinary miss, corrected in 5 s. Not listed.
+    attempt("t", False, "19:27:20", 800, "e")
+    attempt("e", True, "19:27:26", 1200, "t")
+    # Row 6: the next prompt is untimed, so the gap cannot be read.
+    attempt("t", False, "19:27:30", 800, "e")
+    attempt("e", True, "19:27:55", None, "t")
+    # Row 8: a rest cue came between, so the next row is not the next prompt.
+    attempt("t", False, "19:28:00", 900, "e")
+    attempt("n", True, "19:28:40", 900, "R-mid")
+    # Row 10: the next row is in a later session.
+    attempt("e", False, "19:29:00", 900, "n")
+    later = store.start_session(profile.id, started_at="2026-11-13T19:40:00+00:00")
+    attempt("e", True, "19:40:10", 1000, "e", later)
+    # Row 12 is the last row: nothing follows it.
+    attempt("t", False, "19:40:30", 900, "e", later)
+    store.conn.close()
+    return profile.id
+
+
+class TestSlowCorrections:
+    def test_only_a_slow_correction_is_listed_and_the_rest_are_counted_unreadable(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        db_path = tmp_path / "takki.sqlite"
+        profile_id = _seed_slow_corrections(db_path)
+        out = _dump(capsys, monkeypatch, db_path, profile_id)
+
+        assert _section(out, "slow corrections") == [
+            "    row first press                key   gap s level   prev",
+            "      2 2026-11-13T19:26:57+00:00  t      16.5 travel  e",
+            "  6 wrong first presses, 4 with no readable gap (last of a session, next prompt "
+            "untimed or not the next one); gap is an upper bound",
+        ]
+
+    def test_a_database_with_no_slow_correction_says_so(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        db_path = tmp_path / "takki.sqlite"
+        profile_id = _seed_db(db_path)
+        out = _dump(capsys, monkeypatch, db_path, profile_id)
+
+        assert _section(out, "slow corrections")[0] == "  (none)"
+
+
+def _seed_alignment_and_ladder(path: Path) -> int:
+    store = SqliteStore(str(path))
+    profile = store.create_profile("dev", "en", created_at="2026-11-13T09:00:00+00:00")
+    session = store.start_session(profile.id, started_at="2026-11-13T09:00:00+00:00")
+    store.record_landing(profile.id, session, 1, "L-index", 3, 4, True, "2026-11-13T09:00:05+00:00")
+    store.record_landing(profile.id, session, 1, "L-pink", 3, 1, False, "2026-11-13T09:00:12+00:00")
+    store.choose_rest_key(profile.id, "L-index", 3, 4, "bump", "2026-11-13T09:00:05+00:00")
+    store.choose_rest_key(profile.id, "L-pink", 3, 1, "landings", "2026-11-13T09:01:00+00:00")
+    store.choose_rest_key(profile.id, "L-pink", 3, 2, "answer", "2026-11-13T09:02:00+00:00")
+    store.mark_rest_key_ready(profile.id, "L-index", "2026-11-13T09:00:30+00:00")
+    store.mark_rest_key_passed(profile.id, "L-index", "2026-11-13T09:03:00+00:00")
+    store.record_milestone(profile.id, "rest", "2026-11-13T09:04:00+00:00")
+    store.mark_introduced(profile.id, ["e", "n"], introduced_at="2026-11-13T09:04:30+00:00")
+    store.append_reach_press(profile.id, "e", True, "2026-11-13T09:05:00+00:00")
+    store.append_reach_press(profile.id, "e", False, "2026-11-13T09:05:30+00:00")
+    store.append_reach_press(profile.id, "e", True, "2026-11-13T09:06:00+00:00")
+    store.append_reach_press(profile.id, "n", True, "2026-11-13T09:07:00+00:00")
+    # One attempt after each kind of previous prompt.
+    for key, correct, prev in (
+        ("f", True, None),
+        ("e", True, "R-mid"),
+        ("e", False, "R-mid+L-pink"),
+        ("n", True, "n"),
+        ("n", False, "e"),
+        ("n", True, "e"),
+    ):
+        store.append_attempt(
+            profile.id, session, key, correct, "2026-11-13T09:10:00+00:00", prev_char=prev
+        )
+    store.conn.close()
+    return profile.id
+
+
+class TestAlignmentAndLadderRecords:
+    def test_landings_rest_keys_reach_presses_and_the_rest_rung_are_printed(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        db_path = tmp_path / "takki.sqlite"
+        profile_id = _seed_alignment_and_ladder(db_path)
+        out = _dump(capsys, monkeypatch, db_path, profile_id)
+
+        assert _section(out, "landings") == [
+            "  session round finger  cell  valid landed_at",
+            "        1     1 L-index 3,4   yes   2026-11-13T09:00:05+00:00",
+            "        1     1 L-pink  3,1   no    2026-11-13T09:00:12+00:00",
+        ]
+        # A replaced key is kept, with when it was replaced.
+        rest_keys = _section(out, "rest_keys")
+        assert [line.split() for line in rest_keys] == [
+            "finger cell chosen_by chosen_at ready_at passed_at replaced_at".split(),
+            [
+                "L-index", "3,4", "bump", "2026-11-13T09:00:05+00:00",
+                "2026-11-13T09:00:30+00:00", "2026-11-13T09:03:00+00:00", "-",
+            ],
+            [
+                "L-pink", "3,1", "landings", "2026-11-13T09:01:00+00:00",
+                "-", "-", "2026-11-13T09:02:00+00:00",
+            ],
+            ["L-pink", "3,2", "answer", "2026-11-13T09:02:00+00:00", "-", "-", "-"],
+        ]  # fmt: skip
+        assert _section(out, "reach_presses") == [
+            "  key  presses  correct  accuracy  first / last",
+            "  e          3        2     66.7%  2026-11-13T09:05:00+00:00 / 2026-11-13T09:06:00+00:00",
+            "  n          1        1    100.0%  2026-11-13T09:07:00+00:00 / 2026-11-13T09:07:00+00:00",
+        ]
+        assert _section(out, "milestones") == ["  rest       2026-11-13T09:04:00+00:00"]
+
+    def test_accuracy_is_split_by_the_previous_prompt(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        db_path = tmp_path / "takki.sqlite"
+        profile_id = _seed_alignment_and_ladder(db_path)
+        out = _dump(capsys, monkeypatch, db_path, profile_id)
+
+        assert _section(out, "first-press accuracy by the previous prompt") == [
+            "  previous prompt            attempts  correct  accuracy",
+            "  first prompt of a session         1        1    100.0%",
+            "  after a rest cue                  2        1     50.0%",
+            "  after the same letter             1        1    100.0%",
+            "  after another letter              2        1     50.0%",
+        ]

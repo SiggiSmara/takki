@@ -15,8 +15,10 @@ single-profile Alpha behaviour -- but never creates one.
 
 import argparse
 import sqlite3
+from datetime import datetime, timedelta
 from pathlib import Path
 
+from takki import config
 from takki.data_dir import database_path
 
 
@@ -227,6 +229,180 @@ def _print_sessions(conn: sqlite3.Connection, profile_id: int) -> None:
         print(f"  {session_id:>4}  {started_at:<20} {ended_at or '(in progress)'}")
 
 
+def _print_accuracy_by_previous_prompt(conn: sqlite3.Connection, profile_id: int) -> None:
+    # `prev_char` names the prompt before this one, or the finger ids of a rest
+    # cue joined by `+` (ADR-011). The split shows whether a letter is answered
+    # less well when the child can predict it (a double) than when it follows
+    # another letter.
+    rows = conn.execute(
+        """
+        SELECT CASE
+                   WHEN prev_char IS NULL THEN 0
+                   WHEN length(prev_char) > 1 AND instr(prev_char, '-') > 0 THEN 1
+                   WHEN prev_char = key_char THEN 2
+                   ELSE 3
+               END AS band, COUNT(*), SUM(correct)
+        FROM key_attempts
+        WHERE profile_id = ?
+        GROUP BY band
+        ORDER BY band
+        """,
+        (profile_id,),
+    ).fetchall()
+    print("\nfirst-press accuracy by the previous prompt")
+    if not rows:
+        print("  (none)")
+        return
+    names = (
+        "first prompt of a session",
+        "after a rest cue",
+        "after the same letter",
+        "after another letter",
+    )
+    print(f"  {'previous prompt':<26} {'attempts':>8} {'correct':>8} {'accuracy':>9}")
+    for band, attempts, correct in rows:
+        print(f"  {names[band]:<26} {attempts:>8} {correct:>8} {correct / attempts:>9.1%}")
+
+
+def _print_slow_corrections(conn: sqlite3.Connection, profile_id: int) -> None:
+    # A retry press is not an attempt and writes no row, so the gap is not
+    # stored. What is stored: the next row's `attempted_at` less its
+    # `latency_ms` is when the next letter was sent, and the right key came no
+    # later than that. `timeouts` cannot show it, because the row is written at
+    # the first press and the re-ask comes after it. The gap is therefore an
+    # upper bound, and it is read only where the next row is the next prompt
+    # (its `prev_char` is this letter), is timed, and is in the same session.
+    # What it cannot see: the last prompt of a session, a Reach prompt or a
+    # re-ask (no row), a pause inside the gap, and seconds below the stamps'.
+    attempts = conn.execute(
+        """
+        SELECT rowid, key_char, attempted_at, correct, latency_ms, prev_char
+        FROM key_attempts
+        WHERE profile_id = ?
+        ORDER BY rowid
+        """,
+        (profile_id,),
+    ).fetchall()
+    starts = [
+        row[0]
+        for row in conn.execute(
+            "SELECT started_at FROM sessions WHERE profile_id = ?", (profile_id,)
+        )
+    ]
+    slow: list[tuple[int, str, str, float, str, str]] = []
+    wrong = 0
+    unreadable = 0
+    for i, (row_id, key_char, at, correct, _, prev_char) in enumerate(attempts):
+        if correct:
+            continue
+        wrong += 1
+        following = attempts[i + 1] if i + 1 < len(attempts) else None
+        if (
+            following is None
+            or following[4] is None
+            or following[5] != key_char
+            or any(at < start <= following[2] for start in starts)
+        ):
+            unreadable += 1
+            continue
+        sent = datetime.fromisoformat(following[2]) - timedelta(milliseconds=following[4])
+        gap = (sent - datetime.fromisoformat(at)).total_seconds()
+        if gap > config.PROMPT_TIMEOUT_SECONDS:
+            level = conn.execute(
+                """
+                SELECT level FROM ramp_up_levels
+                WHERE profile_id = ? AND key_char = ? AND started_at <= ?
+                  AND (completed_at IS NULL OR completed_at > ?)
+                ORDER BY id DESC LIMIT 1
+                """,
+                (profile_id, key_char, at, at),
+            ).fetchone()
+            slow.append((row_id, at, key_char, gap, level[0] if level else "-", prev_char or "-"))
+    print(
+        f"\nslow corrections (wrong first press, right key after more than {config.PROMPT_TIMEOUT_SECONDS:g} s)"
+    )
+    if not slow:
+        print("  (none)")
+    else:
+        print(f"  {'row':>5} {'first press':<26} {'key':<4} {'gap s':>6} {'level':<7} prev")
+        for row_id, at, key_char, gap, level, prev in slow:
+            print(f"  {row_id:>5} {at:<26} {key_char:<4} {gap:>6.1f} {level:<7} {prev}")
+    print(
+        f"  {wrong} wrong first presses, {unreadable} with no readable gap "
+        "(last of a session, next prompt untimed or not the next one); "
+        "gap is an upper bound"
+    )
+
+
+def _print_reach_presses(conn: sqlite3.Connection, profile_id: int) -> None:
+    rows = conn.execute(
+        """
+        SELECT key_char, COUNT(*), SUM(correct), MIN(pressed_at), MAX(pressed_at)
+        FROM reach_presses
+        WHERE profile_id = ?
+        GROUP BY key_char
+        ORDER BY MIN(id)
+        """,
+        (profile_id,),
+    ).fetchall()
+    print("\nreach_presses (never trimmed)")
+    if not rows:
+        print("  (none)")
+        return
+    print(f"  {'key':<4} {'presses':>7} {'correct':>8} {'accuracy':>9}  first / last")
+    for key_char, presses, correct, first, last in rows:
+        print(
+            f"  {key_char:<4} {presses:>7} {correct:>8} {correct / presses:>9.1%}  {first} / {last}"
+        )
+
+
+def _print_rest_keys(conn: sqlite3.Connection, profile_id: int) -> None:
+    rows = conn.execute(
+        """
+        SELECT finger, key_row, key_col, chosen_by, chosen_at, ready_at, passed_at, replaced_at
+        FROM rest_keys
+        WHERE profile_id = ?
+        ORDER BY id
+        """,
+        (profile_id,),
+    ).fetchall()
+    print("\nrest_keys (replaced ones included)")
+    if not rows:
+        print("  (none)")
+        return
+    print(
+        f"  {'finger':<7} {'cell':<5} {'chosen_by':<9} {'chosen_at':<26} "
+        f"{'ready_at':<26} {'passed_at':<26} replaced_at"
+    )
+    for finger, row, col, chosen_by, chosen_at, ready_at, passed_at, replaced_at in rows:
+        print(
+            f"  {finger:<7} {f'{row},{col}':<5} {chosen_by:<9} {chosen_at:<26} "
+            f"{ready_at or '-':<26} {passed_at or '-':<26} {replaced_at or '-'}"
+        )
+
+
+def _print_landings(conn: sqlite3.Connection, profile_id: int) -> None:
+    rows = conn.execute(
+        """
+        SELECT session_id, round, finger, key_row, key_col, validated, landed_at
+        FROM landings
+        WHERE profile_id = ?
+        ORDER BY id
+        """,
+        (profile_id,),
+    ).fetchall()
+    print("\nlandings (the keyboard alignment)")
+    if not rows:
+        print("  (none)")
+        return
+    print(f"  {'session':>7} {'round':>5} {'finger':<7} {'cell':<5} {'valid':<5} landed_at")
+    for session_id, round_, finger, row, col, validated, landed_at in rows:
+        print(
+            f"  {session_id:>7} {round_:>5} {finger:<7} {f'{row},{col}':<5} "
+            f"{'yes' if validated else 'no':<5} {landed_at}"
+        )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--db", type=Path, default=None, help="database path (default: main.py's)")
@@ -249,7 +425,12 @@ def main() -> None:
         _print_key_stats(conn, profile_id)
         _print_attempts_by_day(conn, profile_id)
         _print_accuracy_by_timing(conn, profile_id)
+        _print_accuracy_by_previous_prompt(conn, profile_id)
+        _print_slow_corrections(conn, profile_id)
         _print_ramp_up(conn, profile_id)
+        _print_reach_presses(conn, profile_id)
+        _print_landings(conn, profile_id)
+        _print_rest_keys(conn, profile_id)
         _print_milestones(conn, profile_id)
         _print_sessions(conn, profile_id)
     finally:
