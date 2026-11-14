@@ -255,6 +255,7 @@ def _seed_slow_corrections(path: Path) -> int:
         latency_ms: int | None,
         prev: str | None,
         session_id: int = session,
+        timeouts: int = 0,
     ) -> None:
         store.append_attempt(
             profile.id,
@@ -264,6 +265,7 @@ def _seed_slow_corrections(path: Path) -> int:
             f"2026-11-13T{at}+00:00",
             latency_ms=latency_ms,
             prev_char=prev,
+            timeouts=timeouts,
         )
 
     attempt("e", True, "19:26:50", 1000, None)
@@ -274,18 +276,23 @@ def _seed_slow_corrections(path: Path) -> int:
     # Row 4: an ordinary miss, corrected in 5 s. Not listed.
     attempt("t", False, "19:27:20", 800, "e")
     attempt("e", True, "19:27:26", 1200, "t")
-    # Row 6: the next prompt is untimed, so the gap cannot be read.
+    # Row 6: the next prompt is untimed, so the gap cannot be read. Row 7 sat
+    # through one re-ask.
     attempt("t", False, "19:27:30", 800, "e")
-    attempt("e", True, "19:27:55", None, "t")
+    attempt("e", True, "19:27:55", None, "t", timeouts=1)
     # Row 8: a rest cue came between, so the next row is not the next prompt.
     attempt("t", False, "19:28:00", 900, "e")
     attempt("n", True, "19:28:40", 900, "R-mid")
-    # Row 10: the next row is in a later session.
+    # Row 10: two causes at once, an untimed next row that is also not the
+    # next prompt. It is counted as untimed, the first. Row 11 sat through two.
+    attempt("t", False, "19:28:45", 900, "e")
+    attempt("n", True, "19:28:50", None, "R-mid", timeouts=2)
+    # Row 12: the next row is in a later session.
     attempt("e", False, "19:29:00", 900, "n")
     later = store.start_session(profile.id, started_at="2026-11-13T19:40:00+00:00")
     attempt("e", True, "19:40:10", 1000, "e", later)
-    # Row 12 is the last row: nothing follows it.
-    attempt("t", False, "19:40:30", 900, "e", later)
+    # Row 14 is the last row: nothing follows it. A wrong press after a re-ask.
+    attempt("t", False, "19:40:30", None, "e", later, timeouts=1)
     store.conn.close()
     return profile.id
 
@@ -301,8 +308,23 @@ class TestSlowCorrections:
         assert _section(out, "slow corrections") == [
             "    row first press                key   gap s level   prev",
             "      2 2026-11-13T19:26:57+00:00  t      16.5 travel  e",
-            "  6 wrong first presses, 4 with no readable gap (last of a session, next prompt "
-            "untimed or not the next one); gap is an upper bound",
+            "  7 wrong first presses, 5 with no readable gap: 1 last press in the database, "
+            "2 next prompt untimed, 1 next recorded prompt not the one that followed, "
+            "1 session start in between; gap is an upper bound",
+        ]
+
+    def test_prompts_answered_after_a_re_ask_are_listed_whatever_the_press(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        db_path = tmp_path / "takki.sqlite"
+        profile_id = _seed_slow_corrections(db_path)
+        out = _dump(capsys, monkeypatch, db_path, profile_id)
+
+        assert _section(out, "prompts answered after a re-ask") == [
+            "    row when                       key  timeouts latency ms level   prev",
+            "      7 2026-11-13T19:27:55+00:00  e           1          - -       t",
+            "     11 2026-11-13T19:28:50+00:00  n           2          - -       R-mid",
+            "     14 2026-11-13T19:40:30+00:00  t           1          - travel  e",
         ]
 
     def test_a_database_with_no_slow_correction_says_so(
@@ -313,6 +335,21 @@ class TestSlowCorrections:
         out = _dump(capsys, monkeypatch, db_path, profile_id)
 
         assert _section(out, "slow corrections")[0] == "  (none)"
+        # `j`'s one answer that sat through two timeouts, with the Choose run
+        # that was open at the time.
+        assert _section(out, "prompts answered after a re-ask") == [
+            "    row when                       key  timeouts latency ms level   prev",
+            "      8 2026-09-20T10:01:00+00:00  j           2          - choose  -",
+        ]
+
+    def test_a_database_with_no_re_ask_says_so(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        db_path = tmp_path / "takki.sqlite"
+        profile_id = _seed_alignment_and_ladder(db_path)
+        out = _dump(capsys, monkeypatch, db_path, profile_id)
+
+        assert _section(out, "prompts answered after a re-ask") == ["  (none)"]
 
 
 def _seed_alignment_and_ladder(path: Path) -> int:

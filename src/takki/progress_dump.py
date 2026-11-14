@@ -264,19 +264,33 @@ def _print_accuracy_by_previous_prompt(conn: sqlite3.Connection, profile_id: int
         print(f"  {names[band]:<26} {attempts:>8} {correct:>8} {correct / attempts:>9.1%}")
 
 
+def _level_at(conn: sqlite3.Connection, profile_id: int, key_char: str, at: str) -> str:
+    row = conn.execute(
+        """
+        SELECT level FROM ramp_up_levels
+        WHERE profile_id = ? AND key_char = ? AND started_at <= ?
+          AND (completed_at IS NULL OR completed_at > ?)
+        ORDER BY id DESC LIMIT 1
+        """,
+        (profile_id, key_char, at, at),
+    ).fetchone()
+    return row[0] if row else "-"
+
+
 def _print_slow_corrections(conn: sqlite3.Connection, profile_id: int) -> None:
     # A retry press is not an attempt and writes no row, so the gap is not
     # stored. What is stored: the next row's `attempted_at` less its
     # `latency_ms` is when the next letter was sent, and the right key came no
-    # later than that. `timeouts` cannot show it, because the row is written at
-    # the first press and the re-ask comes after it. The gap is therefore an
+    # later than that. `timeouts` cannot show it: the row is written at the
+    # first press, so it counts only the re-asks before that press and never
+    # the one that follows a wrong press. The gap is therefore an
     # upper bound, and it is read only where the next row is the next prompt
     # (its `prev_char` is this letter), is timed, and is in the same session.
-    # What it cannot see: the last prompt of a session, a Reach prompt or a
-    # re-ask (no row), a pause inside the gap, and seconds below the stamps'.
+    # What it cannot see: a Reach prompt or a re-ask (no row), a pause inside
+    # the gap, and seconds below the stamps'.
     attempts = conn.execute(
         """
-        SELECT rowid, key_char, attempted_at, correct, latency_ms, prev_char
+        SELECT rowid, key_char, attempted_at, correct, latency_ms, prev_char, timeouts
         FROM key_attempts
         WHERE profile_id = ?
         ORDER BY rowid
@@ -291,33 +305,30 @@ def _print_slow_corrections(conn: sqlite3.Connection, profile_id: int) -> None:
     ]
     slow: list[tuple[int, str, str, float, str, str]] = []
     wrong = 0
-    unreadable = 0
-    for i, (row_id, key_char, at, correct, _, prev_char) in enumerate(attempts):
+    # Why a wrong first press has no readable gap. A press that meets several
+    # causes is counted under the first that applies, in this order, so the
+    # counts add up to the total: last row, next row untimed, next row not the
+    # prompt that followed, a session start in between.
+    unreadable = {"last": 0, "untimed": 0, "not next": 0, "session": 0}
+    for i, (row_id, key_char, at, correct, _, prev_char, _) in enumerate(attempts):
         if correct:
             continue
         wrong += 1
         following = attempts[i + 1] if i + 1 < len(attempts) else None
-        if (
-            following is None
-            or following[4] is None
-            or following[5] != key_char
-            or any(at < start <= following[2] for start in starts)
-        ):
-            unreadable += 1
-            continue
-        sent = datetime.fromisoformat(following[2]) - timedelta(milliseconds=following[4])
-        gap = (sent - datetime.fromisoformat(at)).total_seconds()
-        if gap > config.PROMPT_TIMEOUT_SECONDS:
-            level = conn.execute(
-                """
-                SELECT level FROM ramp_up_levels
-                WHERE profile_id = ? AND key_char = ? AND started_at <= ?
-                  AND (completed_at IS NULL OR completed_at > ?)
-                ORDER BY id DESC LIMIT 1
-                """,
-                (profile_id, key_char, at, at),
-            ).fetchone()
-            slow.append((row_id, at, key_char, gap, level[0] if level else "-", prev_char or "-"))
+        if following is None:
+            unreadable["last"] += 1
+        elif following[4] is None:
+            unreadable["untimed"] += 1
+        elif following[5] != key_char:
+            unreadable["not next"] += 1
+        elif any(at < start <= following[2] for start in starts):
+            unreadable["session"] += 1
+        else:
+            sent = datetime.fromisoformat(following[2]) - timedelta(milliseconds=following[4])
+            gap = (sent - datetime.fromisoformat(at)).total_seconds()
+            if gap > config.PROMPT_TIMEOUT_SECONDS:
+                level = _level_at(conn, profile_id, key_char, at)
+                slow.append((row_id, at, key_char, gap, level, prev_char or "-"))
     print(
         f"\nslow corrections (wrong first press, right key after more than {config.PROMPT_TIMEOUT_SECONDS:g} s)"
     )
@@ -328,10 +339,41 @@ def _print_slow_corrections(conn: sqlite3.Connection, profile_id: int) -> None:
         for row_id, at, key_char, gap, level, prev in slow:
             print(f"  {row_id:>5} {at:<26} {key_char:<4} {gap:>6.1f} {level:<7} {prev}")
     print(
-        f"  {wrong} wrong first presses, {unreadable} with no readable gap "
-        "(last of a session, next prompt untimed or not the next one); "
-        "gap is an upper bound"
+        f"  {wrong} wrong first presses, {sum(unreadable.values())} with no readable gap: "
+        f"{unreadable['last']} last press in the database, "
+        f"{unreadable['untimed']} next prompt untimed, "
+        f"{unreadable['not next']} next recorded prompt not the one that followed, "
+        f"{unreadable['session']} session start in between; gap is an upper bound"
     )
+
+
+def _print_reasked_prompts(conn: sqlite3.Connection, profile_id: int) -> None:
+    # A prompt that was asked again and then answered, right or wrong. A child
+    # who waits out a prompt that did not sound is stored this way, and so is a
+    # child who paused; the rows cannot tell them apart.
+    print("\nprompts answered after a re-ask (timeouts > 0)")
+    reasked = conn.execute(
+        """
+        SELECT rowid, key_char, attempted_at, latency_ms, prev_char, timeouts
+        FROM key_attempts
+        WHERE profile_id = ? AND timeouts > 0
+        ORDER BY rowid
+        """,
+        (profile_id,),
+    ).fetchall()
+    if not reasked:
+        print("  (none)")
+        return
+    print(
+        f"  {'row':>5} {'when':<26} {'key':<4} {'timeouts':>8} {'latency ms':>10} {'level':<7} prev"
+    )
+    for row_id, key_char, at, latency, prev_char, timeouts in reasked:
+        shown = "-" if latency is None else str(latency)
+        level = _level_at(conn, profile_id, key_char, at)
+        print(
+            f"  {row_id:>5} {at:<26} {key_char:<4} {timeouts:>8} {shown:>10} "
+            f"{level:<7} {prev_char or '-'}"
+        )
 
 
 def _print_reach_presses(conn: sqlite3.Connection, profile_id: int) -> None:
@@ -427,6 +469,7 @@ def main() -> None:
         _print_accuracy_by_timing(conn, profile_id)
         _print_accuracy_by_previous_prompt(conn, profile_id)
         _print_slow_corrections(conn, profile_id)
+        _print_reasked_prompts(conn, profile_id)
         _print_ramp_up(conn, profile_id)
         _print_reach_presses(conn, profile_id)
         _print_landings(conn, profile_id)
