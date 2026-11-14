@@ -323,7 +323,7 @@ A database that still has the old table is not refused: nothing reads it. So the
 - **A Reach press is written at the prompt's first press**, as a counted attempt is, and nothing is written for a press too early to have heard the letter **[T]**.
 - **`prev_char` after a rest cue for a composite holds both fingers' ids**, in keystroke order, joined by `+`, for example `R-pink+L-mid` **[A]**: the cue asks back every finger the letter used (ADR-024, "Built, #12m session (6)"). It still contains `-` and is longer than one character. **`prev_char` names every prompt before**, counted or not: a Reach letter, a re-ask and a cue **[T]**, as "it names the prompt before this one" always said.
 
-`progress_dump` prints none of these records yet, except the practice days below. Printing them is session (8)'s, which is the dump tool's session.
+`progress_dump` prints each of these records: the level runs and the bar with the introductions, and the Reach presses, the rest keys (replaced ones included) and the landings in tables of their own **[T]**.
 
 #### Practice days outside the window (E4)
 
@@ -383,7 +383,7 @@ Only the number is stored. The comparison is `next_practice_day`, one function b
 
 **The `rest` rung reads a round's day from its session's number**, through `practice_days_by_session` (each of the profile's sessions, by id, with its number) **[T]**. The rung's rules do not change. A round 1 stamped a day after its session started is the start's day **[T]**.
 
-**`progress_dump`** is unchanged **[D]**. Its lifetime table's `days` counts `practice_days` rows, so it shows the numbers. Its per-day table still groups the window by `date(attempted_at, 'localtime')` when read, which is allowed (local time is a presentation concern), and shows calendar days, so a session left open overnight is one practice day there and two rows. Grouping by practice day would need the session on each `key_attempts` row. Both are #12m session (8)'s, the dump tool's.
+**`progress_dump`** is unchanged **[D]**. Its lifetime table's `days` counts `practice_days` rows, so it shows the numbers. Its per-day table still groups the window by `date(attempted_at, 'localtime')` when read, which is allowed (local time is a presentation concern), and shows calendar days, so a session left open overnight is one practice day there and two rows. Grouping by practice day would need the session on each `key_attempts` row, a schema change; it is filed in [roadmap § D](../roadmap.md#d-smaller-gaps-worth-a-line-in-the-relevant-adr).
 
 **Schema version 2. Every older database is refused**, with "schema version 1, older than this Takki's 2 … delete it", and left as found **[T]**. No migration: the developer decided in session 2 that none is written for development databases, and a version-1 database's days are local dates fixed in whatever zone they were written in. Delete the development database on each machine: the dev box had none on 2026-11-08; the laptop's must go before Takki runs there again.
 
@@ -404,3 +404,4 @@ Only the number is stored. The comparison is `next_practice_day`, one function b
 ### Changes
 
 - 2026-11-13, alpha-plan #12m session (7): `rest_keys` refuses a passed mark on a key that is not ready. The alignment now writes landings and rest keys.
+- 2026-11-14, alpha-plan #14a: the dump's grouping by practice day points to roadmap § D, not to #12m session (8), which did not take it; the dump prints the ladder's, the alignment's and the rest keys' records, which (8) added.

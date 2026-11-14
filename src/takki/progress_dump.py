@@ -90,7 +90,7 @@ def _print_attempts_by_day(conn: sqlite3.Connection, profile_id: int) -> None:
     # the window's days only: Known counts every practice day of a key, from
     # `practice_days`, which the window cannot evict (#12m session 2, E4). They
     # are calendar days, not practice days: a session left open overnight is
-    # one practice day and two rows here. Left to #12m session (8), the dump's.
+    # one practice day and two rows here. Filed in roadmap § D.
     # `mean ms` is the time from the letter being sent, which is what the speed
     # term reads (ADR-011).
     rows = conn.execute(
