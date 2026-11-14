@@ -56,13 +56,22 @@ A single child sits down, hears a letter in English, types it, hears immediate f
 - Begin VI community outreach for pilot recruitment — RNIB (UK), AFB (US), Perkins, local schools for the blind. Goal: 3–5 participating families by end of Beta.
 - **Unsigned PyInstaller Windows bundle** — built in CI (`windows-latest`, the [ADR-019](adr/0019-testing-strategy-and-io-isolation.md) tier-5 job pulled forward from V1) and published as a GitHub pre-release. Pulled forward (2026-07-05) because Beta's done-criterion is "a friend's child can install Takki" — that requires an installable artifact, not a `uv` checkout. The SmartScreen click-through on an unsigned binary is documented in the pilot instructions (may need sighted assistance once, at install). Code signing itself stays out; see [research/windows-code-signing.md](research/windows-code-signing.md).
 
+- **A minimal visual display** — a subset of [ADR-016](adr/0016-visual-display-design.md), pulled forward from V1 *(decided by the developer 2026-11-14)*. "Legally blind" does not mean "sees nothing": a child with usable vision relies on it in every other tool, and the first pilot child does. The always-on window ([ADR-028](adr/0028-composite-input-and-keyboard-ownership.md)) stops being blank for a child who turns the display on. What Beta builds:
+  - **On/off**, off by default, turned on by the child.
+  - **Background and foreground colour**, six each: black, white, yellow, green, blue, red (all in ADR-016's palette). Chosen by ear in ADR-016's browse mode only: each colour is named and shown, and Enter confirms. The background stays on screen while the foreground is chosen, and the same colour is not offered twice. No colour naming by voice, so the display does not wait for Whisper.
+  - **No text-size step.** The letter fills the window and scales with it, so the window's size is the size control; a child with a narrow field of view may need a smaller window, and the pilot instructions say so. The window's size, position and maximised state are saved with the profile's display settings and restored, pulled back onto the screen if they no longer fit it.
+  - **Letter drills:** the target letter, shown at the moment it is sent to be spoken. That is the moment `latency_ms` already counts from ([ADR-011](adr/0011-persistence-and-state.md)), so the timing does not change.
+  - **Word practice:** one line, the word with the letter to type next marked by reversed colours.
+  - **To settle when it is designed:** which part gets the reversed pair (the developer's first choice is the word reversed and the letter to type in the chosen pair; the other way round lights up less of the screen for a child who chose a dark background, so both are drawn and the pilot child chooses); whether the 250 ms floor (`HEARD_MIN_MS`) still holds for a child who reads the letter before the voice starts; and what happens to a key's evidence when the display is switched on or off partway through a profile.
+  - **For the pilot:** the one-line word display against ADR-016's two lines.
+
 **Out of scope:**
-- Visual display
+- The rest of the visual display: text-size steps, cursor style, naming a colour by voice, the palette's other four colours, and the two-line layout (V1)
 - Code signing (unsigned bundle for Beta; SignPath signatures arrive at first public release — see [research/windows-code-signing.md](research/windows-code-signing.md))
 - Milestone audio celebrations polish (placeholder cues acceptable for Beta)
 - Per-key accuracy breakdown / WPM trend in parent summary
 
-**Rationale for cuts:** Visual display is opt-in per profile and does not block a VI child from practising. The remaining cuts are polish on an experience that already works end-to-end.
+**Rationale for cuts:** The minimal display covers a child who uses their vision; the rest of ADR-016's setup refines it and does not block practice. The remaining cuts are polish on an experience that already works end-to-end.
 
 ---
 
@@ -72,7 +81,7 @@ A single child sits down, hears a letter in English, types it, hears immediate f
 
 **In scope (additions on top of Beta):**
 - Native alphabet derivation from keyboard layout (replaces the statistical approximation used in the wordfreq spike)
-- Visual display: two-line layout for both lesson layers
+- Visual display: two-line layout for both lesson layers *(the minimal display ships in Beta; V1 adds what Beta left out)*
 - Visual setup workflow with audio-driven color palette selection
 - Expanded parent/teacher printable summary (per-key accuracy, WPM trend, session history, milestone dates)
 - Validation pass over remaining ~40 language configs
@@ -106,6 +115,7 @@ Every external-interface step below is implemented as a `typing.Protocol` + real
 3. Layer controller — weighted mix between Layer 1 and Layer 2 per ADR-010 table
 4. Milestones Silver/Gold/Platinum/Diamond (key-count gates)
 5. Two-phase encouragement messaging
+5b. Minimal visual display (see the Beta scope list): window drawing, the saved window size, and the two-colour setup in browse mode. Before the checkpoint below, because a pilot child who uses their vision needs it from the first session.
 
    > **Pilot-ready checkpoint (added 2026-07-05).** After step 5 the complete *practice* experience — Piper voice, Layer 1 + Layer 2, milestones, encouragement — works end-to-end with keyboard-only interaction. Pilot recruitment, scheduling, and instruction-writing proceed from this point; the voice stack (steps 6–8) improves the experience but must not gate the pilot. If Whisper/intents slip, the pilot starts without voice commands rather than waiting.
 
